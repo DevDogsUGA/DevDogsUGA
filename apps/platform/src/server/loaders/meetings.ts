@@ -59,7 +59,7 @@ export interface MeetingSummary {
   endsAt: Date;
   /**
    * An officer's override for what the night is, for the nights structure
-   * cannot describe. One of the four `MEETING_KIND_CHOICES`: `Build Session`,
+   * cannot describe. One of the four `MEETING_KIND_CHOICES`: `Dev Session`,
    * `Study Session`, `Interest Meeting`, `Social`.
    *
    * Null is the ordinary case and means "read the derived segments", NOT

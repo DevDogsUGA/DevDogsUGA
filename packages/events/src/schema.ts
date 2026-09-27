@@ -67,7 +67,7 @@ export const RSVP_URL_PATTERN = new RegExp(
 
 /** Mirrors `meetings_kind_choices`. */
 export const MEETING_KIND_CHOICES = [
-  "Build Session",
+  "Dev Session",
   "Study Session",
   "Interest Meeting",
   "Social",

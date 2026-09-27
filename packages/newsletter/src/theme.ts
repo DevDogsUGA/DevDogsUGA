@@ -23,7 +23,7 @@ export const UGA = "#ba0c2f";
  */
 export const KIND = {
   interest: EVENT_KIND_VISUALS["Interest Meeting"].accent,
-  build: EVENT_KIND_VISUALS["Build Session"].accent,
+  build: EVENT_KIND_VISUALS["Dev Session"].accent,
   study: EVENT_KIND_VISUALS["Study Session"].accent,
   social: EVENT_KIND_VISUALS.Social.accent,
   workshop: EVENT_SEGMENT_VISUALS.workshop.accent,

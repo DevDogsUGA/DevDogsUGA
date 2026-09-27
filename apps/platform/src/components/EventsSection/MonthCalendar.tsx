@@ -109,13 +109,13 @@ function utcDateKey(date: Date): string {
  * This used to be `segments[0] ?? "open"`, which was safe when the resolver
  * guaranteed a non-empty set. It no longer does: `open` is suppressed whenever
  * an officer set a `kind`, so the segment list is empty for every authored
- * night and that fallback would paint a build session with the unscheduled
+ * night and that fallback would paint a dev session with the unscheduled
  * colour, beside its own emerald chip on the same row. `primaryBadge` consults
  * the kind first for that reason.
  */
 function meetingBadge(meeting: MeetingInRange): SegmentBadge | null {
   // Before the kind and before the segments, because it overrides both. A
-  // cancelled build session is not a build session that is happening, and the
+  // cancelled dev session is not a dev session that is happening, and the
   // grid's hues are a legend of what is ON. `getMeetingsInRange` keeps
   // cancelled rows by design, so without this the square kept its cyan dot and
   // the month read as a night going ahead.
@@ -843,7 +843,7 @@ export default function MonthCalendar({
             appears as a dot. A fixed list guesses wrong in both directions. It
             explained "Judging" in rose on months whose every judging night also
             taught something, since workshop sorts first now and the dot is
-            never rose. And it could never mention a build session, whose colour
+            never rose. And it could never mention a dev session, whose colour
             comes from an officer's `kind` rather than from the segment
             union. */}
         <div className="mt-3 hidden flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs text-mauve-400 lg:flex">

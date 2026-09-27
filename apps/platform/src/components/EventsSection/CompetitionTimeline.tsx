@@ -8,7 +8,7 @@ import { kindBadge, segmentBadge } from "./meetingView";
  * converts a draft in the Competitions Project and closed whenever they merge
  * a winning pull request, neither pinned to a particular Monday. So the strip
  * draws what is still true on a fixed cadence -- Monday's workshop kicks the
- * week off, Wednesday is an open build session -- and lets the build week
+ * week off, Wednesday is an open dev session -- and lets the build week
  * itself run OFF the right edge rather than closing at a second dot: there is
  * no night this diagram can promise judging happens on.
  *
@@ -30,7 +30,7 @@ import { kindBadge, segmentBadge } from "./meetingView";
  */
 
 /**
- * The club meets on Monday nights and the open build session is the Wednesday
+ * The club meets on Monday nights and the open dev session is the Wednesday
  * in between. This is the one place those facts are written down for the
  * diagram; the cards in HowItWorks address the same columns by these names.
  */
@@ -165,7 +165,7 @@ export default function CompetitionTimeline({
       className="group/strip grid grid-cols-7 gap-y-2"
       data-hovering={active !== null}
       role="figure"
-      aria-label="A week of the club: Monday's workshop kicks off the week's competition, teams build through the week with an open build session on Wednesday, and entries stay open -- there is no fixed judging night -- until an officer merges the winning pull request."
+      aria-label="A week of the club: Monday's workshop kicks off the week's competition, teams build through the week with an open dev session on Wednesday, and entries stay open -- there is no fixed judging night -- until an officer merges the winning pull request."
     >
       {WEEK.map((day, i) => {
         const isMeeting = i === 0;
@@ -225,9 +225,9 @@ export default function CompetitionTimeline({
           halo={t.halo}
         >
           <Dot
-            dot={kindBadge["Build Session"]!.dot}
+            dot={kindBadge["Dev Session"]!.dot}
             ring={t.dotRing}
-            label="Wednesday: build session"
+            label="Wednesday: dev session"
           />
         </Cell>
       </div>

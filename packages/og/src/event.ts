@@ -31,7 +31,7 @@ export const EVENT_TZ = "America/New_York";
 
 /** One visual identity per authored kind, shared by calendar and event art. */
 export const EVENT_KIND_VISUALS = {
-  "Build Session": {
+  "Dev Session": {
     accent: "#00a6f4",
     bg: "bg-sky-400",
     dot: "bg-sky-500",

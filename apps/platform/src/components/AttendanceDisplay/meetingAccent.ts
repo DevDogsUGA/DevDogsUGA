@@ -15,7 +15,7 @@ import type { AccentColor } from "~/ui/accent-blobs";
  * Session" to draw from since its decks are authored per meeting.
  */
 const KIND_ACCENT: Record<string, AccentColor> = {
-  "Build Session": "emerald",
+  "Dev Session": "emerald",
   "Study Session": "cyan",
   "Interest Meeting": "violet",
   Social: "rose",

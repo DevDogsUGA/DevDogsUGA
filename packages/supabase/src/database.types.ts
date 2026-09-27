@@ -567,19 +567,106 @@ export type Database = {
           },
         ];
       };
+      oauthConnectCodes: {
+        Row: {
+          clientId: string;
+          clientSecret: string;
+          codeChallenge: string;
+          codeHash: string;
+          createdAt: string;
+          expiresAt: string;
+          id: string;
+          redirectUri: string;
+          userId: string;
+        };
+        Insert: {
+          clientId: string;
+          clientSecret: string;
+          codeChallenge: string;
+          codeHash: string;
+          createdAt?: string;
+          expiresAt?: string;
+          id?: string;
+          redirectUri: string;
+          userId: string;
+        };
+        Update: {
+          clientId?: string;
+          clientSecret?: string;
+          codeChallenge?: string;
+          codeHash?: string;
+          createdAt?: string;
+          expiresAt?: string;
+          id?: string;
+          redirectUri?: string;
+          userId?: string;
+        };
+        Relationships: [];
+      };
+      oauthDeviceCodes: {
+        Row: {
+          callbackUri: string;
+          clientId: string | null;
+          clientSecret: string | null;
+          createdAt: string;
+          deviceCodeHash: string;
+          expiresAt: string;
+          id: string;
+          interval: number;
+          label: string;
+          lastPolledAt: string | null;
+          status: Database["platform"]["Enums"]["oauthDeviceCodeStatus"];
+          userCodeHash: string;
+          userId: string | null;
+        };
+        Insert: {
+          callbackUri: string;
+          clientId?: string | null;
+          clientSecret?: string | null;
+          createdAt?: string;
+          deviceCodeHash: string;
+          expiresAt?: string;
+          id?: string;
+          interval?: number;
+          label: string;
+          lastPolledAt?: string | null;
+          status?: Database["platform"]["Enums"]["oauthDeviceCodeStatus"];
+          userCodeHash: string;
+          userId?: string | null;
+        };
+        Update: {
+          callbackUri?: string;
+          clientId?: string | null;
+          clientSecret?: string | null;
+          createdAt?: string;
+          deviceCodeHash?: string;
+          expiresAt?: string;
+          id?: string;
+          interval?: number;
+          label?: string;
+          lastPolledAt?: string | null;
+          status?: Database["platform"]["Enums"]["oauthDeviceCodeStatus"];
+          userCodeHash?: string;
+          userId?: string | null;
+        };
+        Relationships: [];
+      };
       oauthRegistrations: {
         Row: {
           clientId: string;
+          label: string;
           type: Database["platform"]["Enums"]["oauthRegistrationType"];
           userId: string;
         };
         Insert: {
           clientId: string;
+          label?: string;
           type?: Database["platform"]["Enums"]["oauthRegistrationType"];
           userId: string;
         };
         Update: {
           clientId?: string;
+          label?: string;
           type?: Database["platform"]["Enums"]["oauthRegistrationType"];
           userId?: string;
         };
@@ -1625,6 +1712,7 @@ export type Database = {
       membershipDirection: "invite" | "request";
       membershipRequestStatus:
         "pending" | "accepted" | "declined" | "withdrawn" | "expired";
+      oauthDeviceCodeStatus: "pending" | "approved" | "denied";
       oauthRegistrationType: "development" | "production";
       quarantineEffect: "hide" | "freeze";
       reportReason:
@@ -3009,6 +3097,7 @@ export const Constants = {
         "withdrawn",
         "expired",
       ],
+      oauthDeviceCodeStatus: ["pending", "approved", "denied"],
       oauthRegistrationType: ["development", "production"],
       quarantineEffect: ["hide", "freeze"],
       reportReason: [
