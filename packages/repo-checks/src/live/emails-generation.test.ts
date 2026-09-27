@@ -51,7 +51,8 @@ describe("email preview generation (via `devtools emails`)", () => {
 
     expect(
       result.code,
-      `devtools emails exited non-zero:\n${result.stderr}`,
+      // devtools reports command errors through clack, on stdout.
+      `devtools emails exited non-zero:\n${result.stdout}\n${result.stderr}`,
     ).toBe(0);
 
     const html = await readFile(join(outDir, "TeamInvite.html"), "utf8");

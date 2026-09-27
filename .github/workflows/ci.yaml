@@ -257,11 +257,12 @@ jobs:
       # already composed above (every `devtools` command resolves a session
       # tier before dispatch), same reason the RLS suite lives here rather
       # than in the default `pnpm test` lane. `devtools emails` imports the
-      # email package's compiled templates (src/generated/, untracked), which
-      # a fresh checkout doesn't have until `compile` runs.
+      # email package's built runtime (dist/, untracked), which a fresh
+      # checkout doesn't have until `build` runs; `compile` alone only writes
+      # the templates.
       - name: devtools / devtools-ci process contracts
         run: |
-          pnpm --filter @devdogsuga/email run compile
+          pnpm --filter @devdogsuga/email run build
           pnpm --filter @devdogsuga/repo-checks run test:live
       # 124 tests, including the privilege-surface guards in
       # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
