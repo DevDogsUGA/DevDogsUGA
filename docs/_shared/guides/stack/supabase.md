@@ -2,11 +2,13 @@
 name: Supabase
 description: One Postgres project shared by every app, one schema each, and the Row-Level Security rules that are the only real boundary between them.
 order: 3
+section: guides
+mount: [schedule-builder, study-group-finder, platform]
 ---
 
 # Supabase
 
-Supabase is the database, auth and storage layer for every app in the repo: Postgres 17, `supabase-js` 2.112.3, `@supabase/ssr` 0.12.4, CLI 2.115.0. There is one project, and each app owns one schema inside it. Read this before writing a migration, a policy, or a client factory. It is not a Supabase tutorial — [their docs](https://supabase.com/docs) are that — and it will not tell you how to get a stack running, which [Quickstart](/docs/monorepo/guides/quickstart) does.
+Supabase is the database, auth and storage layer for every app in the repo: Postgres 17, `supabase-js` 2.112.3, `@supabase/ssr` 0.12.4, CLI 2.115.0. There is one project, and each app owns one schema inside it. Read this before writing a migration, a policy, or a client factory. It is not a Supabase tutorial — [their docs](https://supabase.com/docs) are that.
 
 ## One project, one schema per app
 
@@ -17,13 +19,13 @@ Schema isolation is **organizational, not a security boundary**. Every schema is
 Client factories live in `@devdogsuga/db` (`/client` for browser/SSR, `/server` for the admin client) and take the app's schema as an argument, which becomes the client's default for `.from()`. Set it explicitly; never rely on the endpoint's default profile. Each app binds its own generated `Database` type once, in its `~/supabase/{client,server,admin}.ts` wrappers — see `packages/supabase`, which now ships only that generated type, the app → schema map, and the RLS persona suite.
 
 > [!WARNING]
-> `[api] schemas` lists `study_group_finder` **first on purpose** — being first makes it PostgREST's default REST profile, which is the only schema supadart can generate Dart models from. Do not reorder that list.
+> `[api] schemas` lists `study_group_finder` **first on purpose** — being first makes it PostgREST's default REST profile, which is the only schema supadart can generate Dart models from (see the Flutter typed-models guide in study-group-finder's own docs). Do not reorder that list.
 
 Ports in `config.toml` stay literals rather than `env(...)`: `supabase seed` validates the file against a typed schema that interpolates `env()` into _string_ fields only, so an `env()` in a numeric field makes it exit 1 — silently, under the `with-env` wrapper. Everything else in that file may still use `env()`.
 
 ## Locking down a function takes both halves
 
-Postgres grants `EXECUTE` to `PUBLIC` on every function by default, and `20260616232300_platform_init.sql` additionally grants it to `anon` and `authenticated` through default privileges. Revoking from either side alone fails open, silently:
+Postgres grants `EXECUTE` to `PUBLIC` on every function by default, and one of the platform migrations additionally grants it to `anon` and `authenticated` through default privileges. Revoking from either side alone fails open, silently:
 
 ```sql
 revoke execute on function "platform".content_types()
@@ -33,7 +35,7 @@ revoke execute on function "platform".content_types()
 <details>
 <summary>Why does the scoped <code>alter default privileges … revoke</code> not work?</summary>
 
-`alter default privileges in schema "platform" revoke execute on functions from public` is a **no-op**, and a silent one. `pg_default_acl` stores a delta that Postgres merges on top of `acldefault()` at creation time, and PUBLIC's EXECUTE lives in `acldefault()` — it is never written into the row, so a revoke has nothing there to remove. This was measured on PostgreSQL 17.6 and cost two days of believing the schema was closed; `20260807000004_platform_close_public_execute.sql` carries the full write-up and the statement that does work.
+`alter default privileges in schema "platform" revoke execute on functions from public` is a **no-op**, and a silent one. `pg_default_acl` stores a delta that Postgres merges on top of `acldefault()` at creation time, and PUBLIC's EXECUTE lives in `acldefault()` — it is never written into the row, so a revoke has nothing there to remove. This was measured on PostgreSQL 17.6 and cost two days of believing the schema was closed; the migration that fixed it carries the full write-up and the statement that does work.
 
 </details>
 

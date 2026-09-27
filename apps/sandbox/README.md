@@ -15,7 +15,7 @@ pnpm dev --filter sandbox   # wrangler dev, against the local Supabase stack
 ```
 
 Monorepo setup, env handling, and the contribution flow:
-[Monorepo](../../docs/monorepo/index.md).
+[Toolkit](../../docs/toolkit/index.md).
 
 ## Docs
 

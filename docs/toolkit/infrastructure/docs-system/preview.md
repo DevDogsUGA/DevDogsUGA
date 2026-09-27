@@ -1,12 +1,13 @@
 ---
 name: Local Preview
 description: Run the docs from your working copy — the dev server plus a watcher, and one extra step to make search see your edits.
-order: 30
+order: 4
+section: infrastructure
 ---
 
 # Local Preview
 
-There is no separate preview tool. Docs are compiled into the platform app, so **the dev server is the preview** — `/docs/...` renders your working copy through the exact pipeline that ships. Read this when you are editing a page and want to see it. Search is the one thing the dev server does not pick up on its own, and the second half of this page is about that. For what to put in the page, see [writing docs](/docs/monorepo/guides/docs-system/writing).
+There is no separate preview tool. Docs are compiled into the platform app, so **the dev server is the preview** — `/docs/...` renders your working copy through the exact pipeline that ships. Read this when you are editing a page and want to see it. Search is the one thing the dev server does not pick up on its own, and the second half of this page is about that. For what to put in the page, see [writing docs](/docs/toolkit/infrastructure/docs-system/writing).
 
 ## The loop
 
@@ -44,9 +45,11 @@ That indexes your working copy into the local stack, so a page you just wrote is
 
 Because the dev server uses the same parser and the same renderer as production, a page that looks right locally looks right deployed. Worth confirming before you push:
 
-- The page appears in the sidebar, under the right project, with the title you expect.
+- The page appears in the sidebar, under the right project **and section**, with the title you expect.
+- A mounted `_shared` page appears under every project you listed in `mount`, at the path you expected.
 - Code blocks are highlighted — an unregistered language falls back to plain text silently.
-- Links between docs pages use site paths (`/docs/monorepo/guides/docs-system/writing`), not file paths.
+- Links between docs pages use site paths (`/docs/toolkit/infrastructure/docs-system/writing`), not file paths. `pnpm --filter @devdogsuga/docs exec docs-compiler check` fails the build on a broken one rather than warning.
+- Every command in a fenced code block is a real one, or the fence is tagged `nocheck` on purpose.
 - The table of contents on the right lists the headings you intended, and no heading you buried in a `<details>`.
 - `pnpm dev` printed no budget warnings for your page. `pnpm --filter @devdogsuga/docs exec docs-compiler check` prints the detail behind that count.
 

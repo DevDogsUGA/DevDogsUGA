@@ -2,6 +2,7 @@
 name: docs-compiler
 description: Three modes behind one binary — compile a folder of markdown, lint the hand-written pages, or regenerate the API reference from source.
 order: 9
+section: guides
 ---
 
 # docs-compiler
@@ -41,12 +42,15 @@ behind a command somebody has to think to run is a warning nobody reads. Pages
 under a `reference/` segment are skipped whole — every rule is about a judgement
 an author made, and a generated page had none.
 
-**`gen`** walks the monorepo's TypeScript and Dart sources and writes
-`docs/<project>/reference/`, which the bare mode then compiles like any other
-page. It is a separate subcommand because it needs the whole repo, where the
-bare mode only ever needs the folder it stands in. Doc-comment coverage is
-reported on every run and never enforced, and an extractor that cannot read a
-file warns and carries on.
+**`gen`** walks the shared packages' TypeScript sources and writes
+`docs/toolkit/reference/`, which the bare mode then compiles like any other
+page. Only `toolkit` gets a generated reference — an app is not a published
+package with a stable public surface the way `packages/*` is, so app-level
+`reference/` directories have been removed rather than kept in sync by hand.
+`gen` is a separate subcommand because it needs the whole repo, where the bare
+mode only ever needs the folder it stands in. Doc-comment coverage is reported
+on every run and never enforced, and an extractor that cannot read a file
+warns and carries on.
 
 ## Running it
 
@@ -69,5 +73,5 @@ cd docs && node ./node_modules/.bin/docs-compiler check   # no PATH at all
 ```
 
 What the rules mean for a page you are writing is
-[Writing docs](/docs/monorepo/guides/docs-system/writing); how a page reaches
-the site is [the docs system](/docs/monorepo/guides/docs-system).
+[Writing docs](/docs/toolkit/infrastructure/docs-system/writing); how a page reaches
+the site is [the docs system](/docs/toolkit/infrastructure/docs-system).

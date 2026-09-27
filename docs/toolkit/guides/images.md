@@ -2,6 +2,7 @@
 name: Images
 description: Select, size, preview, and export the club's generated graphics.
 order: 5
+section: guides
 ---
 
 # Images

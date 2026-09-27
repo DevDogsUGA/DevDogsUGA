@@ -2,6 +2,7 @@
 name: supabase
 description: Three client factories scoped to an app's schema, the generated Database types, and the RLS persona suite.
 order: 6
+section: guides
 ---
 
 # supabase
@@ -79,7 +80,7 @@ pnpm --filter @devdogsuga/supabase test:rls
 ```
 
 For policies, migrations and `config.toml`, read
-[Supabase](/docs/monorepo/stack/supabase). This repo's own exports (the
+[Supabase](/docs/platform/guides/stack/supabase). This repo's own exports (the
 `Database` type, `SCHEMAS`) are in the generated
 [`@devdogsuga/supabase`](/docs/toolkit/reference/api/supabase) reference; the
 client/server factories are documented in

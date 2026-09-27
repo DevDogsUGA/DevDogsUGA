@@ -6,7 +6,7 @@ Next.js app on the shared DevDogs Supabase project, owning the
 (`supabase/migrations/<timestamp>_schedule_builder_<desc>.sql`).
 
 For monorepo setup, env handling, and the contribution workflow, see
-[Monorepo](../../docs/monorepo/index.md); project-facing docs are
+[Toolkit](../../docs/toolkit/index.md); project-facing docs are
 [Schedule Builder](../../docs/schedule-builder/index.md).
 
 ## Develop

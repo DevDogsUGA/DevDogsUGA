@@ -1,7 +1,8 @@
 ---
 name: Secrets and environments
 description: One env file per target — which file is which, how yours gets filled, and where the full reference lives.
-order: 3
+order: 2
+section: infrastructure
 ---
 
 # Secrets and environments
@@ -12,7 +13,7 @@ There is one env file per **target**, not one file with modes. This page is the 
 
 `.env` at the repo root **is** the development target. Every script that needs it goes through `with-env`, the wrapper from `@devdogsuga/env`, which loads the file and prints on every run which files it actually loaded.
 
-Creating it is the one thing `with-env` cannot do, so `pnpm devtools setup` deliberately runs outside the wrapper — it is the one command that works with no `.env` present. [Quickstart](/docs/monorepo/guides/quickstart) has the full order.
+Creating it is the one thing `with-env` cannot do, so `pnpm devtools setup` deliberately runs outside the wrapper — it is the one command that works with no `.env` present.
 
 When the local Docker stack is up, `with-env` layers `.env.generated` — the stack's own connection block, written by `pnpm devtools db start` — on top of `.env`, first file wins. There is no flag for this: `with-env` probes port 54321 every run, so starting the stack switches you onto it and stopping it switches you back.
 

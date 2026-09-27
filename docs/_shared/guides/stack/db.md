@@ -1,12 +1,14 @@
 ---
-name: Drizzle
+name: Database (Drizzle)
 description: Drizzle 1.0.0-rc.4 as a typed reader over a database whose schema is owned by SQL migrations, plus the connection settings the Supabase pooler forces.
 order: 4
+section: guides
+mount: [schedule-builder, platform]
 ---
 
-# Drizzle
+# Database (Drizzle)
 
-`drizzle-orm` and `drizzle-kit` 1.0.0-rc.4, on the `postgres` (postgres-js) driver 3.4.9, used for server-side SQL in both Next apps. The one thing to understand before touching it: **Drizzle does not own the schema here.** SQL migrations under `supabase/migrations` do. Read this before running a `db:` script or adding a table; [Drizzle's docs](https://orm.drizzle.team) cover the query builder itself.
+`drizzle-orm` and `drizzle-kit` 1.0.0-rc.4, on the `postgres` (postgres-js) driver 3.4.9, used for server-side SQL in both Next apps. The one thing to understand before touching it: **Drizzle does not own the schema here.** SQL migrations under `supabase/migrations` do. Read this before running a `db:` script or adding a table; [Drizzle's docs](https://orm.drizzle.team) cover the query builder itself. `@devdogsuga/db` is the shared client factory package this page's connection settings apply to — see [Toolkit](/docs/toolkit/guides/db) for the factory itself.
 
 Both packages are pinned to an exact version rather than a range, because the `latest` dist-tag still points at 0.45.x and a range would silently downgrade them.
 
@@ -26,7 +28,7 @@ A `db:generate` draft is never the migration. Someone moves it into `supabase/mi
 
 ## The connection settings are not optional
 
-`@devdogsuga/db`'s `/server` subpath exports one `createDb(url, relations)` factory (merged with the Supabase client factories in the Backstage cutover) so these can only be configured one way:
+`@devdogsuga/db`'s `/server` subpath exports one `createDb(url, relations)` factory so these can only be configured one way:
 
 - **`prepare: false`** — the apps connect through Supabase's transaction-mode pooler, which hands a different backend to each transaction and so cannot keep a named prepared statement alive between them.
 - **Connections are cached on `globalThis`, keyed by URL.** An unkeyed slot would let a second caller inherit the first caller's connection, including its database. Caching defaults on outside production, where the module graph is built once anyway.
@@ -34,7 +36,7 @@ A `db:generate` draft is never the migration. Someone moves it into `supabase/mi
 Each app passes its own `relations`. That file is the hand-maintained half: `src/server/db/schema/generated/` is introspected from the live database and never edited, while `src/server/db/relations.ts` is written by hand — a `defineRelations` call over those generated tables. The two apps introspect different schemas, so neither module is interchangeable with the other's.
 
 > [!IMPORTANT]
-> Point `DB_URL` at the **session** pooler (port 5432), not the transaction pooler. `drizzle-kit` uses prepared statements, and against the transaction pooler it hangs rather than erroring.
+> Point `DB_URL` at the **Session pooler** (port 5432), not the Transaction pooler. `drizzle-kit` uses prepared statements, and against the transaction pooler it hangs rather than erroring.
 
 <details>
 <summary>Why does the platform have two drizzle-kit configs?</summary>

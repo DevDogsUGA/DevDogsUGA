@@ -1,12 +1,14 @@
 ---
 name: Tailwind
 description: Tailwind v4 CSS-first in the platform and v3-style config in schedule-builder, plus the @theme ordering trap that silently killed a whole palette.
-order: 6
+order: 2
+section: guides
+mount: [schedule-builder, platform]
 ---
 
 # Tailwind
 
-Tailwind CSS 4.3.3, through `@tailwindcss/postcss` as the only PostCSS plugin in either Next app. Read this before adding a color token, a plugin, or a theme block — the two apps configure Tailwind differently, and v4's ordering rules have already cost this repo an entire palette. [Tailwind's docs](https://tailwindcss.com/docs) cover the utilities themselves. Class order in markup is handled for you by `prettier-plugin-tailwindcss`, so `pnpm format:write` sorts it.
+Tailwind CSS 4.3.3, through `@tailwindcss/postcss` as the only PostCSS plugin in either app. Read this before adding a color token, a plugin, or a theme block — the two apps configure Tailwind differently, and v4's ordering rules have already cost this repo an entire palette. [Tailwind's docs](https://tailwindcss.com/docs) cover the utilities themselves. Class order in markup is handled for you by `prettier-plugin-tailwindcss`, so `pnpm format:write` sorts it.
 
 ## Two apps, two setups
 
@@ -30,6 +32,6 @@ Two consumers have to agree on those colors. Utilities like `bg-card` reach them
 
 ## Plugins are opt-in on purpose
 
-`@tailwindcss/forms` is loaded with `strategy: class` in both apps. The default strategy emits a base layer that restyles every bare `input`, `select` and `textarea` — white background, gray border, square corners, blue focus ring — which fights any shadcn component rendering a raw control. It was rendering cmdk's `<input>` as a white box inside the search dialog's pill. Anything that wants those styles asks for them with `form-input` or `form-textarea`.
+`@tailwindcss/forms` is loaded with `strategy: class` in both apps. The default strategy emits a base layer that restyles every bare `input`, `select` and `textarea` — white background, gray border, square corners, blue focus ring — which fights any shadcn component rendering a raw control. Anything that wants those styles asks for them with `form-input` or `form-textarea`.
 
 `@tailwindcss/typography` is loaded plainly, and the docs pages depend on it: their bodies are bare HTML under a `prose prose-invert` wrapper. `globals.css` remaps the plugin's eighteen `--tw-prose-invert-*` names onto the design tokens rather than styling elements one by one, in an **unlayered** `.prose` rule — the plugin registers `.prose` in the `utilities` layer, and unlayered rules outrank layered ones whatever the source order.

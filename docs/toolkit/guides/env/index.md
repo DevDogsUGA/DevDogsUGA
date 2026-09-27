@@ -2,6 +2,7 @@
 name: Env
 description: Bitwarden Secrets Manager is the source of truth and GitHub is the derived copy the deploy reads — one file per target, and where each value ends up.
 order: 1
+section: guides
 ---
 
 # Env
@@ -27,7 +28,7 @@ One env file per target, and `push` writes Bitwarden and GitHub in the same
 run — a value in one and not the other is the failure this design has. This
 page is what the pieces are; [the commands](/docs/toolkit/guides/env/commands)
 is what to run. A contributor filling in their own `.env` wants
-[Secrets and environments](/docs/monorepo/guides/secrets) instead.
+[Secrets and environments](/docs/toolkit/infrastructure/secrets) instead.
 
 ## One `--target`, one row
 

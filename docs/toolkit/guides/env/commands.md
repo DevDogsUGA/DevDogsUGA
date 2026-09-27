@@ -2,6 +2,7 @@
 name: The commands
 description: pull, push and audit — what each one touches, what the audit can and cannot compare, and the two rare paths.
 order: 2
+section: guides
 ---
 
 # The commands

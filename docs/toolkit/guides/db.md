@@ -1,10 +1,11 @@
 ---
-name: drizzle
+name: db
 description: One client factory shared by every Next app, so the pooler settings that are not optional can only be configured one way.
 order: 5
+section: guides
 ---
 
-# drizzle
+# db
 
 `@devdogsuga/db`'s `/server` subpath exports one relevant function here —
 merged with the Supabase client factories in the Backstage cutover.
@@ -39,7 +40,7 @@ neither version with it, so an app pins them.
 
 Drizzle does not own the schema here; SQL migrations do, and no script in the
 repo runs `drizzle-kit push`. That, the `db:pull` and `db:generate` scripts and
-the `DB_URL` you want are all in [Drizzle](/docs/monorepo/stack/drizzle). The
+the `DB_URL` you want are all in [Database (Drizzle)](/docs/platform/guides/stack/db). The
 full surface is documented in
 [`@devdogsuga/db`](https://github.com/DevDogsUGA/Backstage/tree/main/packages/db)
 — it ships from Backstage now, so there is no local `reference/api` page for

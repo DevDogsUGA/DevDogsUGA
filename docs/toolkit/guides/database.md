@@ -2,6 +2,7 @@
 name: database
 description: The devtools db group — start, migrate and reset the session's Supabase database, plus migrations, types, seeding, introspection and hosted infrastructure.
 order: 4
+section: guides
 ---
 
 # Database commands
