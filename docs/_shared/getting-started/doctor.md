@@ -32,7 +32,7 @@ pnpm devtools doctor --report
 ```
 
 `--report` prints the same checks as a block of text meant to be pasted
-somewhere else — into `#help` on Discord, or into an issue. It redacts
+somewhere else — into `#help` on [Discord](https://devdogsuga.org/discord), or into an issue. It redacts
 anything that looks like a credential before printing, so it's safe to paste
 without editing it yourself first. Run the plain form first; reach for
 `--report` once you've read what it says and still need another person to

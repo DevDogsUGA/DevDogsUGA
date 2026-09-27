@@ -11,7 +11,7 @@ Maintaining shared packages, CI, or deploys? See [Shared packages & tooling](htt
 Competitions are GitHub issues labeled `competition`:
 https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition
 
-Stuck, or something in the docs is wrong? Ask in Discord rather than guessing.
+Stuck, or something in the docs is wrong? Ask in [Discord](https://devdogsuga.org/discord) rather than guessing.
 
 ## Before you open a pull request
 

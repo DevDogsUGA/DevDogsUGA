@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Ask a question on Discord
-    url: https://github.com/DevDogsUGA
-    about: Questions about setup, docs, or anything not a bug/feature go to the club Discord, linked from our GitHub org profile.
+    url: https://devdogsuga.org/discord
+    about: Questions about setup, docs, or anything that isn't a bug or feature request go to the club Discord.
