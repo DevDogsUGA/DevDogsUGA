@@ -102,12 +102,12 @@ catalog:
   # dependency now and pins its own copy there; nothing left in this
   # workspace imports it.
   eslint: ^9.39.5
-  # supabase tracks the `latest` dist-tag so every install pulls the newest
-  # CLI — the local dev/migration tool has no lockstep with the runtime SDKs
-  # (@supabase/* above) and its releases are frequent. Kept out of the
-  # minimumReleaseAge hold via minimumReleaseAgeExclude below, so `latest`
-  # actually resolves to the newest version instead of the newest older-than-N.
-  supabase: latest
+  # supabase is pinned exactly, not `latest`: a `latest` specifier is
+  # re-resolved by every lockfile update, so an unrelated one (a Renovate
+  # Backstage bump, say) would quietly move the CLI too. Its releases are
+  # frequent and it has no lockstep with the runtime SDKs (@supabase/* above);
+  # bump it by hand here when a new CLI is wanted.
+  supabase: 2.117.0
   tsx: ^4.23.12
   typescript: ^6.0.3
   # Bumped off 4.133.0 (vinext Phase 0 spike, schedule-builder): the
@@ -216,10 +216,6 @@ minimumReleaseAgeExclude:
   - miniflare@5.20260916.0-alpha
   - workerd@1.20260916.1
   - wrangler@4.136.3
-  # Version-less on purpose: the catalog pins supabase to `latest`, so no fixed
-  # version can be listed here. The bare name exempts every version, letting
-  # `latest` resolve to the newest release instead of being held back.
-  - supabase
   - '@sentry/core@10.75.1'
   - '@sentry/browser-utils@10.75.1'
   - '@sentry/browser@10.75.1'

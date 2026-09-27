@@ -124,7 +124,7 @@ catalogs:
       specifier: ^19.2.8
       version: 19.2.8
     supabase:
-      specifier: latest
+      specifier: 2.117.0
       version: 2.117.0
     tailwindcss:
       specifier: ^4.3.3
