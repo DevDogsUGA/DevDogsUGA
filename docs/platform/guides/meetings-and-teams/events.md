@@ -9,10 +9,10 @@ section: infrastructure
 
 **Meetings and workshops are authored as data, not typed into a base.**
 `@devdogsuga/events` holds a Zod schema, a publishability validator, and the
-data itself — `data/meetings.json` today, one file per term if that ever
+data itself — `src/data/meetings.json` today, one file per term if that ever
 stops being enough. It is a published package, and its source lives in the
 sibling **Backstage** repository, not here: officers propose a change as a
-pull request against `packages/events/data/meetings.json` there, and
+pull request against `packages/events/src/data/meetings.json` there, and
 Backstage's own CI (`pnpm --filter @devdogsuga/events check`) blocks the merge
 if it does not parse or fails a publishability rule. There is no runtime
 refusal path — Airtable's per-field sync-status refusals are gone along with
@@ -93,7 +93,7 @@ then either re-run `pnpm devtools db reset` or run `pnpm devtools cron run
 
 ## Migrated ids
 
-The data that seeded `data/meetings.json` came from the Airtable base this
+The data that seeded `src/data/meetings.json` came from the Airtable base this
 replaced. Every migrated meeting and workshop keeps its **old Airtable
 record id** (`"recXXXXXXXXXXXXXX"`) as its `configId`, so the reconcile's
 first pass matched the existing Postgres rows one-to-one instead of archiving
