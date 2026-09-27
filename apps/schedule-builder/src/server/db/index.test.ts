@@ -112,6 +112,13 @@ describe("schedule-builder db module", () => {
     expect(createDbMock).toHaveBeenCalledWith(envMock.DB_URL, relationsMock);
   });
 
+  it("treats an unset DEPLOY_ENV as development, as env.ts does", async () => {
+    Reflect.deleteProperty(envMock, "DEPLOY_ENV");
+    const { db } = await loadDb();
+    expect(() => trigger(db)).not.toThrow();
+    expect(createDbMock).toHaveBeenCalledWith(envMock.DB_URL, relationsMock);
+  });
+
   it("reuses one client per request and creates a new one per distinct request", async () => {
     workerEnvMock.HYPERDRIVE = { connectionString: "postgres://one" };
     const { db } = await loadDb();

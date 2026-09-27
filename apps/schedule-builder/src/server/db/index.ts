@@ -39,7 +39,10 @@ function localDb(): ScheduleBuilderDb {
 const currentDb = cacheForRequest((): ScheduleBuilderDb => {
   const hyperdrive = workerEnv.HYPERDRIVE;
   if (!hyperdrive) {
-    if (env.DEPLOY_ENV !== "development") {
+    // Unset means development, the same rule `env.ts` resolves by. The
+    // schema's default doesn't apply under SKIP_ENV_VALIDATION (CI's test
+    // lanes), so this can't rely on it.
+    if ((env.DEPLOY_ENV ?? "development") !== "development") {
       throw new Error(
         `The ${env.DEPLOY_ENV} schedule-builder Worker has no HYPERDRIVE binding.`,
       );
