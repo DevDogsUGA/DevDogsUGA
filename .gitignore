@@ -94,12 +94,11 @@ CLAUDE.md
 .idea/vcs.xml
 
 # drizzle-kit pull byproducts: a fully commented-out "initial migration" plus the
-# snapshot that pairs with it. Migrations live in packages/sb/supabase/migrations
-# and nothing here runs `drizzle-kit generate`, so nothing diffs against these.
+# snapshot that pairs with it. Migrations live in supabase/migrations and
+# nothing here runs `drizzle-kit generate`, so nothing diffs against these.
 # The sibling schema.ts / relations.ts ARE source and stay tracked.
 **/drizzle/*_*/
 **/schema/generated/*_*/
-drizzle-generated/
 
 branch_structure.json
 temp_auto_push.bat
