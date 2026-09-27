@@ -148,14 +148,15 @@ export const relations = defineRelations(schema, (r) => ({
 	subjectsInScheduleBuilder: {
 		coursesInScheduleBuilders: r.many.coursesInScheduleBuilder(),
 	},
-	buildingsInScheduleBuilder: {
-		offeringsInScheduleBuilders: r.many.offeringsInScheduleBuilder({
-			from: r.buildingsInScheduleBuilder.id.through(r.meetingsInScheduleBuilder.buildingId),
-			to: r.offeringsInScheduleBuilder.crn.through(r.meetingsInScheduleBuilder.offeringCrn)
-		}),
-	},
 	offeringsInScheduleBuilder: {
-		buildingsInScheduleBuilders: r.many.buildingsInScheduleBuilder(),
+		buildingsInScheduleBuilders: r.many.buildingsInScheduleBuilder({
+			from: [r.offeringsInScheduleBuilder.academicPeriod.through(r.meetingsInScheduleBuilder.academicPeriod), r.offeringsInScheduleBuilder.crn.through(r.meetingsInScheduleBuilder.offeringCrn)],
+			to: r.buildingsInScheduleBuilder.id.through(r.meetingsInScheduleBuilder.buildingId)
+		}),
+		partsOfTermInScheduleBuilder: r.one.partsOfTermInScheduleBuilder({
+			from: [r.offeringsInScheduleBuilder.academicPeriod, r.offeringsInScheduleBuilder.partOfTerm],
+			to: [r.partsOfTermInScheduleBuilder.academicPeriod, r.partsOfTermInScheduleBuilder.code]
+		}),
 		termsInScheduleBuilder: r.one.termsInScheduleBuilder({
 			from: r.offeringsInScheduleBuilder.academicPeriod,
 			to: r.termsInScheduleBuilder.academicPeriod
@@ -177,6 +178,16 @@ export const relations = defineRelations(schema, (r) => ({
 			to: r.scheduleTypesInScheduleBuilder.id
 		}),
 	},
+	buildingsInScheduleBuilder: {
+		offeringsInScheduleBuilders: r.many.offeringsInScheduleBuilder(),
+	},
+	partsOfTermInScheduleBuilder: {
+		offeringsInScheduleBuilders: r.many.offeringsInScheduleBuilder(),
+		termsInScheduleBuilder: r.one.termsInScheduleBuilder({
+			from: r.partsOfTermInScheduleBuilder.academicPeriod,
+			to: r.termsInScheduleBuilder.academicPeriod
+		}),
+	},
 	termsInScheduleBuilder: {
 		offeringsInScheduleBuilders: r.many.offeringsInScheduleBuilder(),
 		partsOfTermInScheduleBuilders: r.many.partsOfTermInScheduleBuilder(),
@@ -189,12 +200,6 @@ export const relations = defineRelations(schema, (r) => ({
 	},
 	scheduleTypesInScheduleBuilder: {
 		offeringsInScheduleBuilders: r.many.offeringsInScheduleBuilder(),
-	},
-	partsOfTermInScheduleBuilder: {
-		termsInScheduleBuilder: r.one.termsInScheduleBuilder({
-			from: r.partsOfTermInScheduleBuilder.academicPeriod,
-			to: r.termsInScheduleBuilder.academicPeriod
-		}),
 	},
 	userPlanDraftCoursesInScheduleBuilder: {
 		coursesInScheduleBuilder: r.one.coursesInScheduleBuilder({

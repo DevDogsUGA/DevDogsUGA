@@ -1,6 +1,6 @@
 import { pageOgImage, contentType, size } from "~/lib/ogImage";
 
-/** The link card for `/partners`. Copy and colour live in `@devdogsuga/og`. */
+/** The link card for `/partners`. Copy and colour live in `@devdogsuga/open-graph`. */
 const card = pageOgImage("/partners");
 
 export const alt = card.alt;

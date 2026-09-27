@@ -1,17 +1,21 @@
 /**
- * The sidebar's ordering rules, in particular where a FOLDER goes, which no
+ * `buildDocsTree`'s ordering rules, in particular where a FOLDER goes, which no
  * folder declares for itself.
  *
  * Read the first describe block before the rest. A top-level folder's number
- * decides far less than it looks like, because `Nodes` in
- * `components/DocsSidebar/Tree.tsx` renders depth-0 nodes as
- * `[...pages, ...folders]`. Every top-level folder is drawn as a section
- * heading below every loose page whatever `order` says, and `reference/` was
- * already last in the platform sidebar before this module read `order` at all.
- * The number decides the order of the sections relative to each other,
- * everything below the top level, and `firstPagePath`, which walks the array
- * rather than the rendering. `asSidebar` here is that partition transcribed, so
- * the depth-0 tests assert what a reader sees rather than what the array holds.
+ * decides far less than it looks like. This is the tree `getDocsTree` returns
+ * — the flat, whole-project shape `generateStaticParams`, the sitemap and
+ * `firstPagePath` all walk — not the sidebar's own view, which is
+ * `buildDocsSidebarSections`'s fixed Getting-started/Guides/Infrastructure/
+ * Reference grouping (see the tests further down this file, and
+ * `components/DocsSidebar/Tree.tsx`, which renders THAT rather than this
+ * module's raw output). `asSidebar` here transcribes one thing the two shapes
+ * still agree on: a top-level folder gathers below every loose page at its own
+ * level whatever `order` says, which is why `reference/` was already last in
+ * the platform sidebar before this module read `order` at all. The number
+ * still decides the order of the folders relative to each other, everything
+ * below the top level, and `firstPagePath`, which walks the array rather than
+ * either rendering.
  *
  * Where a fixture uses real numbers it says so.
  * `docs/platform/reference/server-actions.md` does carry `order: 1`, and the
@@ -21,9 +25,11 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  buildDocsSidebarSections,
   buildDocsTree,
   findFolder,
   firstPagePath,
+  type DocsSectionId,
   type DocsTreeNode,
 } from "./docsTree";
 
@@ -90,7 +96,7 @@ describe("the top level", () => {
     // before `order` existed: adding `order` did not quietly reshuffle them.
     const tree = buildDocsTree([
       page("contributing", "Contributing"),
-      page("elections", "Elections"),
+      page("deploying", "Deploying"),
       page("documentation-system/writing-docs", "Writing Docs"),
       page("reference/routes", "Routes", 2),
       page("reference/supabase", "Supabase", 224),
@@ -98,7 +104,7 @@ describe("the top level", () => {
 
     expect(labels(asSidebar(tree))).toEqual([
       "Contributing",
-      "Elections",
+      "Deploying",
       "Documentation System/",
       "Reference/",
     ]);
@@ -127,14 +133,14 @@ describe("pages within a folder", () => {
     const tree = buildDocsTree([
       page("caching", "Caching"),
       page("index", "Platform"),
-      page("airtable-setup", "Airtable Setup"),
+      page("appendix", "Appendix"),
       page("getting-started", "Getting Started", 1),
     ]);
 
     expect(labels(tree)).toEqual([
       "Platform",
       "Getting Started",
-      "Airtable Setup",
+      "Appendix",
       "Caching",
     ]);
   });
@@ -320,18 +326,18 @@ describe("where a folder below the top level goes", () => {
     // subfolder under them starts again at 201. There is no one run here for a
     // folder to sit inside. Taking the LARGEST declared number sorted these
     // three by how many pages they happen to hold: Devtools last on 209
-    // because it has nine, Docs Build first on 201 because it has one. The
+    // because it has nine, Docs Compiler first on 201 because it has one. The
     // smallest ties all three at 201, and the title tiebreak settles it the way
     // it did before folders were placed by their contents at all.
     const tree = buildDocsTree([
-      page("reference/api/airtable", "@devdogsuga/airtable", 200),
+      page("reference/api/open-graph", "@devdogsuga/open-graph", 200),
       page("reference/api/devtools", "@devdogsuga/devtools", 200),
-      page("reference/api/docs-build", "@devdogsuga/docs-build", 200),
-      page("reference/api/drizzle", "@devdogsuga/drizzle", 200),
+      page("reference/api/docs-compiler", "@devdogsuga/docs-compiler", 200),
+      page("reference/api/db", "@devdogsuga/db", 200),
       page("reference/api/email", "@devdogsuga/email", 200),
       page("reference/api/env", "@devdogsuga/env", 200),
       page("reference/api/supabase", "@devdogsuga/supabase", 200),
-      page("reference/api/devtools/airtable", "devtools/airtable", 201),
+      page("reference/api/devtools/github", "devtools/github", 201),
       page("reference/api/devtools/bws", "devtools/bws", 202),
       page("reference/api/devtools/deploy", "devtools/deploy", 203),
       page("reference/api/devtools/docs", "devtools/docs", 204),
@@ -340,21 +346,21 @@ describe("where a folder below the top level goes", () => {
       page("reference/api/devtools/oauth", "devtools/oauth", 207),
       page("reference/api/devtools/planner", "devtools/planner", 208),
       page("reference/api/devtools/signing-key", "devtools/signing-key", 209),
-      page("reference/api/docs-build/gen", "docs-build/gen", 201),
+      page("reference/api/docs-compiler/gen", "docs-compiler/gen", 201),
       page("reference/api/email/runtime", "email/runtime", 201),
       page("reference/api/email/templates", "email/templates", 202),
     ]);
 
     expect(labels(findFolder(tree, "reference/api")!.children)).toEqual([
-      "@devdogsuga/airtable",
+      "@devdogsuga/db",
       "@devdogsuga/devtools",
-      "@devdogsuga/docs-build",
-      "@devdogsuga/drizzle",
+      "@devdogsuga/docs-compiler",
       "@devdogsuga/email",
       "@devdogsuga/env",
+      "@devdogsuga/open-graph",
       "@devdogsuga/supabase",
       "Devtools/",
-      "Docs Build/",
+      "Docs Compiler/",
       "Email/",
     ]);
   });
@@ -368,11 +374,111 @@ describe("firstPagePath", () => {
     // rather than the alphabetically first API page. The sidebar's partition
     // never enters into it. `firstPagePath` reads the array.
     const tree = buildDocsTree([
-      page("reference/api/airtable", "@devdogsuga/airtable", 200),
+      page("reference/api/open-graph", "@devdogsuga/open-graph", 200),
       page("reference/api/supabase", "@devdogsuga/supabase", 200),
       page("reference/components/index", "Components", 100),
     ]);
 
     expect(firstPagePath(tree)).toBe("reference/components/index");
+  });
+});
+
+/**
+ * The sidebar's own grouping, orthogonal to `buildDocsTree`'s folder-based
+ * one: a project's root index is pulled out as "Overview" and everything else
+ * buckets into the four fixed sections by the `section` each page's row
+ * already carries, in the fixed Getting started / Guides / Infrastructure /
+ * Reference order, with an empty section dropped rather than drawn.
+ */
+function sectionedPage(
+  path: string,
+  title: string,
+  section: DocsSectionId | null,
+  order: number | null = null,
+) {
+  return { path, title, order, section };
+}
+
+describe("buildDocsSidebarSections", () => {
+  it("pulls the project's root index out as Overview, not into any section", () => {
+    const tree = buildDocsSidebarSections([
+      sectionedPage("index", "Platform", null),
+      sectionedPage("getting-started", "Getting Started", "getting-started"),
+    ]);
+
+    expect(tree.overview).toEqual({
+      type: "page",
+      path: "index",
+      title: "Platform",
+      order: null,
+    });
+    expect(tree.sections.map((s) => s.id)).toEqual(["getting-started"]);
+  });
+
+  it("orders the sections Getting started, Guides, Infrastructure, Reference regardless of input order", () => {
+    const tree = buildDocsSidebarSections([
+      sectionedPage("reference/api", "API", "reference"),
+      sectionedPage("infrastructure/deploys", "Deploys", "infrastructure"),
+      sectionedPage("guides/setup", "Setup", "guides"),
+      sectionedPage("getting-started/install", "Install", "getting-started"),
+    ]);
+
+    expect(tree.sections.map((s) => s.id)).toEqual([
+      "getting-started",
+      "guides",
+      "infrastructure",
+      "reference",
+    ]);
+  });
+
+  it("drops a section that holds nothing rather than drawing an empty heading", () => {
+    const tree = buildDocsSidebarSections([
+      sectionedPage("guides/setup", "Setup", "guides"),
+    ]);
+
+    expect(tree.sections.map((s) => s.id)).toEqual(["guides"]);
+  });
+
+  it("has no Overview for a project with no root index", () => {
+    const tree = buildDocsSidebarSections([
+      sectionedPage("guides/setup", "Setup", "guides"),
+    ]);
+
+    expect(tree.overview).toBeNull();
+  });
+
+  it("keeps a section's own ordering rules, same as buildDocsTree", () => {
+    // Two guides pages, one declaring an index inside its own subfolder — the
+    // index-page-first rule `buildDocsTree` already enforces, unaffected by
+    // being routed through a section first.
+    const tree = buildDocsSidebarSections([
+      sectionedPage("guides/deploying", "Deploying", "guides", 2),
+      sectionedPage("guides/contributing", "Contributing", "guides", 1),
+    ]);
+
+    // Both pages share the `guides/` path segment, so `buildDocsTree` (which
+    // this section's tree is built by) wraps them in one top-level `Guides`
+    // folder rather than leaving them loose — same shape it would produce
+    // outside a section, and exactly what `SectionHeading` in
+    // `components/DocsSidebar/Tree.tsx` unwraps for display.
+    const guides = tree.sections.find((s) => s.id === "guides")!;
+    const guidesFolder = findFolder(guides.nodes, "guides")!;
+    expect(guidesFolder.segment).toBe("guides");
+    expect(labels(guidesFolder.children)).toEqual([
+      "Contributing",
+      "Deploying",
+    ]);
+  });
+
+  it("treats a page with no declared section as guides, the documented default", () => {
+    const tree = buildDocsSidebarSections([
+      sectionedPage("random", "Random", null),
+    ]);
+
+    // Not Overview — "random" isn't the project's root index — and not
+    // dropped either: it lands in Guides, same as the contract's fallback for
+    // any page outside reference/.
+    expect(tree.overview).toBeNull();
+    expect(tree.sections.map((s) => s.id)).toEqual(["guides"]);
   });
 });

@@ -17,9 +17,9 @@
   },
   // `env.ts` at the package root is the env manifest: nothing imports it, so
   // without an explicit entry here it would never be typechecked and its
-  // define() metadata would be unenforced. Same arrangement as
-  // packages/devtools/tsconfig.json. It is NOT under `src` on purpose -- it is
-  // repository tooling read by devtools under Node, not Worker source, and
-  // wrangler bundles from `src/index.ts` so it can never reach the edge.
+  // define() metadata would be unenforced. It is NOT under `src` on purpose
+  // -- it is repository tooling read by the installed `devtools` bin under
+  // Node, not Worker source, and wrangler bundles from `src/index.ts` so it
+  // can never reach the edge.
   "include": ["src", "env.ts"]
 }

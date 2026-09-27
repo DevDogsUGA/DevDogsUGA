@@ -51,10 +51,7 @@ user_custom_roles as (
     r."canCreateCredentials",
     r."canManageVerification",
     r."canManageAttendance",
-    r."canExportStars",
-    r."canTriggerSync",
-    r."canVoteAsOfficer",
-    r."canAuditBallots"
+    r."canExportStars"
   from "platform"."userRoles" ur
   inner join "platform"."roles" r on r.id = ur."roleId" and r."roleType" = 'custom'
 ),
@@ -73,10 +70,7 @@ first_non_null as (
     (array_agg(ucr."canCreateCredentials" order by ucr.rank asc) filter (where ucr."canCreateCredentials" is not null))[1] as "canCreateCredentials",
     (array_agg(ucr."canManageVerification" order by ucr.rank asc) filter (where ucr."canManageVerification" is not null))[1] as "canManageVerification",
     (array_agg(ucr."canManageAttendance" order by ucr.rank asc) filter (where ucr."canManageAttendance" is not null))[1] as "canManageAttendance",
-    (array_agg(ucr."canExportStars" order by ucr.rank asc) filter (where ucr."canExportStars" is not null))[1] as "canExportStars",
-    (array_agg(ucr."canTriggerSync" order by ucr.rank asc) filter (where ucr."canTriggerSync" is not null))[1] as "canTriggerSync",
-    (array_agg(ucr."canVoteAsOfficer" order by ucr.rank asc) filter (where ucr."canVoteAsOfficer" is not null))[1] as "canVoteAsOfficer",
-    (array_agg(ucr."canAuditBallots" order by ucr.rank asc) filter (where ucr."canAuditBallots" is not null))[1] as "canAuditBallots"
+    (array_agg(ucr."canExportStars" order by ucr.rank asc) filter (where ucr."canExportStars" is not null))[1] as "canExportStars"
   from user_custom_roles ucr
   group by ucr."userId"
 ),
@@ -93,9 +87,6 @@ select
   case when rh."userId" is not null then true else coalesce(fnn."canManageVerification", false) end as "canManageVerification",
   case when rh."userId" is not null then true else coalesce(fnn."canManageAttendance", false) end as "canManageAttendance",
   case when rh."userId" is not null then true else coalesce(fnn."canExportStars", false) end as "canExportStars",
-  case when rh."userId" is not null then true else coalesce(fnn."canTriggerSync", false) end as "canTriggerSync",
-  case when rh."userId" is not null then true else coalesce(fnn."canVoteAsOfficer", false) end as "canVoteAsOfficer",
-  case when rh."userId" is not null then true else coalesce(fnn."canAuditBallots", false) end as "canAuditBallots",
   case when rh."userId" is not null then true else coalesce(fnn."isLeader", false) end as "isLeader",
   case when rh."userId" is not null then '-Infinity'::double precision else coalesce(fnn."minRank", 'Infinity'::double precision) end as "minRank"
 from all_users au
@@ -174,8 +165,8 @@ create trigger "userRoles_refresh_resolved_permissions"
 -- frequent writes to this table and they cannot affect a resolved permission.
 --
 -- Adding a permission column to platform."roles" means adding it here and to
--- the view body above. The list is fifteen names and must stay in step with the
--- eleven permission columns plus id, rank, isLeadership and roleType.
+-- the view body above. The list is twelve names and must stay in step with
+-- the eight permission columns plus id, rank, isLeadership and roleType.
 create trigger "roles_refresh_resolved_permissions"
   after insert
      or update of
@@ -190,10 +181,7 @@ create trigger "roles_refresh_resolved_permissions"
           "canCreateCredentials",
           "canManageVerification",
           "canManageAttendance",
-          "canExportStars",
-          "canTriggerSync",
-          "canVoteAsOfficer",
-          "canAuditBallots"
+          "canExportStars"
      or delete
      or truncate
      on "platform"."roles"

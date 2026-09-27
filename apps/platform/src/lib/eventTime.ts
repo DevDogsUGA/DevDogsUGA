@@ -10,7 +10,7 @@
  * bare local timestamp is read in whatever zone the reader is in. Here we name
  * the zone, there the offset.
  *
- * The zone itself is DECLARED in `@devdogsuga/og/event` and re-exported here,
+ * The zone itself is DECLARED in `@devdogsuga/brand/event` and re-exported here,
  * so this module stays the one place the app imports it from. It moved because
  * a second renderer needs it: `pnpm devtools images` draws the same event cards
  * to disk for the GDG on Campus platform, and a CLI cannot import a module out
@@ -19,11 +19,11 @@
  *
  * That entry point imports nothing at all — deliberately, because
  * `lib/meetingTitle.ts` imports EVENT_TZ and is safe for a client component.
- * Routing it through `@devdogsuga/og`'s index instead would put a few hundred
+ * Routing it through `@devdogsuga/brand`'s index instead would put a few hundred
  * kilobytes of embedded fonts one bundler decision away from the browser.
  */
-export { EVENT_TZ } from "@devdogsuga/og/event";
-import { EVENT_TZ } from "@devdogsuga/og/event";
+export { EVENT_TZ } from "@devdogsuga/brand/event";
+import { EVENT_TZ } from "@devdogsuga/brand/event";
 
 const DAY_PARTS = new Intl.DateTimeFormat("en-US", {
   timeZone: EVENT_TZ,
@@ -66,7 +66,7 @@ function clubDateParts(at: Date): {
  *
  * `Intl.DateTimeFormat` with an explicit `timeZone` is the pure way to ask.
  * `@date-fns/tz`'s `TZDate` constructor reads the clock and would drop a
- * calling page out of the prerendered shell (see docs/monorepo/stack/nextjs.md,
+ * calling page out of the prerendered shell (see docs/_shared/guides/stack/nextjs.md,
  * "Why does a client component that formats a date drop the page out of the
  * static shell?"). This reads no clock and touches nothing but its argument, so
  * it is safe in a client component and gives byte-identical answers on both
@@ -226,9 +226,9 @@ function monthIndex({ year, month }: ClubMonth): number {
  * became the defect: every meeting past the bound synced into Postgres and
  * appeared on no surface at all. Not on the calendar, not in the schedule
  * list, and not reachable by paging either, because the page derives its
- * paging bounds from this same span. From the officers' side of Airtable that
- * is indistinguishable from the sync ignoring the rows, which is exactly what
- * it was reported as.
+ * paging bounds from this same span. From the officers' side of authoring
+ * that is indistinguishable from the sync ignoring the rows, which is exactly
+ * what it was reported as.
  *
  * Two clamps, and they are different in kind. The floor is a promise to the
  * reader: an empty base still gets a calendar somebody can page forward

@@ -15,7 +15,7 @@ describe("showsAnnouncement", () => {
     "/community",
     "/partners",
     "/docs",
-    "/docs/platform/airtable-setup",
+    "/docs/platform/guides/meetings-and-teams/events",
     "/legal/privacy",
     "/competitions/spring-2026",
   ];
@@ -26,8 +26,6 @@ describe("showsAnnouncement", () => {
     "/console/permissions",
     "/teams/requests",
     "/tools/oauth",
-    "/vote",
-    "/vote/some-election",
     "/oauth/consent",
   ];
 

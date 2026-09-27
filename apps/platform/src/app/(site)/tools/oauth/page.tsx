@@ -21,8 +21,8 @@ async function OAuthData({ searchParams }: Props) {
   return (
     <>
       <OAuthGateDialog
-        key={data.clientId ?? "disabled"}
-        clientId={data.clientId}
+        key={data.hasAnyClient ? "enabled" : "disabled"}
+        hasAnyClient={data.hasAnyClient}
         hasGithub={data.hasGithub}
       />
 

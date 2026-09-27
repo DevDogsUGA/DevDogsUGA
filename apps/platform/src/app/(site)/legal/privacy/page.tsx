@@ -72,9 +72,9 @@ export default async function Privacy() {
           you draft or submit for eligible DevDogs meetings and competitions.
         </li>
         <li>
-          <strong>Operational history:</strong> Officer corrections and an
-          append-only audit history, including who made a change, why it was
-          made, and reflection revisions before and after the change.
+          <strong>Operational history:</strong> An append-only audit history,
+          including who made a change, why it was made, and reflection revisions
+          before and after the change.
         </li>
       </ul>
       <h3 id="-2-how-we-use-your-data-">
@@ -155,8 +155,8 @@ export default async function Privacy() {
           reflections. These records are not public leaderboards.
         </li>
         <li>
-          Authorized officers can access attendance and EL reflection records in
-          Airtable. Officers with Audit Log access can also inspect the full
+          Authorized officers can access attendance and EL reflection records on
+          the platform. Officers with Audit Log access can also inspect the full
           edit history of a reflection.
         </li>
         <li>
@@ -173,14 +173,14 @@ export default async function Privacy() {
         <strong>6. Third-Party Services</strong>
       </h3>
       <p>
-        We use external platforms including GitHub, Discord, Google, Airtable,
-        and our hosting and database providers to facilitate club operations.
-        Attendance, participation, member metrics, reflections, and correction
-        status are synchronized to Airtable for officer workflows. Officers may
-        export applicable attendance and reflection evidence for independent
-        university EL review. If any financial transactions occur (such as dues
-        or merch), they are handled by UGA&#39;s Paciolan system. These services
-        have their own privacy policies which govern their data handling.
+        We use external platforms including GitHub, Discord, Google, and our
+        hosting and database providers to facilitate club operations.
+        Attendance, participation, member metrics, and reflections are recorded
+        on the platform. Officers may export applicable attendance and
+        reflection evidence for independent university EL review. If any
+        financial transactions occur (such as dues or merch), they are handled
+        by UGA&#39;s Paciolan system. These services have their own privacy
+        policies which govern their data handling.
       </p>
     </div>
   );

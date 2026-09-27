@@ -33,7 +33,6 @@ import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import { resolveMeetingSegments } from "~/lib/meetingSegments";
 import type {
   MeetingInRange,
-  MeetingRangeJudging,
   MeetingRangeWorkshop,
 } from "~/server/loaders/meetings";
 
@@ -59,7 +58,7 @@ interface Props {
    * The instant the page is rendering at, passed in rather than read here.
    *
    * A `new Date()` in this tree would drop the whole route out of the static
-   * shell with no build warning; see `docs/monorepo/stack/nextjs.md`. It is also
+   * shell with no build warning; see `docs/_shared/guides/stack/nextjs.md`. It is also
    * the only way the countdown on every row agrees with the calendar's "today":
    * one read, threaded down, instead of a dozen a few ms apart.
    */
@@ -92,7 +91,7 @@ const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
 /**
  * One week of the schedule, as the reader experiences it.
  *
- * The week is the club's real unit: the Wednesday build session exists *because*
+ * The week is the club's real unit: the Wednesday dev session exists *because*
  * of the Monday's sprint, and `CompetitionTimeline` has always drawn the format
  * that way. It also pays for itself once there are two nights most weeks: twice
  * the rows, half as many headings.
@@ -132,7 +131,7 @@ function weekLabel(key: string): string {
 /**
  * The filters offered, derived from what is actually in the list.
  *
- * A fixed set of chips would offer "Build Session" in a summer with none, and a
+ * A fixed set of chips would offer "Dev Session" in a summer with none, and a
  * filter for a kind nothing on screen has returns an empty list. Derived from
  * the rows in hand, it offers exactly what is there.
  *
@@ -467,9 +466,10 @@ function ScheduleRow({
   // answer than saying it is on right now.
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
 
-  // A cancelled night STAYS on the schedule, struck through. Deleting it in
-  // Airtable would remove it, and that is the failure this replaced: somebody
-  // with the date in their calendar sees nothing at all and walks over anyway.
+  // A cancelled night STAYS on the schedule, struck through. Removing it from
+  // config would archive it instead, and that is the failure this replaced:
+  // somebody with the date in their calendar sees nothing at all and walks
+  // over anyway.
   const cancelled = meeting.cancelledAt !== null;
 
   // Every row prints its room, but only one *not* in the usual room earns a chip
@@ -611,15 +611,8 @@ function ScheduleRow({
           ))}
         </div>
 
-        {(meeting.judgedCompetitions.length > 0 ||
-          meeting.workshops.length > 0) && (
+        {meeting.workshops.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
-            {/* Judging first: it is the segment with a deadline behind it, and
-                the one whose competition opened weeks ago and is being closed
-                tonight. Same ordering the resolver bills the night in. */}
-            {meeting.judgedCompetitions.map((judging) => (
-              <JudgingChip key={judging.competitionId} judging={judging} />
-            ))}
             {meeting.workshops.map((workshop) => (
               <WorkshopChip key={workshop.workshopId} workshop={workshop} />
             ))}
@@ -630,57 +623,12 @@ function ScheduleRow({
   );
 }
 
-/** `relative` so the chip's own link paints above the row's stretched one;
- *  without it the row swallows every click meant for a competition. */
-const CHIP_LINK_CLS =
-  "relative z-10 underline decoration-2 underline-offset-2 hover:no-underline";
-
-function JudgingChip({ judging }: { judging: MeetingRangeJudging }) {
-  const badge = segmentBadge.judging;
-
-  return (
-    <Link
-      href={`/competitions/${judging.competitionSlug}/teams`}
-      className={`${badge.chipDark} ${CHIP_DARK_CLS} ${CHIP_LINK_CLS}`}
-    >
-      {/* Same absence as the event page's row, and the same refusal to dress
-          it up: with no project to name, the chip is just the word. */}
-      {`Judging: ${workshopLabel(judging)}`}
-    </Link>
-  );
-}
-
 function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
-  // A null `competitionSlug` is a *supplementary* workshop: a session complete
-  // on its own and an ordinary thing for a Wednesday. So it gets a chip of the
-  // same size, weight and colour family as any other workshop. No faded state,
-  // no "no competition" caveat, no empty slot where a link would have been. The
-  // only difference is a span rather than an anchor, because there is nowhere to
-  // go. Dressing the absence up as a gap would tell members a complete session
-  // was broken.
-  const badge =
-    workshop.competitionSlug === null
-      ? segmentBadge.workshop
-      : segmentBadge.kickoff;
-  const chipCls = `${badge.chipDark} ${CHIP_DARK_CLS}`;
-
-  // `workshopLabel`, not `projectName`: the title is what officers name a
-  // session by, and `projectName` is null for one that teaches a skill rather
+  // `workshopLabel`, not `project`: the title is what officers name a
+  // session by, and `project` is null for one that teaches a skill rather
   // than a codebase, which rendered the career-fair-readiness night as an empty
   // chip. The fallback matches `/events/<slug>`, so the schedule and the
   // permalink cannot print two different words for one row.
-  const label = workshopLabel(workshop);
-
-  if (workshop.competitionSlug === null) {
-    return <span className={chipCls}>{label}</span>;
-  }
-
-  return (
-    <Link
-      href={`/competitions/${workshop.competitionSlug}/teams`}
-      className={`${chipCls} ${CHIP_LINK_CLS}`}
-    >
-      {label}
-    </Link>
-  );
+  const chipCls = `${segmentBadge.workshop.chipDark} ${CHIP_DARK_CLS}`;
+  return <span className={chipCls}>{workshopLabel(workshop)}</span>;
 }

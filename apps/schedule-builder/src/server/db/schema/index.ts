@@ -1,1 +1,1 @@
-export * from "./schedule-builder";
+export * from "./generated/schema";

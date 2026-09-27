@@ -43,9 +43,9 @@ create type "platform"."roleType" as enum ('default', 'root', 'custom');
 -- ============================================================
 --
 -- Shared logins for the accounts a club owns rather than a person: the club
--- email, the Instagram, the Airtable service user. A credential holds roles the
--- same way a member does, which is how "who is allowed to use the club email"
--- is answered with the same vocabulary as "who is allowed to moderate".
+-- email, the Instagram. A credential holds roles the same way a member does,
+-- which is how "who is allowed to use the club email" is answered with the
+-- same vocabulary as "who is allowed to moderate".
 --
 -- Deny-all to every client. Reads and writes go through the service key.
 
@@ -84,20 +84,21 @@ alter table "platform"."credentials" enable row level security;
 --
 -- Column ORDER here reproduces the order the old migration history arrived at:
 -- the first six permissions sit where they were originally declared, the last
--- five were added years later in the file's history and so sit after the Discord
--- columns. Grouping all eleven together would read better and would change what
--- `select *` returns in what order. Leave them where they are.
+-- two were added years later in the file's history and so sit after the
+-- Discord columns. Grouping all eight together would read better and would
+-- change what `select *` returns in what order. Leave them where they are.
 --
 -- There is no "canManageFeedback". It existed, the feedback feature was removed,
 -- and the column went with it. Nothing in this repo may write that name again:
 -- the matview body and the trigger column list in file 06 both used to carry it,
 -- and a stray reference there is a silent staleness bug rather than an error.
 --
--- There is deliberately no "canManageMeetings" either. Meetings, workshops,
--- competitions and side awards are authored in Airtable, and access to the base
--- IS the permission. A second one in Postgres would create two systems that can
--- disagree about who is an officer, and Airtable would win, because that is
--- where the writes happen.
+-- There is deliberately no "canManageMeetings" either. Meetings and workshops
+-- are authored as config-as-code (`@devdogsuga/events`) and competitions
+-- are mirrored from a GitHub Project; access to those authoring surfaces IS
+-- the permission. A second one in Postgres would create a system that could
+-- disagree with GitHub about who is an officer, and GitHub would win, because
+-- that is where the writes happen.
 
 create table "platform"."roles" (
   "id" uuid not null default gen_random_uuid(),
@@ -134,23 +135,11 @@ create table "platform"."roles" (
   "discordSyncedName" text,
   "discordSyncedColor" integer,
 
-  -- Attendance and export permissions. Three rather than one because the
+  -- Attendance and export permissions. Two rather than one because the
   -- audiences differ: canExportStars downloads every member's email, and
-  -- canTriggerSync is reachable from a button inside Airtable, where the
-  -- audience is everyone with base access. All three gate the platform's
-  -- surfaces only. Anyone with Airtable access can export the same data from the
-  -- base directly and no Postgres permission can stop that.
+  -- canManageAttendance does not. Both gate the platform's surfaces only.
   "canManageAttendance" boolean,
   "canExportStars" boolean,
-  "canTriggerSync" boolean,
-
-  -- Election permissions. canVoteAsOfficer casts the single officer ballot;
-  -- canAuditBallots reads ballots belonging to teams other than your own. The
-  -- ballot policies in file 17 call has_permission(uid, 'canAuditBallots'), and
-  -- an unknown permission name resolves to false rather than erroring, so a
-  -- missing column here denies every officer quietly.
-  "canVoteAsOfficer" boolean,
-  "canAuditBallots" boolean,
 
   constraint "roles_pkey" primary key ("id"),
   constraint "roles_title_key" unique ("title"),

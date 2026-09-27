@@ -3,10 +3,8 @@ import { env } from "~/env";
 import { docsHref } from "~/lib/docsSlug";
 import type { DocsTreeNode } from "~/lib/docsTree";
 import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
-import {
-  getJudgedCompetitionSlugs,
-  getMeetingSlugs,
-} from "~/server/loaders/meetings";
+import { getCompetitionSlugs } from "~/server/loaders/competitions";
+import { getMeetingSlugs } from "~/server/loaders/meetings";
 
 /**
  * /sitemap.xml, every public URL this app serves.
@@ -17,7 +15,7 @@ import {
  *     every docs page, which `@devdogsuga/docs` compiles into the bundle at
  *     build time (see `server/docs/queries.ts`). An in-memory walk over a
  *     constant that cannot throw and cannot be slow.
- *   - Everything that needs a query: meetings and judged competitions.
+ *   - Everything that needs a query: meetings and competitions.
  *
  * The second half is wrapped so a database that is down, unreachable, or not
  * configured costs the sitemap those URLs and nothing else. That matters more
@@ -28,9 +26,10 @@ import {
  * treats as an error for the whole file rather than for the entries it could
  * not fetch.
  *
- * Nothing carries `lastModified`. `meetings` and `competitions` sync from
- * Airtable and have no `updatedAt` column, docs pages carry no date through the
- * build, and a `<lastmod>` derived from something else (a meeting's `endsAt`,
+ * Nothing carries `lastModified`. `meetings` reconciles from config and
+ * `competitions` mirrors GitHub, and neither has an `updatedAt` column; docs
+ * pages carry no date through the build either, and a `<lastmod>` derived
+ * from something else (a meeting's `endsAt`,
  * the time the sitemap happened to render) is a claim about revision history
  * this app cannot make. Google reads `lastmod` only where it trusts it, so an
  * invented one is worse than none.
@@ -118,7 +117,7 @@ function docsRoutes(): MetadataRoute.Sitemap {
 async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
   const [meetings, competitions] = await Promise.allSettled([
     getMeetingSlugs(),
-    getJudgedCompetitionSlugs(),
+    getCompetitionSlugs(),
   ]);
 
   const routes: MetadataRoute.Sitemap = [];
@@ -139,10 +138,18 @@ async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
 
   if (competitions.status === "fulfilled") {
     for (const slug of competitions.value) {
+      const encoded = encodeURIComponent(slug);
       routes.push({
-        // Results are final once the tally has run; the page exists to be
+        // The competition's own page: title, brief and dates. Revisited while
+        // it is open, so `weekly` rather than the results page's `yearly`.
+        url: url(`/competitions/${encoded}`),
+        changeFrequency: "weekly",
+        priority: 0.5,
+      });
+      routes.push({
+        // Results are final once a winner is recorded; the page exists to be
         // linked back to rather than revisited.
-        url: url(`/competitions/${encodeURIComponent(slug)}/results`),
+        url: url(`/competitions/${encoded}/results`),
         changeFrequency: "yearly",
         priority: 0.5,
       });
@@ -160,8 +167,8 @@ async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
 /**
  * An hour, rather than the default of "once, at build".
  *
- * Meetings reach this app through the Airtable sync, which runs every fifteen
- * minutes and is not tied to a deploy, so a sitemap frozen at build time stops
+ * Meetings reach this app through the config reconcile, which runs every
+ * fifteen minutes and is not tied to a deploy, so a sitemap frozen at build time stops
  * naming new meetings the moment an officer schedules one. A TTL is the only
  * mechanism available: `revalidateTag` is inert on the Cloudflare adapter,
  * whose `tagCache` is `"dummy"` (the same reason `events/layout.tsx` reaches

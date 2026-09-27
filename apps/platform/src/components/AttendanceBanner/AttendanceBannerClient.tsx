@@ -16,7 +16,6 @@ const HIDDEN_PREFIXES = [
   "/oauth",
   "/teams",
   "/tools",
-  "/vote",
 ];
 
 export default function AttendanceBannerClient({

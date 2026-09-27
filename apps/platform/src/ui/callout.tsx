@@ -28,10 +28,9 @@ interface CalloutProps {
  * Something worth saying next to the thing it is about: a refusal, a warning,
  * a confirmation.
  *
- * One component because these were nine separate inline blocks: an amber `div`
- * on the permissions page, a red `p` on the sandbox page, a green box on the
- * ballot, an `aside` for a locked roster, each picking its own border radius
- * and opacity. The tone is the only thing that ought to vary.
+ * One component rather than a separate inline block per page, each picking
+ * its own border radius and opacity. The tone is the only thing that ought
+ * to vary.
  */
 export default function Callout({
   tone = "info",

@@ -201,26 +201,38 @@ async function eligibleActivity(
   input: z.infer<typeof inputSchema>,
 ): Promise<{ endsAt: Date } | undefined> {
   if (input.activityType === "meeting") {
-    const rows = await tx.execute<{ endsAt: Date }>(sql`
+    // Raw SQL values do not inherit a column's Date decoder (see the same
+    // note in reflections/load.ts), so `m."endsAt"` comes back as text and
+    // has to be converted explicitly before it reaches `reflectionDeadline`.
+    const rows = await tx.execute<{ endsAt: string }>(sql`
       select m."endsAt" from platform.attendance a
       join platform.meetings m on m.id = a."meetingId"
       where a."userId" = ${userId}::uuid and m.id = ${input.activityId}::uuid
-        and a."revokedAt" is null and m."elEligible"
+        and m."countsForCredit"
         and m."deletedAt" is null and m."cancelledAt" is null
       for share of a, m
     `);
-    return rows[0];
+    const row = rows[0];
+    return row && { endsAt: new Date(row.endsAt) };
   }
-  const rows = await tx.execute<{ endsAt: Date }>(sql`
-    select c."judgingStartsAt" as "endsAt"
-    from platform."teamMembers" tm
-    join platform.teams t on t.id = tm."teamId"
-    join platform.competitions c on c.id = t."competitionId"
-    join platform.workshops w on w.id = c."workshopId"
+  // Competition participation, the same rule `reflections/load.ts` and
+  // `memberStars` use: held an active membership on the entering team at the
+  // moment the entry opened. `c."closedAt" is not null` is what makes this a
+  // reflection-eligible activity rather than merely a participated one -- a
+  // reflection only makes sense once the competition is actually over.
+  const rows = await tx.execute<{ endsAt: string }>(sql`
+    select c."closedAt" as "endsAt"
+    from platform."competitionEntries" ce
+    join platform.competitions c on c.id = ce."competitionId"
+    join platform."teamMembers" tm
+      on tm."teamId" = ce."teamId"
+      and tm."joinedAt" <= ce."openedAt"
+      and (tm."leftAt" is null or tm."leftAt" > ce."openedAt")
     where tm."userId" = ${userId}::uuid and c.id = ${input.activityId}::uuid
-      and coalesce(t."participationOverride", t."competedAt" is not null)
-      and c."elEligible" and c."deletedAt" is null and w."deletedAt" is null
-    for share of tm, t, c, w
+      and c."closedAt" is not null
+    for share of ce, c, tm
+    limit 1
   `);
-  return rows[0];
+  const row = rows[0];
+  return row && { endsAt: new Date(row.endsAt) };
 }

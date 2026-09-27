@@ -102,21 +102,20 @@ function utcDateKey(date: Date): string {
 /**
  * The badge a day's dot takes.
  *
- * One dot per meeting, not one per segment. A night that judges one
- * competition and teaches another would otherwise sprout two dots and read as
- * two meetings. The segment order ranks them, so the first is the one to colour
- * by.
+ * One dot per meeting, not one per segment, even though there is only ever
+ * one segment now (`workshop` or `open`) -- the shape is kept general in case
+ * a night ever grows a second one again.
  *
  * This used to be `segments[0] ?? "open"`, which was safe when the resolver
  * guaranteed a non-empty set. It no longer does: `open` is suppressed whenever
  * an officer set a `kind`, so the segment list is empty for every authored
- * night and that fallback would paint a build session with the unscheduled
+ * night and that fallback would paint a dev session with the unscheduled
  * colour, beside its own emerald chip on the same row. `primaryBadge` consults
  * the kind first for that reason.
  */
 function meetingBadge(meeting: MeetingInRange): SegmentBadge | null {
   // Before the kind and before the segments, because it overrides both. A
-  // cancelled build session is not a build session that is happening, and the
+  // cancelled dev session is not a dev session that is happening, and the
   // grid's hues are a legend of what is ON. `getMeetingsInRange` keeps
   // cancelled rows by design, so without this the square kept its cyan dot and
   // the month read as a night going ahead.
@@ -192,17 +191,8 @@ function MeetingDetail({
           </span>
         ))}
       </div>
-      {(meeting.judgedCompetitions.length > 0 ||
-        meeting.workshops.length > 0) && (
+      {meeting.workshops.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          {meeting.judgedCompetitions.map((judging) => (
-            <span
-              key={judging.competitionId}
-              className={`${CHIP_DARK_CLS} border-rose-400/30 bg-rose-500/10 text-rose-300`}
-            >
-              Judging: {workshopLabel(judging)}
-            </span>
-          ))}
           {meeting.workshops.map((workshop) => (
             <span
               key={workshop.workshopId}
@@ -853,7 +843,7 @@ export default function MonthCalendar({
             appears as a dot. A fixed list guesses wrong in both directions. It
             explained "Judging" in rose on months whose every judging night also
             taught something, since workshop sorts first now and the dot is
-            never rose. And it could never mention a build session, whose colour
+            never rose. And it could never mention a dev session, whose colour
             comes from an officer's `kind` rather than from the segment
             union. */}
         <div className="mt-3 hidden flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs text-mauve-400 lg:flex">

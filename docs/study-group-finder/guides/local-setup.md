@@ -1,7 +1,8 @@
 ---
 name: Local setup
-description: Getting the Flutter app running — the SDK, why you run it through the workspace, the placeholder tree, and how Supabase config reaches a compiled binary.
+description: Getting the Flutter app running — why you run it through the workspace, the app tree, and how Supabase config reaches a compiled binary.
 order: 1
+section: guides
 ---
 
 # Local setup
@@ -12,11 +13,11 @@ app today running as a placeholder against the shared Supabase project.
 
 ## Prerequisites
 
-You need the [Flutter SDK](https://docs.flutter.dev/get-started/install) on your
-`PATH` — `pubspec.yaml` pins the Dart SDK to `^3.5.0`. Nothing else in the
-monorepo needs Flutter, and CI scopes the Flutter jobs separately, so a
-contributor without the SDK is never blocked on the rest of the repo. You also
-need a configured root `.env` (see [Quickstart](/docs/monorepo/guides/quickstart)).
+This assumes you have already worked through
+[Getting started](/docs/study-group-finder/getting-started) — the Flutter SDK
+and an Android/iOS emulator ([Flutter setup](/docs/study-group-finder/getting-started/flutter)),
+a Supabase project, and a configured root `.env`. Everything below is what is
+specific to running `apps/study-group-finder` day to day.
 
 ## Run it through the workspace, not `flutter`
 
@@ -41,34 +42,41 @@ gets blank credentials. Sourcing from `with-env` is also what makes the app
 follow the local stack when it is up and the remote project otherwise — the same
 behaviour the web apps get.
 
+`dev`, `build` and `generate-types` all wrap their command in `with-env -c`,
+not plain `with-env`. `-c` is load-bearing: it defers expanding `$API_URL`,
+`$PUBLISHABLE_KEY` and `$SECRET_KEY` until after `with-env` has loaded the
+`.env` files, rather than expanding them from the (empty) ambient
+environment before `with-env` ever runs. `lint`, `test` and `typecheck` need
+none of that — they call `flutter analyze`, `flutter test` and
+`tsc --noEmit` directly, with no env values to inject.
+
 `lib/main.dart` pins the client to this app's schema at init
 (`PostgrestClientOptions(schema: 'study_group_finder')`), so its REST calls
 never stray into another app's data.
 
-## The tree is deliberately thin
+## What's in `lib/`
 
-This is **not** a full `flutter create` checkout. What exists:
+`lib/` holds one file today:
 
-- `lib/main.dart` — the whole app: Supabase init plus a placeholder
-  `MaterialApp` (Material 3, UGA-red seed) whose home is a centred label.
-- `test/widget_test.dart` — a smoke test that pumps the app and asserts the
-  placeholder renders.
-- `tool/` — the docs-extraction helper.
-- Config: `pubspec.yaml`, `supadart.yaml`, `analysis_options.yaml`, `env.ts`,
-  `package.json`.
+- `lib/main.dart` — Supabase init plus a placeholder `MaterialApp` (Material
+  3, UGA-red seed) whose home is a centred label.
 
-There are **no committed platform runner directories** (`android/`, `ios/`,
-`web/`, …), and `lib/generated/` is gitignored. If you need to actually launch on
-a device or the web, run `flutter create .` in the app directory to scaffold the
-runners locally; `build` targets web (`flutter build web`).
+Everything else is scaffolding, not app code: `android/` and `ios/` are the
+committed platform runner directories (this app targets Android and iOS
+only — there is no `web/` directory and no web build path), `test/widget_test.dart`
+is a smoke test that pumps the app and asserts the placeholder renders,
+`tool/` is the docs-extraction helper, and `lib/generated/` (gitignored) is
+where `generate-types` writes supadart's output. As the app grows, new
+screens and logic land under `lib/`.
 
 ## Auth
 
-Auth mirrors the web apps: `devdogs` — the platform's OAuth server — in
-development, `google` in production. `AUTH_MODE` is only the `--dart-define`
-name; the value comes from `NEXT_PUBLIC_AUTH_MODE` in `.env`. The flow is not
-implemented in the app yet — `AUTH_MODE` is read but currently unused beyond the
-constant.
+`AUTH_MODE` selects the sign-in provider the app is built against —
+`devdogs` (the platform's own OAuth server) by default. It is only the
+`--dart-define` name; the value comes from `NEXT_PUBLIC_AUTH_MODE` in `.env`.
+See [Sign in with DevDogs](/docs/platform/guides/identity/oauth) for how the
+provider itself gets configured — building the actual sign-in flow in this
+app is part of the competition brief, not something this page walks through.
 
 ## Env manifest
 

@@ -1,4 +1,4 @@
-import { AppIcon } from "@devdogsuga/og";
+import { AppIcon } from "@devdogsuga/open-graph";
 import { imageResponse } from "~/lib/ogImage";
 
 /**

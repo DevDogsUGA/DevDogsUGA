@@ -1,0 +1,102 @@
+diff --git a/cjs/react-server-dom-webpack-client.browser.development.js b/cjs/react-server-dom-webpack-client.browser.development.js
+index 304013ec827c3b5efe3c0ca08d33e3c688b2453d..c89a423cfedefdc9622275772d136ff5d965e2d2 100644
+--- a/cjs/react-server-dom-webpack-client.browser.development.js
++++ b/cjs/react-server-dom-webpack-client.browser.development.js
+@@ -5216,7 +5216,28 @@
+       EMPTY_REFERENCE_PATH = [],
+       mightHaveStaticConstructor = /\bclass\b.*\bstatic\b/,
+       MIN_CHUNK_SIZE = 65536,
+-      supportsCreateTask = !!console.createTask,
++      supportsCreateTask = (function () {
++        // Cloudflare workerd (vinext dev, not vinext build) implements
++        // console.createTask() as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED
++        // rather than being absent, breaking the `!!console.createTask`
++        // feature-detect this file used to use. A synchronous probe here is
++        // NOT reliable either: workerd lets the probe succeed when this module
++        // is first required outside any request's I/O context (e.g. at Worker
++        // cold start / route warm-up), then throws the SAME call once it runs
++        // inside real request handling -- which is exactly when this module's
++        // one-time, cached `supportsCreateTask` value is actually used. So:
++        // hard-disable it specifically when running on Cloudflare Workers
++        // (per Cloudflare's documented runtime check), leaving every other
++        // runtime's real support intact.
++        // See DevDogsUGA TASK-294; file upstream against cloudflare/workerd
++        // if this comment outlives the gap.
++        if (
++          typeof navigator !== "undefined" &&
++          navigator.userAgent === "Cloudflare-Workers"
++        )
++          return false;
++        return !!console.createTask;
++      })(),
+       fakeFunctionCache = new Map(),
+       fakeFunctionIdx = 0,
+       createFakeJSXCallStack = {
+diff --git a/cjs/react-server-dom-webpack-client.edge.development.js b/cjs/react-server-dom-webpack-client.edge.development.js
+index c686bb62355bbfa8903b240b8d5d92e090015ae4..d1b079915650170d4841b53b19e9926cdabe09df 100644
+--- a/cjs/react-server-dom-webpack-client.edge.development.js
++++ b/cjs/react-server-dom-webpack-client.edge.development.js
+@@ -5253,7 +5253,28 @@
+       EMPTY_REFERENCE_PATH = [],
+       mightHaveStaticConstructor = /\bclass\b.*\bstatic\b/,
+       MIN_CHUNK_SIZE = 65536,
+-      supportsCreateTask = !!console.createTask,
++      supportsCreateTask = (function () {
++        // Cloudflare workerd (vinext dev, not vinext build) implements
++        // console.createTask() as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED
++        // rather than being absent, breaking the `!!console.createTask`
++        // feature-detect this file used to use. A synchronous probe here is
++        // NOT reliable either: workerd lets the probe succeed when this module
++        // is first required outside any request's I/O context (e.g. at Worker
++        // cold start / route warm-up), then throws the SAME call once it runs
++        // inside real request handling -- which is exactly when this module's
++        // one-time, cached `supportsCreateTask` value is actually used. So:
++        // hard-disable it specifically when running on Cloudflare Workers
++        // (per Cloudflare's documented runtime check), leaving every other
++        // runtime's real support intact.
++        // See DevDogsUGA TASK-294; file upstream against cloudflare/workerd
++        // if this comment outlives the gap.
++        if (
++          typeof navigator !== "undefined" &&
++          navigator.userAgent === "Cloudflare-Workers"
++        )
++          return false;
++        return !!console.createTask;
++      })(),
+       fakeFunctionCache = new Map(),
+       fakeFunctionIdx = 0,
+       createFakeJSXCallStack = {
+diff --git a/cjs/react-server-dom-webpack-client.node.development.js b/cjs/react-server-dom-webpack-client.node.development.js
+index fe4e60350ca59459e74f0fa006d130293130f6fc..ef5398d91e15c5b00b38b9c3bd68d4b321be171d 100644
+--- a/cjs/react-server-dom-webpack-client.node.development.js
++++ b/cjs/react-server-dom-webpack-client.node.development.js
+@@ -5373,7 +5373,28 @@
+       EMPTY_REFERENCE_PATH = [],
+       mightHaveStaticConstructor = /\bclass\b.*\bstatic\b/,
+       MIN_CHUNK_SIZE = 65536,
+-      supportsCreateTask = !!console.createTask,
++      supportsCreateTask = (function () {
++        // Cloudflare workerd (vinext dev, not vinext build) implements
++        // console.createTask() as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED
++        // rather than being absent, breaking the `!!console.createTask`
++        // feature-detect this file used to use. A synchronous probe here is
++        // NOT reliable either: workerd lets the probe succeed when this module
++        // is first required outside any request's I/O context (e.g. at Worker
++        // cold start / route warm-up), then throws the SAME call once it runs
++        // inside real request handling -- which is exactly when this module's
++        // one-time, cached `supportsCreateTask` value is actually used. So:
++        // hard-disable it specifically when running on Cloudflare Workers
++        // (per Cloudflare's documented runtime check), leaving every other
++        // runtime's real support intact.
++        // See DevDogsUGA TASK-294; file upstream against cloudflare/workerd
++        // if this comment outlives the gap.
++        if (
++          typeof navigator !== "undefined" &&
++          navigator.userAgent === "Cloudflare-Workers"
++        )
++          return false;
++        return !!console.createTask;
++      })(),
+       fakeFunctionCache = new Map(),
+       fakeFunctionIdx = 0,
+       createFakeJSXCallStack = {

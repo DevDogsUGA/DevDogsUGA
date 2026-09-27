@@ -5,11 +5,10 @@ import { db } from "~/server/db";
  * Supabase Vault, as four functions.
  *
  * **This file must never carry `"use server"`.** These were private to
- * `server/actions/credentials.ts` and had to move so the sandbox work could
- * reach them, but exporting them from a `"use server"` module is not the way:
- * every export there becomes a server action with an HTTP endpoint, so
- * `readVaultSecret` would become an endpoint that hands any browser any secret
- * by id.
+ * `server/actions/credentials.ts`, and exporting them from a `"use server"`
+ * module is not the way to share them more widely: every export there becomes
+ * a server action with an HTTP endpoint, so `readVaultSecret` would become an
+ * endpoint that hands any browser any secret by id.
  *
  * They live here instead, importable by server code and unreachable from a
  * client. The rule that makes that safe is that nothing in this file is

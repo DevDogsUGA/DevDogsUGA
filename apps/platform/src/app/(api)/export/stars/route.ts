@@ -17,17 +17,16 @@ import {
  * GET /export/stars
  *
  * One row per `(member, workshop)`, across every semester. Query parameters:
- * `from`, `to` (ISO dates, on the meeting start) and `project` (a slug).
+ * `from`, `to` (ISO dates, on the meeting start).
  *
  * Gated on `canExportStars`, kept deliberately separate from
  * `canManageAttendance`. Correcting one member's check-in and downloading every
  * member's email are different powers, and the officer who needs the first
  * rarely needs the second.
  *
- * Every download is audited. That is the protection the design noted was LOST
- * by exporting attendance from Airtable instead, where anybody with base access
- * can export a view silently. Keeping the one export that survived detectable
- * stops the loss from spreading to the file with the most PII in it.
+ * Every download is audited. An export nobody can trace is bulk extraction
+ * that looks identical to an authorized read, and this is the file with the
+ * most PII in it, so it is the one that most needs to stay detectable.
  */
 export async function GET(request: Request) {
   await connection();
@@ -82,13 +81,11 @@ function serialize(filters: StarsFilters): Record<string, string> {
   const out: Record<string, string> = {};
   if (filters.from) out.from = filters.from.toISOString();
   if (filters.to) out.to = filters.to.toISOString();
-  if (filters.projectSlug) out.project = filters.projectSlug;
   return out;
 }
 
 function filename(filters: StarsFilters): string {
   const parts = ["stars"];
-  if (filters.projectSlug) parts.push(filters.projectSlug);
   if (filters.from) parts.push(filters.from.toISOString().slice(0, 10));
   if (filters.to) parts.push(filters.to.toISOString().slice(0, 10));
   return `${parts.join("-")}.csv`;

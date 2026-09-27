@@ -1,17 +1,41 @@
 import type { Metadata } from "next";
 import PageShell from "~/components/PageShell";
 import DocsProjectMark from "~/components/DocsProjectMark";
-import DocsTileGrid from "~/components/DocsTileGrid";
-import { groupDocsProjects } from "~/config/docs";
-import { getDocsProjects } from "~/server/docs/queries";
+import DocsTileGrid, { type DocsTile } from "~/components/DocsTileGrid";
+import { DOCS_LANDING_LARGE, DOCS_LANDING_SMALL } from "~/config/docs";
+import { getDocsProjects, type DocsProject } from "~/server/docs/queries";
 
 export const metadata: Metadata = {
   title: "Docs | DevDogs",
   description: "Documentation for DevDogs projects.",
 };
 
+function tile(project: DocsProject, size: "sm" | "lg"): DocsTile {
+  return {
+    href: `/docs/${encodeURIComponent(project.slug)}`,
+    title: project.name,
+    description: project.description,
+    mark: <DocsProjectMark slug={project.slug} size={size} />,
+  };
+}
+
+/** `slugs` in listing order, keeping only the projects that actually exist —
+ * a slug named here with no matching `docs/<slug>/index.md` drops silently
+ * rather than throwing, the same "missing is not an error" stance
+ * `groupDocsProjects` takes for the navbar and sidebar groupings. */
+function projectsFor(
+  projects: DocsProject[],
+  slugs: readonly string[],
+): DocsProject[] {
+  return slugs
+    .map((slug) => projects.find((project) => project.slug === slug))
+    .filter((project): project is DocsProject => project != null);
+}
+
 export default function DocsLandingPage() {
   const projects = getDocsProjects();
+  const large = projectsFor(projects, DOCS_LANDING_LARGE);
+  const small = projectsFor(projects, DOCS_LANDING_SMALL);
 
   return (
     <PageShell
@@ -19,27 +43,28 @@ export default function DocsLandingPage() {
       title="Documentation"
       description="Guides and references for DevDogs projects, published straight from the monorepo."
     >
-      {/* Grouped for the same reason the navbar menu and the sidebar switcher
-          are: one flat grid of six offers no order to read them in, and this
-          is the page a newcomer lands on first. The headings come from the
-          same config, so a project cannot sit under "Apps" here and somewhere
-          else in the menu. */}
       <div className="flex flex-col gap-8">
-        {groupDocsProjects(projects).map((group) => (
-          <section key={group.id} className="flex flex-col gap-3">
+        {/* The front door: which competition team a new contributor is
+            actually choosing between. Large marks, because this is the one
+            place in the docs a reader is picking a destination rather than
+            looking something up. */}
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
+            Which team are you on?
+          </h2>
+          <DocsTileGrid tiles={large.map((project) => tile(project, "lg"))} />
+        </section>
+
+        {/* Everyone touches these two regardless of team, so they stay one
+            tap away without competing with the choice above. */}
+        {small.length > 0 && (
+          <section className="flex flex-col gap-3">
             <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
-              {group.label}
+              Repo-wide
             </h2>
-            <DocsTileGrid
-              tiles={group.projects.map((project) => ({
-                href: `/docs/${encodeURIComponent(project.slug)}`,
-                title: project.name,
-                description: project.description,
-                mark: <DocsProjectMark slug={project.slug} size="lg" />,
-              }))}
-            />
+            <DocsTileGrid tiles={small.map((project) => tile(project, "sm"))} />
           </section>
-        ))}
+        )}
       </div>
 
       {projects.length === 0 && (

@@ -2,6 +2,7 @@
 name: The DevDogs GitHub App
 description: The App the platform authenticates as on GitHub — why it replaced an owner's personal token, why it does not replace the OAuth app, and how to create, install and rotate it.
 order: 3
+section: infrastructure
 ---
 
 # The DevDogs GitHub App
@@ -40,32 +41,36 @@ Two further reasons to keep them separate, both smaller. **Different lifecycles:
 
 Create it in the **organization**, not your personal account — a personal App is exactly the single point of failure this exists to remove. It installs on `DevDogsUGA` and nowhere else, and it is created by hand in GitHub's UI.
 
-The App holds exactly five permissions: `administration: write`, `contents: write`, `metadata: read`, `pull_requests: read`, and `members: write`. **`Organization administration` is deliberately not among them** — nothing calls it, and it reaches the org settings themselves, including the rulesets and base permissions this whole change exists to tighten. It is the one permission that would put the App back where the token was.
+The App holds `administration: write`, `contents: write`, `issues: read`, `metadata: read`, `pull_requests: read`, `members: write`, and `organization_projects: read`. **`Organization administration` is deliberately not among them** — nothing calls it, and it reaches the org settings themselves, including the rulesets and base permissions this whole change exists to tighten. It is the one permission that would put the App back where the token was.
 
 <details>
 <summary>Field by field: what to enter on the New GitHub App form</summary>
 
 **Settings → Developer settings → GitHub Apps → New GitHub App**, as an organization app under `DevDogsUGA`.
 
-| Field           | Value                                                                              |
-| --------------- | ---------------------------------------------------------------------------------- |
-| GitHub App name | `DevDogs Platform`                                                                 |
-| Homepage URL    | `https://devdogsuga.org`                                                           |
-| Description     | Team provisioning, repository access and branch rulesets for DevDogs competitions. |
+| Field           | Value                                                                       |
+| --------------- | --------------------------------------------------------------------------- |
+| GitHub App name | `DevDogs Platform`                                                          |
+| Homepage URL    | `https://devdogsuga.org`                                                    |
+| Description     | Team provisioning, repository access and branch rulesets for DevDogs teams. |
 
 **Identifying and authorizing users:** leave every field blank, and leave "Request user authorization (OAuth) during installation" unchecked. Member login stays on the OAuth app because it needs `write:org`.
 
 **Post installation:** Setup URL blank, "Redirect on update" unchecked. A setup URL is for Apps needing per-installation configuration; this one is installed once, on one organization.
 
-**Webhook:** Active, URL `https://devdogsuga.org/github/webhook`, secret the value of `GH_WEBHOOK_SECRET`, SSL verification enabled. The route is `apps/platform/src/app/(api)/github/webhook/route.ts`; it verifies `X-Hub-Signature-256` and **refuses with 503 when that value is empty**, because an unsigned endpoint that writes `submissionState` would let anyone on the internet mark a team as having merged.
+**Webhook:** ⚠️ code-ready, **not yet enabled by Sloan**. The teams-core step removed the old `/github/webhook`; the teams-mirror step reintroduced it against the new team-branch model -- see [Teams](/docs/platform/guides/meetings-and-teams/teams), "The live mirror" -- and the competitions step added two more events. Nobody has done the dashboard half yet:
 
-**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches); Metadata read-only (mandatory); Pull requests read-only (the webhook payload). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, and the org invitation and membership endpoints). Account permissions: none.
+- **Payload URL:** `{BASE_URL}/github/webhook`, production's URL only -- staging never receives webhooks, see "Why does staging get a second App" below.
+- **Content type:** `application/json`.
+- **Secret:** 32+ random characters, matching `env.ts`'s `GH_WEBHOOK_SECRET`. Push it (`pnpm devtools env push --target production`), then paste the SAME value into this field -- the route verifies `X-Hub-Signature-256` against it (`server/github/webhookSignature.ts`).
+- **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`, `Projects v2 item`, `Issues`, `Pull request`. See [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for what the three Projects/Issues/PR events drive.
+- **Active:** checked.
 
-**Subscribe to events:** Pull request, and nothing else. It is the only event the route handles; anything else gets a 200 and is ignored.
+Every event above except `Projects v2 item`/`Issues` is covered by `Members` and `Contents`, already listed next; those two need the **Projects** organization permission added below.
+
+**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`, `teams.deleteInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches, and the `create`/`delete` webhook events); Issues read-only; Pull requests read-only (`pulls.list` for `reconcileEntries`, and the `pull_request` webhook event); Metadata read-only (mandatory). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, the org invitation/membership endpoints, and the `membership`/`team` webhook events); **Projects read-only** (the Competitions Project's GraphQL reads). Account permissions: none.
 
 **Where can this be installed:** only on this account.
-
-⚠️ If a **repository webhook** already points at the same URL, delete it once the App's webhook is confirmed working. Two deliveries are harmless — `applyPullRequestEvent` is safe to replay — but two places to update the secret is one place to forget.
 
 </details>
 
@@ -94,13 +99,13 @@ Run this for **each** App — production first, then staging with the reduced pe
      --jq '.installations[] | {app: .app_slug, perms: .permissions}'
    ```
 
-   Expect exactly `administration: write`, `contents: write`, `metadata: read`, `pull_requests: read`, `members: write` on production. Anything else was a mis-tick, and this is the cheapest moment to find it.
+   Expect exactly `administration: write`, `contents: write`, `issues: read`, `pull_requests: read`, `metadata: read`, `members: write`, `organization_projects: read` on production. Anything else was a mis-tick, and this is the cheapest moment to find it.
 
 </details>
 
 ## Operating it
 
-Staging is **read-only against GitHub, by construction**: its App holds only `metadata: read` and `pull_requests: read`. A `members` or `administration` entry there is the mistake that matters.
+Staging is **read-only against GitHub, by construction**: its App holds only `metadata: read`. A `members` or `administration` entry there is the mistake that matters.
 
 <details>
 <summary>Why does staging get a second App with different permissions?</summary>
@@ -109,12 +114,14 @@ Staging is **read-only against GitHub, by construction**: its App holds only `me
 
 And staging is the **less** guarded environment: it deploys from `main` on every push, with no reviewer in front of it. Giving it org-write would make a bad merge more dangerous than the owner token this whole change removed.
 
-|              | `DevDogs Platform`                                                 | `DevDogs Platform (staging)`                    |
-| ------------ | ------------------------------------------------------------------ | ----------------------------------------------- |
-| Webhook      | `https://devdogsuga.org/github/webhook`                            | `https://staging.devdogsuga.org/github/webhook` |
-| Repository   | Administration + Contents write, Metadata read, Pull requests read | Metadata read, Pull requests read               |
-| Organization | Members write                                                      | _none_                                          |
-| Private key  | `production`                                                       | `staging`                                       |
+|              | `DevDogs Platform`                             | `DevDogs Platform (staging)` |
+| ------------ | ---------------------------------------------- | ---------------------------- |
+| Webhook      | configured (see above)                         | not configured               |
+| Repository   | Administration + Contents write, Metadata read | Metadata read                |
+| Organization | Members write                                  | _none_                       |
+| Private key  | `production`                                   | `staging`                    |
+
+Staging gets no webhook at all, not a webhook nobody set up: there is nothing in staging's own database for a `membership`/`team`/`create`/`delete` event to repair (`GH_WEBHOOK_SECRET` is still pushed to both targets, the same as every other `scope: "environment"` secret, but staging's route falls back to its dev-bypass check and never receives a real GitHub delivery to verify it against).
 
 Read-only degrades correctly rather than crashing: `provisionTeam` and its neighbours return `failed("api_error", …)` on a 403, so the console shows a clear failure instead of a 500. Nothing in staging calls GitHub unprompted either — `wrangler.jsonc` gives staging `"crons": []`, so `github-reconcile` runs on production alone.
 

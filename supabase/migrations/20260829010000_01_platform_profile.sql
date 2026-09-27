@@ -39,9 +39,9 @@ create type "platform"."academicProgramCategory" as enum (
 --                       somebody drops off. That is what they are for.
 --   legal*, ugaEmail    Who this person is, durably. Never cleared.
 --
--- Pushing involvement* to Airtable as a legal name would blank the field for
--- every member who graduated, took a semester off, or was missing from one CSV,
--- and blanking a dues record's name is silent loss.
+-- Treating involvement* as the legal name would blank it for every member who
+-- graduated, took a semester off, or was missing from one CSV, and blanking a
+-- durable identity record is silent loss.
 --
 -- ugaEmail is also distinct from auth.users.email, which holds whatever address
 -- the member signed up with, a Gmail address for anyone who came in through
@@ -196,12 +196,12 @@ alter table "platform"."profileAcademicPrograms"
   foreign key ("programId") references platform."academicPrograms"("id") on update cascade on delete restrict;
 
 -- Case-folded rather than case-sensitive: MyID addresses are handed out in one
--- case and typed in another, and two spellings of one address would become two
--- member rows in Airtable. `citext` would say this directly, but it is an
--- extension type (extensions.citext under Supabase's layout) and drizzle-kit
--- cannot introspect it into the generated schema. A check plus a plain unique
--- index gives the identical guarantee in types Drizzle already understands. Do
--- not substitute citext here.
+-- case and typed in another, and two spellings of one address would become
+-- two rows here that should be one member. `citext` would say this directly,
+-- but it is an extension type (extensions.citext under Supabase's layout) and
+-- drizzle-kit cannot introspect it into the generated schema. A check plus a
+-- plain unique index gives the identical guarantee in types Drizzle already
+-- understands. Do not substitute citext here.
 alter table "platform"."profile"
   add constraint "profile_ugaEmail_lowercase"
   check ("ugaEmail" is null or "ugaEmail" = lower("ugaEmail"));
@@ -209,14 +209,13 @@ alter table "platform"."profile"
 create unique index "profile_ugaEmail_key"
   on "platform"."profile" ("ugaEmail");
 
--- The unique is why the Airtable attendance import must leave "ugaEmail" null
--- on accounts it creates. That import takes a MyID off a form nobody checked.
--- If a mistyped address were already sitting in this column under somebody
--- else's account, the Involvement roster import, which writes "ugaEmail" for
--- every roster member inside one transaction, would raise a unique violation
--- and abort. One typo in a form would break the import for the whole club.
+-- Written only by the Involvement roster import, which sets "ugaEmail" for
+-- every roster member inside one transaction. The unique is what makes that
+-- safe to run repeatedly: a duplicate anywhere in this column raises a
+-- unique violation and aborts the whole import rather than silently
+-- attaching one member's MyID to another's account.
 comment on index "platform"."profile_ugaEmail_key" is
-  'Unique, and written only by the Involvement roster import. The Airtable attendance import deliberately leaves "ugaEmail" null on accounts it creates: a self-declared MyID landing here would make one typo abort the next roster import for everybody.';
+  'Unique, and written only by the Involvement roster import.';
 
 
 -- ============================================================

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
@@ -30,9 +29,7 @@ import JsonLd, { eventLd } from "~/lib/structuredData";
 import {
   getMeetingBySlug,
   getMeetingWorkshops,
-  getMeetingJudging,
   resolveMeetingSegments,
-  type MeetingRangeJudging,
   type MeetingWorkshop,
 } from "~/server/loaders/meetings";
 
@@ -40,8 +37,8 @@ import {
  * /events/[slug], one meeting, as the body of the dialog its layout opens.
  *
  * The STRUCTURE here is derived and stays that way: the segments come from
- * `resolveMeetingSegments` and the agenda from the workshops and judging
- * attached to the meeting. Nothing restates in prose what the schedule already
+ * `resolveMeetingSegments` and the agenda from the workshops attached to the
+ * meeting. Nothing restates in prose what the schedule already
  * knows, because that copy goes stale the moment the schedule moves and this
  * URL exists to be pasted into Discord weeks in advance.
  *
@@ -125,10 +122,7 @@ export default async function MeetingPage({
   // miss stays inside the dialog with the calendar still behind it.
   if (!meeting) notFound();
 
-  const [workshops, judged] = await Promise.all([
-    getMeetingWorkshops(meeting.id),
-    getMeetingJudging(meeting.id),
-  ]);
+  const workshops = await getMeetingWorkshops(meeting.id);
 
   // Both derived and authored are rendered: a social that also runs a workshop
   // is a real night, and showing only the kind would drop the workshop.
@@ -137,7 +131,6 @@ export default async function MeetingPage({
   const { segments } = resolveMeetingSegments({
     kind: meeting.kind,
     workshops,
-    judgedCompetitions: judged,
   });
   const badges = meetingBadges({ kind: meeting.kind, segments });
 
@@ -257,13 +250,13 @@ export default async function MeetingPage({
         </p>
       </div>
 
-      {/* Plain text from Airtable, rendered as text. Never as markup: it is
-          typed into a form field by an officer, not authored in this repo. */}
+      {/* Plain text authored in config, rendered as text. Never as markup: it
+          is typed by an officer, not authored as markup in this repo. */}
       {meeting.summary !== null && (
         <p className="text-sm/relaxed text-mauve-300">{meeting.summary}</p>
       )}
 
-      {(judged.length > 0 || workshops.length > 0) && (
+      {workshops.length > 0 && (
         <section className="flex flex-col gap-2">
           {/* h3, not h2. The dialog's own title is the h2 here, since Radix
             renders `DialogTitle` as one and uses it for the accessible name, so
@@ -274,18 +267,9 @@ export default async function MeetingPage({
             Agenda
           </h3>
           <ul className="flex flex-col gap-2">
-            {/* Judging first, and only judging carries a time: `judgingStartsAt`
-                is authored, and two competitions judged the same night really do
-                start at 18:00 and 18:40. A workshop has no start of its own. The
-                only honest time for one is the meeting's span, which the header
-                already shows, so these rows print no time rather than inventing
-                one. */}
-            {judged.map((competition) => (
-              <JudgingRow
-                key={competition.competitionId}
-                judging={competition}
-              />
-            ))}
+            {/* A workshop has no start of its own. The only honest time for
+                one is the meeting's span, which the header already shows, so
+                these rows print no time rather than inventing one. */}
             {workshops.map((workshop) => (
               <WorkshopRow key={workshop.workshopId} workshop={workshop} />
             ))}
@@ -357,78 +341,28 @@ export default async function MeetingPage({
 const ROW_CLS =
   "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-white/5 p-3";
 
-function JudgingRow({ judging }: { judging: MeetingRangeJudging }) {
-  const badge = segmentBadge.judging;
-
-  return (
-    <li className={ROW_CLS}>
-      <time
-        dateTime={judging.judgingStartsAt.toISOString()}
-        className="font-display text-sm font-extrabold text-white tabular-nums"
-      >
-        {formatEventTime(judging.judgingStartsAt)}
-      </time>
-      <Link
-        href={`/competitions/${judging.competitionSlug}/teams`}
-        className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
-      >
-        {/* Without a project there is no name to print, and the night still
-            judges something, so the link keeps its target and wears the plain
-            noun rather than opening an empty anchor. */}
-        {workshopLabel(judging)}
-      </Link>
-      <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
-        {badge.label}
-      </span>
-    </li>
-  );
-}
-
 function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
-  // A workshop with no competition is complete on its own and still earns the
-  // workshop badge. It needs no second descriptor restating that relationship;
-  // the absence of a team count already distinguishes it from a kickoff.
-  const badge =
-    workshop.competitionSlug === null
-      ? segmentBadge.workshop
-      : segmentBadge.kickoff;
+  const badge = segmentBadge.workshop;
 
   return (
     <li className={ROW_CLS}>
       <span className="flex flex-col">
-        {/* `workshopLabel`, not `projectName`. Officers name these sessions by
+        {/* `workshopLabel`, not `project`. Officers name these sessions by
             topic ("Supabase", "Career Fair Readiness") and the schema named them
             by project, so the page printed "Platform" where the published
             schedule said "Next.js". A session with no project has only the
             title, and one authored before the column existed has only the
             project, so the fallback runs both ways. */}
-        {workshop.competitionSlug === null ? (
-          <span className="text-sm font-semibold text-white">
-            {workshopLabel(workshop)}
-          </span>
-        ) : (
-          <Link
-            href={`/competitions/${workshop.competitionSlug}/teams`}
-            className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
-          >
-            {workshopLabel(workshop)}
-          </Link>
-        )}
-        {workshop.competitionSlug !== null && (
-          <span className="text-xs text-mauve-400">
-            {workshop.teamCount === 1
-              ? "1 team so far"
-              : `${workshop.teamCount} teams so far`}
-          </span>
-        )}
+        <span className="text-sm font-semibold text-white">
+          {workshopLabel(workshop)}
+        </span>
       </span>
       <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
         {badge.label}
       </span>
       {/* `basis-full` rather than a child of the flex-col above: `ROW_CLS` is
           `flex flex-wrap items-center`, so this wraps onto its own line and
-          leaves the badge's `ml-auto` alignment intact. Putting it inside that
-          column would force `items-start` on a class `JudgingRow` shares. */}
+          leaves the badge's `ml-auto` alignment intact. */}
       {workshop.description !== null && (
         <span className="basis-full text-xs/relaxed text-mauve-400">
           {workshop.description}

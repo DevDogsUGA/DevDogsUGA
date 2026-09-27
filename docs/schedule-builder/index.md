@@ -1,79 +1,54 @@
 ---
 name: Schedule Builder
-description: Course planning on real registrar data.
+description: Course planning on real registrar data — architecture and domain terms for apps/schedule-builder.
 order: 30
 ---
 
 # Schedule Builder
 
 `apps/schedule-builder` — branded "DogDays" — is the Next.js app that plans a
-UGA student's semester against real registrar data. It runs on the shared
-DevDogs Supabase project and owns the **`schedule_builder`** Postgres schema.
+UGA student's semester against real registrar data.
 
-Nothing here repeats the monorepo setup. If you are still getting the repository
-running, start at [Monorepo](/docs/monorepo); for the shared schema rules, read
-[Database](/docs/platform/guides/database) — this page covers only what is
-different about this app.
+> [!TIP]
+> Just getting started? Start at
+> [Getting started](/docs/schedule-builder/getting-started) instead of this
+> page. Working the **schedule-builder competition**? The brief is a GitHub
+> issue, not a doc — see every open
+> [competition issue](https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition).
 
-## Guides
+## Architecture
 
-- [Local setup](/docs/schedule-builder/guides/local-setup) — running just this app, its env, and why sign-in needs the platform
-- [Ingestion](/docs/schedule-builder/guides/ingestion) — how registrar data is scraped, parsed, and reconciled into Postgres
-- [Schedule generation](/docs/schedule-builder/guides/generation) — the rule engine, and how to add a rule
-- [Database](/docs/schedule-builder/guides/database) — the `schedule_builder` schema, and why migrations are drafted, not authored
+- **Next.js on Workers.** Built and deployed through vinext
+  (`vite.config.ts` + `@cloudflare/vite-plugin`), not OpenNext — the Worker
+  entry is `cloudflare/worker.ts`, and the KV-backed data/CDN cache rides the
+  `VINEXT_KV_CACHE` binding.
+- **`schedule_builder` Postgres schema.** Owned by this app on the shared
+  DevDogs Supabase project; see [Database](/docs/schedule-builder/guides/database).
+- **Ingestion.** A Cloudflare Workflow (`cloudflare/ScrapeWorkflow.ts`) scrapes
+  the UGA registrar on a daily cron, parses it, and reconciles it into
+  Postgres. See [Ingestion](/docs/schedule-builder/guides/ingestion).
+- **Generation.** A rule-based engine searches conflict-free combinations of
+  sections and ranks them. See
+  [Schedule generation](/docs/schedule-builder/guides/generation).
 
-## Where things are
+## Glossary
 
-| Area                    | Path                               |
-| ----------------------- | ---------------------------------- |
-| Scrape entry points     | `src/app/(api)/cron/`              |
-| Parsing                 | `src/lib/parsers/`                 |
-| Reconcile into Postgres | `src/lib/parsers/reconcileTerm.ts` |
-| Schedule generation     | `src/lib/generation/`              |
-| Owned schema            | `src/server/db/schema/`            |
+- **Term** — one semester's registration period, keyed by an `academicPeriod` code.
+- **Part of term** — a sub-window of a term with its own dates (a full-semester
+  and an 8-week course in the same term have different parts of term).
+- **Course** — a catalog entry (subject + course number + title), independent of any term.
+- **Section (offering)** — one instance of a course in one term, keyed by its
+  **CRN**. Cancelled sections are kept, not deleted — saved plans reference a CRN.
+- **CRN** — Course Reference Number, the registrar's primary key for a section.
+- **Instructor** — who teaches a section. `Professor.quality` is a dormant
+  field, always `null` (no rating source is wired up).
+- **Meeting** — one weekly time block of a section (days, times, building/room).
+- **Schedule** — a conflict-free set of sections, one per requested course.
+- **Rule** — one unit of generation logic that can reject a section, prune a
+  partial schedule, reject a complete schedule, or score it.
 
-Course and instructor data arrive on a cron route — `scrape-registrar`, or the
-`ScrapeWorkflow` in production — which parses and reconciles it into Postgres.
-The generator reads what that leaves behind; it never scrapes anything itself.
+## Where to go next
 
-## Migrations are drafted, not authored
-
-This is the one place the app departs from
-[Database](/docs/platform/guides/database), and the departure is narrow enough
-to state in a sentence: the Drizzle schema is where a change is _drafted_, and
-`supabase/migrations/` is still the only thing that defines the database.
-
-The schema at `src/server/db/schema/` is **hand-authored** — it is the input to
-the draft, not an output of anything. Edit it, then:
-
-```bash
-pnpm --filter schedule-builder db:generate   # schema → drizzle-generated/
-```
-
-That writes draft SQL under `drizzle-generated/` via
-`drizzle-migrations.config.ts`. Carry the draft into a real file in
-`supabase/migrations/`, which is what actually runs. Nothing applies
-`drizzle-generated/` — treating it as a migration directory is the mistake this
-paragraph exists to prevent.
-
-`db:pull` is **not** the reverse of that, despite the name pairing:
-
-```bash
-pnpm --filter schedule-builder db:pull       # other schemas → src/supabase/drizzle/
-```
-
-Its config filters this app's own schema out (`"!schedule_builder"`) and writes
-to `src/supabase/drizzle/`. It exists to give you typed access to the schemas
-this app _reads but does not own_. Running it will never regenerate
-`src/server/db/schema/`, and expecting it to is how someone concludes their
-hand-written schema was silently dropped.
-
-## Deployment
-
-Deploys to Cloudflare Workers through OpenNext, the same path the platform app
-takes, on its own zone: `dogdays.dev` in production and `staging.dogdays.dev` in
-staging, both declared as custom domains in `wrangler.jsonc`.
-
-`SCHEDULE_BUILDER_URL` has to be kept in step with those by hand, because
-nothing cross-checks the two. A mismatch is not a build failure; it is a
-callback that silently goes to the wrong place.
+- [Getting started](/docs/schedule-builder/getting-started) — set up and run this app
+- [Where things live](/docs/schedule-builder/guides/where-things-live) — "I want to change X"
+- [Database](/docs/schedule-builder/guides/database), [Ingestion](/docs/schedule-builder/guides/ingestion), [Schedule generation](/docs/schedule-builder/guides/generation)

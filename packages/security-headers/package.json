@@ -1,0 +1,30 @@
+{
+  "name": "@devdogsuga/security-headers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The security response headers every app in the workspace sends: HSTS, framing/MIME/referrer hardening, a locked-down Permissions-Policy, and an env-derived Content-Security-Policy-Report-Only. One builder so apps/platform and apps/schedule-builder can't drift on the allowlist.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "devdogs-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@devdogsuga/config": "^0.1.1",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,4 +1,5 @@
-import { createServerClient } from "@devdogsuga/supabase";
+import { createServerClient } from "@devdogsuga/db/client";
+import type { Database } from "@devdogsuga/supabase";
 import { cookies } from "next/headers";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";
@@ -12,7 +13,7 @@ import { APP_SCHEMA } from "./schema";
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
-  return createServerClient({
+  return createServerClient<Database, typeof APP_SCHEMA>({
     url: env.API_URL,
     key: env.PUBLISHABLE_KEY,
     schema: APP_SCHEMA,

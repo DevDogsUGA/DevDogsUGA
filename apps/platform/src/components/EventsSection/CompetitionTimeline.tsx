@@ -2,25 +2,21 @@ import type { ReactNode } from "react";
 import { kindBadge, segmentBadge } from "./meetingView";
 
 /**
- * One week of the club, drawn as the loop it is.
+ * One week of the club, drawn as an open-ended sprint rather than a loop.
  *
- * The model (see `docs/platform/guides/meetings-and-teams`): a competition is a
- * week-long window between two Mondays. The first Monday's workshop kicks it
- * off, the next Monday judges it, and the moment judging is done that same
- * night's workshop kicks off the next one. So the strip is the middle of a
- * chain, not one bar with two ends: last week's bar arrives from the left in
- * grey and ends in rose at the first Monday, this week's runs muted yellow from
- * there
- * to the next Monday, where an emerald kickoff dot starts the one after, whose
- * bar leaves to the right in grey. Grey is "not the week in view"; the dots on
- * the Monday in view are always coloured, because that Monday's meeting always
- * happens.
+ * A competition is a mirrored GitHub issue, kicked off whenever an officer
+ * converts a draft in the Competitions Project and closed whenever they merge
+ * a winning pull request, neither pinned to a particular Monday. So the strip
+ * draws what is still true on a fixed cadence -- Monday's workshop kicks the
+ * week off, Wednesday is an open dev session -- and lets the build week
+ * itself run OFF the right edge rather than closing at a second dot: there is
+ * no night this diagram can promise judging happens on.
  *
- * The bars are striped and the stripes crawl, so a week in progress reads as a
+ * The bar is striped and the stripes crawl, so a week in progress reads as a
  * progress bar. `motion-safe` gates the crawl.
  *
  * No labels of its own. The day cards in {@link HowItWorks} sit on this strip's
- * eight columns, above and below it, each pointing at its dot, so a second set
+ * columns, above and below it, each pointing at its dot, so a second set
  * here would say everything twice. The strip answers the cards instead:
  * `active` names the card under the pointer, and the matching dots swell with a
  * ring pulsing out behind them, the bar brightens and hurries when the build
@@ -34,37 +30,26 @@ import { kindBadge, segmentBadge } from "./meetingView";
  */
 
 /**
- * The club meets on Monday nights and the open build session is the Wednesday
+ * The club meets on Monday nights and the open dev session is the Wednesday
  * in between. This is the one place those facts are written down for the
  * diagram; the cards in HowItWorks address the same columns by these names.
  */
-export const WEEK = [
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat",
-  "Sun",
-  "Mon",
-] as const;
+export const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 /** Grid columns are 1-based, like `grid-column-start`. */
 export const MEETING_COL = 1;
 export const OPEN_BUILD_COL = 3;
-export const JUDGING_COL = WEEK.length;
 
 export type Tone = "light" | "dark";
 
-/** The four things a card can be about, in the strip's vocabulary. */
-export type StripDay = "monday" | "wednesday" | "week" | "nextMonday";
+/** The three things a card can be about, in the strip's vocabulary. */
+export type StripDay = "monday" | "wednesday" | "week";
 
 /** Which day-name columns each StripDay lights up (0-based into WEEK). */
 const DAY_COLUMNS: Record<StripDay, readonly number[]> = {
   monday: [0],
   wednesday: [2],
   week: [3, 4, 5, 6],
-  nextMonday: [7],
 };
 
 /** The neutral colours per plate; the accent hues never change with tone. */
@@ -86,7 +71,7 @@ const TONES = {
 } satisfies Record<Tone, Record<string, string>>;
 
 /** Fraction of the strip's width that half a column takes: where col 1's
- *  centre is from the left edge, and col 8's from the right. */
+ *  centre is from the left edge. */
 const HALF = `${100 / WEEK.length / 2}%`;
 
 function Dot({
@@ -108,9 +93,9 @@ function Dot({
 }
 
 /**
- * A cell on the strip holding one or two dots, centred on its column. When it
- * is the active one its dots swell and a ring pulses out from behind them, the
- * strip's answer to a card being hovered.
+ * A cell on the strip holding one dot, centred on its column. When it is the
+ * active one its dot swells and a ring pulses out from behind it, the strip's
+ * answer to a card being hovered.
  */
 function Cell({
   col,
@@ -145,20 +130,18 @@ const DAY_CLS =
   "font-display text-center text-xs font-extrabold tracking-widest uppercase transition-[opacity,scale] duration-300 group-data-[hovering=true]/strip:opacity-40 group-data-[hovering=true]/strip:data-[active=true]:scale-110 group-data-[hovering=true]/strip:data-[active=true]:opacity-100";
 
 /**
- * Where the two grey tails end. Normally at the strip's own edges; inside the
- * homepage's cutout they run on to the SECTION's edges, so the fade finishes
+ * Where the left tail ends. Normally at the strip's own edge; inside the
+ * homepage's cutout it runs on to the SECTION's edge, so the fade finishes
  * exactly where the plate does rather than a column's padding short of it. The
  * section is the site layout's `@container` width less its `mx-4` / `md:mx-6`,
  * and the strip is centred in it, the same arithmetic as `Cutout` in
- * HowItWorks, so each tail's far edge is half the strip's width from centre
+ * HowItWorks, so the tail's far edge is half the strip's width from centre
  * minus half the section's.
  */
 const TAIL_EDGE = {
-  contained: { left: "left-0", right: "right-0" },
+  contained: { left: "left-0" },
   bleed: {
     left: "left-[calc(50%_-_50cqw_+_1rem)] md:left-[calc(50%_-_50cqw_+_1.5rem)]",
-    right:
-      "right-[calc(50%_-_50cqw_+_1rem)] md:right-[calc(50%_-_50cqw_+_1.5rem)]",
   },
 } as const;
 
@@ -170,7 +153,7 @@ export default function CompetitionTimeline({
   tone?: Tone;
   /** The card under the pointer, if any; the strip lights up to match. */
   active?: StripDay | null;
-  /** Run the tails out to the section's edges. See {@link TAIL_EDGE}. */
+  /** Run the left tail out to the section's edge. See {@link TAIL_EDGE}. */
   bleed?: boolean;
 }) {
   const t = TONES[tone];
@@ -179,13 +162,13 @@ export default function CompetitionTimeline({
 
   return (
     <div
-      className="group/strip grid grid-cols-8 gap-y-2"
+      className="group/strip grid grid-cols-7 gap-y-2"
       data-hovering={active !== null}
       role="figure"
-      aria-label="A week of the club: last week's competition is judged on Monday and the next one kicks off the same night, teams build through the week with an open build on Wednesday, and the following Monday judges it and kicks off the next — if there is one."
+      aria-label="A week of the club: Monday's workshop kicks off the week's competition, teams build through the week with an open dev session on Wednesday, and entries stay open -- there is no fixed judging night -- until an officer merges the winning pull request."
     >
       {WEEK.map((day, i) => {
-        const isMeeting = i === 0 || i === WEEK.length - 1;
+        const isMeeting = i === 0;
         return (
           <span
             key={i}
@@ -198,9 +181,10 @@ export default function CompetitionTimeline({
       })}
 
       {/* The track. */}
-      <div className="relative col-span-8 grid h-6 grid-cols-8 items-center">
-        {/* Last week's competition, arriving: grey, fading in from the left
-            edge, ending at Monday's rose dot. */}
+      <div className="relative col-span-7 grid h-6 grid-cols-7 items-center">
+        {/* Before Monday: grey, fading in from the left edge, ending at
+            Monday's emerald dot. Texture only -- nothing before Monday belongs
+            to this week's competition. */}
         <span
           aria-hidden
           className={`${BAR_CLS} ${edge.left} ${t.tail} [mask-image:linear-gradient(to_right,transparent,black_70%)]`}
@@ -209,40 +193,30 @@ export default function CompetitionTimeline({
             animationDuration: "1.05s",
           }}
         />
-        {/* This week's: Monday's emerald dot to next Monday's rose one. When
-            the build-week card is hovered it shifts lighter and the stripes hurry.
-            Its inline duration retimes the already-running animation when the
-            active card changes. */}
+        {/* From Monday's kickoff, running off the right edge rather than
+            closing at a second dot: entries stay open until an officer merges
+            the winning pull request, which this diagram cannot pin to a
+            column because nothing schedules it. When the build-week card is
+            hovered it shifts lighter and the stripes hurry. Its inline
+            duration retimes the already-running animation when the active
+            card changes. */}
         <span
           aria-hidden
           data-active={active === "week"}
           className={`${BAR_CLS} bg-yellow-600 transition-colors duration-300 data-[active=true]:bg-yellow-500 data-[active=true]:[--slants-alpha:0.36]`}
           style={{
             left: HALF,
-            right: HALF,
+            right: `calc(0% - 6rem)`,
             animationDuration: active === "week" ? "0.22s" : "0.62s",
-          }}
-        />
-        {/* Next week's, if there is one: grey, fading out to the right. */}
-        <span
-          aria-hidden
-          className={`${BAR_CLS} ${edge.right} ${t.tail} [mask-image:linear-gradient(to_right,black_30%,transparent)]`}
-          style={{
-            left: `calc(100% - ${HALF})`,
-            animationDuration: "1.05s",
+            maskImage: "linear-gradient(to right, black 80%, transparent)",
           }}
         />
 
         <Cell col={MEETING_COL} active={active === "monday"} halo={t.halo}>
           <Dot
-            dot={segmentBadge.judging.dot}
+            dot={segmentBadge.workshop.dot}
             ring={t.dotRing}
-            label="Monday: last week's competition is judged"
-          />
-          <Dot
-            dot={segmentBadge.kickoff.dot}
-            ring={t.dotRing}
-            label="Monday: the workshop kicks off this week's"
+            label="Monday: workshop, then the competition kicks off"
           />
         </Cell>
         <Cell
@@ -251,21 +225,9 @@ export default function CompetitionTimeline({
           halo={t.halo}
         >
           <Dot
-            dot={kindBadge["Build Session"]!.dot}
+            dot={kindBadge["Dev Session"]!.dot}
             ring={t.dotRing}
-            label="Wednesday: build session"
-          />
-        </Cell>
-        <Cell col={JUDGING_COL} active={active === "nextMonday"} halo={t.halo}>
-          <Dot
-            dot={segmentBadge.judging.dot}
-            ring={t.dotRing}
-            label="Next Monday: this week's competition is judged"
-          />
-          <Dot
-            dot={segmentBadge.kickoff.dot}
-            ring={t.dotRing}
-            label="Next Monday: the next one kicks off"
+            label="Wednesday: dev session"
           />
         </Cell>
       </div>

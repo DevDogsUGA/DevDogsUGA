@@ -2,7 +2,6 @@ export const AUDIT_SOURCES = [
   "platform",
   "qr",
   "manual_code",
-  "airtable_form",
   "system",
 ] as const;
 

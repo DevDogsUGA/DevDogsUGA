@@ -33,16 +33,12 @@
 /.github/**                          @DevDogsUGA/devops
 /pnpm-workspace.yaml                 @DevDogsUGA/devops
 /pnpm-lock.yaml                      @DevDogsUGA/devops
-/packages/with-env/**                @DevDogsUGA/devops
 /supabase/migrations/**              @DevDogsUGA/devops
 /apps/*/wrangler.jsonc               @DevDogsUGA/devops
 /apps/*/src/env.ts                   @DevDogsUGA/devops
 
 # Provisions repository access for competition teams.
 /apps/platform/src/server/github/**  @DevDogsUGA/devops
-
-# A hand-edited field id writes to nothing and reports success.
-/packages/airtable/src/registry.ts   @DevDogsUGA/devops
 
 # Carries site_url and the OAuth providers. No dry run exists for `config
 # push`, so this committed diff is the only preview anyone gets.

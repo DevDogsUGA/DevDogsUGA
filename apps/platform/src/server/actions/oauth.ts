@@ -1,77 +1,96 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { authenticate, expectUserWith } from "../auth";
 import { db } from "../db";
-import { oauthRegistrations } from "../db/schema";
+import { oauthRegistrations, oauthTestAccounts } from "../db/schema";
 import { supabaseAdmin } from "../../supabase/admin";
 
 const MAX_REDIRECT_URIS = 5;
+const MAX_LABEL_LENGTH = 100;
 
 const DEFAULT_REDIRECT_URIS = [
   "http://localhost:3000/auth", // Community Resource Forum
 ];
 
 export type OAuthState = {
+  /** The client the most recent dispatch minted or reset a secret for. */
   clientId: string | null;
+  /** Shown once, then gone: neither Supabase nor this table can recover it. */
   clientSecret: string | null;
-  redirectUris: string[];
 };
 
+const EMPTY_STATE: OAuthState = { clientId: null, clientSecret: null };
+
+/**
+ * Deletes every test account this user owns and their backing `auth.users`
+ * rows, once they hold zero OAuth clients (test accounts exist only to sign
+ * into somebody's client).
+ */
+async function cleanUpTestAccountsIfNoClientsRemain(
+  userId: string,
+): Promise<void> {
+  const remaining = await db.query.oauthRegistrations.findFirst({
+    columns: { clientId: true },
+    where: { userId },
+  });
+  if (remaining) return;
+
+  const testAccounts = await db.query.oauthTestAccounts.findMany({
+    columns: { testUserId: true },
+    where: { ownerUserId: userId },
+  });
+  if (testAccounts.length === 0) return;
+
+  await db
+    .delete(oauthTestAccounts)
+    .where(eq(oauthTestAccounts.ownerUserId, userId));
+  await Promise.all(
+    testAccounts.map(({ testUserId }) =>
+      supabaseAdmin.auth.admin.deleteUser(testUserId),
+    ),
+  );
+}
+
+/**
+ * `/tools/oauth`'s manual client management: one OAuth client per project,
+ * not per member (migration 32). The one-click `devtools oauth` connect flow
+ * (`~/server/actions/oauthConnect.ts`) mints clients the same way but without
+ * a form round trip; this action is what still lets someone create, inspect,
+ * and revoke a client by hand.
+ */
 export default async function oauthAction(
-  prev: OAuthState,
+  _prev: OAuthState,
   formData: FormData,
 ): Promise<OAuthState> {
   // eslint-disable-next-line @typescript-eslint/no-base-to-string
   const intent = formData.get("intent")?.toString();
 
   const user = await expectUserWith({
-    profile: { with: { oauthRegistration: true } },
     githubIdentity: { columns: { id: true } },
   }).catch(() => authenticate("google", "/tools/oauth"));
 
-  const clientId = user.profile?.oauthRegistration?.clientId ?? null;
-
   // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
   switch (intent) {
-    case "toggle-client": {
-      if (clientId) {
-        // Fetch test account IDs before deleting so we can clean up the
-        // backing auth.users rows after the DB transaction.
-        const testAccounts = await db.query.oauthTestAccounts.findMany({
-          columns: { testUserId: true },
-          where: { ownerUserId: user.id },
-        });
-
-        await db.transaction(async (tx) => {
-          await tx
-            .delete(oauthRegistrations)
-            .where(eq(oauthRegistrations.userId, user.id));
-          await supabaseAdmin.auth.admin.oauth.deleteClient(clientId);
-        });
-
-        await Promise.all(
-          testAccounts.map(({ testUserId }) =>
-            supabaseAdmin.auth.admin.deleteUser(testUserId),
-          ),
-        );
-
-        return {
-          clientId: null,
-          clientSecret: null,
-          redirectUris: [],
-        };
-      }
-
+    case "create-client": {
       if (!user.githubIdentity) {
         throw new Error(
           "A linked GitHub account is required to create an OAuth client",
         );
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const label = formData.get("label")?.toString().trim() ?? "";
+      if (!label) throw new Error("Label is required");
+      if (label.length > MAX_LABEL_LENGTH) {
+        throw new Error(
+          `Label must be ${MAX_LABEL_LENGTH} characters or fewer`,
+        );
+      }
+
       const { data, error } = await supabaseAdmin.auth.admin.oauth.createClient(
         {
-          client_name: user.id,
+          client_name: label,
           redirect_uris: DEFAULT_REDIRECT_URIS,
           scope: "openid email profile",
         },
@@ -81,17 +100,49 @@ export default async function oauthAction(
 
       await db
         .insert(oauthRegistrations)
-        .values({ userId: user.id, clientId: data.client_id });
+        .values({ userId: user.id, clientId: data.client_id, label });
 
       return {
         clientId: data.client_id,
         clientSecret: data.client_secret ?? null,
-        redirectUris: data.redirect_uris,
       };
     }
 
+    case "revoke-client": {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const clientId = formData.get("clientId")?.toString() ?? "";
+
+      const owned = await db.query.oauthRegistrations.findFirst({
+        columns: { clientId: true },
+        where: { clientId, userId: user.id },
+      });
+      if (!owned) throw new Error("OAuth client not found");
+
+      // Fetch test-account ids before deleting so the auth.users cleanup
+      // below still has them, same reasoning as the old toggle-client path.
+      await db
+        .delete(oauthRegistrations)
+        .where(
+          and(
+            eq(oauthRegistrations.clientId, clientId),
+            eq(oauthRegistrations.userId, user.id),
+          ),
+        );
+      await supabaseAdmin.auth.admin.oauth.deleteClient(clientId);
+      await cleanUpTestAccountsIfNoClientsRemain(user.id);
+
+      return EMPTY_STATE;
+    }
+
     case "reset-secret": {
-      if (!clientId) throw new Error("No OAuth client exists");
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const clientId = formData.get("clientId")?.toString() ?? "";
+
+      const owned = await db.query.oauthRegistrations.findFirst({
+        columns: { clientId: true },
+        where: { clientId, userId: user.id },
+      });
+      if (!owned) throw new Error("OAuth client not found");
 
       const { data, error } =
         await supabaseAdmin.auth.admin.oauth.regenerateClientSecret(clientId);
@@ -100,14 +151,20 @@ export default async function oauthAction(
           `Failed to regenerate client secret: ${error?.message}`,
         );
 
-      return { ...prev, clientId, clientSecret: data.client_secret ?? null };
+      return { clientId, clientSecret: data.client_secret ?? null };
     }
 
     case "add-uri": {
-      if (!clientId) throw new Error("No OAuth client exists");
-
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const clientId = formData.get("clientId")?.toString() ?? "";
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
       const uri = formData.get("uri")?.toString().trim() ?? "";
+
+      const owned = await db.query.oauthRegistrations.findFirst({
+        columns: { clientId: true },
+        where: { clientId, userId: user.id },
+      });
+      if (!owned) throw new Error("OAuth client not found");
 
       let parsed: URL;
       try {
@@ -124,7 +181,7 @@ export default async function oauthAction(
       if (getError || !existing)
         throw new Error(`Failed to fetch OAuth client: ${getError?.message}`);
 
-      if (existing.redirect_uris.includes(uri)) return prev;
+      if (existing.redirect_uris.includes(uri)) return EMPTY_STATE;
 
       if (existing.redirect_uris.length >= MAX_REDIRECT_URIS) {
         throw new Error(
@@ -136,14 +193,20 @@ export default async function oauthAction(
       await supabaseAdmin.auth.admin.oauth.updateClient(clientId, {
         redirect_uris: updated,
       });
-      return { ...prev, redirectUris: updated };
+      return EMPTY_STATE;
     }
 
     case "remove-uri": {
-      if (!clientId) throw new Error("No OAuth client exists");
-
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const clientId = formData.get("clientId")?.toString() ?? "";
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
       const uri = formData.get("uri")?.toString().trim() ?? "";
+
+      const owned = await db.query.oauthRegistrations.findFirst({
+        columns: { clientId: true },
+        where: { clientId, userId: user.id },
+      });
+      if (!owned) throw new Error("OAuth client not found");
 
       const { data: existing, error: getError } =
         await supabaseAdmin.auth.admin.oauth.getClient(clientId);
@@ -154,7 +217,7 @@ export default async function oauthAction(
       await supabaseAdmin.auth.admin.oauth.updateClient(clientId, {
         redirect_uris: updated,
       });
-      return { ...prev, redirectUris: updated };
+      return EMPTY_STATE;
     }
 
     default:

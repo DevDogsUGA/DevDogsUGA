@@ -1,5 +1,5 @@
 {
-  "extends": "../config/tsconfig/lib.json",
+  "extends": "@devdogsuga/config/tsconfig/lib.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",

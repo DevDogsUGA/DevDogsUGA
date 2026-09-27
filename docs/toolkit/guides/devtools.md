@@ -2,12 +2,18 @@
 name: devtools
 description: The contributor CLI, organized by the job you are trying to do.
 order: 3
+section: guides
 ---
 
 # devtools
 
 `pnpm devtools` is the front door for repository tasks, local and hosted
 infrastructure, generated content, configuration, and platform checks.
+`@devdogsuga/devtools` ships as a published package from the sibling
+**Backstage** repository — a root devDependency pinned to an exact version,
+installed like any other npm package, not a workspace member of this repo.
+CI runs the separate `devtools-ci`/`devtools-ci-bare` binaries from the same
+package.
 
 Run it without arguments to open the interactive menu. The menu reads the same
 command registry as `--help` and shell completions, but leaves out commands that
@@ -45,7 +51,7 @@ project. Both commands also live together under **Workspace** in the menu.
 
 - `setup` — check prerequisites and initialize the workspace.
 - `oauth` — configure the local Supabase project for DevDogs OAuth.
-- `run` — run a Turborepo task after choosing the affected apps.
+- `run` — run a pnpm workspace task after choosing the affected apps.
 - `gen` — refresh committed generated source.
 - `docs` — maintain the documentation search index.
 
@@ -75,17 +81,31 @@ examples.
 
 - `env` — synchronize target env files with Bitwarden, GitHub, and Cloudflare.
 - `bw` — pass arguments through to the bundled Bitwarden CLI.
-- `airtable` — check, verify, or apply the officers' base schema.
+
+### GitHub
+
+- `github` — reconcile branch protection rulesets and repository settings
+  (secret scanning, push protection, Dependabot, SHA pinning, allowed
+  actions) against what the repo declares.
 
 ### Moderation
 
-- `catalog` — list report reasons and moderatable content types.
-- `doctor` — check an app's moderation integration.
-- `roundtrip` — exercise report, quarantine, and freeze behavior end to end.
+- `moderation catalog` — list report reasons and moderatable content types.
+- `moderation check` — check an app's moderation integration and whether the
+  catalog holds up.
+- `moderation roundtrip` — file a report, quarantine it, and check the freeze,
+  end to end, then cleans up.
 - `grant-root` — grant a local account the Root role.
 
-All four moderation commands are structurally local: they discover the
-Supabase stack on this machine and cannot be pointed at production.
+All four of these commands are structurally local: they discover the Supabase
+stack on this machine and cannot be pointed at production.
+
+### Environment
+
+- `doctor` — check this machine's environment against what the repo needs:
+  Node, pnpm, Docker, `.env`, hosted Supabase, OAuth — read-only. Scope it to
+  one app with `--app <slug>`; pass `--report` for a redacted, paste-able block
+  (versions, OS, results — no secrets) to drop in Discord when asking for help.
 
 ## Cron jobs and Workflows
 
@@ -131,9 +151,10 @@ Next.js development server for the web UI; it does not register Cloudflare
 Workflow bindings or expose Wrangler's local control API. Before triggering,
 devtools probes that API. If Wrangler is absent, the interactive command offers
 to build and start it for this one Workflow and stops it afterward, or lets you
-enter the port of a Wrangler session that is already running. The Wrangler
-configuration performs the same freshness check when `wrangler dev` is started
-manually, so a clean checkout first generates its required `.open-next` output.
+enter the port of a Wrangler session that is already running. A bare
+`wrangler dev` auto-redirects to the config `vinext build` writes at
+`dist/server/wrangler.json`, so a clean checkout still needs that build run
+once before `wrangler dev` has anything to redirect to.
 When devtools owns the session, it also passes only the selected app's declared
 runtime variables through a temporary mode-0600 env file and removes that file
 when Wrangler stops. It does not expose the rest of the contributor's shell

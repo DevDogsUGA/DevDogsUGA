@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { SOCIAL_LINKS, SWITCHER_LINKS } from "~/config/nav";
 import { env } from "~/env";
 
@@ -142,12 +143,10 @@ export function eventLd(meeting: EventLdInput) {
     url: `${BASE}/events/${encodeURIComponent(meeting.slug)}`,
     startDate: meeting.startsAt.toISOString(),
     endDate: meeting.endsAt.toISOString(),
-    // Read from the column rather than assumed. This used to be hardcoded to
-    // `EventScheduled` on the premise that a cancelled meeting was soft
-    // deleted in Airtable and 404ed before rendering. That stopped being true
-    // when cancellation became a column and the night kept its page, and a
-    // crawler was then told a cancelled meeting was going ahead, which is the
-    // one thing `eventStatus` exists to prevent.
+    // Read from the column rather than assumed: a cancelled meeting keeps its
+    // page rather than being soft deleted, so a crawler told the meeting was
+    // going ahead regardless would be wrong, which is the one thing
+    // `eventStatus` exists to prevent.
     eventStatus:
       meeting.cancelledAt === null
         ? "https://schema.org/EventScheduled"
@@ -187,11 +186,22 @@ function serialize(data: unknown): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
 }
 
-/** Renders one JSON-LD block. Server components only; `env` is read above. */
-export default function JsonLd({ data }: { data: unknown }) {
+/**
+ * Renders one JSON-LD block. Server components only; `env` is read above.
+ *
+ * `type="application/ld+json"` doesn't exempt it from `script-src`: a
+ * strict-CSP browser gates every `<script>` element on the nonce/hash
+ * allowlist regardless of its `type`, JSON-LD included, so this reads and
+ * stamps the same per-request nonce as every other inline script in this app
+ * (`~/app/layout.tsx`'s `headers().get("x-nonce")`) or the payload is simply
+ * never parsed once the policy goes enforcing.
+ */
+export default async function JsonLd({ data }: { data: unknown }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <script
       type="application/ld+json"
+      nonce={nonce}
       dangerouslySetInnerHTML={{ __html: serialize(data) }}
     />
   );

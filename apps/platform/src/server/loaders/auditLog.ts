@@ -46,8 +46,7 @@ export type ReflectionRevisionDetail = {
   content: string;
   submittedAt: string | null;
   createdAt: string;
-  createdByUserId: string | null;
-  createdByAirtableUserId: string | null;
+  createdByUserId: string;
   changeReason: string | null;
 };
 
@@ -80,11 +79,7 @@ export const getAuditLogPageData = cache(
       .offset(offset);
 
     const entries = rows.map((row): AuditLogEntry => {
-      const actor =
-        row.actorAirtableDisplayName ??
-        row.actorAirtableUserId ??
-        row.actorUserId ??
-        "System";
+      const actor = row.actorUserId ?? "System";
 
       return {
         id: row.id,
@@ -151,11 +146,7 @@ export const getAuditEventDetailData = cache(async (eventId: string) => {
       id: event.id,
       createdAt: event.createdAt.toISOString(),
       actorType: event.actorType,
-      actor:
-        event.actorAirtableDisplayName ??
-        event.actorAirtableUserId ??
-        event.actorUserId ??
-        "System",
+      actor: event.actorUserId ?? "System",
       source: event.source,
       action: event.action,
       targetType: event.targetType,

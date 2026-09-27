@@ -2,6 +2,7 @@
 name: Typed models
 description: How Dart models are generated with supadart, the default-schema constraint that dictates config.toml ordering, and why generation is a no-op until the schema has tables.
 order: 2
+section: guides
 ---
 
 # Typed models
@@ -54,4 +55,5 @@ schema and applies the PostgREST role grants, nothing more), so
 `generate-types` currently produces nothing. Once the first tables land in a
 migration, running it will populate `lib/generated/`, and the models regenerate
 from the database the same way — the schema is always the source, the Dart is
-always output.
+always output. See [Schema change loop](/docs/study-group-finder/guides/schema-change-loop)
+for adding that first table.

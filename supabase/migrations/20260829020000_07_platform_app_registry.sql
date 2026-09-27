@@ -1,9 +1,9 @@
 -- The app registry: platform."apps", its schema-name validation trigger, its
 -- four policies, and the three rows every downstream file resolves by slug.
 --
--- An app is a Postgres schema, not an OAuth client. Reports, content types and
--- projects all carry an "appId" pointing here, so this file has to precede all
--- of them. It also has to follow the schemas file, because the seed at the
+-- An app is a Postgres schema, not an OAuth client. Reports and content types
+-- carry an "appId" pointing here, so this file has to precede both. It also
+-- has to follow the schemas file, because the seed at the
 -- bottom fires apps_validate_schema, which checks pg_namespace: registering an
 -- app whose schema does not exist yet fails the migration.
 

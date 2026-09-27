@@ -1,6 +1,7 @@
 "use client"; // Error boundaries must be Client Components
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
 
 /**
@@ -24,6 +25,11 @@ export default function EventsError({
     // message, so this logs the placeholder plus the digest rather than
     // anything sensitive. It is also the only record of the failure on the
     // visitor's side when they screenshot the console for us.
+    //
+    // captureException is safe unconditionally -- it no-ops with no DSN
+    // configured, same contract as everywhere else in this app's Sentry
+    // wiring.
+    Sentry.captureException(error);
     console.error(error);
   }, [error]);
 

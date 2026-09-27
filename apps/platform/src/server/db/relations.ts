@@ -41,7 +41,13 @@ export const relations = defineRelations(
         from: r.usersInAuth.id,
         to: r.oauthTestAccounts.ownerUserId,
       }),
-      oauthRegistration: r.one.oauthRegistrations({
+      // Many, not one: migration 32 dropped `oauthRegistrations.userId`'s
+      // unique constraint so a member can hold one client per project
+      // instead of a single shared one. Call sites that used to read
+      // `.oauthRegistration` (singular) now read `.oauthRegistrations` and
+      // decide for themselves whether they want "any of them" or a specific
+      // one filtered by a `where`.
+      oauthRegistrations: r.many.oauthRegistrations({
         from: r.usersInAuth.id,
         to: r.oauthRegistrations.userId,
       }),
@@ -80,10 +86,9 @@ export const relations = defineRelations(
         from: r.profile.userId,
         to: r.profileAcademicPrograms.userId,
       }),
-      oauthRegistration: r.one.oauthRegistrations({
+      oauthRegistrations: r.many.oauthRegistrations({
         from: r.profile.userId,
         to: r.oauthRegistrations.userId,
-        optional: true,
       }),
     },
     profileLinks: {
@@ -120,6 +125,22 @@ export const relations = defineRelations(
       authorizations: r.many.oauthAuthorizationsInAuth({
         from: r.oauthRegistrations.clientId,
         to: r.oauthAuthorizationsInAuth.clientId,
+      }),
+      connectCodes: r.many.oauthConnectCodes({
+        from: r.oauthRegistrations.clientId,
+        to: r.oauthConnectCodes.clientId,
+      }),
+    },
+    oauthConnectCodes: {
+      registration: r.one.oauthRegistrations({
+        from: r.oauthConnectCodes.clientId,
+        to: r.oauthRegistrations.clientId,
+        optional: false,
+      }),
+      user: r.one.usersInAuth({
+        from: r.oauthConnectCodes.userId,
+        to: r.usersInAuth.id,
+        optional: false,
       }),
     },
     apps: {

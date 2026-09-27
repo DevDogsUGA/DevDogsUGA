@@ -1,4 +1,5 @@
-import { createAdminClient } from "@devdogsuga/supabase";
+import { createAdminClient } from "@devdogsuga/db/server";
+import type { Database } from "@devdogsuga/supabase";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";
 
@@ -7,7 +8,7 @@ import { APP_SCHEMA } from "./schema";
  * this app's schema. Bypasses RLS, so only use it server-side. Never expose
  * this to the client.
  */
-export const supabaseAdmin = createAdminClient({
+export const supabaseAdmin = createAdminClient<Database, typeof APP_SCHEMA>({
   url: env.API_URL,
   key: env.SECRET_KEY,
   schema: APP_SCHEMA,

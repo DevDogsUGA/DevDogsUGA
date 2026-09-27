@@ -8,12 +8,16 @@ import { Layout } from "../components/Layout.js";
  * The mirror of TeamInvite, and deliberately a separate template rather than
  * one with a `direction` prop: the compile step bakes a single render, so a
  * conditional would ship one branch to both audiences.
+ *
+ * No `competitionName`, for the same reason TeamInvite has none: teams are
+ * persistent now, not scoped to one competition (see
+ * `server/actions/teams.ts`'s module doc), so a request to join is to the
+ * TEAM, not to a competition roster.
  */
 export type Props = {
   leadName: string;
   applicantName: string;
   teamName: string;
-  competitionName: string;
   reviewUrl: string;
 };
 
@@ -28,8 +32,7 @@ export default function JoinRequest(p: Props) {
       </Heading>
 
       <Paragraph>
-        Hi {p.leadName} — {p.applicantName} would like to join {p.teamName} for{" "}
-        {p.competitionName}.
+        Hi {p.leadName} — {p.applicantName} would like to join {p.teamName}.
       </Paragraph>
 
       <Paragraph>

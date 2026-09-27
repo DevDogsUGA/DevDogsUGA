@@ -8,7 +8,7 @@ import { supabase } from "~/supabase/client";
  */
 export default async function signIn() {
   const usesGoogle = env.NEXT_PUBLIC_AUTH_MODE === "google";
-  const provider = usesGoogle ? "google" : "custom:devdogs";
+  const provider = usesGoogle ? "google" : "custom:devdogsuga";
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider,

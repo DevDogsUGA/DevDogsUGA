@@ -2,6 +2,7 @@
 name: Env
 description: Bitwarden Secrets Manager is the source of truth and GitHub is the derived copy the deploy reads — one file per target, and where each value ends up.
 order: 1
+section: guides
 ---
 
 # Env
@@ -27,12 +28,12 @@ One env file per target, and `push` writes Bitwarden and GitHub in the same
 run — a value in one and not the other is the failure this design has. This
 page is what the pieces are; [the commands](/docs/toolkit/guides/env/commands)
 is what to run. A contributor filling in their own `.env` wants
-[Secrets and environments](/docs/monorepo/guides/secrets) instead.
+[Secrets and environments](/docs/toolkit/infrastructure/secrets) instead.
 
 ## One `--target`, one row
 
 Every per-target fact is read from a single table,
-`packages/env/src/targets.ts`:
+Backstage's `packages/env/src/targets.ts`:
 
 | `--target`    | File              | Bitwarden project | Valid `DEPLOY_ENV`? |
 | ------------- | ----------------- | ----------------- | ------------------- |
@@ -66,7 +67,7 @@ Two rows are asymmetric, both deliberately:
 | `production-apply` | `production`      | everything, apply-tier too    | `production` |
 
 Which keys a project holds is the **tier's** decision, named after the jobs that
-read each key (`EnvTier` in `packages/env/src/meta.ts`). `deploy` is the default
+read each key (`EnvTier` in Backstage's `packages/env/src/meta.ts`). `deploy` is the default
 and reaches staging and production; `plan` reaches the two dry-run jobs in
 preflight and production, and nothing in staging; `apply` reaches
 `production-apply` alone.
@@ -85,8 +86,11 @@ touch the credentials behind the reviewers.
 
 `SUPABASE_ACCESS_TOKEN` carries full account privileges across both Supabase
 organizations; `supabase config push` needs it, and that is the one mutation
-with no dry run. `AIRTABLE_APPLY_PAT` can restructure the officers' base. Both
-are declared `tier: "apply"` in `packages/devtools/env.ts`.
+with no dry run. It is declared `tier: "apply"` in `@devdogsuga/devtools`'s
+own `env.ts` (devtools ships its own operator manifest now, consumed as a
+package rather than a workspace member of this repo — see
+`packages/repo-checks/src/env-registry.ts`), not in anything under
+`apps/*`/`packages/*` here.
 
 Both still live in the `production` Bitwarden project. That is a GitHub routing
 rule, not a Bitwarden one: only a person reads that project, one project per

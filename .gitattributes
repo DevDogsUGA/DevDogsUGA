@@ -1,0 +1,21 @@
+* text=auto eol=lf
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+
+# svg is text (XML) — left out so it still normalizes to LF
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Documents / archives
+*.pdf binary
+*.zip binary

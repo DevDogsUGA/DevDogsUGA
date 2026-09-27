@@ -148,11 +148,11 @@ describe("test identities", () => {
       .select("id");
     expect(memberRoles?.length).toBeGreaterThan(0);
 
-    // reportContentTypes is deliberately absent: content types are derived from
-    // each app's own schema now rather than stored as a per-client label list,
-    // so the table it used to deny access to no longer exists. contentTypes,
-    // which holds the overrides and declarations that replaced it, is in the
-    // same category and carries the same restrictive policy.
+    // reportContentTypes is deliberately absent: content types are derived
+    // from each app's own schema rather than stored as a per-client label
+    // list, and no such table exists. contentTypes, which holds the
+    // overrides and declarations, is in the same category and carries the
+    // same restrictive policy.
     for (const table of ["roles", "reportReasons", "contentTypes"]) {
       const { data } = await testAccount.client.from(table).select("*");
       expect(data, `${table} should be invisible to a test identity`).toEqual(
@@ -314,7 +314,6 @@ describe("platform.profile durable identity", () => {
 });
 
 describe("platform meetings, teams and attendance", () => {
-  const projectId = "aaaaaaaa-0000-4000-a000-000000000001";
   const meetingId = "bbbbbbbb-0000-4000-a000-000000000001";
   const workshopId = "cccccccc-0000-4000-a000-000000000001";
   const competitionId = "dddddddd-0000-4000-a000-000000000001";
@@ -325,9 +324,6 @@ describe("platform meetings, teams and attendance", () => {
   beforeAll(async () => {
     const a = admin();
     const now = Date.now();
-    await a
-      .from("projects")
-      .insert({ id: projectId, slug: "rls-proj", displayName: "RLS Project" });
     await a.from("meetings").insert({
       id: meetingId,
       slug: "rls-meeting",
@@ -335,13 +331,21 @@ describe("platform meetings, teams and attendance", () => {
       startsAt: new Date(now).toISOString(),
       endsAt: new Date(now + 7_200_000).toISOString(),
     });
-    await a.from("workshops").insert({ id: workshopId, meetingId, projectId });
     await a
-      .from("competitions")
-      .insert({ id: competitionId, slug: "rls-comp", workshopId });
+      .from("workshops")
+      .insert({ id: workshopId, meetingId, project: "RLS Project" });
+    await a.from("competitions").insert({
+      id: competitionId,
+      slug: "rls-comp",
+      issueNodeId: "RLS_ISSUE_NODE_ID",
+      issueNumber: 1,
+      repo: "DevDogsUGA/DevDogsUGA",
+      url: "https://github.com/DevDogsUGA/DevDogsUGA/issues/1",
+      title: "RLS Competition",
+      kickedOffAt: new Date(now).toISOString(),
+    });
     await a.from("teams").insert({
       id: teamId,
-      competitionId,
       slug: "rls-team",
       name: "RLS Team",
       joinCode: "SECRET-CODE",
@@ -349,7 +353,17 @@ describe("platform meetings, teams and attendance", () => {
     });
     await a
       .from("teamMembers")
-      .insert({ teamId, competitionId, userId: member.userId, role: "lead" });
+      .insert({ teamId, userId: member.userId, role: "lead" });
+    // A departed stint: joined and left before this fixture ran, so it
+    // exercises the "leftAt is not null" branch of the roster policy rather
+    // than only ever the current-roster branch.
+    await a.from("teamMembers").insert({
+      teamId,
+      userId: moderator.userId,
+      role: "member",
+      joinedAt: new Date(now - 172_800_000).toISOString(),
+      leftAt: new Date(now - 86_400_000).toISOString(),
+    });
     await a.from("attendance").insert({
       meetingId,
       userId: member.userId,
@@ -387,21 +401,40 @@ describe("platform meetings, teams and attendance", () => {
     // evidence is removed explicitly before this test fixture's schedule.
     await admin().from("attendance").delete().eq("meetingId", meetingId);
     await admin().from("meetings").delete().eq("id", meetingId);
-    await admin().from("projects").delete().eq("id", projectId);
   });
 
   it("publishes the schedule to logged-out visitors", async () => {
     const client = anon();
-    for (const table of [
-      "projects",
-      "meetings",
-      "workshops",
-      "competitions",
-    ] as const) {
+    for (const table of ["meetings", "workshops", "competitions"] as const) {
       const { data, error } = await client.from(table).select("id");
       expect(error, `${table} should be anon-readable`).toBeNull();
       expect(data?.length ?? 0).toBeGreaterThan(0);
     }
+  });
+
+  // No fixture row here: this is a read-only-policy check, so an empty
+  // table is a legitimate answer. In production the pull_request webhook
+  // and reconcileEntries backstop keep this table populated, but the RLS
+  // policy under test doesn't care whether any rows exist.
+  it("publishes competition entries to logged-out visitors, read-only", async () => {
+    const client = anon();
+    const { data, error } = await client
+      .from("competitionEntries")
+      .select("id");
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+
+    const { error: insert } = await member.client
+      .from("competitionEntries")
+      .insert({
+        competitionId,
+        teamId,
+        prNodeId: "PR_rogue",
+        prNumber: 1,
+        url: "https://github.com/DevDogsUGA/DevDogsUGA/pull/1",
+        openedAt: new Date().toISOString(),
+      });
+    expect(insert?.code).toBe("42501");
   });
 
   it("refuses client writes to the schedule", async () => {
@@ -463,7 +496,7 @@ describe("platform meetings, teams and attendance", () => {
     // The rest of the row still reads, or the meetings page breaks.
     const { data, error } = await anon()
       .from("teams")
-      .select("id, name, slug, competitionId")
+      .select("id, name, slug, createdBy")
       .eq("id", teamId)
       .single();
     expect(error).toBeNull();
@@ -481,6 +514,27 @@ describe("platform meetings, teams and attendance", () => {
       .select("userId");
     expect(error).toBeNull();
     expect(memberRows?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  // A departed stint is history, not roster: it names when someone joined and
+  // left, which the design note's "the team page shows who is on each team"
+  // does not extend to every signed-in account. Only the team's own current
+  // members can see it; `suspended` is on no team at all.
+  it("hides a departed member's stint from non-members but shows it to the team", async () => {
+    const { data: outsiderRows } = await suspended.client
+      .from("teamMembers")
+      .select("userId")
+      .eq("teamId", teamId)
+      .not("leftAt", "is", null);
+    expect(outsiderRows ?? []).toHaveLength(0);
+
+    const { data: insiderRows, error } = await member.client
+      .from("teamMembers")
+      .select("userId")
+      .eq("teamId", teamId)
+      .not("leftAt", "is", null);
+    expect(error).toBeNull();
+    expect(insiderRows?.some((r) => r.userId === moderator.userId)).toBe(true);
   });
 
   // Officers read other people's attendance through a server action holding
@@ -595,13 +649,9 @@ describe("platform meetings, teams and attendance", () => {
     expect(data).toEqual([]);
   });
 
-  it("resolves the three new permissions", async () => {
+  it("resolves the two new permissions", async () => {
     const a = admin();
-    for (const perm of [
-      "canManageAttendance",
-      "canExportStars",
-      "canTriggerSync",
-    ] as const) {
+    for (const perm of ["canManageAttendance", "canExportStars"] as const) {
       const { data: before } = await a.rpc("has_permission", {
         uid: member.userId,
         perm,

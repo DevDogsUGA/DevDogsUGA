@@ -1,30 +1,70 @@
 ---
-name: Toolkit
-description: The shared packages every app builds on.
+name: Shared packages & tooling
+description: The shared packages every app builds on, and the repo-wide maintainer material — CI, deploys, secrets, the docs system.
 order: 50
 ---
 
-# Toolkit
+# Shared packages & tooling
 
-`packages/*` holds the libraries and CLIs the apps share. None of them is a
-product; you meet one because you hit an import or ran a command. These pages
-are reference-shaped and short — what it is, the two or three calls you will
-actually make, and a link to the generated API.
+Two things live here: reference-shaped guides to the packages under `packages/*` and the Backstage-published `@devdogsuga/*` tooling every app shares — you meet one because you hit an import or ran a command — and, under **Infrastructure**, the maintainer/officer-only material that spans the whole repo: deploys, secrets, CI, the docs system.
+
+## Which app owns what
+
+| Directory                 | What it is                                                              | Postgres schema      |
+| ------------------------- | ----------------------------------------------------------------------- | -------------------- |
+| `apps/schedule-builder`   | Next.js — course schedule planning ("DogDays")                          | `schedule_builder`   |
+| `apps/study-group-finder` | Flutter — study groups ("Dog Pack"), still a scaffold                   | `study_group_finder` |
+| `apps/platform`           | Next.js — shared OAuth server, plus the DevDogs site, console, and docs | `platform`           |
+| `apps/sandbox`            | Cloudflare Worker — dormant; used to proxy each team's Supabase project | none                 |
+
+Schema-per-app is an organizational boundary, not a security one — see [Supabase](/docs/platform/guides/stack/supabase) for why Row-Level Security is what actually isolates one app's data from another's. The SQL is not in `packages/`: all three schemas are built by one migration history at the repo root, `supabase/migrations/`.
 
 ## I need to…
 
-| …do this                             | …use this                                                                                                                                                                            |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Read a variable, or add a new one    | [**`@devdogsuga/env`**](/docs/toolkit/guides/env) — the registry: one declaration per variable, carrying its schema and where it is allowed to live                                  |
-| Find the command for a chore         | [**`@devdogsuga/devtools`**](/docs/toolkit/guides/devtools) — the contributor CLI: database, moderation, OAuth, env sync, and the deploy steps CI runs                               |
-| Boot, migrate or reset a database    | [**Database commands**](/docs/toolkit/guides/database) — `devtools db …`, over Supabase on this machine or the linked project, plus `stop` and `restart` for the one on this machine |
-| Talk to Postgres from an app         | [**`@devdogsuga/drizzle`**](/docs/toolkit/guides/drizzle) — the shared postgres-js + Drizzle client factory                                                                          |
-| Reach Supabase, or write an RLS test | [**`@devdogsuga/supabase`**](/docs/toolkit/guides/supabase) — the three client factories, the generated `Database` types, the app → schema map, and the RLS test harness             |
-| Push or pull officer data            | [**`@devdogsuga/airtable`**](/docs/toolkit/guides/airtable) — the field registry, sync engine, and base verifier                                                                     |
-| Send an email                        | [**`@devdogsuga/email`**](/docs/toolkit/guides/email) — react-email sources compiled to typed, React-free HTML                                                                       |
-| Change how docs are built            | [**`@devdogsuga/docs-build`**](/docs/toolkit/guides/docs-build) — compiles markdown, and generates the reference section                                                             |
+| …do this                             | …use this                                                                                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read a variable, or add a new one    | [**`@devdogsuga/env`**](/docs/toolkit/guides/env) — one declaration per variable                                                                                                            |
+| Find the command for a chore         | [**`@devdogsuga/devtools`**](/docs/toolkit/guides/devtools) — the contributor CLI                                                                                                           |
+| Boot, migrate or reset a database    | [**Database commands**](/docs/toolkit/guides/database) — `devtools db …`                                                                                                                    |
+| Talk to Postgres from an app         | [**`@devdogsuga/db`**](/docs/toolkit/guides/db) — the shared postgres-js + Drizzle client factory                                                                                           |
+| Reach Supabase, or write an RLS test | [**`@devdogsuga/db`** + `@devdogsuga/supabase`](/docs/toolkit/guides/supabase) — client factories, types, RLS suite                                                                         |
+| Author a meeting or a workshop       | [**`@devdogsuga/events`**](/docs/platform/guides/meetings-and-teams/events) — a PR against Backstage's data                                                                                 |
+| Send an email                        | [**`@devdogsuga/email`**](/docs/toolkit/guides/email) — react-email, compiled to typed HTML                                                                                                 |
+| Change how docs are built            | [**`@devdogsuga/docs-compiler`**](/docs/toolkit/guides/docs-compiler) — compiles markdown, generates reference                                                                              |
+| Deploy, rotate a secret, add an app  | **Infrastructure**, below — [Cloudflare](/docs/toolkit/infrastructure/cloudflare), [Secrets](/docs/toolkit/infrastructure/secrets), [Docs system](/docs/toolkit/infrastructure/docs-system) |
+
+<details>
+<summary>Every pinned version, and what departs from the default</summary>
+
+Shared versions live in the `catalog:` block of `pnpm-workspace.yaml`.
+
+| Layer           | Technology                                            | Version                          |
+| --------------- | ----------------------------------------------------- | -------------------------------- |
+| Framework       | Next.js, App Router, built by vinext                  | 16.3.2, vinext 1.0.0-beta.11     |
+| UI              | React / React DOM                                     | 19.2.8                           |
+| Styling         | Tailwind CSS                                          | 4.3.3                            |
+| Hosting         | Cloudflare Workers, `@cloudflare/vite-plugin`         | wrangler ^4.136.3                |
+| Data            | Supabase — Postgres 17, `supabase-js`                 | 2.112.3, CLI 2.115.0             |
+| Server SQL      | Drizzle ORM and Kit, on `postgres` 3.4.9              | 1.0.0-rc.4                       |
+| Build graph     | pnpm workspace filters (`--filter`, topological `-r`) | pnpm 11.8.0                      |
+| Mobile          | Flutter, Dart SDK                                     | ^3.5.0                           |
+| Language        | TypeScript, Node                                      | 6.0.3, Node 24 (engines >=22.12) |
+| Validation      | Zod, `@t3-oss/env-nextjs`                             | 4.4.3, ^0.13.11                  |
+| Tests           | Vitest, jsdom                                         | 4.1.11, ^29.1.1                  |
+| Lint and format | ESLint, Prettier                                      | ^9.39.5, 3.9.6                   |
+
+What is unusual, by app: [Next.js](/docs/platform/guides/stack/nextjs) and [Tailwind](/docs/platform/guides/stack/tailwind) (schedule-builder, platform); [Supabase](/docs/platform/guides/stack/supabase) (all three apps); [Database (Drizzle)](/docs/platform/guides/stack/db) (schedule-builder, platform); [Flutter](/docs/study-group-finder/guides/typed-models) (study-group-finder); [Cloudflare](/docs/toolkit/infrastructure/cloudflare) (deploy, all apps).
+
+Four of the catalog's ranges are held back deliberately: ESLint stays on 9.x (`eslint-plugin-react`, reached through `eslint-config-next`, is not compatible with ESLint 10); TypeScript stays on 6.x (typescript-eslint peer-requires `>=4.8.4 <6.1.0`); Vitest stays on 4.x (5.x is still on the beta dist-tag); jsdom stays on 29.x (30.x raises its Node floor above this repo's declared `engines.node`). Three catalog entries are pinned to an exact version rather than a range: `drizzle-orm` and `drizzle-kit` on `1.0.0-rc.4`, because the `latest` dist-tag still points at 0.45.x, and `zod` on `4.4.3`. `prettier` is pinned to `3.9.6` in the root `package.json` rather than the catalog. `undici` is overridden repo-wide to `^7.28.0` — see [Cloudflare](/docs/toolkit/infrastructure/cloudflare) for the Wasm reason.
+
+</details>
 
 ## Reference
 
-[API reference](/docs/toolkit/reference/api/env) is generated from each
-package's source on every build, so it never drifts from what the code exports.
+An [API reference](/docs/toolkit/reference/api/supabase) page exists for each
+`packages/*` published with a public surface — `deploy-checks`, `email`,
+`open-graph`, `repo-checks`, `security-headers`, and `supabase` today —
+generated from that package's source on every build, so it never drifts from
+what the code exports. `@devdogsuga/env` is Backstage-published tooling
+rather than a `packages/*` workspace member, so it is documented by hand in
+[Env](/docs/toolkit/guides/env) instead.

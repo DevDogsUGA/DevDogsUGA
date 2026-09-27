@@ -1,3 +1,4 @@
+import { Suspense, type ReactNode } from "react";
 import {
   CalendarDotsIcon,
   CompassIcon,
@@ -12,6 +13,7 @@ import SectionMarquee, { MarqueeItem } from "~/components/SectionMarquee";
 import MissionSection, { MISSION_BLOBS } from "~/components/MissionSection";
 import ProjectsSection, { PROJECTS_BLOBS } from "~/components/ProjectsSection";
 import EventsSection, { EVENTS_BLOBS } from "~/components/EventsSection";
+import UpcomingMeetings from "~/components/EventsSection/UpcomingMeetings";
 import PartnersSection from "~/components/PartnersSection";
 import LeadershipSection from "~/components/LeadershipSection";
 import StatCard from "~/ui/stat-card";
@@ -32,7 +34,13 @@ export default function HomePage() {
           It sits out here rather than inside {@link HomeSections} because it
           describes the site rather than the cached page sections themselves. */}
       <JsonLd data={siteGraph()} />
-      <HomeSections />
+      <HomeSections
+        upcomingMeetings={
+          <Suspense>
+            <UpcomingMeetings />
+          </Suspense>
+        }
+      />
     </>
   );
 }
@@ -42,9 +50,20 @@ export default function HomePage() {
  * Components everything is dynamic by default, so without it the static output
  * was the nav chrome and nothing else, 7.9 KB of shell, and every visit
  * re-rendered the whole marketing page on the server. Every section here is
- * static copy or reads the cached calendar frame, so caching is accurate.
+ * static copy or reads the cached calendar frame, so caching is accurate --
+ * except the next-meetings stack, which is neither: it needs "now", not
+ * whatever was true when this cache entry was last populated. That element
+ * arrives as `upcomingMeetings`, built by `HomePage` above before this
+ * function is entered, so it renders on the request that's actually being
+ * served instead of getting frozen into the shared cache entry (or, worse,
+ * having its database read attributed to the wrong request entirely -- see
+ * `UpcomingMeetings`'s doc comment for what that looked like).
  */
-async function HomeSections() {
+async function HomeSections({
+  upcomingMeetings,
+}: {
+  upcomingMeetings: ReactNode;
+}) {
   "use cache";
 
   return (
@@ -135,7 +154,11 @@ async function HomeSections() {
         <MarqueeItem>100% Free and Open Source</MarqueeItem>
       </SectionMarquee>
 
-      <EventsSection topEdge="bs" bottomEdge="bs" />
+      <EventsSection
+        topEdge="bs"
+        bottomEdge="bs"
+        upcomingMeetings={upcomingMeetings}
+      />
 
       <SectionMarquee
         slope="bs"
@@ -147,7 +170,7 @@ async function HomeSections() {
         <MarqueeItem>Every Team at Once</MarqueeItem>
         <MarqueeItem>Weekly Workshops</MarqueeItem>
         <MarqueeItem>Ship a Pull Request</MarqueeItem>
-        <MarqueeItem>Build Sessions</MarqueeItem>
+        <MarqueeItem>Dev Sessions</MarqueeItem>
         <MarqueeItem>Show off to Your Friends</MarqueeItem>
         <MarqueeItem>Vote for the Best</MarqueeItem>
       </SectionMarquee>

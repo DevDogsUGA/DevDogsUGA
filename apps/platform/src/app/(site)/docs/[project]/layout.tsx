@@ -1,5 +1,5 @@
 import DocsSidebar from "~/components/DocsSidebar";
-import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
+import { getDocsProjects, getDocsSidebarTree } from "~/server/docs/queries";
 
 export default async function DocsProjectLayout({
   children,
@@ -24,7 +24,7 @@ export default async function DocsProjectLayout({
           description,
         }))}
         project={projectSlug}
-        tree={getDocsTree(projectSlug)}
+        tree={getDocsSidebarTree(projectSlug)}
       />
       <div className="flex min-w-0 flex-1 flex-col self-stretch">
         {children}

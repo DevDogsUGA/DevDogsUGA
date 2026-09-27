@@ -5,9 +5,12 @@ import { usersInAuth } from "~/supabase/drizzle/schema";
 import { csvTimestamp } from "./csv";
 
 /**
- * The export follows the new one-row-per-star ledger. Attendance is a meeting
- * fact and participation is a competition fact; neither is attributed to a
- * workshop merely to fit the former shape.
+ * The export is a one-row-per-star ledger. Attendance is a meeting fact and
+ * participation is a competition fact; neither is attributed to a workshop.
+ *
+ * There is no `project` filter here: a competition is a standalone GitHub
+ * issue, not opened by any workshop, so "this project's competitions" is not
+ * a question this export can answer.
  */
 export const STARS_COLUMNS = [
   "user_id",
@@ -28,8 +31,6 @@ export const STARS_COLUMNS = [
 export interface StarsFilters {
   from?: Date;
   to?: Date;
-  /** Limits competition rows to those opened by this project. */
-  projectSlug?: string;
 }
 
 export interface StarRow {
@@ -87,16 +88,6 @@ async function starPage(
   const conditions = [];
   if (filters.from) conditions.push(gte(memberStars.startsAt, filters.from));
   if (filters.to) conditions.push(lte(memberStars.startsAt, filters.to));
-  if (filters.projectSlug) {
-    conditions.push(sql`exists (
-      select 1
-      from platform.competitions c
-      join platform.workshops w on w.id = c."workshopId"
-      join platform.projects p on p.id = w."projectId"
-      where c.id = ${memberStars.competitionId}
-        and p.slug = ${filters.projectSlug}
-    )`);
-  }
 
   const rows = await db
     .select({
@@ -153,10 +144,8 @@ export function parseStarsFilters(url: URL): StarsFilters {
   const filters: StarsFilters = {};
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
-  const project = url.searchParams.get("project");
 
   if (from && !Number.isNaN(Date.parse(from))) filters.from = new Date(from);
   if (to && !Number.isNaN(Date.parse(to))) filters.to = new Date(to);
-  if (project) filters.projectSlug = project;
   return filters;
 }

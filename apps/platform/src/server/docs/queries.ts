@@ -6,8 +6,10 @@ import {
 } from "@devdogsuga/docs";
 import { projectPath, splitProjectPath } from "~/lib/docsSlug";
 import {
+  buildDocsSidebarSections,
   buildDocsTree,
   findFolder,
+  type DocsSidebarTree,
   type DocsTreeFolder,
   type DocsTreeNode,
 } from "~/lib/docsTree";
@@ -42,6 +44,26 @@ export function getDocsTree(project: string): DocsTreeNode[] {
         path: splitProjectPath(page.path).path,
         title: page.title,
         order: page.order,
+      })),
+  );
+}
+
+/**
+ * The sidebar's grouped view of one project: Overview, then the four fixed
+ * sections, each dropped when empty. A separate call from `getDocsTree`
+ * rather than a derived view of its result — see `buildDocsSidebarSections`
+ * for why sectioning starts from the flat page list instead of partitioning
+ * the folder tree.
+ */
+export function getDocsSidebarTree(project: string): DocsSidebarTree {
+  return buildDocsSidebarSections(
+    pages
+      .filter((page) => page.project === project)
+      .map((page) => ({
+        path: splitProjectPath(page.path).path,
+        title: page.title,
+        order: page.order,
+        section: page.section,
       })),
   );
 }
@@ -96,6 +118,13 @@ export interface DocsPageContent {
   description: string | null;
   headings: DocHeading[];
   content: string;
+  /**
+   * `docs/_shared/<path>` for a page the compiler mounted into this project
+   * from the shared pool (contract item 2), null for a page that lives here
+   * natively. Drives the "edit this page" link: a mounted page's real source
+   * is the shared file, not the per-project copy this route renders.
+   */
+  mountedFrom: string | null;
 }
 
 export function getDocsPage(
@@ -110,5 +139,9 @@ export function getDocsPage(
     description: page.description,
     headings: page.headings,
     content: page.content,
+    // The compiler's `mountedFrom` is relative to `_shared/`; this one is
+    // relative to `docs/`, like every other path the edit link is built from.
+    mountedFrom:
+      page.mountedFrom === null ? null : `_shared/${page.mountedFrom}`,
   };
 }

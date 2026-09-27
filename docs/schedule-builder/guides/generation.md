@@ -2,6 +2,7 @@
 name: Schedule generation
 description: The rule engine behind recommended schedules — how the search works, the ScheduleRule contract, and how to add a rule without touching the engine.
 order: 3
+section: guides
 ---
 
 # Schedule generation

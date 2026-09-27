@@ -1,4 +1,4 @@
-import { APPS, OG_SIZE, PageCard } from "@devdogsuga/og";
+import { APPS, OG_SIZE, PageCard } from "@devdogsuga/open-graph";
 import { imageResponse } from "~/lib/ogImage";
 
 /**

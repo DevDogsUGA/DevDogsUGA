@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "devtools": "pnpm dlx @devdogsuga/devtools",
     "build": "pnpm devtools run build",
     "dev": "pnpm devtools run dev",
     "typecheck": "pnpm devtools run typecheck",
@@ -17,14 +18,14 @@
     "node": ">=22.12"
   },
   "devDependencies": {
-    "@devdogsuga/devtools": "workspace:*",
-    "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/config": "^0.1.1",
+    "@devdogsuga/devtools": "0.1.8",
+    "@devdogsuga/env": "^0.1.1",
     "@types/node": "catalog:",
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "supabase": "catalog:",
     "tsx": "catalog:",
-    "turbo": "^2.10.12",
     "typescript": "catalog:",
     "zod": "catalog:"
   },

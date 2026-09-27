@@ -1,0 +1,46 @@
+query CompetitionsProjectItems($projectId: ID!, $cursor: String) {
+  node(id: $projectId) {
+    ... on ProjectV2 {
+      id
+      plannedEndDateField: field(name: "Judging/End Date") {
+        __typename
+        ... on ProjectV2Field {
+          name
+          dataType
+        }
+      }
+
+      items(first: 100, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+
+          plannedEndDateValue: fieldValueByName(name: "Judging/End Date") {
+            ... on ProjectV2ItemFieldDateValue {
+              date
+            }
+          }
+
+          content {
+            __typename
+            ... on Issue {
+              id
+              number
+              title
+              body
+              url
+              createdAt
+              closedAt
+              repository {
+                nameWithOwner
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

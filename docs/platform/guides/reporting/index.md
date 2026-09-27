@@ -2,6 +2,7 @@
 name: Reporting
 description: The contract a DevDogs app calls to let a member report content — three functions in the platform schema, what filing one does, and what the reporter is told back.
 order: 1
+section: guides
 ---
 
 # Reporting
@@ -37,7 +38,7 @@ Reasons are one global enum, `platform."reportReason"`, so `file_report` takes a
 <details>
 <summary>Which reasons ship, and how do I add one?</summary>
 
-The database is the source of truth; `pnpm devtools catalog` prints what an instance actually has. As of `20260807000000_platform_report_reasons_enum.sql`, in display order:
+The database is the source of truth; `pnpm devtools moderation catalog` prints what an instance actually has. As of `20260807000000_platform_report_reasons_enum.sql`, in display order:
 
 | Label            | Title          |
 | ---------------- | -------------- |

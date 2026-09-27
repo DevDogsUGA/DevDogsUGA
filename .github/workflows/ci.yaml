@@ -43,34 +43,72 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # Full history so `turbo --affected` can compute the merge base.
+          # Full history so the base-ref diff below (affected-package
+          # detection, done with a git-diff-backed pnpm `--filter
+          # '...[<ref>]'` selector) has both ends of the comparison to work
+          # with, whether that is a PR's base branch or the previous commit
+          # on a push.
           fetch-depth: 0
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      # Next's GENERATED types (PageProps/LayoutProps globals, the image
-      # module declarations, next-env.d.ts itself) exist on every laptop that
-      # has ever run `next dev` and on no fresh checkout — `tsc --noEmit`
-      # then fails on names the framework provides. `next typegen` creates
-      # them without a build or a database; next.config.ts falls back to a
-      # placeholder URL under SKIP_ENV_VALIDATION so loading it here needs no
-      # credentials.
-      # `pnpm --filter ... exec` bypasses turbo, so nothing has compiled the
-      # workspace packages the Next configs import (`~/env` reaches into
-      # @devdogsuga/env's dist/) — build the apps' dependencies first. The
-      # results land in turbo's cache, so the lint/typecheck/test step below
-      # doesn't repeat the work.
-      - name: Generate the Next type stubs
+      - uses: ./.github/actions/setup-workspace
+      # Turbo used to auto-detect this; pnpm's `[<since>]` filter needs the
+      # ref named explicitly. A pull request diffs against the branch it
+      # targets (its head may be several commits ahead of where it forked,
+      # so the base branch's current tip is the right comparison point); a
+      # push compares against the commit that `HEAD` pointed to before the
+      # push landed, falling back to the previous commit if that value is
+      # unset or unreachable (a repository's first push, or history pnpm
+      # cannot see for another reason).
+      - name: Determine base ref for affected-package detection
+        id: base
         run: |
-          pnpm turbo run build --filter 'platform^...' --filter 'schedule-builder^...'
-          pnpm --filter platform exec next typegen
-          pnpm --filter schedule-builder exec next typegen
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            REF="${{ github.event.pull_request.base.sha }}"
+          else
+            REF="${{ github.event.before }}"
+            if [ -z "$REF" ] || [ "$REF" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$REF" 2>/dev/null; then
+              REF="HEAD~1"
+            fi
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          # These are turbo's globalDependencies equivalents, but pnpm
+          # attributes root-level files to the workspace root package, which
+          # the filters below exclude -- a root-only change would otherwise
+          # select nothing. Force the full package set when one changed.
+          if git diff --quiet "$REF" HEAD -- tsconfig.base.json package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc; then
+            echo "since=--filter=...[$REF]" >> "$GITHUB_OUTPUT"
+          else
+            echo "since=" >> "$GITHUB_OUTPUT"
+          fi
+      # `supabase/migrations/` is one flat directory; a new file timestamped
+      # before the newest one already on the base branch would apply out of
+      # the order its author tested it in the next time someone runs
+      # migrations from scratch. Credential-free — pure git, no database — so
+      # it runs here rather than in the `database` job, and needs the base
+      # ref this job already resolved above rather than re-deriving it.
+      - name: Migrations are added in timestamp order
+        run: pnpm --filter @devdogsuga/repo-checks run check:migration-order "${{ steps.base.outputs.ref }}"
+      # Both apps' GENERATED route types (the `VinextRouteTypes` namespace,
+      # next-env.d.ts's `vinext/types/augmentations` reference) exist on
+      # every laptop that has ever run `vinext dev`/`vinext build` and on no
+      # fresh checkout — `tsc --noEmit` then fails on names the framework
+      # provides. `vinext typegen` (NOT `next typegen` — the two write
+      # mutually incompatible shapes to the same `.next/types/routes.d.ts`
+      # and `next-env.d.ts`; `next typegen` also strips next-env.d.ts's
+      # `vinext/types/augmentations` import, which then breaks `tsc
+      # --noEmit`) creates them without a build or a database;
+      # next.config.ts falls back to a placeholder URL under
+      # SKIP_ENV_VALIDATION so loading it here needs no credentials.
+      # `pnpm --filter ... exec` runs only in that one package, so nothing
+      # has compiled the workspace packages the Next configs import (`~/env`
+      # reaches into @devdogsuga/env's dist/) — build the apps' dependencies
+      # first, topologically, with pnpm's own `^...` (deps-of) selector.
+      - name: Generate the vinext type stubs
+        run: |
+          pnpm -r --if-present --filter 'platform^...' --filter 'schedule-builder^...' run build
+          pnpm --filter platform exec vinext typegen
+          pnpm --filter schedule-builder exec vinext typegen
       # Flutter isn't installed here — the study-group-finder app is validated
-      # in the `flutter` job below. Turbo runs the three tasks in parallel.
+      # in the `flutter` job below.
       #
       # `build` is NOT in this list, and its absence is the point. A Next
       # production build reads the environment whether or not the schema is
@@ -79,53 +117,94 @@ jobs:
       # any page renders. SKIP_ENV_VALIDATION moves that failure; it does not
       # remove the requirement. Building the apps needs a database, so it
       # happens in the `database` job, which has one.
-      - name: Lint + typecheck + test (affected)
-        run: >-
-          pnpm turbo run lint typecheck test
-          --affected --filter='!study-group-finder'
-      # Reads the committed snapshot and touches no network, so it needs no
-      # credential -- which is why it can live here at all. It answers "does
-      # registry.ts still agree with the base as last observed", not "is the
-      # live base still correct"; the latter needs a token and belongs in the
-      # deployed worker's cron.
       #
-      # Unconditional rather than --affected: the registry is edited by hand
-      # after `airtable apply` writes the ids into it, and a hand-edited id is
-      # exactly the mistake with no other detection. It costs no network and
-      # about a second.
-      - name: Registry agrees with the schema snapshot
-        run: pnpm devtools airtable check
+      # pnpm has no single "run these tasks only against packages changed
+      # since a ref, and their dependents, but build every dependency they
+      # could reach so type-aware lint/typecheck have every .d.ts on disk"
+      # command the way turbo's task graph did. `--filter './packages/**'
+      # --filter './docs'` is deliberately a directory selector, not
+      # `!<app-name>` exclusions: it builds every package UNDER apps' own
+      # dependencies without ever running an app's OWN `build` script, which
+      # is exactly what turbo's `^build` did too (typechecking `platform`
+      # ran `platform`'s `typecheck` script and its DEPENDENCIES' `build`
+      # scripts, never `platform`'s own `build`). That distinction matters
+      # here specifically: this job sets SKIP_ENV_VALIDATION but has no .env
+      # and no database, so `pnpm --filter platform run build`'s own
+      # `_images` step reaching for `with-env` would fail outright, and a
+      # broader "build everything, apps included" pre-step would too. It
+      # also sidesteps the workspace-root recursion a `!`-exclusion-based
+      # filter would otherwise risk: a directory selector never matches the
+      # workspace root the way `!study-group-finder` alone would, so there is
+      # no need to separately exclude `devdogs-monorepo`, whose own
+      # `build`/`lint`/`typecheck`/`test` scripts are all `pnpm devtools run
+      # <task>` — the exact command this step is replacing.
+      #
+      # This still costs more than turbo's per-task `^build` scoping would
+      # have on a small-diff PR — every package under `packages/` and `docs`
+      # builds regardless of which ones are actually affected, since pnpm has
+      # no narrower "only the dependencies an affected app would reach"
+      # selector — accepted here because turbo's remote cache was never
+      # enabled and `.turbo` was never persisted across CI runs, so turbo was
+      # already rebuilding all of it from nothing on every run; this only
+      # makes that cost explicit. `--if-present` skips the packages with no
+      # `build` script (`@devdogsuga/repo-checks`, test-only, nothing else in
+      # the workspace imports it) instead of failing on them.
+      - name: Lint + typecheck + test (affected)
+        run: |
+          pnpm -r --if-present --filter './packages/**' --filter './docs' run build
+          status=0
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run lint || status=1
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run typecheck || status=1
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run test || status=1
+          exit $status
+      # REMOVED: "Events config passes its publishability checks"
+      # (`pnpm --filter @devdogsuga/events check`), the CLI that parses
+      # data/meetings.json against the Zod schema and runs the validator
+      # (lengths, the RSVP-host allowlist, cancellation pairing, id
+      # uniqueness and shape).
+      #
+      # `@devdogsuga/events` is an installed npm dependency now, not a
+      # workspace package, so `pnpm --filter` can no longer see it here to
+      # run its `check` script. More to the point, the meetings/workshops
+      # config-as-code — both the schema/validator source AND the authored
+      # data/meetings.json this step was gating — moved to Backstage with the
+      # package; DevDogsUGA no longer has anything to author or check here.
+      # Backstage's own CI runs this same gate on every change to that
+      # package. If a future `@devdogsuga/events` release ships a config
+      # that fails its own validator, that is a bug in the published
+      # package, not something a check in this repo can catch earlier.
       # .env.example is GENERATED from the env manifests; this regenerates it
       # in memory and byte-compares -- the same pattern the database job uses
       # for database.types.ts. Credential-free by construction: the generator
       # is registry-only (no Bitwarden token, no network, no Docker).
       #
-      # This and the check above used to be root aliases (`env:example:check`,
-      # `airtable:snapshot:check`) that reached devtools through `cli:no-env`,
-      # because `with-env` refused to start without a `.env` this job
-      # deliberately does not have. The wrapper reports that absence and
-      # continues now, so both call the one front door like everything else.
+      # `with-env` reports a missing `.env` and continues rather than
+      # refusing to start, so this job -- which deliberately does not have
+      # one -- calls the one front door like everything else.
       #
-      # Unconditional rather than --affected, like the snapshot check above:
-      # any manifest edit anywhere can change the output, and it costs about
-      # a second.
+      # Unconditional rather than --affected: any manifest edit anywhere can
+      # change the output, and it costs about a second.
+      # `pnpm exec devtools`, not `pnpm devtools`: the root script is
+      # `pnpm dlx @devdogsuga/devtools` (always the newest publish), and CI
+      # runs the exact version package.json pins, like deploys do.
       - name: .env.example agrees with the env manifests
-        run: pnpm devtools env example --check
+        run: pnpm exec devtools env example --check
       - name: Cloudflare binding types match the Worker configuration
         run: pnpm --filter platform cf:typegen:check && pnpm --filter schedule-builder cf:typegen:check
       # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
       #
-      # It existed because `scripts/` was not a workspace package, so `turbo run
-      # typecheck` could not see it — while the files in it were the ones that
-      # composed production credentials and wrote Worker secrets. All six are
-      # `devtools deploy` commands now, so they are typechecked, linted and
-      # TESTED by the `turbo run lint typecheck test` step above, along with
-      # everything else in that package. `scripts/` is gone with them; a step
+      # It existed because `scripts/` was not a workspace package, so the
+      # lint/typecheck/test step could not see it — while the files in it
+      # were the ones that composed production credentials and wrote Worker
+      # secrets. All six are `devtools deploy` commands now, so they are
+      # typechecked, linted and TESTED by the "Lint + typecheck + test
+      # (affected)" step above, along with everything else in that package.
+      # `scripts/` is gone with them; a step
       # pointed at an empty directory does not fail loudly, it fails as
       # TS18003 "no inputs were found", which reads like a broken config
       # rather than like a job with nothing to do.
 
-  # Everything that needs a real Postgres: 139 tests CI has never run.
+  # Everything that needs a real Postgres: 189 tests CI has never run.
   #
   # Credential-free like the rest of this file, and not by exception — the local
   # stack's keys ARE the well-known constants Supabase publishes in its own
@@ -133,21 +212,16 @@ jobs:
   #
   # Unconditional rather than --affected, deliberately. Migrations and RLS are
   # the highest-consequence things in this repository, the whole job is a few
-  # minutes, and a security check that skips itself on a heuristic is exactly the
-  # failure mode described at the bottom of this file: the Airtable job passed
-  # for months by never running.
+  # minutes, and a security check that skips itself on a heuristic is exactly
+  # the failure mode this repository has already been bitten by: a job
+  # guarded on `secrets.X != ''` that passed green for months without ever
+  # running, because the secret it needed was never set.
   database:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # The runner's volume is always empty, so this applies every migration to
       # a fresh database and fails if any of them does not apply -- which is the
       # "migrations apply cleanly from scratch" check, with no separate reset
@@ -155,53 +229,23 @@ jobs:
       #
       # ⚠️ The devtools entrypoint and RLS suite run through `with-env`, which
       # REFUSES a missing .env by design. Seed it before the stack writes the
-      # local connection overlay; the synthetic-environment step later replaces
-      # this file and appends those generated values for the builds.
+      # local connection overlay; the synthetic-environment step right after
+      # the stack starts replaces this file and appends the generated values.
       - name: Seed the env file for wrapped checks
         run: cp .github/ci.env .env
       # config.toml enables four OAuth providers with `env()` credentials that
       # CI does not have. Verified: unset resolves to a WARN and exit 0, not an
       # error.
       - name: Start the local Supabase stack
-        run: pnpm devtools db start
-      # Catches a migration that changed the schema without the committed types
-      # being regenerated -- which typechecks fine everywhere until something
-      # reads a column the types still claim exists.
-      - name: Generated Database types match the migrations
-        run: |
-          pnpm devtools db types
-          git diff --exit-code -- packages/supabase/src/database.types.ts
-      # 54 tests. All app schemas share one PostgREST endpoint and one anon key,
-      # so RLS -- not the schema boundary -- is what isolates one app's data from
-      # another's. This is the only thing that checks it.
-      - name: Row-Level Security
-        run: pnpm --filter @devdogsuga/supabase run test:rls
-      # 85 tests, including the privilege-surface guards in
-      # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
-      # nothing else can see: a function reachable by every role in the cluster
-      # typechecks perfectly.
-      # Vitest resolves @devdogsuga/drizzle and friends from their dist/,
-      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
-      # invocation bypasses turbo's ^build ordering, so build the app's
-      # dependencies first (cached for the build step below).
-      - name: Query validity + privilege surface
-        run: |
-          pnpm turbo run build --filter 'platform^...'
-          pnpm --filter platform run test:db
-      # Vitest resolves @devdogsuga/drizzle and friends from their dist/,
-      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
-      # invocation bypasses turbo's ^build ordering, so build the app's
-      # dependencies first (cached for the build step below).
-      - name: Query validity + privilege surface (schedule-builder)
-        run: |
-          pnpm turbo run build --filter 'schedule-builder^...'
-          pnpm --filter schedule-builder run test:db
-      # The Supabase half comes from .env.generated, so the build renders
-      # against a real Postgres and a real PostgREST rather than a mock. The
-      # NEXT_PUBLIC pair is derived rather than hardcoded: it has to match the
-      # stack being rendered against, and the CLI's local keys are not
-      # guaranteed stable across versions.
-      - name: Synthetic environment for the build
+        run: pnpm exec devtools db start
+      # The Supabase half comes from .env.generated, so the suites and the
+      # build run against a real Postgres and a real PostgREST rather than a
+      # mock. The NEXT_PUBLIC pair is derived rather than hardcoded: it has to
+      # match the running stack, and the CLI's local keys are not guaranteed
+      # stable across versions. Written before the test suites, not just
+      # before the build: schedule-builder's query hooks create the browser
+      # Supabase client at import, so its db-tests need the pair too.
+      - name: Synthetic environment for the suites and the build
         run: |
           cp .github/ci.env .env
           set -a; . ./.env.generated; set +a
@@ -209,6 +253,52 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
           } >> .env
+      # Catches a migration that changed the schema without the committed types
+      # being regenerated -- which typechecks fine everywhere until something
+      # reads a column the types still claim exists.
+      - name: Generated Database types match the migrations
+        run: |
+          pnpm exec devtools db types
+          git diff --exit-code -- packages/supabase/src/database.types.ts
+      # 59 tests. All app schemas share one PostgREST endpoint and one anon key,
+      # so RLS -- not the schema boundary -- is what isolates one app's data from
+      # another's. This is the only thing that checks it.
+      - name: Row-Level Security
+        run: pnpm --filter @devdogsuga/supabase run test:rls
+      # Black-box devtools/devtools-ci process contracts (cron contract
+      # conformance, deploy-cli stdout purity, real email-template
+      # generation) — the "live" lane devtools' own MOVED-TESTS.md left for
+      # stage B to re-home. Needs the `.env`/`.env.generated` this job
+      # already composed above (every `devtools` command resolves a session
+      # tier before dispatch), same reason the RLS suite lives here rather
+      # than in the default `pnpm test` lane. `devtools emails` imports the
+      # email package's built runtime (dist/, untracked), which a fresh
+      # checkout doesn't have until `build` runs; `compile` alone only writes
+      # the templates.
+      - name: devtools / devtools-ci process contracts
+        run: |
+          pnpm --filter @devdogsuga/email run build
+          pnpm --filter @devdogsuga/repo-checks run test:live
+      # 124 tests, including the privilege-surface guards in
+      # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
+      # nothing else can see: a function reachable by every role in the cluster
+      # typechecks perfectly.
+      # Vitest resolves @devdogsuga/db (/server) and friends from their dist/,
+      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
+      # invocation only runs in that one package, so build the app's
+      # dependencies first with pnpm's own deps-of selector.
+      - name: Query validity + privilege surface
+        run: |
+          pnpm -r --if-present --filter 'platform^...' run build
+          pnpm --filter platform run test:db
+      # Vitest resolves @devdogsuga/db (/server) and friends from their dist/,
+      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
+      # invocation only runs in that one package, so build the app's
+      # dependencies first with pnpm's own deps-of selector.
+      - name: Query validity + privilege surface (schedule-builder)
+        run: |
+          pnpm -r --if-present --filter 'schedule-builder^...' run build
+          pnpm --filter schedule-builder run test:db
       # Validation ENFORCED, unlike everywhere else in this file. That is what
       # makes this worth running: a newly added required variable with no
       # default fails here rather than at deploy time.
@@ -216,18 +306,18 @@ jobs:
       # Both Next apps. study-group-finder is Flutter and is covered by its own
       # job.
       #
-      # Note this goes through turbo, which under strict env mode passes a task
-      # only the variables named in turbo.json's `build.env`. A variable missing
-      # there is REMOVED rather than merely unhashed, so it arrives undefined
-      # and fails validation -- while `next build` run directly in the app
-      # inherits the real environment and succeeds. The two disagree, and this
-      # step is the one that matters.
+      # `--filter '!devdogs-monorepo'` alongside `!study-group-finder`: an
+      # unqualified `!<name>` exclusion still matches the workspace root
+      # (unlike a bare, filter-less `-r`, or a dependency-direction selector
+      # like `^...`, both of which never do), and the root's own `build`
+      # script is `pnpm devtools run build` — precisely the picker this
+      # workflow bypasses everywhere else, so it must stay excluded here too.
       - name: Build both Next apps, with the env schema enforced
         env:
           SKIP_ENV_VALIDATION: ""
         run: >-
           pnpm exec with-env
-          pnpm turbo run build --filter='!study-group-finder'
+          pnpm -r --if-present --filter '!study-group-finder' --filter '!devdogs-monorepo' run build
 
   # Repo-wide formatting check — fast, no build needed.
   format:
@@ -235,13 +325,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: Prettier check
         run: pnpm format:check
 
@@ -253,20 +337,44 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
+      # Turbo's `--affected --filter=study-group-finder --dry-run=json`
+      # answered one question: does study-group-finder, or anything it
+      # depends on, appear in the changed set since the merge base? pnpm has
+      # no single flag for that, so this rebuilds it from two pieces: the
+      # same base-ref logic as the `validate` job's "Determine base ref" step
+      # (duplicated rather than shared — jobs don't share step outputs, and
+      # it's five lines), and `study-group-finder...` (pnpm's "package and
+      # its dependencies" selector) to list exactly the directories whose
+      # content decides this — the app itself, plus @devdogsuga/config,
+      # @devdogsuga/env and @devdogsuga/supabase's actual resolved graph,
+      # read from pnpm rather than hand-copied from a package.json that could
+      # drift. A plain `git diff --quiet` over those directories since the
+      # base ref is then exactly turbo's "changed or a dependency changed"
+      # check.
       - name: Is study-group-finder affected?
         id: affected
         run: |
-          if pnpm turbo run build --affected --filter=study-group-finder --dry-run=json | grep -q '"study-group-finder"'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
           else
+            BASE="${{ github.event.before }}"
+            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+              BASE="HEAD~1"
+            fi
+          fi
+          PATHS=$(pnpm -r --filter 'study-group-finder...' list --depth -1 --json 2>/dev/null \
+            | node -e '
+                let d = "";
+                process.stdin.on("data", (c) => (d += c));
+                process.stdin.on("end", () => {
+                  for (const p of JSON.parse(d)) console.log(p.path);
+                });
+              ')
+          if git diff --quiet "$BASE"...HEAD -- $PATHS; then
             echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         if: steps.affected.outputs.run == 'true'
@@ -283,34 +391,15 @@ jobs:
 
 # Removed from this workflow, and not yet replaced:
 #
-#   * Airtable base verification. It needed AIRTABLE_PAT, which cannot live in a
-#     PR-triggered workflow. It moves to a Cloudflare cron in the deployed
-#     worker, which already holds the credential and — verifying with the same
-#     token and scopes as the code that writes — catches a scope loss that a
-#     separate CI token would not. Note the job never actually ran: the secret
-#     was never set, so its `env.AIRTABLE_PAT != ''` guard skipped it every
-#     time. Nothing regresses here; the gap is now recorded rather than silent.
-#
-#   * Turbo remote cache (TURBO_TOKEN / TURBO_TEAM). A token here is readable by
-#     any PR author, and a PR that can WRITE the cache a deploy later READS is a
-#     path from an unreviewed branch into a production artifact. If remote
-#     caching returns, it needs signature verification or disjoint scopes for
-#     trusted and untrusted contexts. These secrets were never set either.
-#
 #   * The `author_association` gates. Every contributor will be a COLLABORATOR,
 #     so the condition passed by construction — protection in appearance only.
 #     With no secrets in this file there is nothing left for it to protect.
 #
-# Both of the gaps recorded here have since been closed, credential-free:
+# The gap recorded here has since been closed, credential-free:
 #
 #   * The local Supabase stack, as the `database` job above. A fresh runner
 #     volume makes `supabase start` itself the from-scratch migration check, so
 #     no separate `db reset` is needed.
-#   * The Airtable registry, diffed against a committed schema snapshot in
-#     `validate`. Note this is NOT the live-base verification that was removed:
-#     it answers "does registry.ts still agree with the base as last observed",
-#     which needs no token. "Is the live base still correct" needs one, and
-#     still belongs in the deployed worker's cron.
 #
 # The test steps of the `database` job run under the workflow-wide
 # SKIP_ENV_VALIDATION, so they do not prove the env schema -- .env.generated

@@ -12,27 +12,26 @@
 --
 -- Postgres grants EXECUTE to PUBLIC on every new function, and PUBLIC is every
 -- role in the cluster, not "the client". Measured on the live local database
--- before this revoke first existed: `sandbox_proxy`, a role created to hold no
--- privileges at all, could execute 18 of this schema's functions, every one of
--- them SECURITY DEFINER. SECURITY DEFINER is the part that bites, because those
--- functions run as their owner, so the calling role's empty table grants stop
--- nothing. `claim_root`, which granted its caller every permission in the
--- system, was among the 18 and has since been removed for related reasons.
+-- before this revoke first existed: a role created to hold no privileges at
+-- all could execute 18 of this schema's functions, every one of them SECURITY
+-- DEFINER. SECURITY DEFINER is the part that bites, because those functions
+-- run as their owner, so the calling role's empty table grants stop nothing.
+-- `claim_root`, which granted its caller every permission in the system, was
+-- among the 18 and has since been removed for related reasons.
 --
 -- Safe for every legitimate caller. The per-schema `grant all on functions`
 -- default privilege in the first migration gives anon, authenticated and
 -- service_role an EXPLICIT grant on each function as it is created
 -- (`{anon=X,authenticated=X,service_role=X}`), so removing PUBLIC removes only
 -- the grant that lets unlisted roles in. The "did not take the API roles down
--- with it" assertion in resolveCredential.db-test.ts fails loudly if that ever
+-- with it" assertion in `functionGrants.db-test.ts` fails loudly if that ever
 -- stops being true.
 --
 -- This does not replace the per-function revokes elsewhere in the set. Those
 -- are narrower on purpose: resolve_content, apply_content_action and the
--- resolve_report_as / dismiss_report_as pair also drop anon and authenticated,
--- and log_proxy_request and resolve_sandbox_credential drop service_role too and
--- grant to sandbox_proxy alone. Idempotent, and a no-op on any function whose
--- own file already revoked PUBLIC by hand.
+-- resolve_report_as / dismiss_report_as pair also drop anon and authenticated.
+-- Idempotent, and a no-op on any function whose own file already revoked
+-- PUBLIC by hand.
 revoke execute on all functions in schema "platform" from public;
 
 

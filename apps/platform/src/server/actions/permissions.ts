@@ -49,9 +49,6 @@ const PERMISSION_KEYS = [
   "canManageVerification",
   "canManageAttendance",
   "canExportStars",
-  "canTriggerSync",
-  "canVoteAsOfficer",
-  "canAuditBallots",
 ] as const satisfies readonly PermissionKey[];
 
 // Two-way exhaustiveness check: fails to compile if a nullable-boolean
@@ -100,9 +97,6 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canManageVerification: false,
   canManageAttendance: false,
   canExportStars: false,
-  canTriggerSync: false,
-  canVoteAsOfficer: false,
-  canAuditBallots: false,
 };
 
 /** Returns the userId of the current Root holder, or null if unassigned. */
@@ -134,9 +128,6 @@ export async function resolveUserPermissions(
       canManageVerification: resolvedUserPermissions.canManageVerification,
       canManageAttendance: resolvedUserPermissions.canManageAttendance,
       canExportStars: resolvedUserPermissions.canExportStars,
-      canTriggerSync: resolvedUserPermissions.canTriggerSync,
-      canVoteAsOfficer: resolvedUserPermissions.canVoteAsOfficer,
-      canAuditBallots: resolvedUserPermissions.canAuditBallots,
     })
     .from(resolvedUserPermissions)
     .where(eq(resolvedUserPermissions.userId, userId))
@@ -179,9 +170,6 @@ export async function getCallerContext(userId: string): Promise<{
       canManageVerification: row.canManageVerification,
       canManageAttendance: row.canManageAttendance,
       canExportStars: row.canExportStars,
-      canTriggerSync: row.canTriggerSync,
-      canVoteAsOfficer: row.canVoteAsOfficer,
-      canAuditBallots: row.canAuditBallots,
     },
     minRank: row.minRank,
     isLeader: row.isLeader,
@@ -221,15 +209,6 @@ export async function canUserManageAttendance(
 }
 export async function canUserExportStars(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canExportStars);
-}
-export async function canUserTriggerSync(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canTriggerSync);
-}
-export async function canUserVoteAsOfficer(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canVoteAsOfficer);
-}
-export async function canUserAuditBallots(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canAuditBallots);
 }
 
 // ── Shared guards ─────────────────────────────────────────────────────────────
@@ -283,9 +262,6 @@ export type CreateRoleInput = {
   canManageVerification?: boolean | null;
   canManageAttendance?: boolean | null;
   canExportStars?: boolean | null;
-  canTriggerSync?: boolean | null;
-  canVoteAsOfficer?: boolean | null;
-  canAuditBallots?: boolean | null;
 };
 
 export async function createRole(
@@ -316,9 +292,6 @@ export async function createRole(
       canManageVerification: data.canManageVerification ?? null,
       canManageAttendance: data.canManageAttendance ?? null,
       canExportStars: data.canExportStars ?? null,
-      canTriggerSync: data.canTriggerSync ?? null,
-      canVoteAsOfficer: data.canVoteAsOfficer ?? null,
-      canAuditBallots: data.canAuditBallots ?? null,
     })
     .returning({ id: roles.id });
 
@@ -385,15 +358,6 @@ export async function updateRole(
       }),
       ...(data.canExportStars !== undefined && {
         canExportStars: data.canExportStars,
-      }),
-      ...(data.canTriggerSync !== undefined && {
-        canTriggerSync: data.canTriggerSync,
-      }),
-      ...(data.canVoteAsOfficer !== undefined && {
-        canVoteAsOfficer: data.canVoteAsOfficer,
-      }),
-      ...(data.canAuditBallots !== undefined && {
-        canAuditBallots: data.canAuditBallots,
       }),
     })
     .where(eq(roles.id, roleId));

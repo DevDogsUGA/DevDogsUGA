@@ -7,76 +7,45 @@ order: 40
 # Study Group Finder
 
 `apps/study-group-finder` — branded "Dog Pack" — is DevDogs' Flutter app for
-finding and forming study groups. It is the only app in the monorepo that is not
-Next.js, which is most of what makes it different to work on.
+finding and forming study groups, targeting **Android and iOS** (no web
+build). It is the only app in the monorepo that is not Next.js, which is most
+of what makes it different to work on.
 
-Today it is a placeholder: `lib/main.dart` initialises Supabase against the
-**`study_group_finder`** schema and runs `StudyGroupFinderApp`. The schema is
-reserved by `supabase/migrations/20260829000000_00_schemas_and_grants.sql`,
-which creates all three app schemas and grants the PostgREST roles — Supabase
-pre-configures those grants for `public` only — but declares no tables for this
-one. Isolation is by RLS, not by the schema boundary.
+> [!TIP]
+> Just getting started? Head to
+> [Getting started](/docs/study-group-finder/getting-started). Working on
+> the team's competition? Read the brief on the
+> [competition issues board](https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition)
+> before you start.
 
-## Guides
+## Architecture
 
-- [Local setup](/docs/study-group-finder/guides/local-setup) — the Flutter SDK, running through the workspace, and the placeholder tree
-- [Typed models](/docs/study-group-finder/guides/typed-models) — supadart, the default-schema constraint, and why it's a no-op today
-
-## Working on it
-
-Flutter is not part of the repo-wide toolchain. You need the
-[Flutter SDK](https://docs.flutter.dev/get-started/install) on `PATH`; nothing
-else in the monorepo does, and CI scopes the Flutter jobs separately so a
-contributor without it is never blocked.
-
-```bash
-pnpm dev --filter study-group-finder
+```
+Flutter client (Android/iOS)
+  --dart-define (from the shared root .env, via with-env)
+  --> supabase_flutter --> Supabase over HTTP
+        - PostgREST: study_group_finder schema
+        - Auth: "Sign in with DevDogs" provider
+  <-- generated Dart models (supadart)
 ```
 
-Run it through the workspace rather than calling `flutter` directly. The
-package script passes `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and
-`AUTH_MODE` in as `--dart-define` values sourced from the shared root `.env`, so
-the app picks up the local stack when it is running and the remote project
-otherwise — the same behaviour the web apps get from `with-env`. See
-[Secrets and environments](/docs/monorepo/guides/secrets) for where that `.env`
-comes from.
+The client talks to the shared DevDogs Supabase project the same way every
+other app does — over HTTP, never a direct database connection — and owns the
+**`study_group_finder`** Postgres schema. `supabase/migrations/20260829000000_00_schemas_and_grants.sql`
+reserves the schema and its PostgREST grants; it declares no tables yet, so
+isolation is by RLS, not by the schema boundary. Sign-in goes through the
+platform's own OAuth server (see
+[Sign in with DevDogs](/docs/platform/guides/identity/oauth)) rather than the
+app holding its own user store. Dart models are generated from the live
+schema by [supadart](/docs/study-group-finder/guides/typed-models), not
+hand-written.
 
-Auth mirrors the web apps: `devdogs` — the platform's own OAuth server — in
-development, `google` in production. `AUTH_MODE` is only the `--dart-define`
-name; the value is selected by `NEXT_PUBLIC_AUTH_MODE` in `.env`.
+## Glossary
 
-## Typed models, and the constraint they impose
-
-`supabase gen types` has no Dart target, so models come from the community
-[supadart](https://pub.dev/packages/supadart) generator, configured by
-`supadart.yaml`:
-
-```bash
-pnpm --filter study-group-finder generate-types
-```
-
-supadart can only read PostgREST's **default** schema — it requests `/rest/v1/`
-without an `Accept-Profile` header and offers no way to name one. That single
-limitation is why `supabase/config.toml` lists `study_group_finder` **first**
-under `[api] schemas`: being first makes it the default REST profile, so
-supadart reads exactly this app's schema with no per-run juggling.
-
-Nothing else depends on that ordering, because every Supabase client in the
-repo sets its `db.schema` explicitly. It is worth knowing anyway — the reason
-this app's schema sits at the top of a shared config file is not alphabetical
-and not arbitrary, and it should not be "tidied".
-
-> [!NOTE]
-> `generate-types` maps the monorepo's `API_URL` / `SECRET_KEY` onto the
-> `SUPABASE_URL` / `SUPABASE_API_KEY` supadart expects. The **secret** key is
-> required: supadart returns 401 against the publishable key when fetching the
-> spec. The schema has no tables yet, so the command is currently a no-op.
-
-## Deployment
-
-There is none yet. `dogpack.dev` is reserved for an eventual web build, and
-both `STUDY_GROUP_FINDER_URL` and `STUDY_GROUP_FINDER_URL_CALLBACK` are already
-declared in `supabase/env.ts` and listed in `config.toml`'s auth redirect
-allowlist — optional, and left unset until something is deployed. Release
-Android and iOS artifacts are built by dedicated pipelines rather than by
-`turbo`.
+- **Dog Pack** — this app's brand name.
+- **`study_group_finder`** — this app's Postgres schema. Reserved, not yet
+  populated; see [Schema change loop](/docs/study-group-finder/guides/schema-change-loop).
+- **supadart** — the community Dart codegen tool that reads Supabase's
+  default PostgREST schema; see [Typed models](/docs/study-group-finder/guides/typed-models).
+- **`--dart-define`** — how Supabase config (URL, publishable key, auth mode)
+  reaches the compiled app; see [Flutter setup](/docs/study-group-finder/getting-started/flutter).

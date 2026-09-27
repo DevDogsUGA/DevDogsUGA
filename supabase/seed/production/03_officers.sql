@@ -1,0 +1,764 @@
+-- The 2026-27 executive board.
+--
+-- Content, so it lives with the content. The schema this needs --
+-- `roleDescription` widened to 512, and the academic program tables --
+-- is 20260829010000_01_platform_profile.sql, and it has to be: a
+-- migration is the only thing that reaches a database nobody is allowed to
+-- drop. The people are a different kind of fact, and a file called
+-- `03_officers.sql` says what it holds in a way a timestamped migration
+-- cannot.
+--
+-- Lives in `seed/production/`, alongside `01_roles.sql` and not the
+-- development-only `seed/development/02_moderation.sql`: this is content
+-- every tier needs, so it is part of the set `devtools db seed production`
+-- (Backstage `packages/devtools`) applies directly to a staging or
+-- production target, without a `db reset` -- which, on a hosted database,
+-- would erase everything else on it. `supabase db reset` still runs it too,
+-- on a LOCAL reset, because `config.toml`'s `[db.seed]` lists
+-- `seed/production/*.sql` first and `seed/development/*.sql` second.
+--
+-- A reset erases the database. That is fine on a fresh local stack, and it
+-- stops being fine the moment production carries attendance, awards or teams
+-- that cannot be dropped. That is exactly why `devtools db seed production`
+-- exists as its own command rather than "reset production": it writes these
+-- gap-fills without touching anything else. The officers' own content is
+-- maintained where they already maintain it -- `roleDescription` and links
+-- from /account, titles and role assignments from the console -- with a
+-- one-off migration for anything that has to be corrected centrally.
+--
+-- Seeds run after migrations, so the columns below always exist by the time
+-- this runs. Filename order puts it after 01_roles.sql, which is what
+-- guarantees the Member and Root definitions are already there.
+--
+-- ============================================================
+-- Filling gaps, never overwriting
+-- ============================================================
+--
+-- Every write below is a gap-fill: `coalesce` for scalars,
+-- `on conflict do nothing` for the academic selections and links, and the
+-- same pattern for the rest. An officer who has already written their own role description, set
+-- their own graduation year or picked their own preferred name keeps every bit
+-- of it. That matters more than it looks -- these submissions were emailed in
+-- July, `roleDescription` is editable from /account, and the account is the
+-- newer source. It is also what makes the file safe to replay, which a reset
+-- does every time.
+--
+-- ============================================================
+-- The bios
+-- ============================================================
+--
+-- Third person throughout, and condensed to fit varchar(512) -- the submitted
+-- text ran 448 to 959 characters. Nothing is invented and no claim is added;
+-- where a sentence was cut it was cut whole. The full submitted text, in each
+-- officer's original wording, is the copy of record in the private archive
+-- alongside their resumes and the original emails.
+--
+-- Pronouns are recorded for every officer, and where they came from matters,
+-- because for most of the board there was nothing to find.
+--
+-- Armani Peacox's and Anusha Tandon's came from their own submitted bios;
+-- Sidhant Dash stated his directly. The remaining values were confirmed by the
+-- president, including Taha Arif's. Nothing here is inferred from a name.
+--
+-- The bios follow. They were written in the third person with they/them
+-- standing in wherever a pronoun was unavoidable, explicitly pending this
+-- answer; each of those now reads as the officer's own. Gabrielle's and
+-- Sloan's use no pronoun at all and were left as written.
+--
+-- `profile.pronouns` is editable from /account, which is where a correction
+-- belongs -- these are second-hand, however well sourced, and the person is
+-- the only authority on them.
+--
+-- ============================================================
+-- Graduation dates
+-- ============================================================
+--
+-- Read off each officer's resume in the private archive rather than guessed
+-- from "sophomore", which is what the bios say and which does not pin a year.
+-- Every one reads "May 20xx", so every semester below is 'spring'.
+--
+-- Two carry a caveat:
+--
+--   * Jack Harrington's resume lists a BS in May 2027 AND an MS in May 2028.
+--     2027 is recorded, being the degree he is currently enrolled for, but the
+--     field's stated purpose on /account is verifying student status -- and by
+--     that reading 2028 is the truer answer. His to settle.
+--   * Armani Peacox's resume gives a start (08/2025) and no expected end, so
+--     hers stays null. Four years from a 2025 start would be a guess, and this
+--     column feeds `profileWithVerification`.
+--
+-- Setting both halves matters beyond the card: `hasGraduationDate` in
+-- `profileWithVerification` requires the semester AND the year, so these rows
+-- move each officer a step toward verified.
+--
+-- ============================================================
+-- Accounts, and the hazard in creating them
+-- ============================================================
+--
+-- Officers are matched to `auth.users` case-insensitively, and one is created
+-- where there is no such user. A
+-- created row has no password and no `auth.identities` row, so it cannot sign
+-- in -- it is a container holding submitted content until the person arrives.
+-- The ids are in the same literal space as the moderation personas
+-- (00000000-0000-4000-a000-...), one block along, so the two seeds cannot
+-- collide.
+--
+-- Every officer is matched on their UGA MyID address -- the initials-plus-digits
+-- form, supplied by the president -- because sign-in is UGA SSO and that is
+-- the address the account will carry. Three officers submitted from personal
+-- Gmail and two more from a uga.edu alias rather than the MyID; each of those
+-- is kept in "altEmails" so a match still lands if an account was made under
+-- one of them.
+--
+-- That closes the orphaning hazard this file used to carry, with one case
+-- left. If an officer signs in under an address on neither list, GoTrue mints a NEW user and the profile seeded here is stranded --
+-- the card keeps the seeded content while the real account has none. Adding an
+-- address here before a reset is cheap; merging two users afterwards is not.
+--
+-- ============================================================
+-- Matching precedence, and refusing to guess
+-- ============================================================
+--
+-- A fresh `db reset` starts from an empty `auth.users`, so every officer
+-- matches at most one row and there is nothing to decide. `devtools db seed
+-- production` does not get that luxury: it replays this file against a
+-- staging or production target that may already carry a signed-up account
+-- AND the placeholder container a previous replay created, or two different
+-- real accounts each matching a different one of an officer's emails. Picking
+-- the wrong one silently attaches a card to a stranger, or leaves an officer's
+-- real account without the profile this file means to fill in.
+--
+-- So every officer's candidate matches -- every `auth.users` row whose email,
+-- lowercased, equals their primary address or any altEmail, lowercased -- are
+-- ranked instead of taken in whatever order Postgres happens to return them:
+--
+--   1. A row `platform.profile` already links to this officer beats a row it
+--      does not. Once a replay has resolved an officer to a row and written
+--      their profile onto it, later replays keep using that SAME row even if
+--      a new candidate starts matching too -- e.g. the officer separately
+--      signs up for real, under an altEmail, after a container already holds
+--      their submitted content. Switching winners between replays would
+--      `insert` a second profile for the new row (the upsert below is keyed
+--      on "userId") rather than update the one already there, leaving two
+--      rows for one officer. This is the rule that makes replaying an
+--      already-resolved officer a true no-op, and it is checked first
+--      because nothing below should ever override it.
+--   2. Among rows tied on that (normally: an officer's first ever
+--      resolution, where nothing has a profile yet), any row that is NOT
+--      this seed's own placeholder container beats the container. The
+--      container's id is always the officer's literal "seededId", so it is
+--      identifiable without guessing at anything about the row itself; a
+--      real account beats the placeholder that was only ever a stand-in for
+--      it.
+--   3. Among rows still tied, a match on the primary address beats a match
+--      on an altEmail. The primary address is unique in `auth.users`, so at
+--      most one row can ever win on this step.
+--
+-- Two distinct rows can still tie after all three rules -- two different
+-- accounts, each linked or matched exactly as well as the other, with
+-- nothing left to rank them by. That is exactly the case this file refuses
+-- to guess at: it names the officer and the addresses that matched (never
+-- the other side -- the matched rows' own data stays out of the error) and
+-- RAISES, aborting the whole transaction rather than attaching either
+-- account to the wrong profile. Whoever sees the error merges the accounts or
+-- corrects the seeded email/altEmails and replays.
+--
+-- The whole file runs in one transaction. A RAISE EXCEPTION partway through
+-- -- ambiguous match or otherwise -- rolls back every insert this replay made,
+-- rather than leaving some officers updated and others not.
+
+begin;
+
+create temporary table "officer_submissions" (
+  "slug" text primary key,
+  "email" text not null,
+  "preferredName" text not null,
+  -- Name of record, which is not always the preferred name: Armani submitted as
+  -- Ashlee, Kyle as Gia Khang. Kept distinct so `profile.legalName` carries the
+  -- real thing while the card shows what they go by.
+  "legalFirstName" text not null,
+  "legalLastName" text not null,
+  "title" text,
+  "roleDescription" text not null,
+  -- Numeric UGA Bulletin detail ids. They distinguish credentials with the
+  -- same program name (Computer Science BS and MS are separate rows).
+  "programIds" integer[] not null,
+  "graduationYear" integer,
+  -- 'spring' | 'summer' | 'fall'. Cast to the enum on the way into profile.
+  -- Every date below reads "May 20xx" on the resume, which is spring.
+  "graduationSemester" text,
+  -- Other addresses the same person may have signed in under. Matching checks
+  -- these too, which is the cheapest defence against attaching a profile to
+  -- the wrong account -- a mistake only discovered when somebody notices their
+  -- card is a stranger's.
+  "altEmails" text[] not null default '{}',
+  -- Only set where the officer has actually said. See the pronouns note above.
+  "pronouns" text[],
+  -- Flipped on for officers with a GitHub or LinkedIn on record. They gate
+  -- display of a LINKED OAuth identity, not the resume links seeded below, so
+  -- today they change nothing visible -- nothing reads them yet either. They
+  -- are set because the intent is recorded now, and whoever wires the display
+  -- should not have to re-derive who consented.
+  --
+  -- Applied on INSERT ONLY, like "preferredName" and for a sharper reason:
+  -- these are consent, and the column is `not null default false`, so a false
+  -- read cannot tell "never set" from "deliberately switched off". Re-asserting
+  -- on every replay would silently republish a link somebody had hidden. An
+  -- existing profile therefore keeps whatever its owner last chose.
+  "showGithub" boolean not null default false,
+  "showLinkedin" boolean not null default false,
+  -- Deterministic, so a replay finds the same row and so the headshot key in
+  -- the `avatars` bucket -- which is the bare user id -- is knowable before
+  -- the upload. That upload is `supabase/seed/avatars/<id>`, carried into the
+  -- bucket by `objects_path` in config.toml, so `db reset` restores the images
+  -- with the rows. The two halves are named by the same literal: rename an id
+  -- here and the matching file has to move with it.
+  --
+  -- The exception is an officer who already has an account, since the profile
+  -- then hangs off their real user id and the file named for "seededId" is not
+  -- theirs. A reset cannot hit this -- it empties auth.users first -- but a
+  -- seed replayed over a live database can, and the symptom is one card back
+  -- to initials.
+  --
+  -- Same literal space as the moderation personas
+  -- (00000000-0000-4000-a000-...), one block along so they cannot collide.
+  "seededId" uuid not null,
+  "userId" uuid
+);
+
+insert into "officer_submissions" (
+  "slug", "email", "preferredName", "legalFirstName", "legalLastName",
+  "title", "roleDescription",
+  "programIds", "graduationYear", "graduationSemester",
+  "altEmails", "pronouns", "showGithub", "showLinkedin", "seededId"
+) values
+  (
+    'jack-harrington', 'jbh36784@uga.edu', 'Jack Harrington',
+    'Jack', 'Harrington',
+    'Vice President',
+    'Jack Harrington is a Computer Science student at the University of Georgia with a passion for building full-stack software that solves real-world problems. As Vice President, Jack helps coordinate the student-led software projects DevDogs runs for the UGA community. As a Software Engineer Intern with the U.S. Air Force, he has built production software in a collaborative engineering environment, and he contributes to SpectraGuru, an open-source spectrum analysis platform for research.',
+    array[73962, 84091]::integer[], 2027, 'spring',
+    array['jackharrington290@gmail.com']::text[],
+    array['he', 'him']::text[], true, true,
+    '00000000-0000-4000-b000-000000000001'
+  ),
+  (
+    'zayan-hoodani', 'zkh27085@uga.edu', 'Zayan Hoodani',
+    'Zayan', 'Hoodani',
+    'External Affairs Director',
+    'Zayan Hoodani is a sophomore studying Computer Science while pursuing a certificate in Cybersecurity and Privacy. As External Affairs Director, Zayan leads the Campus Engagement and Corporate Outreach teams. He is a NetOps Intern at GreenSky, architecting automated systems for cloud network segmentation on AWS and provisioning physical switch infrastructure, and Director of R&D at The Hack Pack. Zayan loves anything to do with cybersecurity and AI.',
+    array[73962, 19969]::integer[], 2028, 'spring',
+    array['zayanhoodani@gmail.com']::text[],
+    array['he', 'him']::text[], false, true,
+    '00000000-0000-4000-b000-000000000002'
+  ),
+  (
+    'nandan-praveen', 'np43598@uga.edu', 'Nandan Praveen',
+    'Nandan', 'Praveen',
+    'DogPack Project Manager',
+    'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as DogPack Project Manager and Flutter Focus Lead at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
+    array[45516]::integer[], 2029, 'spring',
+    array['nandan@uga.edu']::text[],
+    array['he', 'him']::text[], true, false,
+    '00000000-0000-4000-b000-000000000003'
+  ),
+  (
+    'shruti-mishra', 'sbm64430@uga.edu', 'Shruti Mishra',
+    'Shruti', 'Mishra',
+    'Backend Integration Focus Lead',
+    'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Backend Integration Focus Lead on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. She is passionate about software engineering and AI.',
+    array[73962]::integer[], 2027, 'spring',
+    array['shruti.mishra@uga.edu', 'shrutibmishra1@gmail.com']::text[],
+    array['she', 'her']::text[], true, false,
+    '00000000-0000-4000-b000-000000000004'
+  ),
+  (
+    -- Submitted as Ashlee Peacox; Armani is the name she goes by. Her wording,
+    -- her pronouns -- see the note above.
+    'armani-peacox', 'aap86342@uga.edu', 'Armani Peacox',
+    'Ashlee', 'Peacox',
+    'Campus Engagement Team',
+    'Armani is a Computer Science and Interdisciplinary Art student at the University of Georgia with a passion for game development. She serves on the Campus Engagement Team for UGA''s DevDogs chapter and is actively involved in TheHackPack, Girls Who Code, and the Powerlifting & Bodybuilding Club. Her interests include gameplay programming, game design, virtual and augmented reality, human-computer interaction, and digital art.',
+    array[73962, 86044, 62630]::integer[], null, null,
+    array['ashlee.peacox@uga.edu']::text[],
+    array['she', 'her']::text[], false, false,
+    '00000000-0000-4000-b000-000000000005'
+  ),
+  (
+    'gabrielle-rose', 'glr26038@uga.edu', 'Gabrielle Rose',
+    'Gabrielle', 'Rose',
+    'UI/UX Focus Lead',
+    'Gabrielle Rose is pursuing a degree in Computer Science with a focus on front-end development, human-computer interaction, and UI/UX design, and is passionate about creating intuitive, user-centered technologies that solve real-world problems. In the future, Gabrielle aspires to bridge the gap between people and technology by designing digital solutions that create meaningful impact and empower communities to confidently engage with technology.',
+    array[73962]::integer[], 2028, 'spring',
+    array['gabrielle.rose@uga.edu']::text[],
+    array['she', 'her']::text[], false, true,
+    '00000000-0000-4000-b000-000000000006'
+  ),
+  (
+    -- Submitted as Gia Khang Quach; Kyle is the name he goes by there --
+    -- his own resume prints linkedin.com/in/kyle-quach.
+    'kyle-quach', 'gq72484@uga.edu', 'Kyle Quach',
+    'Gia Khang', 'Quach',
+    'Next.js Focus Lead',
+    'Kyle Quach is a sophomore majoring in Computer Science at the University of Georgia. Kyle''s interests span software development to AI engineering, and he sometimes develops games on the side. He has built projects with tech stacks such as Java, C#, Python, and JavaScript, as well as frameworks like React and Spring. As an aspiring software developer, Kyle looks forward to building software that contributes meaningfully to people''s daily lives.',
+    array[73962]::integer[], 2028, 'spring',
+    array['giakhang.quach@uga.edu']::text[],
+    array['he', 'him']::text[], true, true,
+    '00000000-0000-4000-b000-000000000007'
+  ),
+  (
+    'anusha-tandon', 'at17157@uga.edu', 'Anusha Tandon',
+    'Anusha', 'Tandon',
+    'Campus Engagement Team',
+    'Anusha Tandon is a second-year Management Information Systems major with a Computer Science minor. She is interested in software development, data analytics, and information security. As a member of the DevDogs Campus Engagement Team, she hopes to bring more students into the club, connect with potential partners, and help showcase the work of DevDogs members.',
+    array[23268, 67412]::integer[], 2029, 'spring',
+    array['anusha.tandon@uga.edu', 'anushatandon25@gmail.com']::text[],
+    array['she', 'her']::text[], false, false,
+    '00000000-0000-4000-b000-000000000009'
+  ),
+  (
+    'sidhant-dash', 'sd04573@uga.edu', 'Sidhant Dash',
+    'Sidhant', 'Dash',
+    'DogDays Project Manager',
+    'Sidhant Dash is a fourth-year Computer Science student at the University of Georgia with a certificate in New Media. He is interested in frontend and backend development, game development, and UI/UX design. Sidhant serves as the DogDays Project Manager for DevDogs and the Marketing Chair of ACM at UGA. He recently interned at CGI as a software developer and strives to develop software that benefits others while helping developers grow.',
+    array[73962, 62630]::integer[], 2027, 'spring',
+    array['sidhant.dash@uga.edu']::text[],
+    array['he', 'him']::text[], false, false,
+    '00000000-0000-4000-b000-000000000010'
+  ),
+  (
+    'taha-arif', 'tza47676@uga.edu', 'Taha Arif',
+    'Taha', 'Arif',
+    'Corporate Outreach Team',
+    'Taha Arif is a Computer Systems Engineering student at the University of Georgia with interests in embedded systems, problem-solving, and connecting students with technology professionals. As a member of the DevDogs Corporate Outreach Team, he builds relationships with companies and alumni while creating career and networking opportunities for members. He enjoys hands-on programming projects and collaborating with others.',
+    array[45516]::integer[], 2029, 'spring',
+    array['taha.arif@uga.edu']::text[],
+    array['he', 'him']::text[], false, false,
+    '00000000-0000-4000-b000-000000000011'
+  );
+
+-- ============================================================
+-- Accounts
+-- ============================================================
+--
+-- The four empty strings are not decoration, and 02_moderation.sql explains
+-- why: GoTrue scans confirmation_token, recovery_token,
+-- email_change_token_new and email_change into non-nullable Go strings, and
+-- those columns have no database default, so a row without them exists but
+-- fails every sign-in with an error naming neither the column nor the user.
+--
+-- Create the placeholder container only where NOTHING matches yet -- primary
+-- or altEmail, case-insensitively. That is what guarantees the ranking below
+-- always has at least one candidate: an officer with no existing account gets
+-- exactly one (the container just inserted), with nothing to rank.
+insert into "auth"."users" (
+  "id", "instance_id", "aud", "role", "email",
+  "raw_app_meta_data", "raw_user_meta_data",
+  "confirmation_token", "recovery_token",
+  "email_change_token_new", "email_change",
+  "created_at", "updated_at"
+)
+select
+  s."seededId", '00000000-0000-0000-0000-000000000000', 'authenticated',
+  'authenticated', s."email",
+  '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+  '', '', '', '', now(), now()
+from "officer_submissions" s
+where not exists (
+  select 1 from "auth"."users" u
+  where lower(u."email") = lower(s."email")
+     or lower(u."email") = any (
+          select lower("e") from unnest(s."altEmails") as "e"
+        )
+)
+on conflict ("id") do nothing;
+
+-- Every `auth.users` row that matches an officer, tagged with the three
+-- facts the ranking below needs: whether `platform.profile` already links
+-- this row to an officer (a previous replay resolved it here), whether it is
+-- this seed's own container (identifiable by its literal "seededId", nothing
+-- guessed), and whether it matched the primary address rather than an
+-- altEmail.
+create temporary table "officer_matches" as
+select
+  s."slug",
+  u."id" as "userId",
+  exists (
+    select 1 from "platform"."profile" p where p."userId" = u."id"
+  ) as "hasProfile",
+  (u."id" = s."seededId") as "isContainer",
+  (lower(u."email") = lower(s."email")) as "isPrimary"
+from "officer_submissions" s
+join "auth"."users" u
+  on lower(u."email") = lower(s."email")
+  or lower(u."email") = any (
+       select lower("e") from unnest(s."altEmails") as "e"
+     );
+
+-- The row(s) ranked best per officer. "score" is lexicographic, not
+-- additive, and checked in this order:
+--
+--   1. A row `platform.profile` already links to an officer (weight 0) beats
+--      any row it does not (weight 4) -- once a replay has resolved an
+--      officer to a row and written their profile there, later replays keep
+--      using that SAME row even if a new candidate starts matching too. This
+--      is what keeps the seed idempotent: switching winners between replays
+--      would `insert` a second profile for the new userId (the upsert below
+--      is keyed on "userId") rather than update the one already there,
+--      leaving two rows for one officer.
+--   2. Among rows tied on that (normally: nothing has a profile yet, an
+--      officer's first ever resolution), not-a-container (weight 0) beats
+--      the container (weight 2) -- a real account, however it was matched,
+--      beats the seed's own placeholder.
+--   3. Among rows still tied, a primary-address match (weight 0) beats an
+--      altEmail match (weight 1).
+--
+-- The weights (4, 2, 1) are chosen so no combination of lower-tier weights
+-- can ever equal or exceed one instance of a higher tier's weight, which is
+-- what makes this a strict hierarchy rather than a sum that can tie across
+-- tiers. Lower "score" wins. Exactly one row per slug here is the normal,
+-- unambiguous case; more than one is two distinct accounts tied with nothing
+-- left to rank them by.
+create temporary table "officer_winners" as
+select "slug", "userId"
+from (
+  select
+    "slug", "userId",
+    (case when "hasProfile" then 0 else 4 end)
+      + (case when "isContainer" then 2 else 0 end)
+      + (case when "isPrimary" then 0 else 1 end) as "score",
+    min(
+      (case when "hasProfile" then 0 else 4 end)
+        + (case when "isContainer" then 2 else 0 end)
+        + (case when "isPrimary" then 0 else 1 end)
+    ) over (partition by "slug") as "bestScore"
+  from "officer_matches"
+) "scored"
+where "score" = "bestScore";
+
+-- Refuse to guess: if any officer's best-ranked rows are still more than one
+-- distinct account, name that officer and the addresses that matched --
+-- never anything about the accounts themselves -- and abort. The transaction
+-- wrapping this whole file rolls every prior write in this replay back too.
+do $$
+declare
+  "conflictReport" text;
+begin
+  select string_agg(
+    format(
+      '%s (checked %s%s)',
+      "s"."slug",
+      "s"."email",
+      case
+        when array_length("s"."altEmails", 1) > 0
+          then ', alt emails: ' || array_to_string("s"."altEmails", ', ')
+        else ''
+      end
+    ),
+    '; '
+    order by "s"."slug"
+  )
+  into "conflictReport"
+  from (
+    select "slug"
+    from "officer_winners"
+    group by "slug"
+    having count(distinct "userId") > 1
+  ) "ambiguous"
+  join "officer_submissions" "s" on "s"."slug" = "ambiguous"."slug";
+
+  if "conflictReport" is not null then
+    raise exception
+      'supabase/seed/production/03_officers.sql: ambiguous account match for %. '
+      'Each of these officers'' primary/altEmail addresses matches more than '
+      'one distinct auth.users row, and this seed refuses to guess which one '
+      'is theirs. Merge the duplicate accounts or correct the seeded email/'
+      'altEmails, then replay.', "conflictReport";
+  end if;
+end $$;
+
+update "officer_submissions" s
+set "userId" = w."userId"
+from "officer_winners" w
+where w."slug" = s."slug";
+
+drop table "officer_winners";
+drop table "officer_matches";
+
+-- ============================================================
+-- Profiles
+-- ============================================================
+--
+-- `preferredName` is NOT NULL and so can only be supplied on insert; an
+-- existing profile keeps whatever name its owner chose. The involvement fields
+-- deliberately assert that every current officer is on the DevDogs roster;
+-- the normal roster import remains authoritative after seeding.
+insert into "platform"."profile" (
+  "userId", "preferredName", "ugaEmail", "legalFirstName", "legalLastName",
+  "roleDescription",
+  "graduationYear", "graduationSemester", "pronouns",
+  "showGithub", "showLinkedin",
+  "involvementFirstName", "involvementLastName", "involvementImportedAt"
+)
+select
+  s."userId", s."preferredName", s."email", s."legalFirstName", s."legalLastName",
+  s."roleDescription",
+  s."graduationYear",
+  s."graduationSemester"::"platform"."graduationSemester",
+  s."pronouns", s."showGithub", s."showLinkedin",
+  split_part(s."preferredName", ' ', 1),
+  substring(s."preferredName" from position(' ' in s."preferredName") + 1),
+  now()
+from "officer_submissions" s
+where s."userId" is not null
+on conflict ("userId") do update set
+  "roleDescription" = coalesce(
+    "platform"."profile"."roleDescription", excluded."roleDescription"
+  ),
+  "graduationYear" = coalesce(
+    "platform"."profile"."graduationYear", excluded."graduationYear"
+  ),
+  "graduationSemester" = coalesce(
+    "platform"."profile"."graduationSemester", excluded."graduationSemester"
+  ),
+  "pronouns" = coalesce(
+    "platform"."profile"."pronouns", excluded."pronouns"
+  ),
+  "ugaEmail" = coalesce(
+    "platform"."profile"."ugaEmail", excluded."ugaEmail"
+  ),
+  "legalFirstName" = coalesce(
+    "platform"."profile"."legalFirstName", excluded."legalFirstName"
+  ),
+  "legalLastName" = coalesce(
+    "platform"."profile"."legalLastName", excluded."legalLastName"
+  ),
+  "involvementFirstName" = excluded."involvementFirstName",
+  "involvementLastName" = excluded."involvementLastName",
+  "involvementImportedAt" = excluded."involvementImportedAt";
+
+-- The officer subset makes a reset immediately useful before the first daily
+-- scrape. The cron upsert owns these same Bulletin ids and refreshes every
+-- field from the source without changing profile selections.
+insert into "platform"."academicPrograms"
+  ("id", "name", "credential", "category", "schoolCode", "bulletinUrl", "lastSeenAt")
+values
+  (73962, 'Computer Science', 'BS', 'undergraduate_major', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/73962?IDc=ARTS', now()),
+  (84091, 'Computer Science', 'MS', 'graduate_major', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/84091?IDc=ARTS', now()),
+  (19969, 'Undergraduate Certificate in Cybersecurity and Privacy', 'CERT-UG',
+    'undergraduate_certificate', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/19969?IDc=ARTS', now()),
+  (45516, 'Computer Systems Engineering', 'BSCSE', 'undergraduate_major', 'FENGR',
+    'https://bulletin.uga.edu/Program/Details/45516?IDc=FENGR', now()),
+  (86044, 'Art: Interdisciplinary Art', 'AB', 'undergraduate_major', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/86044?IDc=ARTS', now()),
+  (62630, 'Undergraduate Certificate in New Media', 'CERT-UG',
+    'undergraduate_certificate', 'JOUR',
+    'https://bulletin.uga.edu/Program/Details/62630?IDc=JOUR', now()),
+  (77932, 'Sociology', 'AB', 'undergraduate_major', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/77932?IDc=ARTS', now()),
+  (23268, 'Management Information Systems', 'BBA', 'undergraduate_major', 'BUS',
+    'https://bulletin.uga.edu/Program/Details/23268?IDc=BUS', now()),
+  (67412, 'Computer Science', 'MINOR', 'undergraduate_minor', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/67412?IDc=ARTS', now())
+on conflict ("id") do update set
+  "name" = excluded."name",
+  "credential" = excluded."credential",
+  "category" = excluded."category",
+  "schoolCode" = excluded."schoolCode",
+  "bulletinUrl" = excluded."bulletinUrl",
+  "active" = true,
+  "lastSeenAt" = excluded."lastSeenAt",
+  "updatedAt" = now();
+
+insert into "platform"."profileAcademicPrograms"
+  ("userId", "programId", "sortOrder")
+select
+  s."userId", p."programId", (p."ordinality" - 1)::smallint
+from "officer_submissions" s
+cross join lateral unnest(s."programIds") with ordinality
+  as p("programId", "ordinality")
+where s."userId" is not null
+on conflict do nothing;
+
+-- ============================================================
+-- Links
+-- ============================================================
+--
+-- Every one of these is printed on the officer's own resume -- the document
+-- they sent to be used on the website. None was found by searching for them:
+-- attaching a profile to a named student on a public page on the strength of a
+-- name match is how the wrong person ends up on the site, and a resume is both
+-- certain and already offered.
+--
+-- Armani Peacox lists none. Her resume carries an email and a phone number and
+-- nothing else, so she has none here until somebody asks her.
+--
+-- Note what is NOT taken from those resumes: phone numbers, street addresses
+-- and personal email. Gabrielle's LinkedIn shares a header line with her mobile
+-- number, and only the URL crossed over.
+--
+-- These go to `profileLinks`, the list members curate from /account, so an
+-- officer can delete or reorder any of them without asking anybody. GitHub and
+-- LinkedIn are separately modelled as linked OAuth identities gated on
+-- `showGithub`/`showLinkedin`, which is the better long-term home because it
+-- proves the account is theirs -- but it needs each officer to link it, and
+-- none has yet.
+--
+-- Gap-filled as a set: an officer who has added any link of their own owns
+-- that list, and these do not push into it.
+create temporary table "officer_links" (
+  "slug" text not null,
+  "title" text not null,
+  "url" text not null,
+  "sortOrder" integer not null
+);
+
+insert into "officer_links" ("slug", "title", "url", "sortOrder") values
+  ('jack-harrington', 'LinkedIn',  'https://www.linkedin.com/in/jackharrington2006/', 0),
+  ('jack-harrington', 'GitHub',    'https://github.com/JackHarrington3', 1),
+  ('zayan-hoodani',   'Portfolio', 'https://zayan.hoodani.me/', 0),
+  ('zayan-hoodani',   'LinkedIn',  'https://www.linkedin.com/in/zayanh1/', 1),
+  ('nandan-praveen',  'Portfolio', 'https://nandanpraveen.github.io', 0),
+  -- Not printed on his resume as a github.com URL, but the resume's own
+  -- portfolio link is nandanpraveen.github.io, and that account resolves to
+  -- GitHub user 97852696 named "Nandan Praveen". Derived, then verified.
+  ('nandan-praveen',  'GitHub',    'https://github.com/nandanpraveen', 1),
+  ('shruti-mishra',   'GitHub',    'https://github.com/smcodes612', 0),
+  ('gabrielle-rose',  'LinkedIn',  'https://www.linkedin.com/in/gabrielle-rose-b79b00308/', 0),
+  ('kyle-quach',      'LinkedIn',  'https://www.linkedin.com/in/kyle-quach/', 0),
+  ('kyle-quach',      'GitHub',    'https://github.com/kquakk', 1);
+
+insert into "platform"."profileLinks" ("userId", "title", "url", "sortOrder")
+select s."userId", l."title", l."url", l."sortOrder"
+from "officer_links" l
+join "officer_submissions" s on s."slug" = l."slug"
+where s."userId" is not null
+  and not exists (
+    select 1 from "platform"."profileLinks" p where p."userId" = s."userId"
+  )
+on conflict do nothing;
+
+drop table "officer_links";
+
+-- Assignments. Officers who stated no title have none to assign.
+insert into "platform"."userRoles" ("userId", "roleId")
+select s."userId", r."id"
+from "officer_submissions" s
+join "platform"."roles" r on r."title" = s."title"
+where s."userId" is not null and s."title" is not null
+on conflict do nothing;
+
+-- Secondary leadership roles.
+--
+-- A person can carry more than one leadership responsibility.
+insert into "platform"."userRoles" ("userId", "roleId")
+select s."userId", r."id"
+from "officer_submissions" s
+join (values
+  ('nandan-praveen', 'Flutter Focus Lead')
+) as secondary("slug", "title") on secondary."slug" = s."slug"
+join "platform"."roles" r on r."title" = secondary."title"
+where s."userId" is not null
+on conflict do nothing;
+
+drop table "officer_submissions";
+
+-- ============================================================
+-- Sloan Finger, President
+-- ============================================================
+--
+-- Separate from the block above because he sent no submission: there is no
+-- resume, no headshot email and no bio in his own words. What is here was
+-- confirmed directly -- the address, spring 2027, and the presidency -- plus a
+-- bio drafted for him and accepted as a placeholder he intends to rewrite.
+--
+-- His bio uses no pronoun, so it needed no revision when pronouns arrived.
+--
+-- His headshot is the `apps/platform/src/assets/sloan.jpg` this branch deleted
+-- along with the other placeholder headshots, recovered into the archive and
+-- derived to `web/sloan-finger.webp` for the avatars bucket.
+insert into "auth"."users" (
+  "id", "instance_id", "aud", "role", "email",
+  "raw_app_meta_data", "raw_user_meta_data",
+  "confirmation_token", "recovery_token",
+  "email_change_token_new", "email_change",
+  "created_at", "updated_at"
+)
+select
+  '00000000-0000-4000-b000-000000000008',
+  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+  'jsf51288@uga.edu',
+  '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+  '', '', '', '', now(), now()
+where not exists (
+  select 1 from "auth"."users" u where lower(u."email") = 'jsf51288@uga.edu'
+)
+on conflict ("id") do nothing;
+
+insert into "platform"."profile" (
+  "userId", "preferredName", "ugaEmail", "legalFirstName", "legalLastName",
+  "roleDescription",
+  "graduationYear", "graduationSemester", "pronouns",
+  "involvementFirstName", "involvementLastName", "involvementImportedAt"
+)
+select u."id", 'Sloan Finger', 'jsf51288@uga.edu', 'Sloan', 'Finger',
+  'Sloan Finger is President of DevDogs, leading the executive board and the '
+  'club''s software projects. A University of Georgia student graduating in '
+  'spring 2027, Sloan built and maintains the DevDogs platform -- this site '
+  'and the console the club runs on -- and works on the developer tooling and '
+  'deployment infrastructure behind them.',
+  2027, 'spring',
+  array['he', 'him']::text[],
+  'Sloan', 'Finger', now()
+from "auth"."users" u
+where lower(u."email") = 'jsf51288@uga.edu'
+on conflict ("userId") do update set
+  "roleDescription" = coalesce(
+    "platform"."profile"."roleDescription", excluded."roleDescription"
+  ),
+  "graduationYear" = coalesce(
+    "platform"."profile"."graduationYear", excluded."graduationYear"
+  ),
+  "graduationSemester" = coalesce(
+    "platform"."profile"."graduationSemester", excluded."graduationSemester"
+  ),
+  "pronouns" = coalesce(
+    "platform"."profile"."pronouns", excluded."pronouns"
+  ),
+  "ugaEmail" = coalesce(
+    "platform"."profile"."ugaEmail", excluded."ugaEmail"
+  ),
+  "legalFirstName" = coalesce(
+    "platform"."profile"."legalFirstName", excluded."legalFirstName"
+  ),
+  "legalLastName" = coalesce(
+    "platform"."profile"."legalLastName", excluded."legalLastName"
+  ),
+  "involvementFirstName" = excluded."involvementFirstName",
+  "involvementLastName" = excluded."involvementLastName",
+  "involvementImportedAt" = excluded."involvementImportedAt";
+
+insert into "platform"."profileAcademicPrograms"
+  ("userId", "programId", "sortOrder")
+select u."id", p."programId", p."sortOrder"
+from "auth"."users" u
+cross join (values (73962, 0), (77932, 1)) as p("programId", "sortOrder")
+where lower(u."email") = 'jsf51288@uga.edu'
+on conflict do nothing;
+
+insert into "platform"."userRoles" ("userId", "roleId")
+select u."id", r."id"
+from "auth"."users" u, "platform"."roles" r
+where lower(u."email") = 'jsf51288@uga.edu' and r."title" = 'President'
+on conflict do nothing;
+
+insert into "platform"."userRoles" ("userId", "roleId")
+select u."id", r."id"
+from "auth"."users" u, "platform"."roles" r
+where lower(u."email") = 'jsf51288@uga.edu' and r."title" = 'DevOps Director'
+on conflict do nothing;
+
+commit;

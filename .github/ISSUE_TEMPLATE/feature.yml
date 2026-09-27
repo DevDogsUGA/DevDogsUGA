@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose something new or an improvement
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: project
+    attributes:
+      label: Project
+      options:
+        - schedule-builder
+        - study-group-finder
+        - platform
+        - toolkit / infrastructure
+        - sandbox
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

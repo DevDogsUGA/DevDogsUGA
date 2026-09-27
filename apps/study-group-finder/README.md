@@ -4,8 +4,8 @@ DevDogs Study Group Finder — a Flutter app on the shared DevDogs Supabase
 project, owning the **`study_group_finder`** Postgres schema.
 
 Currently a placeholder (`lib/main.dart` → `StudyGroupFinderApp`). The schema is
-reserved by `supabase/migrations/*_study_group_finder_init.sql` and
-exposed in `config.toml`; tables are added as the app is built.
+reserved by a `supabase/migrations/<timestamp>_study_group_finder_<desc>.sql`
+migration and exposed in `config.toml`; tables are added as the app is built.
 
 Branded **Dog Pack**, with `dogpack.dev` reserved for its eventual web
 deployment — `STUDY_GROUP_FINDER_URL` and `STUDY_GROUP_FINDER_URL_CALLBACK` are
@@ -54,9 +54,13 @@ default (every Supabase client sets its `db.schema` explicitly).
 required — supadart 401s on the publishable key when fetching the spec). The
 schema is currently empty, so this is a no-op until tables are added.
 
-## Turborepo
+## pnpm workspace
 
 `package.json` is a thin task wrapper (`build`/`dev`/`test`/`lint`/
-`typecheck`/`generate-types`) so `turbo` can orchestrate the Flutter toolchain; `build`
-targets the web output for fast validation. Release Android/iOS artifacts are
-built in dedicated pipelines, not by turbo.
+`typecheck`/`generate-types`) so pnpm's workspace filters (`pnpm --filter
+study-group-finder run <task>`) can orchestrate the Flutter toolchain. There is
+no `web/` target in this app, so `build` produces a debug APK
+(`flutter build apk --debug`) for fast validation that the app compiles.
+Release Android/iOS artifacts are built in dedicated pipelines, not through
+this wrapper. CI does not run this script — it analyzes and tests the app
+directly (see `.github/workflows/ci.yaml`).

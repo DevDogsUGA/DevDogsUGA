@@ -1,5 +1,5 @@
-import { EventCard } from "@devdogsuga/og";
-import { meetingCardDetail, meetingLocation } from "@devdogsuga/og/event";
+import { EventCard } from "@devdogsuga/open-graph";
+import { meetingCardDetail, meetingLocation } from "@devdogsuga/brand/event";
 import { isCancelled } from "~/components/EventsSection/meetingView";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import { contentType, ogResponse, size } from "~/lib/ogImage";

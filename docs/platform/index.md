@@ -6,21 +6,34 @@ order: 10
 
 # Platform
 
-`apps/platform` is the Next.js app behind the DevDogs site: the public pages, the officer console, these docs, and the OAuth server sibling projects sign in against. Read a guide here when you are working on one of its subsystems. If you are still getting the repository running, or want a technology's version and conventions, start at [Monorepo](/docs/monorepo) — nothing on this page repeats it.
+`apps/platform` is the Next.js app behind the DevDogs site: the public pages, the officer console, these docs, and the OAuth server sibling projects sign in against. Read a guide here when you are working on one of its subsystems.
+
+> [!TIP]
+> New here? Start at [Getting started](/docs/platform/getting-started) — installing the toolchain, a database, and running the app. Just entering a feature competition, with no local setup? [Entering a competition](/docs/platform/getting-started/competition-entry) is the shorter path.
+
+## Architecture, briefly
+
+One Next.js app on Cloudflare Workers (vinext, not OpenNext), owning the
+`platform` schema in the shared Supabase project. It is the only app that
+talks to GitHub — provisioning teams, granting branch access, mirroring
+competitions — through the GitHub App in [Identity](/docs/platform/guides/identity/github-app).
+Sibling apps never call GitHub or the shared database directly; they can let
+a member sign in with their DevDogs account through the OAuth server this app
+also runs — see [Sign in with DevDogs](/docs/platform/guides/identity/oauth).
+
+## Glossary
+
+- **Team** — a persistent group, not per-competition. See [Teams](/docs/platform/guides/meetings-and-teams/teams).
+- **Competition** — a labeled GitHub issue, mirrored into a private Project; entering is opening a linked pull request, merging it is winning. See [Competitions](/docs/platform/guides/meetings-and-teams/competitions).
+- **Meeting** — a general body meeting or workshop, authored as config in Backstage and reconciled here. See [Events](/docs/platform/guides/meetings-and-teams/events).
+- **Attendance** — a member's authoritative meeting check-in, the input every star and streak derives from. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
+- **Star / streak** — a derived participation passport, not a stored score: one per credit-eligible meeting attended, one per competition entered, decorated by a win. See [Stars & Streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards).
+- **Moderation report** — a complaint against member-written content, resolved into a quarantine or a sanction. See [Reporting](/docs/platform/guides/reporting) and [Moderation](/docs/platform/guides/moderation).
 
 ## Guides
 
-| Guide                                                        | What it covers                                                                    |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| [Meetings & Teams](/docs/platform/guides/meetings-and-teams) | Meetings, workshops, competitions, teams, attendance, stars, and awards           |
-| [Elections](/docs/platform/guides/elections)                 | Ranked ballots over competing implementations, and how a competition is scored    |
-| [Airtable](/docs/platform/guides/airtable)                   | The officer base, the field registry, and what syncs in which direction           |
-| [Reporting](/docs/platform/guides/reporting)                 | The `platform` RPC contract every app calls to report content                     |
-| [Moderation](/docs/platform/guides/moderation)               | How a table becomes reportable and quarantinable, and the traps that hides        |
-| [Identity](/docs/platform/guides/identity)                   | Sign in with DevDogs, and the GitHub App the platform authenticates as            |
-| [Database](/docs/platform/guides/database)                   | SQL migrations own the schema — the change loop, and how one reaches each project |
-| [Navigation](/docs/platform/guides/navigation)               | The top nav, the docs sidebar, and permission-gated console items                 |
+[Meetings & Teams](/docs/platform/guides/meetings-and-teams), [Reporting](/docs/platform/guides/reporting), [Moderation](/docs/platform/guides/moderation), and [Navigation](/docs/platform/guides/navigation) — the domain model and the contracts other apps build against.
 
-## Reference
+## Infrastructure
 
-[Platform reference](/docs/platform/reference) enumerates the app itself: every route and API route, the server actions, the components and hooks, and the Supabase surface. Those pages are generated from the source tree by `docs-build gen` and overwritten on every build, so a correction belongs in the doc comment it was read from, not in the page.
+Maintainer and officer-only material: [Identity](/docs/platform/guides/identity) (the OAuth server and the GitHub App), [Database](/docs/platform/guides/database) (the migration loop), and [Events](/docs/platform/guides/meetings-and-teams/events) (club config).

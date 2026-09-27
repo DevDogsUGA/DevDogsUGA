@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MEETING_BUILDING_CHOICES as FROM_AIRTABLE } from "@devdogsuga/airtable";
+import { MEETING_BUILDING_CHOICES as FROM_CLUB_CONFIG } from "@devdogsuga/events";
 import { HIGHLIGHT_PATHS, HIGHLIGHT_PINS } from "./campusMapData";
 import { BUILDING_CENTERS, BUILDING_KEYS, VIEW } from "./campusMapMeta";
 import {
@@ -12,20 +12,20 @@ import {
 
 /**
  * Four lists have to say the same thing about which buildings exist: the
- * Airtable dropdown, the check constraint behind it, the generated map data,
- * and the label tables here. Three of them are code and can be compared; the
+ * config schema, the check constraint behind it, the generated map data, and
+ * the label tables here. Three of them are code and can be compared; the
  * fourth is a migration, which these cannot read.
  *
- * The failure they guard against is quiet. A building in the dropdown with no
+ * The failure they guard against is quiet. A building in the picker with no
  * footprint is a dialog with a pin over empty ground, and a building on the
- * map that Airtable cannot offer is unreachable. Neither throws, neither shows
+ * map that config cannot offer is unreachable. Neither throws, neither shows
  * up in a build, and both are found by a member standing in the wrong place.
  */
 describe("the building list", () => {
-  it("matches the copy in packages/airtable", () => {
+  it("matches the copy in @devdogsuga/events", () => {
     // Order as well as membership: this is the order officers see in the
-    // dropdown, and `BUILDING_KEYS` is what fixes it.
-    expect([...MEETING_BUILDING_CHOICES]).toEqual([...FROM_AIRTABLE]);
+    // picker, and `BUILDING_KEYS` is what fixes it.
+    expect([...MEETING_BUILDING_CHOICES]).toEqual([...FROM_CLUB_CONFIG]);
   });
 
   it("offers exactly the buildings the map can draw, plus Other", () => {

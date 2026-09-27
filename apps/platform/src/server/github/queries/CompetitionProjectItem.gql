@@ -1,0 +1,40 @@
+query CompetitionProjectItem($itemId: ID!) {
+  node(id: $itemId) {
+    ... on ProjectV2Item {
+      id
+
+      project {
+        id
+        plannedEndDateField: field(name: "Judging/End Date") {
+          __typename
+          ... on ProjectV2Field {
+            name
+            dataType
+          }
+        }
+      }
+
+      plannedEndDateValue: fieldValueByName(name: "Judging/End Date") {
+        ... on ProjectV2ItemFieldDateValue {
+          date
+        }
+      }
+
+      content {
+        __typename
+        ... on Issue {
+          id
+          number
+          title
+          body
+          url
+          createdAt
+          closedAt
+          repository {
+            nameWithOwner
+          }
+        }
+      }
+    }
+  }
+}

@@ -63,7 +63,6 @@ const NON_PUBLIC_PREFIXES = [
   "/oauth",
   "/teams",
   "/tools",
-  "/vote",
 ];
 
 /**

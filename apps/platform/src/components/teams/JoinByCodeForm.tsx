@@ -23,7 +23,7 @@ export interface JoinTarget {
  *
  * The team PICKER is here for a duller reason. `joinTeam` takes a team id and
  * a code, and nothing resolves a code on its own to the team it belongs to, so
- * on the competition-wide list the member has to say which team they are
+ * on the browse-all-teams page the member has to say which team they are
  * joining as well as prove it. Where the page already knows the team (a team's
  * own page) it passes one target and the picker collapses to a label.
  */
@@ -69,9 +69,9 @@ export default function JoinByCodeForm({
         role="status"
         className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200"
       >
-        Your request is with {selected.name}&rsquo;s lead. They get an email,
-        and you will get one back when they answer — nothing is reserved for you
-        in the meantime, so it is fine to ask a second team as well.
+        Your request is with {selected.name}&rsquo;s lead, who answers it from
+        their team requests page. Nothing is reserved for you in the meantime,
+        so it is fine to ask a second team as well.
       </p>
     );
   }

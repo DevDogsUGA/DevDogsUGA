@@ -1,5 +1,5 @@
 {
-  "extends": "../../packages/config/tsconfig/next.json",
+  "extends": "@devdogsuga/config/tsconfig/next.json",
   "compilerOptions": {
     /* Path aliases stay local: TypeScript resolves them against the config
        file that declares them, so a hoisted "~/*" would point at the preset. */
@@ -13,15 +13,36 @@
     "**/*.tsx",
     "**/*.cjs",
     "**/*.js",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "src/_deprecated",
-    "cloudflare/worker.ts",
+    // Bundled/typechecked by its own program instead -- see
+    // cloudflare/tsconfig.json for why (DOM's `Request`/`Response`/
+    // `ReadableStream` and @cloudflare/workers-types' shapes of the same
+    // names are similar enough to both resolve, but different enough that
+    // mixing them here made `@sentry/cloudflare`'s `withSentry` generic
+    // inference silently give up and fall back to implicit `any` on every
+    // handler parameter (TS7006) -- not a real type error, so it's easy to
+    // miss and worse to "fix" by loosening `noImplicitAny`. Verified
+    // directly: temporarily un-excluding `cloudflare/**` here and running
+    // `tsc --noEmit` reproduced exactly that on every `fetch`/`scheduled`
+    // parameter, the same code that type-checks cleanly in its own program.
+    "cloudflare/**",
     "cloudflare-env.d.ts",
     "eslint.config.js",
-    "ds-bundle"
+    "ds-bundle",
+    // `vinext build`'s output (gitignored, same as `.vinext/`). Unlike
+    // `.open-next/worker.js` -- reachable only from `cloudflare/worker.ts`,
+    // itself excluded above -- `dist/server/**/*.js` sits inside this
+    // program's own root and matches the "**/*.js" glob directly, so once a
+    // build has run, `tsc` picks up its raw generated bundles as program
+    // roots and typechecks them as loose, unstricted JS. Excluding the whole
+    // directory keeps `pnpm typecheck` deterministic regardless of whether a
+    // build happened to run first. See apps/schedule-builder/tsconfig.json
+    // for the identical exclude.
+    "dist/**",
+    ".vinext/**"
   ]
 }

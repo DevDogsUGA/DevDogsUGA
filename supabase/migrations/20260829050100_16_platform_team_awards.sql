@@ -1,72 +1,92 @@
--- Team awards and member stars: platform."teamAwards" and the platform."memberStars" view.
+-- Competition entries and member stars:
+-- platform."competitionEntries" and the platform."memberStars" view.
 --
 -- The one thing to know: stars are never stored. "memberStars" derives every
--- star from attendance rows, team membership and the winner award, so it reads
--- platform."attendance", platform."teamMembers", platform."teams",
--- platform."competitions" and platform."workshops". A `create view` body
--- resolves its relations at create time, so this file has to run after both the
--- attendance file and the teams file. That is the whole reason awards are not
--- folded into either of them.
+-- star from attendance rows, team membership and competition entries, so it
+-- reads platform."attendance", platform."teamMembers", platform."teams",
+-- platform."competitions" and platform."competitionEntries". A `create view`
+-- body resolves its relations at create time, so this file has to run after
+-- the attendance file, the events-core file (which creates
+-- platform.competitions) and the teams file. That is the whole reason
+-- entries are not folded into any of them.
+--
+-- ## Competition participation
+--
+-- A team is not scoped to one competition. "competitionEntries" is the
+-- participation mirror: one row per entry pull request, created by the
+-- `pull_request` webhook handling in `server/github/prEvent.ts` (nothing in
+-- `server/github/competitions.ts` writes to it, since an entry is a fact
+-- about a PR, not about the competition issue).
+--
+-- Participation is "held an active membership on the entering team, at the
+-- moment the entry opened, and the entry opened before the competition's
+-- issue closed (or it is still open)": exactly `teamMembers."joinedAt"`/
+-- `"leftAt"` compared against `competitionEntries."openedAt"`.
+--
+-- ## Winning, without a `teamAwards` table
+--
+-- The lifecycle is "kickoff -> teams open PRs -> an officer merges the
+-- winning PR -> issue closed", and a MERGE is already a fact GitHub records
+-- and this table already mirrors (`competitionEntries."mergedAt"`) -- a
+-- second, officer-authored table recording the same outcome by hand would be
+-- one more place for the truth to live, and the two could disagree (an
+-- officer awarding 'winner' to a team whose PR never actually merged, or
+-- forgetting to record a merge everyone could already see on GitHub). Winner
+-- is simply `competitionEntries."mergedAt" is not null` -- see the star view
+-- below.
 
 -- ============================================================
--- Team awards
+-- Competition entries
 -- ============================================================
 --
--- 'winner' is the category the star system reads. Everything else
--- ('honorable-mention', 'best-design', whatever a semester invents) is a free
--- text label officers author in Airtable. Text rather than an enum precisely
--- because the set changes: an enum would make inventing a category a migration.
-create table "platform"."teamAwards" (
+-- One row per entry: a pull request from a team's branch that links a
+-- competition's issue, recognized and kept current by
+-- `server/github/prEvent.ts`'s `pull_request` webhook handling and the
+-- nightly `github-reconcile` backstop (`reconcileEntries`, for still-open
+-- competitions).
+--
+-- The lifecycle this table exists to answer: a team enters by opening the PR
+-- ("openedAt"), and any PR still open when the issue closes without being
+-- merged lost. "closedAt" is a PR closed-without-merge, kept distinct from
+-- "mergedAt" so "did this PR resolve, and how" is one row's own history
+-- rather than inferred from the competition's `closedAt` and a null merge
+-- time, which cannot tell "still open" from "closed unmerged" apart.
+-- "mergedAt" is also this table's answer to "who won" -- see this file's
+-- header on why there is no separate award table for that any more.
+create table "platform"."competitionEntries" (
   "id"            uuid not null default gen_random_uuid(),
-  "teamId"        uuid not null,
   "competitionId" uuid not null,
-  "category"      text not null,
-  -- One line on why, shown on the hall of fame.
-  "citation"      text,
-  "mergedPrUrl"   text,
-  -- Nullable, and no foreign key. Nullable because the 'winner' row is written
-  -- by the tally, not authored by anyone, and every value a not-null column
-  -- would force is a lie: a sentinel user, the team's own id, or whichever
-  -- officer happened to trigger the cron. No FK because the award outlives the
-  -- officer's account. Adding either one back breaks a real case.
-  "awardedBy"     uuid,
-  "awardedAt"     timestamptz not null default now(),
-
-  constraint "teamAwards_pkey" primary key ("id"),
-  -- Composite rather than a plain reference to teams("id"), so an award can
-  -- never name a team from a different competition.
-  constraint "teamAwards_teamId_competitionId_fkey"
-    foreign key ("teamId", "competitionId")
-    references "platform"."teams"("id", "competitionId")
-    on update cascade on delete cascade
+  "teamId"        uuid not null,
+  "prNodeId"      text not null,
+  "prNumber"      integer not null,
+  "url"           text not null,
+  "openedAt"      timestamptz not null,
+  "mergedAt"      timestamptz,
+  "closedAt"      timestamptz,
+  constraint "competitionEntries_pkey" primary key ("id"),
+  constraint "competitionEntries_prNodeId_key" unique ("prNodeId"),
+  constraint "competitionEntries_competitionId_fkey" foreign key ("competitionId")
+    references "platform"."competitions"("id") on update cascade on delete cascade,
+  constraint "competitionEntries_teamId_fkey" foreign key ("teamId")
+    references "platform"."teams"("id") on update cascade on delete cascade
 );
 
-comment on column "platform"."teamAwards"."awardedBy" is
-  'The officer who authored this award. Null means it was computed by the tally, which is the case for every category = ''winner'' row.';
+alter table "platform"."competitionEntries" enable row level security;
 
-alter table "platform"."teamAwards" enable row level security;
+create index "competitionEntries_competitionId_idx"
+  on "platform"."competitionEntries" ("competitionId");
+create index "competitionEntries_teamId_idx"
+  on "platform"."competitionEntries" ("teamId");
 
--- At most one winner per competition. Partial, because every other category
--- may repeat: several teams can share an honourable mention.
-create unique index "teamAwards_one_winner_per_competition"
-  on "platform"."teamAwards" ("competitionId") where "category" = 'winner';
-
--- Awards are public, writes are server-only. The permissive select is what
--- makes the hall of fame render for a logged-out visitor; the restrictive trio
--- closes the insert, update and delete that the schema's default privileges
--- already granted to anon and authenticated. The trio is split per command
--- because `for all using (false)` would also kill the select above.
---
--- These four names repeat on other tables in this schema. Policy names are
--- scoped per table, so that is legal, and a pass that deduplicates them by name
--- deletes live policies.
-create policy "public_select" on "platform"."teamAwards"
+-- Entries are public (they are what the results page lists), writes are
+-- server-only -- same four-policy shape as every other table in this file.
+create policy "public_select" on "platform"."competitionEntries"
   as permissive for select to anon, authenticated using (true);
-create policy "no_client_insert" on "platform"."teamAwards"
+create policy "no_client_insert" on "platform"."competitionEntries"
   as restrictive for insert to anon, authenticated with check (false);
-create policy "no_client_update" on "platform"."teamAwards"
+create policy "no_client_update" on "platform"."competitionEntries"
   as restrictive for update to anon, authenticated using (false) with check (false);
-create policy "no_client_delete" on "platform"."teamAwards"
+create policy "no_client_delete" on "platform"."competitionEntries"
   as restrictive for delete to anon, authenticated using (false);
 
 -- ============================================================
@@ -76,10 +96,11 @@ create policy "no_client_delete" on "platform"."teamAwards"
 -- Stars are derived, never stored. A qualifying meeting attendance and a
 -- qualifying competition participation are separate one-star facts.
 --
--- What is stored is teams."competedAt", because "did this team have a live
--- entry at the moment judging began" stops being answerable the instant the
--- losing PRs are closed. That is a question about a past moment, so it is
--- frozen once and never recomputed.
+-- What IS stored is `competitionEntries."openedAt"`, because "was this team's
+-- entry live at the moment it opened" stops being answerable the instant
+-- membership changes again -- that is a question about a past moment, and the
+-- entry row freezes it the same way an attendance row freezes "who was in
+-- the room".
 --
 -- The view is server-only. Member surfaces load a caller-filtered slice through
 -- a server loader; granting it directly would expose competition participation
@@ -97,35 +118,45 @@ select
   false as "won"
 from "platform"."attendance" a
 join "platform"."meetings" m on m."id" = a."meetingId"
-where a."revokedAt" is null
-  and m."countsTowardProgress"
+where m."countsForCredit"
   and m."cancelledAt" is null
   and m."deletedAt" is null
 
 union all
 
+-- Competition participation, described at the top of this file. Grouped by
+-- (member, competition) rather than left as one row per qualifying entry,
+-- because a team that reopens an entry (a second PR after the first was
+-- closed) must still earn its members exactly one star -- `memberStars` is a
+-- set of one-star FACTS, and "the same fact twice" is not a second fact.
+-- `min("openedAt")` picks the earliest qualifying entry's moment as the
+-- star's `earnedAt`, and `bool_or` over "mergedAt is not null" means one
+-- MERGED qualifying entry is enough even if an unrelated later entry from
+-- the same team did not itself carry the win -- see this file's header on
+-- why winning is `competitionEntries."mergedAt"` now, not a separate award.
 select
   tm."userId",
   'competition'::text as "activityType",
   c."id" as "activityId",
   null::uuid as "meetingId",
   c."id" as "competitionId",
-  opening_meeting."startsAt" as "startsAt",
-  coalesce(t."participationOverrideAt", t."competedAt", c."judgingStartsAt") as "earnedAt",
-  exists (
-    select 1
-    from "platform"."teamAwards" aw
-    where aw."teamId" = t."id" and aw."category" = 'winner'
-  ) as "won"
-from "platform"."teamMembers" tm
-join "platform"."teams" t on t."id" = tm."teamId"
-join "platform"."competitions" c on c."id" = t."competitionId"
-join "platform"."workshops" w on w."id" = c."workshopId"
-join "platform"."meetings" opening_meeting on opening_meeting."id" = w."meetingId"
-where coalesce(t."participationOverride", t."competedAt" is not null)
-  and c."countsTowardProgress"
-  and c."deletedAt" is null
-  and w."deletedAt" is null
-  and opening_meeting."deletedAt" is null;
+  min(ce."openedAt") as "startsAt",
+  min(ce."openedAt") as "earnedAt",
+  bool_or(ce."mergedAt" is not null) as "won"
+from "platform"."competitionEntries" ce
+join "platform"."competitions" c on c."id" = ce."competitionId"
+-- Active membership AT THE MOMENT the entry opened, not membership now and
+-- not membership ever: the history `teamMembers."joinedAt"`/`"leftAt"` keeps
+-- is exactly what answers "was this member on the team when it entered".
+join "platform"."teamMembers" tm
+  on tm."teamId" = ce."teamId"
+  and tm."joinedAt" <= ce."openedAt"
+  and (tm."leftAt" is null or tm."leftAt" > ce."openedAt")
+-- The entry has to have opened before the issue closed (or the issue is
+-- still open). An entry opened after closing cannot happen through the
+-- normal PR-linking flow, but the guard is cheap and the alternative is a
+-- star for a PR opened against a competition that was already over.
+where c."closedAt" is null or ce."openedAt" < c."closedAt"
+group by tm."userId", c."id";
 
 revoke all on "platform"."memberStars" from anon, authenticated;

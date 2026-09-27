@@ -1,20 +1,22 @@
 -- Teams, their rosters, and the invitations and join requests that fill them.
 --
--- Creates four enums (teamRole, submissionState, membershipDirection,
--- membershipRequestStatus) and three tables. The enums live here because these
--- three tables are their only consumers.
+-- Creates two enums (teamRole, membershipDirection, membershipRequestStatus)
+-- and three tables. The enums live here because these three tables are their
+-- only consumers.
 --
--- The one thing to know before editing: every constraint name in this file is
--- an FK target or an application reference somewhere else. teams_id_competitionId_key
--- is what teamMembers, teamAwards and teamMembershipRequests point at, and
--- teamMembers_teamId_userId_role_key is what the sandbox layer's composite FK
--- points at. Renaming either one breaks a later migration, not this file.
+-- The one thing to know before editing: a team is not scoped to a
+-- competition. GitHub is the source of truth -- a team IS a branch,
+-- `team/<slug>`, and membership IS push access to it, granted through a
+-- GitHub team and a branch ruleset (server/github/teamSync.ts + rulesets.ts).
+-- What lives here is the mirror: Postgres's copy of that state, plus
+-- `teamMembershipRequests`, the one thing GitHub cannot hold (a pending
+-- invite or join request).
 --
--- This file must run after events core, which creates platform.competitions,
--- and before the sandbox environments file.
+-- This file must run after events core, which creates platform.competitions
+-- (not referenced by these tables, but "team_awards" in the next file
+-- points at both).
 
 create type "platform"."teamRole" as enum ('lead', 'member');
-create type "platform"."submissionState" as enum ('open', 'closed', 'merged');
 create type "platform"."membershipDirection" as enum ('invite', 'request');
 create type "platform"."membershipRequestStatus" as enum
   ('pending', 'accepted', 'declined', 'withdrawn', 'expired');
@@ -23,101 +25,39 @@ create type "platform"."membershipRequestStatus" as enum
 -- Teams
 -- ============================================================
 --
--- The four submission columns are one state machine, and the reason they are
--- FOUR rather than the two that look sufficient is the only subtle thing in
--- this file.
---
--- The obvious design is a single `submittedAt`, used both to lock the roster
--- and to mark the team as having competed. It breaks on what happens after
--- judging: the winning PR is merged and every other PR is CLOSED. If the star
--- reads "has an open PR", closing the losers retroactively erases the
--- participation of every team that did not win, silently, days later, and in a
--- way nobody would connect to the cleanup that caused it.
---
--- So the two questions get two columns:
---
---   "submissionState"  follows the PR forever      (open -> merged, or -> closed)
---   "competedAt"       frozen once at judging      (never cleared)
---
--- and the derived predicates read:
---
---   locked   = "submissionState" in ('open', 'merged')
---           or now() >= competitions."judgingStartsAt"
---           or "lockedManuallyAt" is not null
---   competed = "competedAt" is not null
---
--- Locking on the PR rather than on a deadline is deliberate: opening the PR is
--- the team's official entry, so that is the moment the roster should stop
--- moving. Deleting the PR before judging unlocks it again, which is why
--- `locked` is derived rather than stored.
+-- A team is a persistent project team, not a per-competition roster: it
+-- outlives any single competition it enters, and it exists independently of
+-- one ever happening. There is no roster lock here for the same reason. The
+-- only ceilings are membership caps (a contributor on at most
+-- `MAX_CONCURRENT_TEAMS_PER_USER` teams, a team at most `MAX_TEAM_SIZE`
+-- members -- both in server/teams/limits.ts), enforced in the platform
+-- actions rather than in a stored column.
 create table "platform"."teams" (
   "id"              uuid not null default gen_random_uuid(),
-  "competitionId"   uuid not null,
+  -- Globally unique, not per-competition: it names the branch,
+  -- `team/<slug>`, and the branch lives for as long as the team does.
   "slug"            text not null,
   "name"            text not null,
   -- Never exposed to clients; see the grants at the bottom of this file.
   "joinCode"        text not null,
   -- No foreign key, here or on the other audit columns in this file: the team
   -- outlives the account that created it, and a cascade from auth.users would
-  -- delete a competition's history along with a member.
+  -- delete a team's identity along with one member's account.
   "createdBy"       uuid not null,
-
-  "submissionUrl"   text,
-  "submittedAt"     timestamptz,
-  "submissionState" "platform"."submissionState",
-  "competedAt"      timestamptz,
-  -- Null follows competedAt; true/false is a durable officer correction. The
-  -- automatic judging pass never rewrites it, so a revocation stays revoked.
-  "participationOverride"       boolean,
-  "participationOverrideAt"     timestamptz,
-  "participationOverrideBy"     uuid,
-  "participationOverrideReason" text,
-
-  -- Officer override for the case the automatic rules get wrong.
-  "lockedManuallyAt" timestamptz,
-  -- null = not yet graded. Officers fill this in through Airtable.
-  "requirementsMet"  smallint,
   "acceptingRequests" boolean not null default true,
-  -- Re-forming for the next competition copies the roster and records where it
-  -- came from, so "the same team" is visible across weeks without teams being
-  -- long-lived entities that span competitions.
-  "clonedFromTeamId" uuid,
+  -- Freshness of the mirror, not of the team. Set to `now()` every time
+  -- something confirms the roster/branch/ruleset here actually match
+  -- GitHub right now: a successful GitHub call inside a team action, a
+  -- webhook event for this team, or a nightly reconcile pass touching it.
+  -- Null only for a team whose mirror has never been confirmed against
+  -- GitHub, which should not happen outside a bug -- `createTeam` sets it
+  -- at insert, having just provisioned GitHub moments before. The dashboard
+  -- reads how old this is to show mirror staleness rather than presenting a
+  -- roster that might have drifted since the last webhook delivery.
+  "githubSyncedAt"  timestamptz,
 
   constraint "teams_pkey" primary key ("id"),
-  constraint "teams_competitionId_slug_key" unique ("competitionId", "slug"),
-  -- Denormalized composite key, existing only so teamMembers, teamAwards and
-  -- teamMembershipRequests can carry "competitionId" and have the database
-  -- reject a row whose team belongs to a different competition.
-  constraint "teams_id_competitionId_key" unique ("id", "competitionId"),
-
-  constraint "teams_requirementsMet_nonneg"
-    check ("requirementsMet" is null or "requirementsMet" >= 0),
-  -- A submission is all three columns or none of them.
-  constraint "teams_submission_url_state_together"
-    check (("submissionUrl" is null) = ("submissionState" is null)),
-  constraint "teams_submission_url_submittedAt_together"
-    check (("submissionUrl" is null) = ("submittedAt" is null)),
-  -- A team cannot have competed without ever having had an entry.
-  constraint "teams_competedAt_requires_submission"
-    check ("competedAt" is null or "submissionUrl" is not null),
-  constraint "teams_participationOverride_together" check (
-    ("participationOverride" is null
-      and "participationOverrideAt" is null
-      and "participationOverrideBy" is null
-      and "participationOverrideReason" is null)
-    or
-    ("participationOverride" is not null
-      and "participationOverrideAt" is not null
-      and "participationOverrideBy" is not null
-      and nullif(btrim("participationOverrideReason"), '') is not null)
-  ),
-  constraint "teams_participationOverrideReason_length"
-    check ("participationOverrideReason" is null or char_length("participationOverrideReason") <= 500),
-
-  constraint "teams_competitionId_fkey" foreign key ("competitionId")
-    references "platform"."competitions"("id") on update cascade on delete cascade,
-  constraint "teams_clonedFromTeamId_fkey" foreign key ("clonedFromTeamId")
-    references "platform"."teams"("id") on update cascade on delete set null
+  constraint "teams_slug_key" unique ("slug")
 );
 
 alter table "platform"."teams" enable row level security;
@@ -125,42 +65,50 @@ alter table "platform"."teams" enable row level security;
 -- ============================================================
 -- Team members
 -- ============================================================
+--
+-- Keeps HISTORY. `joinedAt`/`leftAt` is deliberately not a hard delete on
+-- leave: a later competition step derives competition stars from who was on
+-- a team at some past moment, and a hard delete on leave would make that
+-- question unanswerable the day after somebody left. Active membership is
+-- `"leftAt" is null`; every other predicate in this codebase that means
+-- "on the team right now" reads that column, not the row's mere existence.
 create table "platform"."teamMembers" (
+  "id"            uuid not null default gen_random_uuid(),
   "teamId"        uuid not null,
-  "competitionId" uuid not null,
   "userId"        uuid not null,
   "role"          "platform"."teamRole" not null default 'member',
   "joinedAt"      timestamptz not null default now(),
+  "leftAt"        timestamptz,
 
-  constraint "teamMembers_pkey" primary key ("teamId", "userId"),
-  -- One team per member per competition. Denormalizing "competitionId" onto
-  -- this row is what lets that be a unique constraint instead of a trigger:
-  -- without the column the rule is "no two rows whose teams share a
-  -- competition", which is not expressible as a constraint at all.
-  constraint "teamMembers_userId_competitionId_key" unique ("userId", "competitionId"),
-  -- FK target for sandbox environment ownership, which needs to name the lead
-  -- of a specific team and have the database enforce that it IS the lead.
-  constraint "teamMembers_teamId_userId_role_key" unique ("teamId", "userId", "role"),
+  constraint "teamMembers_pkey" primary key ("id"),
 
-  constraint "teamMembers_teamId_competitionId_fkey"
-    foreign key ("teamId", "competitionId")
-    references "platform"."teams"("id", "competitionId")
-    on update cascade on delete cascade,
+  constraint "teamMembers_teamId_fkey" foreign key ("teamId")
+    references "platform"."teams"("id") on update cascade on delete cascade,
   constraint "teamMembers_userId_fkey" foreign key ("userId")
     references "auth"."users"("id") on update cascade on delete cascade
 );
 
 alter table "platform"."teamMembers" enable row level security;
 
--- Exactly one lead per team. Partial rather than a plain unique on
--- ("teamId", "role"), which would also allow only one MEMBER per team.
-create unique index "teamMembers_one_lead_per_team"
-  on "platform"."teamMembers" ("teamId") where "role" = 'lead';
+-- At most one ACTIVE stint per (team, member). A member who left and later
+-- rejoins gets a second row, not a revived first one -- that is what makes
+-- "history" mean something here rather than just being an unused column.
+create unique index "teamMembers_one_active_per_team_user"
+  on "platform"."teamMembers" ("teamId", "userId") where "leftAt" is null;
 
--- Serves the memberStars and memberPoints views in the two files after this
--- one. Profile renders are the only read path and they are all keyed by user.
-create index "teamMembers_userId_teamId_idx"
-  on "platform"."teamMembers" ("userId", "teamId");
+-- Exactly one ACTIVE lead per team. Partial on both `role` and `leftAt`, so a
+-- lead who left does not block the team from ever having a lead again.
+create unique index "teamMembers_one_lead_per_team"
+  on "platform"."teamMembers" ("teamId") where "role" = 'lead' and "leftAt" is null;
+
+-- Serves the cap check in requireCanJoin (how many teams is this member
+-- active on right now) and, later, the memberStars view. Partial, since every
+-- caller of this index is asking about ACTIVE membership.
+create index "teamMembers_userId_active_idx"
+  on "platform"."teamMembers" ("userId") where "leftAt" is null;
+
+comment on column "platform"."teamMembers"."leftAt" is
+  'Null while the member is active. Set once, on leave; a rejoin is a new row, not a cleared one. Active membership is "leftAt is null" everywhere this table is read.';
 
 -- ============================================================
 -- Invitations and join requests
@@ -173,7 +121,6 @@ create index "teamMembers_userId_teamId_idx"
 create table "platform"."teamMembershipRequests" (
   "id"            uuid not null default gen_random_uuid(),
   "teamId"        uuid not null,
-  "competitionId" uuid not null,
   "userId"        uuid not null,
   "direction"     "platform"."membershipDirection" not null,
   "createdBy"     uuid not null,
@@ -198,10 +145,8 @@ create table "platform"."teamMembershipRequests" (
   constraint "teamMembershipRequests_pending_unresponded"
     check ("status" <> 'pending' or "respondedAt" is null),
 
-  constraint "teamMembershipRequests_teamId_competitionId_fkey"
-    foreign key ("teamId", "competitionId")
-    references "platform"."teams"("id", "competitionId")
-    on update cascade on delete cascade,
+  constraint "teamMembershipRequests_teamId_fkey" foreign key ("teamId")
+    references "platform"."teams"("id") on update cascade on delete cascade,
   constraint "teamMembershipRequests_userId_fkey" foreign key ("userId")
     references "auth"."users"("id") on update cascade on delete cascade
 );
@@ -233,7 +178,8 @@ create index "teamMembershipRequests_unnotified"
 -- `for all using (false)`, because the `for all` form would also kill the
 -- SELECT policy sitting next to it.
 
--- Teams are listed to logged-out visitors on the meetings page.
+-- Teams are listed to logged-out visitors: finding one to join does not
+-- require an account.
 create policy "public_select" on "platform"."teams"
   as permissive for select to anon, authenticated using (true);
 create policy "no_client_insert" on "platform"."teams"
@@ -246,31 +192,73 @@ create policy "no_client_delete" on "platform"."teams"
 -- `joinCode` is the one column that policy must not reach, and a row policy
 -- cannot express "every column but one", so it is a column grant.
 --
--- The design note for this table reads "anon: name, slug, competition;
--- authenticated: all". Taken literally the second half hands every signed-in
--- member the join code of every team in the club, which is the entire secret
--- the code consists of. Both roles are therefore held to the same column set,
--- and the code is served to the team's own members through a loader that
--- checks membership. Drizzle connects as the owner and is not subject to these
+-- The design note for this table reads "anon: name, slug; authenticated:
+-- all". Taken literally the second half hands every signed-in member the
+-- join code of every team in the club, which is the entire secret the code
+-- consists of. Both roles are therefore held to the same column set, and the
+-- code is served to the team's own members through a loader that checks
+-- membership. Drizzle connects as the owner and is not subject to these
 -- grants.
 --
 -- The revoke and the grant are a pair. Dropping the revoke restores the
 -- schema-wide default privileges from the first migration, which include
 -- "joinCode"; adding "joinCode" to the grant list does the same thing more
--- directly. The override decision is readable so public competition state can
--- show the effective result; its officer, timestamp, and reason remain server-only.
+-- directly.
 revoke select on "platform"."teams" from anon, authenticated;
 grant select (
-  "id", "competitionId", "slug", "name", "createdBy",
-  "submissionUrl", "submittedAt", "submissionState", "competedAt", "participationOverride",
-  "lockedManuallyAt", "requirementsMet", "acceptingRequests", "clonedFromTeamId"
+  "id", "slug", "name", "createdBy", "acceptingRequests"
 ) on "platform"."teams" to anon, authenticated;
+
+-- Whether `uid` is an ACTIVE member of `team_id`, for the history policy
+-- below. Security definer, and specifically NOT a plain subquery inlined into
+-- that policy: a subquery on `teamMembers` inside a policy ON `teamMembers` is
+-- self-referencing, and Postgres evaluates every one of the table's own
+-- policies -- including the one being defined -- against each row the
+-- subquery scans. That recurses into itself and fails with 42P17, "infinite
+-- recursion detected in policy for relation teamMembers"; measured against
+-- this exact policy locally. Security definer runs this function's body as
+-- its owner, which bypasses RLS entirely, so the lookup never re-triggers
+-- policy evaluation. `set search_path = ''` is mandatory alongside it, per
+-- `has_permission` above: nothing here may resolve through a caller-controlled
+-- schema.
+create or replace function "platform".is_active_team_member(team_id uuid, uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from "platform"."teamMembers"
+    where "teamId" = team_id and "userId" = uid and "leftAt" is null
+  );
+$$;
 
 -- Rosters are public to signed-in members: the team page shows who is on each
 -- team, and hiding that would make the club less legible for no gain. Not
 -- public to `anon`, because it is a membership list keyed to real accounts.
+--
+-- `"leftAt" is null` keeps this to the CURRENT roster. `teamMembers` now keeps
+-- history (a leave sets `leftAt` rather than deleting the row) so a later
+-- competition step can derive stars from who was on a team when it entered,
+-- but that history is not the design note's "who is on each team" -- it is
+-- every departed member's join/leave timeline, on every team, readable by
+-- any signed-in account. Past stints stay restricted to the team's own
+-- members below.
 create policy "authenticated_select" on "platform"."teamMembers"
-  as permissive for select to authenticated using (true);
+  as permissive for select to authenticated
+  using ("leftAt" is null);
+
+-- Past stints (`"leftAt" is not null`) are visible only to the team's own
+-- current members -- the same membership check `teamMembershipRequests` uses
+-- above, rewritten through `is_active_team_member` to dodge the recursion
+-- explained on it -- rather than to every signed-in account.
+create policy "team_member_select_history" on "platform"."teamMembers"
+  as permissive for select to authenticated
+  using (
+    "leftAt" is not null
+    and "platform".is_active_team_member("teamId", (select auth.uid()))
+  );
 create policy "no_client_insert" on "platform"."teamMembers"
   as restrictive for insert to anon, authenticated with check (false);
 create policy "no_client_update" on "platform"."teamMembers"
@@ -278,8 +266,9 @@ create policy "no_client_update" on "platform"."teamMembers"
 create policy "no_client_delete" on "platform"."teamMembers"
   as restrictive for delete to anon, authenticated using (false);
 
--- Your own approaches, plus every approach aimed at a team you are on. The
--- second half is what lets a lead see the queue they are meant to act on.
+-- Your own approaches, plus every approach aimed at a team you are ACTIVELY
+-- on. `"leftAt" is null` is what keeps a departed member from still seeing the
+-- queue on a team they no longer lead.
 create policy "own_or_team_select" on "platform"."teamMembershipRequests"
   as permissive for select to authenticated
   using (
@@ -288,6 +277,7 @@ create policy "own_or_team_select" on "platform"."teamMembershipRequests"
       select 1 from "platform"."teamMembers" tm
        where tm."teamId" = "platform"."teamMembershipRequests"."teamId"
          and tm."userId" = (select auth.uid())
+         and tm."leftAt" is null
     )
   );
 create policy "no_client_insert" on "platform"."teamMembershipRequests"

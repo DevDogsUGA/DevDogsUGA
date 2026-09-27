@@ -5,13 +5,13 @@ import {
   PAGE_CARDS,
   PageCard,
   type PageCardCopy,
-} from "@devdogsuga/og";
+} from "@devdogsuga/open-graph";
 import type { ReactElement } from "react";
 
 /**
  * The plumbing every `opengraph-image.tsx` in this app shares.
  *
- * The cards themselves live in `@devdogsuga/og` so the CLI can render the same
+ * The cards themselves live in `@devdogsuga/open-graph` so the CLI can render the same
  * artwork to disk (`pnpm devtools images`). What is left here is the part that
  * is Next's: the file-convention exports, and turning an element into a PNG.
  *
@@ -69,7 +69,7 @@ export function pageOgImage(route: string) {
   const copy: PageCardCopy | undefined = PAGE_CARDS[route];
   if (!copy)
     throw new Error(
-      `No Open Graph copy for ${route}. Add it to @devdogsuga/og's pages.ts.`,
+      `No Open Graph copy for ${route}. Add it to @devdogsuga/open-graph's pages.ts.`,
     );
 
   return {

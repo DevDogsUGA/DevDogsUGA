@@ -27,7 +27,6 @@ build/
 **/build/
 dist/
 **/dist/
-.turbo
 
 # misc
 .DS_Store
@@ -57,9 +56,9 @@ scripts/spike/
 # vercel
 .vercel
 
-# cloudflare / opennext
-.open-next/
-**/.open-next/
+# cloudflare / vinext
+.vinext/
+**/.vinext/
 .wrangler/
 **/.wrangler/
 .dev.vars
@@ -82,6 +81,14 @@ volumes/
 .claude
 .idea
 .mcp.json
+# the Playwright MCP's screenshots, snapshots and console logs
+.playwright-mcp/
+
+# agent instructions — local to each contributor's setup, not shared source
+AGENTS.md
+**/AGENTS.md
+CLAUDE.md
+**/CLAUDE.md
 
 # eslint
 /.eslintcache
@@ -89,12 +96,11 @@ volumes/
 .idea/vcs.xml
 
 # drizzle-kit pull byproducts: a fully commented-out "initial migration" plus the
-# snapshot that pairs with it. Migrations live in packages/sb/supabase/migrations
-# and nothing here runs `drizzle-kit generate`, so nothing diffs against these.
+# snapshot that pairs with it. Migrations live in supabase/migrations and
+# nothing here runs `drizzle-kit generate`, so nothing diffs against these.
 # The sibling schema.ts / relations.ts ARE source and stay tracked.
 **/drizzle/*_*/
 **/schema/generated/*_*/
-drizzle-generated/
 
 branch_structure.json
 temp_auto_push.bat
@@ -134,7 +140,7 @@ apps/study-group-finder/tool/*.docs.json
 
 # The rest of what `pnpm devtools images` renders. Nothing here is a source
 # file: every one is a deterministic render of the SVGs in public/brand and the
-# templates in @devdogsuga/og, so committing them stored a second copy of
+# templates in @devdogsuga/open-graph, so committing them stored a second copy of
 # artwork the repo already had, and one that went stale silently.
 #
 # Two kinds live here now. The email signatures and platform-192 are DEPLOYED

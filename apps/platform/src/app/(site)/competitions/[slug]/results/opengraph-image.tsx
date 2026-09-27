@@ -1,6 +1,7 @@
-import { ACCENT, PageCard } from "@devdogsuga/og";
+import { ACCENT, PageCard } from "@devdogsuga/open-graph";
 import { contentType, ogResponse, size } from "~/lib/ogImage";
-import { getCompetitionBySlug } from "~/server/loaders/meetings";
+import { getCompetitionBySlug } from "~/server/loaders/competitions";
+import { getEntrants } from "~/server/loaders/teams";
 
 /**
  * A competition's results card.
@@ -9,10 +10,10 @@ import { getCompetitionBySlug } from "~/server/loaders/meetings";
  * with a card at all — the two under `teams/` redirect an anonymous visitor and
  * carry `robots: { index: false }`.
  *
- * The description is the scoring split rather than a placing, matching the
- * page's own metadata and for the same reason: the page refuses to reduce a
- * team to one number, and a card leading with a winner would undo that in the
- * one place nobody proofreads.
+ * Fetches `getEntrants` the same way the page itself does, so a link shared
+ * once a winner has merged shows the winner's name rather than the generic
+ * "who entered, and who won." -- `getEntrants`'s own `cache()` wrapper is
+ * what keeps this a second read rather than a second query.
  */
 export const alt = "DevDogs competition results";
 export { contentType, size };
@@ -37,12 +38,16 @@ export default async function Image({
     );
   }
 
+  const entrants = await getEntrants(slug);
+  const winner = entrants.find((entrant) => entrant.won);
+
   return ogResponse(
     PageCard({
       ...size,
-      title: `${competition.name} results`,
-      description:
-        "Final standings, scored out of 1000 — 600 for requirements met and 400 from the member elections.",
+      title: `${competition.title} results`,
+      description: winner
+        ? `${winner.teamName} won.`
+        : "Who entered, and who won.",
       eyebrow: "Results",
       accent: ACCENT.amber400,
       footer: `devdogsuga.org/competitions/${slug}/results`,

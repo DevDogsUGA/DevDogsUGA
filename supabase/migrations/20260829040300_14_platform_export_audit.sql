@@ -12,7 +12,6 @@ create type "platform"."auditEventSource" as enum (
   'platform',
   'qr',
   'manual_code',
-  'airtable_form',
   'system'
 );
 
@@ -22,8 +21,6 @@ create table "platform"."auditEvents" (
   "actorType"                text not null,
   -- No FK: an audit event outlives the actor account.
   "actorUserId"              uuid,
-  "actorAirtableUserId"      text,
-  "actorAirtableDisplayName" text,
   "source"                   "platform"."auditEventSource" not null,
   "action"                   text not null,
   "targetType"               text not null,
@@ -35,13 +32,11 @@ create table "platform"."auditEvents" (
 
   constraint "auditEvents_pkey" primary key ("id"),
   constraint "auditEvents_actorType_choices"
-    check ("actorType" in ('user', 'airtable_collaborator', 'system')),
+    check ("actorType" in ('user', 'system')),
   constraint "auditEvents_actor_shape" check (
-    ("actorType" = 'user' and "actorUserId" is not null and "actorAirtableUserId" is null)
+    ("actorType" = 'user' and "actorUserId" is not null)
     or
-    ("actorType" = 'airtable_collaborator' and "actorUserId" is null and "actorAirtableUserId" is not null)
-    or
-    ("actorType" = 'system' and "actorUserId" is null and "actorAirtableUserId" is null)
+    ("actorType" = 'system' and "actorUserId" is null)
   ),
   constraint "auditEvents_metadata_bounded"
     check (pg_column_size("metadata") <= 16384),
@@ -91,19 +86,12 @@ create trigger "auditEvents_append_only"
   before update or delete on "platform"."auditEvents"
   for each row execute function "platform".reject_audit_event_mutation();
 
-alter table "platform"."airtableChangeReceipts"
-  add constraint "airtableChangeReceipts_auditEventId_fkey"
-  foreign key ("auditEventId") references "platform"."auditEvents"("id")
-  on delete restrict;
-
 -- Who downloaded what.
 --
--- `stars.csv` carries member emails, so every download is recorded. This is the
--- protection the design noted was LOST by exporting attendance from Airtable
--- instead of the platform: anybody with base access can export an Airtable view
--- silently, and bulk extraction stops being detectable. Keeping the one export
--- that survived auditable is what stops that loss from spreading to the export
--- that still holds the most PII.
+-- `stars.csv` carries member emails, so every download is recorded. An
+-- export nobody can trace is bulk extraction that looks identical to an
+-- authorized read, and this table is what keeps that detectable -- most of
+-- all for the export that holds the most PII.
 create table "platform"."exportAudit" (
   "id"         uuid primary key default gen_random_uuid(),
   -- `set null` rather than cascade: the point of an audit row is that it
@@ -130,9 +118,9 @@ alter table "platform"."exportAudit" enable row level security;
 -- see who exported the roster is a different disclosure from the export
 -- itself and is not one this table grants.
 --
--- These three names are reused verbatim on platform."attendance" and
--- platform."airtableSyncState". Policy names are per-table, so that is legal,
--- and a pass that deduplicates by name deletes live policies.
+-- These three names are reused verbatim on platform."attendance". Policy
+-- names are per-table, so that is legal, and a pass that deduplicates by
+-- name deletes live policies.
 create policy "no_client_insert" on "platform"."exportAudit"
   as restrictive for insert to anon, authenticated with check (false);
 create policy "no_client_update" on "platform"."exportAudit"

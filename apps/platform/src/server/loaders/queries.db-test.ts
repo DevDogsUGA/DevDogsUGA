@@ -6,33 +6,18 @@ import {
   getUpcomingMeetings,
   getPastMeetings,
   getMeetingBySlug,
-  getWorkshopDetail,
-  getCompetitionBySlug,
   getMeetingWorkshops,
   getMeetingsInRange,
 } from "./meetings";
+import { getCompetitionBySlug, getCompetitionSlugs } from "./competitions";
 import {
-  getTeamsForCompetition,
+  getAllTeams,
   getTeamDetail,
   getPendingForUser,
-  getMyTeam,
+  getMyTeams,
+  getEntrants,
 } from "./teams";
-import { getStarsForUser, getStarsForWorkshop } from "./stars";
-import {
-  getStandings,
-  getMemberPointsLeaderboard,
-  getMemberPoints,
-} from "./points";
-import {
-  getOpenElections,
-  getElectionBySlug,
-  getBallotOptions,
-  getMyBallot,
-  getElectionResults,
-  getTiebreakDisclosures,
-  getPointsElections,
-} from "./elections";
-import { readSyncState } from "~/server/airtable/lease";
+import { getStarsForUser } from "./stars";
 import { streamStarRows } from "~/server/export/stars";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
@@ -59,18 +44,21 @@ describe("every loader is valid SQL", () => {
     await getUpcomingMeetings();
     await getPastMeetings();
     await getMeetingBySlug("nope");
-    await getWorkshopDetail("nope", "nope");
-    await getCompetitionBySlug("nope");
     await getMeetingWorkshops(NIL);
+    expect(true).toBe(true);
+  });
+
+  it("competitions", async () => {
+    await getCompetitionBySlug("nope");
+    await getCompetitionSlugs();
     expect(true).toBe(true);
   });
 
   it("the calendar's range query, on an empty window and a populated one", async () => {
     // Two calls, because the loader has two code paths and only one reaches
-    // the child statements. A window with no meetings returns before the
-    // workshop and judging queries run, so a far-future range on its own would
-    // never prove those parse. The judging join is the riskiest expression in
-    // the file: it joins ON two timestamp comparisons rather than on a key.
+    // the child statement. A window with no meetings returns before the
+    // workshop query runs, so a far-future range on its own would never prove
+    // it parses.
     const far = new Date("2999-01-01T00:00:00Z");
     await getMeetingsInRange(far, new Date("2999-04-01T00:00:00Z"));
 
@@ -85,58 +73,32 @@ describe("every loader is valid SQL", () => {
     expect(true).toBe(true);
   });
   it("teams", async () => {
-    await getTeamsForCompetition("nope");
-    await getTeamDetail("nope", "nope", NIL);
+    await getAllTeams();
+    await getTeamDetail("nope", NIL);
     await getPendingForUser(NIL);
-    await getMyTeam("nope", NIL);
+    await getMyTeams(NIL);
+    await getEntrants("nope");
     expect(true).toBe(true);
   });
   it("stars", async () => {
     await getStarsForUser(NIL);
-    await getStarsForWorkshop(NIL);
     expect(true).toBe(true);
   });
-  it("points", async () => {
-    await getStandings("nope");
-    await getMemberPointsLeaderboard();
-    await getMemberPoints(NIL);
-    expect(true).toBe(true);
-  });
-  it("the airtable sync state the console renders", async () => {
-    // The console page is the only reader, and a page that throws on load is
-    // indistinguishable from the sync being broken.
-    await readSyncState();
-    expect(true).toBe(true);
-  });
-
   it("the stars export, including its filters", async () => {
     // The export is a generator, so nothing runs until it is drained. An
     // untouched `streamStarRows(...)` would prove nothing.
     for await (const _ of streamStarRows({}, 10)) break;
     for await (const _ of streamStarRows(
-      { from: new Date("2020-01-01"), to: new Date(), projectSlug: "nope" },
+      { from: new Date("2020-01-01"), to: new Date() },
       10,
     ))
       break;
-    expect(true).toBe(true);
-  });
-
-  it("elections", async () => {
-    await getOpenElections();
-    await getElectionBySlug("nope");
-    await getBallotOptions(NIL);
-    await getMyBallot(NIL, NIL);
-    await getElectionResults(NIL);
-    await getTiebreakDisclosures(NIL);
-    await getPointsElections(NIL);
     expect(true).toBe(true);
   });
 });
 
 const COUNTS = {
   meeting: "11111111-2222-4000-8000-000000000001",
-  project: "11111111-2222-4000-8000-000000000002",
-  project2: "11111111-2222-4000-8000-000000000003",
   workshop: "11111111-2222-4000-8000-000000000004",
   workshop2: "11111111-2222-4000-8000-000000000005",
 } as const;
@@ -144,9 +106,6 @@ const COUNTS = {
 async function cleanupCounts() {
   await db.execute(
     sql`delete from platform.meetings where slug = 'counts-test-meeting'`,
-  );
-  await db.execute(
-    sql`delete from platform.projects where slug like 'counts-test-%'`,
   );
 }
 
@@ -172,17 +131,13 @@ describe("correlated counts on a meeting", () => {
   beforeAll(async () => {
     await cleanupCounts();
     await db.execute(sql`
-      insert into platform.projects (id, slug, "displayName")
-      values (${COUNTS.project}::uuid, 'counts-test-a', 'Counts Test A'),
-             (${COUNTS.project2}::uuid, 'counts-test-b', 'Counts Test B')`);
-    await db.execute(sql`
       insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
       values (${COUNTS.meeting}::uuid, 'counts-test-meeting', 'Counts Test',
               now() + interval '1 day', now() + interval '1 day 2 hours')`);
     await db.execute(sql`
-      insert into platform.workshops (id, "meetingId", "projectId")
-      values (${COUNTS.workshop}::uuid, ${COUNTS.meeting}::uuid, ${COUNTS.project}::uuid),
-             (${COUNTS.workshop2}::uuid, ${COUNTS.meeting}::uuid, ${COUNTS.project2}::uuid)`);
+      insert into platform.workshops (id, "meetingId", "project")
+      values (${COUNTS.workshop}::uuid, ${COUNTS.meeting}::uuid, 'Counts Test A'),
+             (${COUNTS.workshop2}::uuid, ${COUNTS.meeting}::uuid, 'Counts Test B')`);
   });
 
   afterAll(cleanupCounts);

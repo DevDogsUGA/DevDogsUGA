@@ -29,20 +29,16 @@ export default function robots(): MetadataRoute.Robots {
         "/account", // the viewer's own profile
         "/oauth", // /oauth/consent, mid-authorization-flow only
         "/tools", // /tools/oauth, a member's own test client
-        "/vote", // ballots; expectSession() -> /auth
         "/teams", // /teams/requests; expectSession() -> /auth
 
         // (api) route handlers. None render HTML, and several are guarded by
         // a shared secret rather than a session, so a crawler reaching them
         // gets a 401 or a 503 at best.
         "/cron", // CRON_SECRET-guarded jobs
-        "/airtable", // the officers' sync trigger
         "/attendance", // check-in submissions (and public/attendance/*)
         "/auth", // sign-in entry point and OAuth callback
         "/discord", // Discord interaction webhook, signature-verified
         "/github", // GitHub App webhook, signature-verified
-        "/supabase", // sandbox OAuth authorize/callback
-        "/sandbox", // sandbox environment control
         "/export", // CSV exports, permission-gated
         "/search", // JSON search API; there is no results PAGE to index
         // Not private. It 307s to the UGA Involvement Network listing, and is

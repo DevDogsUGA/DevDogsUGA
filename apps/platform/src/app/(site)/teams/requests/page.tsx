@@ -1,23 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
-import PageShell from "~/components/PageShell";
 import EmptyState from "~/components/participation/EmptyState";
-import { LOCK_COPY } from "~/components/participation/LockNotice";
 import RequestActions from "~/components/teams/RequestActions";
+import PageShell from "~/components/PageShell";
+import Callout from "~/ui/callout";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import { respondToMembership } from "~/server/actions/teams";
 import { requireSession } from "~/server/auth/require";
-import { getCompetitionBySlug } from "~/server/loaders/meetings";
 import {
-  getMyTeam,
+  getAllTeams,
+  getMyTeams,
   getPendingForUser,
-  getTeamsForCompetition,
   type PendingRequest,
   type TeamCard,
 } from "~/server/loaders/teams";
-import type { LockReason } from "~/server/teams/lockState";
-import Callout from "~/ui/callout";
+import { MAX_CONCURRENT_TEAMS_PER_USER } from "~/server/teams/limits";
 
 /**
  * A queue addressed to one person: `requireSession()` below redirects
@@ -39,51 +36,36 @@ export const metadata: Metadata = {
  * places to find out whether anything is outstanding.
  *
  * Beyond listing, it decides whether each row can still be accepted.
- * Acceptance is validated when answered, never when created: the team can fill
- * up, the roster can lock, or the person can join somebody else in between. A
- * row can be dead on arrival, and this page exists so nobody finds that out by
- * pressing Accept and getting an error.
+ * Acceptance is validated when answered, never when created: the
+ * concurrent-team cap and the team's roster can both have changed since a
+ * request was opened. A row can be dead on arrival, and this page exists so
+ * nobody finds that out by pressing Accept and getting an error.
  */
 
 interface Row {
   request: PendingRequest;
-  /** The team, from its competition's list. Null if it has since vanished. */
+  /** The team, from the all-teams list. Null if it has since been disbanded. */
   card: TeamCard | null;
-  /** What the competition is called. `PendingRequest` carries only its slug. */
-  competitionName: string;
-  /** The team the person this row would add is already on, if any. */
-  joinerTeam: { teamSlug: string; role: "lead" | "member" } | null;
+  /** How many teams the person this row would add is active on right now. */
+  joinerActiveTeamCount: number;
 }
 
 export default async function TeamRequestsPage() {
-  // Whether a roster is locked is a comparison against now, the same reason
-  // the team pages opt out of prerendering.
-  await connection();
-
   const userId = await requireSession();
   const pending = await getPendingForUser(userId);
+  const cards = await getAllTeams();
 
   const rows: Row[] = await Promise.all(
     pending.map(async (request) => {
-      // The pending row carries a team id and a name but no team SLUG, so the
-      // competition's list is also what makes each of these linkable. All
-      // three loaders are `cache`d per argument, so several rows in one
-      // competition cost one query between them. None of the three reads
-      // another's answer, so they go out together rather than in sequence.
-      const [cards, competition, joinerTeam] = await Promise.all([
-        getTeamsForCompetition(request.competitionSlug),
-        getCompetitionBySlug(request.competitionSlug),
-        // Asked about the person the row would ADD, not about the viewer. For
-        // an invitation those are the same person; for a join request the
-        // difference is the whole check: the asker may have joined somebody
-        // else while the lead was deciding.
-        getMyTeam(request.competitionSlug, request.userId),
-      ]);
+      // Asked about the person the row would ADD, not about the viewer. For
+      // an invitation those are the same person; for a join request the
+      // difference is the whole check: the asker may have filled their own
+      // cap while the lead was deciding.
+      const joinerTeams = await getMyTeams(request.userId);
       return {
         request,
         card: cards.find((card) => card.id === request.teamId) ?? null,
-        competitionName: competition?.name ?? request.competitionSlug,
-        joinerTeam,
+        joinerActiveTeamCount: joinerTeams.length,
       };
     }),
   );
@@ -109,17 +91,11 @@ export default async function TeamRequestsPage() {
               <h2 className="px-1 font-semibold text-white">
                 Invitations to you
               </h2>
-              {/* Deliberately does not promise that accepting withdraws the
-                  rest. The design says it should; `respondToMembership` marks
-                  only the row it answered, so the others stay pending and
-                  become the blocked rows below. Describing the intent rather
-                  than the behaviour would leave a member waiting for teams to
-                  hear something the platform never sent. */}
               <p className="max-w-prose px-1 text-sm text-mauve-400">
-                Several at once is fine and rather the point — ask a few, join
-                whichever answers first. You can only be on one team per
-                competition, so the moment you accept one the rest stop being
-                acceptable; decline those to let the leads know.
+                Several at once is fine — you can be active on up to{" "}
+                {MAX_CONCURRENT_TEAMS_PER_USER} teams, so accepting one does not
+                automatically clear the rest. Accepting past that cap fails at
+                the button; decline the ones you do not want to keep pending.
               </p>
               <ul className="flex flex-col gap-3">
                 {invitations.map((row) => (
@@ -148,11 +124,9 @@ export default async function TeamRequestsPage() {
 }
 
 function RequestCard({ row }: { row: Row }) {
-  const { request, card, competitionName } = row;
+  const { request, card } = row;
   const isInvite = request.direction === "invite";
-  const teamHref = `/competitions/${request.competitionSlug}/teams${
-    card === null ? "" : `/${card.slug}`
-  }`;
+  const teamHref = card === null ? "/teams" : `/teams/${card.slug}`;
   const subject = isInvite
     ? request.teamName
     : (request.preferredName ?? "A member");
@@ -179,10 +153,6 @@ function RequestCard({ row }: { row: Row }) {
           )}
         </span>
         <span className="text-xs text-mauve-400">
-          {/* Named, because "you were invited to a team" is not enough to
-              decide with. Which competition it is for is half the question,
-              and a member may be looking at two weeks' worth at once. */}
-          {competitionName} ·{" "}
           <time dateTime={request.createdAt.toISOString()}>
             {formatRelative(request.createdAt)}
           </time>
@@ -228,62 +198,37 @@ function RequestCard({ row }: { row: Row }) {
  * inside the transaction. This is not the enforcement, it is the difference
  * between being told and being surprised.
  *
- * One thing it cannot answer: whether the team is FULL. The cap is
- * `competitions.maxTeamSize`, and where that is null the real limit comes from
- * the instance default, neither of which any loader on this path exposes. A
- * full team therefore still fails at the button with `team_full`.
+ * One thing it cannot answer: whether the team is FULL. `requireCanJoin`
+ * resolves that against `MAX_TEAM_SIZE` and no loader on this path counts the
+ * roster for a team the viewer may not be on. A full team therefore still
+ * fails at the button with `team_full`.
  */
 function blockerFor({
   request,
   card,
-  joinerTeam,
+  joinerActiveTeamCount,
 }: Row): { title: string; body: string } | null {
   const isInvite = request.direction === "invite";
   const who = request.preferredName ?? "They";
 
-  if (joinerTeam !== null) {
-    return isInvite
-      ? {
-          title: "You are already on a team for this competition",
-          body: "It is one team per member per competition, so this invitation can no longer be accepted. Declining it just clears it from the list.",
-        }
-      : {
-          title: `${who} joined another team`,
-          body: "They are on a team for this competition already, so this request cannot be accepted. Declining it lets them know.",
-        };
-  }
-
   if (card === null) {
     return {
       title: "That team is no longer listed",
-      body: "It may have been removed. There is nothing left to join, so declining is all this row is good for.",
+      body: "It may have been disbanded. There is nothing left to join, so declining is all this row is good for.",
     };
   }
 
-  if (card.lock !== null) {
-    // The lead gets the standard copy, written in the second person
-    // possessive ("your entry is open"). An invitee is not on the team, so
-    // that reading is wrong for them, and the temporary case matters more to
-    // them anyway: an entry lock is the one that can come back.
+  if (joinerActiveTeamCount >= MAX_CONCURRENT_TEAMS_PER_USER) {
     return isInvite
-      ? INVITEE_LOCK_COPY[card.lock]
-      : { title: LOCK_COPY[card.lock].title, body: LOCK_COPY[card.lock].body };
+      ? {
+          title: `You are already active on ${MAX_CONCURRENT_TEAMS_PER_USER} teams`,
+          body: "That is the most one contributor can be on at once, so this invitation can no longer be accepted without leaving another team first. Declining it just clears it from the list.",
+        }
+      : {
+          title: `${who} reached the team cap`,
+          body: `${who === "They" ? "They are" : `${who} is`} already active on ${MAX_CONCURRENT_TEAMS_PER_USER} teams, so this request cannot be accepted. Declining it lets them know.`,
+        };
   }
 
   return null;
 }
-
-const INVITEE_LOCK_COPY: Record<LockReason, { title: string; body: string }> = {
-  entry: {
-    title: "That roster is closed while their entry is open",
-    body: "A team's pull request closes its roster. This invitation is not dead — if they close the pull request to make room, it can be accepted again.",
-  },
-  judging: {
-    title: "Judging has started",
-    body: "Rosters close when judging begins and do not reopen, so this invitation can no longer be accepted.",
-  },
-  officer: {
-    title: "An officer locked that roster",
-    body: "Nobody can be added until it is unlocked. The team's lead is the one to ask about it.",
-  },
-};

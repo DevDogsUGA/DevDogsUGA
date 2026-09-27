@@ -8,8 +8,8 @@ export type NavIcon = keyof typeof icons;
 
 /**
  * DevDogs on the UGA Involvement Network, the roster that decides official
- * membership (see `docs/platform/airtable-setup.md`). `/join` redirects here,
- * so keep the two in sync by importing this rather than retyping the URL.
+ * membership. `/join` redirects here, so keep the two in sync by importing
+ * this rather than retyping the URL.
  */
 export const INVOLVEMENT_NETWORK_URL =
   "https://uga.campuslabs.com/engage/organization/devdogs";
@@ -158,12 +158,12 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "Upload the UGA Involvement Network roster to verify member profiles and unlock community page visibility.",
   },
   {
-    label: "Airtable Sync",
-    href: "/console/airtable",
-    icon: "ArrowSquareOutIcon",
-    permission: "canTriggerSync",
+    label: "Exports",
+    href: "/console/exports",
+    icon: "DownloadSimpleIcon",
+    permission: "canExportStars",
     description:
-      "Run the Airtable sync by hand and see what the last pass refused.",
+      "Download CSV snapshots of stars, attendance, and reflections.",
   },
   {
     label: "Permissions",
@@ -176,18 +176,17 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
 ];
 
 /**
- * The competition program's personal pages. Voting and team requests both
- * answer "what is a competition waiting on me for", so the profile popover
- * nests them in one sub-menu rather than listing them beside Account, which is
- * about the viewer.
+ * The competition program's personal pages. Answers "what is a competition
+ * waiting on me for", so the profile popover nests it in one sub-menu rather
+ * than listing it beside Account, which is about the viewer.
  */
 export const COMPETITION_ITEMS: NavItem[] = [
   {
-    label: "Vote",
-    href: "/vote",
-    icon: "StarIcon",
+    label: "Teams",
+    href: "/teams",
+    icon: "UsersIcon",
     description:
-      "Rank the competing implementations in any election you can vote in.",
+      "Every team, and the two ways onto one: a join code, or a request to the lead.",
   },
   {
     label: "Team requests",

@@ -10,14 +10,14 @@ import { CRON_ROUTES, scheduled } from "./scheduled";
  * The dispatcher was silently wrong. Every entry was written as
  * `/api/cron/...`, but the handlers live under `src/app/(api)/`, and
  * parentheses make a route group: the segment does not appear in the URL. So
- * `/api/cron/judging-start` returned 404 while `/cron/judging-start` served
- * 200, and had done since the Vercel-to-Cloudflare move that carried the paths
- * over from `vercel.json` unchanged.
+ * `/api/cron/github-reconcile` returned 404 while `/cron/github-reconcile`
+ * served 200, and had done since the Vercel-to-Cloudflare move that carried
+ * the paths over from `vercel.json` unchanged.
  *
  * The dispatcher swallows non-2xx responses, so the crons failed quietly: no
- * tally, no judging freeze, no Airtable sync, no GitHub reconcile.
- * Typechecking cannot see it, because a path is just a string. Mapping the
- * string back to a file is the only check that would have.
+ * config reconcile, no GitHub reconcile. Typechecking cannot see it, because
+ * a path is just a string. Mapping the string back to a file is the only
+ * check that would have.
  */
 
 const APP = join(import.meta.dirname, "..", "src", "app");
@@ -68,7 +68,7 @@ describe("cron dispatcher", () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) =>
       Promise.resolve(
         new Response(null, {
-          status: readRequestUrl(input).endsWith("/cron/sandbox-refresh")
+          status: readRequestUrl(input).endsWith("/cron/github-reconcile")
             ? 503
             : 200,
         }),
@@ -87,7 +87,7 @@ describe("cron dispatcher", () => {
           CRON_SECRET: "secret",
         },
       ),
-    ).rejects.toThrow("/cron/sandbox-refresh: HTTP 503");
+    ).rejects.toThrow("/cron/github-reconcile: HTTP 503");
 
     expect(fetchMock).toHaveBeenCalledTimes(paths.length);
     expect(

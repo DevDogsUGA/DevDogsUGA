@@ -3,9 +3,33 @@
  * Docker builds need.
  */
 import type { NextConfig } from "next";
+import { buildSecurityHeaders } from "@devdogsuga/security-headers";
 import { env } from "~/env";
 
 const config = {
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        // Same `??` fallback as `images.remotePatterns` below: CI's
+        // credential-free validate job loads this config under
+        // `SKIP_ENV_VALIDATION`, where `env.NEXT_PUBLIC_SUPABASE_URL` is
+        // `undefined` rather than a real URL. A real build never takes it.
+        headers: buildSecurityHeaders({
+          environment: env.DEPLOY_ENV,
+          supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
+          sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
+          // This static `headers()` declaration is evaluated once at
+          // build/dev-server start, not per request, so it can never mint a
+          // real nonce -- and never needs to: it is a fallback purely for
+          // routes middleware's matcher excludes (static assets, images),
+          // none of which carry an inline script to gate. See
+          // `applySecurityHeaders`'s doc comment.
+          nonce: "unused-static-fallback",
+        }),
+      },
+    ];
+  },
   async redirects() {
     return [
       {
@@ -25,24 +49,21 @@ const config = {
       },
     ];
   },
-  turbopack: {
-    rules: {
-      "*.{graphql,gql}": {
-        loaders: ["raw-loader"],
-        as: "*.js",
-      },
-    },
-    resolveExtensions: [".graphql", ".gql", ".js", ".jsx", ".ts", ".tsx"],
-  },
+  // `.gql`/`.graphql` sources no longer need a Turbopack loader rule --
+  // vinext builds with Vite, whose native `?raw` import suffix reads a
+  // file's contents as a string with no loader config at all (see
+  // src/server/github/queries/index.ts and graphql.d.ts).
+  //
   // NOT `cacheComponents: true`, deliberately, since 2026-08-20: Cache
-  // Components' partial prerendering is broken on the OpenNext Cloudflare
-  // adapter. Upstream's symptom is cached shells served without dynamic
-  // streaming (opennextjs-cloudflare#1115); ours was worse. Every `◐` route
-  // hung in workerd until the runtime killed the request ("hung and would
-  // never generate a response"), while route handlers, middleware and the
-  // database all worked. `experimental.useCache` keeps the `"use cache"` +
-  // `cacheLife` directives (DocsMarkdown and friends) compiling and caching;
-  // only the PPR machinery is off. Revisit when the adapter supports it.
+  // Components' partial prerendering was broken on the OpenNext Cloudflare
+  // adapter (opennextjs-cloudflare#1115: cached shells served without
+  // dynamic streaming; ours was worse -- every `◐` route hung in workerd
+  // until the runtime killed the request). vinext replaces that adapter, but
+  // this flag hasn't been re-evaluated against it yet -- that is a
+  // deliberate separate change, not folded into this migration.
+  // `experimental.useCache` keeps the `"use cache"` + `cacheLife` directives
+  // (DocsMarkdown and friends) compiling and caching; only the PPR machinery
+  // is off.
   //
   // ⚠️ `experimental.useCache` prints "is deprecated. Please use the
   // top-level `cacheComponents` option instead". Read next's own config.js

@@ -2,6 +2,7 @@
 name: Integrating your own app
 description: The policy predicates every app must add, the eight steps to make a table moderatable, and the three traps that let an integration look finished while doing nothing.
 order: 2
+section: guides
 ---
 
 # Integrating your own app
@@ -44,7 +45,7 @@ An app that hides should freeze as well. Without it an author can rewrite quaran
 5. Find every other surface the same content reaches — a second table, a storage object — and freeze those too.
 6. For content that is reportable but **not** quarantinable, write one `platform."contentTypes"` row with no foreign key. Resolving such a report with `quarantine` raises and rolls the decision back, which is what makes the outcome atomic.
 7. Add the schema to `[api] schemas` in `supabase/config.toml` and to the exclusion list in `drizzle-introspection.config.ts`. See Trap 2.
-8. Verify with `pnpm devtools doctor --app <slug>`, then `pnpm devtools roundtrip` — the step that matters, because it exercises _your_ policy.
+8. Verify with `pnpm devtools moderation check --app <slug>`, then `pnpm devtools moderation roundtrip` — the step that matters, because it exercises _your_ policy.
 
 ⚠️ **`config.toml` changes need a restart, not a reset.** `[api] schemas` becomes PostgREST's `db-schemas` at `supabase start`, so `supabase db reset` leaves the old list in place — and a schema on it that no longer exists stops PostgREST building its schema cache at all: every request returns `PGRST002`. Run `pnpm devtools db restart`, which is exactly that stop/start pair.
 
@@ -87,7 +88,7 @@ Excluding costs nothing anyway: `src/supabase/drizzle` exists so the console can
 
 An app that seeds its own sign-in-able accounts inserts into `auth.users` from SQL: the local Docker stack is HTTP and cannot host OAuth. A naive row looks correct — it exists, `encrypted_password` holds a valid bcrypt hash, `email_confirmed_at` is set — and sign-in still fails with `"Database error querying schema"`, which names neither a column nor a user.
 
-GoTrue scans several `auth.users` columns into **non-nullable Go strings**, so a `NULL` is a scan error, not an empty value. Four have no database default, and `supabase/seed/02_moderation.sql` sets them to `''` explicitly:
+GoTrue scans several `auth.users` columns into **non-nullable Go strings**, so a `NULL` is a scan error, not an empty value. Four have no database default, and `supabase/seed/development/02_moderation.sql` sets them to `''` explicitly:
 
 - `confirmation_token`
 - `recovery_token`

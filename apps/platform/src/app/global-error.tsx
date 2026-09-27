@@ -1,6 +1,7 @@
 "use client"; // Error boundaries must be Client Components
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * The last boundary: the root layout itself failed, so `(site)/error.tsx`
@@ -22,6 +23,13 @@ export default function GlobalError({
   retry: () => void;
 }) {
   useEffect(() => {
+    // The root layout itself failed, which is the one boundary Sentry's own
+    // Next.js docs single out: https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#error-handling
+    // The rest of the app's Server Components/Actions/routes are captured
+    // server-side in cloudflare/worker.ts; this is the client-side layer's
+    // last resort, and captureException here is safe to call unconditionally
+    // -- it no-ops with no DSN configured, the same as everywhere else.
+    Sentry.captureException(error);
     console.error(error);
   }, [error]);
 

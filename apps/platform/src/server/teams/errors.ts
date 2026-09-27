@@ -1,21 +1,28 @@
 /**
  * Typed failures for the team actions.
  *
- * The join screens branch on these. "The competition is over", "close your PR
- * first", "link GitHub to join" and "that team is full" are four different
- * screens, and a string message cannot be switched on without matching prose
- * that translation or a copy edit will break.
+ * The join screens branch on these. "Link GitHub to join", "that team is
+ * full", and "you are already on two teams" are three different screens, and
+ * a string message cannot be switched on without matching prose that
+ * translation or a copy edit will break.
  */
 export type TeamActionCode =
-  /** Judging has begun, or the competition does not exist. */
-  | "competition_closed"
-  /** The team has a live entry, an officer lock, or judging has started. */
-  | "roster_locked"
   /** Joining provisions repository access, which needs a linked GitHub identity. */
   | "github_not_linked"
-  /** The team is at its effective cap. */
+  /** GitHub did not apply the change; the mirror was left untouched. */
+  | "github_unavailable"
+  /** The linked GitHub account has 2FA off. Membership grants push access to
+   *  the org repo, so this is refused rather than granted with a weaker
+   *  account sitting on the roster. */
+  | "github_2fa_required"
+  /** GitHub could not be asked whether 2FA is on, so this fails closed rather
+   *  than guessing. See `server/github/twoFactor.ts`. */
+  | "github_2fa_unverifiable"
+  /** The team is at `MAX_TEAM_SIZE` active members. */
   | "team_full"
-  /** One team per member per competition. */
+  /** The caller is already at `MAX_CONCURRENT_TEAMS_PER_USER` active teams. */
+  | "too_many_teams"
+  /** The caller is already an active member of this team. */
   | "already_on_team"
   /** The caller is not on the team the action targets. */
   | "not_a_member"
@@ -27,10 +34,18 @@ export type TeamActionCode =
   | "bad_join_code"
   /** The request is not pending, or is not the caller's to answer. */
   | "request_not_actionable"
-  /** Another team in this competition already uses that name. */
+  /** Another team already uses that name. */
   | "name_taken"
-  /** The team, request or competition named does not exist. */
-  | "not_found";
+  /** No account matches the exact email or GitHub username an invite named. */
+  | "invitee_not_found"
+  /** The team or request named does not exist. */
+  | "not_found"
+  /**
+   * The caller (or, for invites, the team) hit its budget for this action
+   * within the tracked window. See `server/rateLimit.ts` and the budgets
+   * chosen per call site in `server/actions/teams.ts`.
+   */
+  | "rate_limited";
 
 /**
  * Everything a caller can be told, including the one thing the domain does not
@@ -76,7 +91,7 @@ interface PostgresErrorShape {
  * never matches, and fails silently: the catch block falls through, the caller
  * re-throws, and a member who is already on a team gets a 500 instead of "you
  * are already on a team". None of it is visible in a type, and it only shows up
- * against a real database, which is why it survived until the ballot write path
+ * against a real database, which is why it survived until code exercising it
  * ran against one.
  *
  * The chain is walked rather than unwrapped once, because a nested transaction

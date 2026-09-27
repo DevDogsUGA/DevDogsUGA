@@ -4,25 +4,29 @@
  * NOTHING IMPORTS THIS FILE, and the Worker never will. `src/index.ts` reads
  * its configuration from the `Env` argument workerd hands `fetch()`, not from
  * `process.env`, so there is no `createEnv` here and no boot that this file
- * could fail. Like `packages/devtools/env.ts` and `apps/study-group-finder/
- * env.ts` it exists for the registry's consumers: the completeness test, the
- * `.env.example` generator, `env push` routing, and `env audit`. The
- * sibling `tsconfig.json` names it explicitly, which is what keeps the metadata
+ * could fail. Like `apps/study-group-finder/env.ts` it exists for the
+ * registry's consumers: the completeness test, the `.env.example` generator,
+ * `env push` routing, and `env audit`. (Devtools' own operator-tooling
+ * manifest used to be a third example of this same pattern — `packages/
+ * devtools/env.ts` — but that package moved to Backstage in the devtools
+ * cutover and its env vars are no longer part of THIS repo's registry at
+ * all; they're the CLI's own concern now, configured on a contributor's
+ * machine, not routed through `.env.example`/`env push` here.) The sibling
+ * `tsconfig.json` names it explicitly, which is what keeps the metadata
  * typechecked.
  *
- * ## Why this file now exists, when `discovery.ts` used to say it never would
+ * ## Why this manifest exists despite no boot reading it
  *
- * The old reasoning was: bindings arrive as a function argument, so a manifest
- * would describe nothing. That is true of the RUNTIME and false of everything
- * else. Two failures followed from the absence:
+ * Bindings arrive as a function argument, so at runtime a manifest describes
+ * nothing. Two other consumers still need it to exist:
  *
  *   1. `env audit` reports any Worker secret it cannot find in Bitwarden as
  *      an orphan, and the plan doc's §3.6 prune path deletes orphans on
  *      `workflow_dispatch`. `SANDBOX_PROXY_TOKEN` is minted, so by design it
- *      is in no Bitwarden project, which made the live proxy credential
- *      indistinguishable from a leftover from a rename. The audit was
- *      recommending its deletion.
- *   2. `SUPABASE_JWT_SIGNING_KEY` had no route to the `production` GitHub
+ *      is in no Bitwarden project, which would make the live proxy credential
+ *      indistinguishable from a leftover from a rename without this manifest
+ *      declaring it `minted: true`.
+ *   2. `SUPABASE_JWT_SIGNING_KEY` needs a route to the `production` GitHub
  *      environment, because routing is derived from declarations. An
  *      undeclared deploy credential is one CI cannot see.
  *
@@ -36,7 +40,7 @@
  * package at all), so this works today; add `"zod": "catalog:"` to this
  * package's devDependencies the next time the lockfile is touched.
  */
-import { declare, define } from "@devdogsuga/env";
+import { DEPLOY_ENVIRONMENTS, declare, define } from "@devdogsuga/env";
 import { z } from "zod";
 
 declare({
@@ -44,9 +48,26 @@ declare({
   server: {
     // Everything here is `.optional()`. No app boots on these: the Worker
     // checks its two bindings itself and answers 503 `proxy_misconfigured`
-    // when either is missing, and the signing key is checked by
-    // `devtools deploy mint-token` with a named refusal. A required
-    // schema here would only break CI, which holds none of them.
+    // when either is missing. Nothing checks the signing key separately, so
+    // a required schema here would only break CI, which holds none of them.
+
+    // Which deployment this is, read by `src/index.ts` only to become the
+    // Sentry `environment` tag it passes to `buildSentryOptions`. Same key,
+    // same meta, as `apps/platform/src/env.ts`'s declaration -- duplicate
+    // declarations of one registry key must agree on every field, doc string
+    // included (`completeness.test.ts` enforces this), so this is a copy of
+    // that one rather than an independently worded restatement. Committed by
+    // `wrangler.jsonc`'s top-level `vars` and each `env.<tier>.vars` block
+    // here, exactly as it says.
+    DEPLOY_ENV: define(z.enum(DEPLOY_ENVIRONMENTS).default("development"), {
+      doc:
+        "Which deployment this is: development, staging, or production. Never " +
+        "written into an env file -- wrangler.jsonc's per-env blocks and the " +
+        "cf:build:* scripts are its two committed sources.",
+      scope: "default",
+      secrecy: "public",
+      commented: true,
+    }),
 
     // ── Decided here rather than in wrangler.jsonc ──────────────────────────
     // The plan doc left this open ("`PLATFORM_REST_URL`: `wrangler.jsonc` var
@@ -78,9 +99,38 @@ declare({
       example: "$REST_URL",
     }),
 
+    // Sentry ingest DSN for the "sandbox" project (see @devdogsuga/telemetry).
+    // Ordinary registry variable, NOT the `PLATFORM_REST_URL` special case
+    // above: it is the same value in every environment (one Sentry project
+    // per app; `production` vs `staging` is the `environment` tag, not a
+    // different DSN), so it is stored and reaches the Worker the same way
+    // `apps/platform/src/env.ts` and `apps/schedule-builder/src/env.ts`
+    // deliver theirs -- Bitwarden -> `env push` -> `deploy secrets-file` ->
+    // `wrangler deploy --secrets-file`. Optional and empty by default: the
+    // org is not onboarded in every environment yet, and `buildSentryOptions`
+    // treats a falsy DSN as "skip Sentry.init entirely" -- no init, no
+    // network calls, no console noise, which matches local `wrangler dev`
+    // too. A DSN is not a secret (it identifies a project, not a credential
+    // -- anyone can only submit events, never read them).
+    // Prefixed with the app, unlike most keys here: every app has its own
+    // Sentry project, and a deploy environment holds one value per name, so a
+    // shared SENTRY_DSN would send every app's events to one project (and the
+    // release step uploads each app's source maps to its own project).
+    SANDBOX_SENTRY_DSN: define(z.string().url().optional(), {
+      doc:
+        "Sentry ingest DSN for this app's Sentry project (see " +
+        "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
+        "entirely, which is the state before the org is onboarded and the " +
+        "state of local development. Reaches the Worker like every other " +
+        "environment variable.",
+      scope: "environment",
+      secrecy: "public",
+    }),
+
     // ── The credential this whole file exists for ──────────────────────────
     // A JWT carrying {"role": "sandbox_proxy"}, signed with the platform
-    // project's own signing key by `devtools deploy mint-token`.
+    // project's own signing key. Nothing in this repository mints this
+    // value.
     //
     // NOT a Supabase secret key, and that distinction is the security property.
     // `sb_secret_...` keys authorize as `service_role` and cannot be bound to
@@ -96,11 +146,10 @@ declare({
       doc:
         "The sandbox Worker's credential for resolve_sandbox_credential and " +
         'log_proxy_request: a JWT carrying {"role": "sandbox_proxy"}, ' +
-        "SIGNED at deploy time from SUPABASE_JWT_SIGNING_KEY and written " +
-        "straight to the Worker. There is no stored copy anywhere -- not " +
-        "here, not in Bitwarden, not in GitHub -- because minting is signing " +
-        "rather than an API call, which is what makes rotating it on every " +
-        "deploy free. 90-day exp, so a pipeline that goes stale fails loudly.",
+        "signed with SUPABASE_JWT_SIGNING_KEY. Nothing in this repository " +
+        "mints this value. Still declared `minted: true` so `env audit` " +
+        "keeps reading its absence from Bitwarden as correct rather than a " +
+        "rename left behind; see the reasoning on `EnvMeta.minted`.",
       scope: "environment",
       secrecy: "secret",
       minted: true,
@@ -109,58 +158,48 @@ declare({
 });
 
 /**
- * What mints the token, and a SEPARATE source, which is the whole point.
+ * The key that could mint the token, kept in a SEPARATE source, which is the
+ * whole point.
  *
  * `devtools deploy secrets-file` sends a Worker every storable key its app
  * declares, and excludes `:tooling` sources because "a key the DEPLOY needs is
  * not automatically a key the WORKER needs". Declared as plain `sandbox`, this
- * key rode that path onto the proxy Worker itself.
+ * key would ride that path onto the proxy Worker itself.
  *
- * That is the exact inversion this file's own comments argue against. The
- * signing key mints a token for ANY role, `service_role` included;
- * `sandbox_proxy` was built to hold EXECUTE on two functions and no table
- * grants. Uploading the former to the Worker restricted to the latter hands an
+ * That would be the exact inversion this file's own comments argue against.
+ * The signing key mints a token for ANY role, `service_role` included;
+ * `sandbox_proxy` holds EXECUTE on two functions and no table grants.
+ * Uploading the former to the Worker restricted to the latter would hand an
  * internet-facing proxy the means to escalate itself to everything, and it
  * would sit there as a Cloudflare secret long after the deploy that wrote it.
  *
- * The trust argument that justifies CI holding it is about the PIPELINE:
- * whoever deploys `apps/platform` can already read `SECRET_KEY` from its own
- * environment, so a pipeline deploying both Workers gains no authority it
- * lacked. It says nothing about the Worker, a different principal with a much
- * longer-lived and more exposed store. Keep the two apart: the mint script runs
- * on the runner, the token is what reaches the edge.
+ * The trust argument for CI holding it is about the PIPELINE: whoever deploys
+ * `apps/platform` can already read `SECRET_KEY` from its own environment, so a
+ * pipeline deploying both Workers gains no authority it lacked. It says
+ * nothing about the Worker, a different principal with a much longer-lived
+ * and more exposed store. The two stay apart: a mint would run on the runner,
+ * the token would reach the edge.
  *
- * Still declared here rather than in the devtools operator manifest, because
- * minting that token is its only use in this repository and a reader of
- * `.env.example` should find the whole rotation path in one place: the
- * endpoint, the minted token, and the key that signs it. `:tooling` sources
- * fold into their app's section when the example is rendered, so that holds.
+ * Nothing in this repository mints a token from this key.
  *
- * If the proxy ever moves to a separate, less-trusted pipeline, this key does
- * NOT follow it and the token goes back to being minted out of band.
+ * Still declared here rather than in the devtools operator manifest, so a
+ * reader of `.env.example` finds the whole rotation path in one place -- the
+ * endpoint, the minted token, and the key that would sign it. `:tooling`
+ * sources fold into their app's section when the example is rendered, so that
+ * still holds.
  */
 declare({
   source: "sandbox:tooling",
   server: {
     SUPABASE_JWT_SIGNING_KEY: define(z.string().min(32).optional(), {
       doc:
-        "The platform Supabase project's JWT signing secret (HS256), used by " +
-        "devtools deploy mint-token to sign SANDBOX_PROXY_TOKEN at " +
-        "deploy time. ⚠️ It can mint a token for ANY role, including a " +
-        "user session -- it is the widest credential in this file by a long " +
-        "way, and it is here only because the sandbox token is the one thing " +
-        "signed with it. Devops-only. Mint and register it with " +
-        "`pnpm devtools signing-key generate` then `signing-key import` " +
-        "(--target staging|production) -- never let Supabase generate it: " +
-        "keys in that system cannot be extracted afterwards, so an imported " +
-        "copy is the only way this side can hold the signing half. The " +
-        "import lands as a standby shared-secret key, which verifies the " +
-        "sandbox token without changing what signs user sessions. The legacy JWT " +
-        "secret is deprecated with no announced removal date; the imported " +
-        "shared secret is the path that outlives it. After migrating a " +
-        "project to signing keys, verify the sandbox token still resolves " +
-        "-- PostgREST v13 tightened custom-JWT validation (2025-07) and " +
-        "some migrated projects needed the key re-imported.",
+        "The platform Supabase project's JWT signing secret (HS256), which " +
+        "would sign SANDBOX_PROXY_TOKEN. ⚠️ It can mint a token for ANY " +
+        "role, including a user session -- the widest credential in this " +
+        "file by a long way, kept here only because SANDBOX_PROXY_TOKEN is " +
+        "the one thing it would sign. Nothing in this repository mints or " +
+        "imports this value; leaving it blank is correct until a " +
+        "replacement integration needs it.",
       scope: "environment",
       secrecy: "secret",
       commented: true,

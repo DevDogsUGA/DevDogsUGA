@@ -22,13 +22,6 @@ name: Deploy
 # pushing to a protected branch needs a GitHub App in the bypass list —
 # complexity with no matching benefit when the branch would only ever mirror
 # `main`.
-#
-# ⚠️ No TURBO_TOKEN / TURBO_TEAM here either. Remote caching is entirely off
-# (`turbo.json` configures no `remoteCache`, verified 2026-08-11), and turning
-# it on requires — in the same change — either `remoteCache.signature` or
-# disjoint cache scopes for trusted and untrusted contexts. A PR that can WRITE
-# a cache a deploy later READS is a path from an unreviewed branch into a
-# production artifact. `ci.yaml` carries the same warning.
 
 on:
   push:
@@ -69,46 +62,62 @@ env:
 #
 # ── the two devtools entry points, and why every step names one ──────────────
 #
-# Every step below runs a `devtools-ci deploy <step>` command. They used to be
-# loose files in `scripts/` that reached into devtools' own sources through a
-# relative path; they are commands now, with the same help, refusals and named
-# errors as the rest of the CLI. Which entry point a step uses is NOT a style
-# choice:
+# Every step below runs a `devtools-ci deploy <step>` command against
+# `@devdogsuga/devtools`, consumed from npm at the exact version the root
+# `package.json` pins (published from Backstage), not a workspace package. Which entry point a step uses is still NOT a style
+# choice, but the shapes changed in the Backstage cutover (Wave 2, stage B):
 #
-#   run ci   `tsx src/ci.ts` — the CI bin; no env file, no wrapper.
-#   run cli  `node bin/devtools.mjs` — resolves the tier and loads its env first.
+#   pnpm exec devtools-ci-bare   the installed `devtools-ci-bare` bin
+#                                (`@devdogsuga/devtools`'s own third bin,
+#                                `bin/devtools-ci-bare.mjs` -> `dist/ci.js`'s
+#                                `main()` directly) — no tier resolution, no
+#                                env file. The real, published counterpart of
+#                                the old in-repo bare `run ci` package script
+#                                (`node dist/ci.js`, unwrapped). Until
+#                                Backstage's Wave 2 gaps pass, the published
+#                                package shipped only two `bin`s (`devtools`,
+#                                `devtools-ci`), and `devtools-ci`
+#                                unconditionally resolves a tier and loads its
+#                                env file before dispatching — so this repo
+#                                carried an interim `scripts/
+#                                devtools-ci-bare.mjs` workaround that
+#                                imported `dist/ci.js` directly. Deleted now
+#                                that devtools ships the real bin.
+#   pnpm exec devtools-ci       the installed `devtools-ci` bin — resolves the
+#                                tier and loads its env file FIRST
+#                                (`bin/devtools-ci.mjs` -> `src/launch-ci.ts`)
+#                                before dispatching into `ci.ts`.
 #
 # ⚠️ `deploy write-env` is the step that CREATES .env.$DEPLOY_ENV, so routing
-# it through `with-env` is a bootstrap cycle: it would die on
-# MissingEnvFileError for the file it was about to write. It uses `run ci`.
+# it through tier resolution is a bootstrap cycle: it would die on
+# MissingEnvFileError for the file it was about to write. It uses
+# `devtools-ci-bare`.
 #
 # `deploy orphans`, `deploy preflight`, `deploy require-token`,
-# `deploy airtable-plan` and `deploy airtable-apply` use `run ci` for a
-# different reason — they run in jobs that hold one narrow credential and
-# compose no env file at all, so the wrapped entry point would exit reporting a
-# missing FILE rather than the missing TOKEN, the paused project or the missing
-# Airtable credential, which is the one thing those jobs exist to say. Note
-# that the Airtable pair take their single token from the step's own `env:`
-# block precisely so that stays true: nothing composes a file for them, and
-# the base id they used to need beside it is now a committed constant. This is
-# NOT about the two nested cases: inside `with-env -c '…'` the wrapper would be
-# value-neutral anyway, because dotenvx leaves an already-set value alone. It
-# is about the BARE runs in the orphan-audit and prune jobs, and the same entry
-# point is used in both places so there is one answer rather than two.
+# `deploy require-planner`, `deploy plan` and `deploy migrate` use
+# `devtools-ci-bare` for a different reason — they run in jobs that hold one
+# narrow credential and compose no env file at all, so a tier-resolving entry
+# point would exit reporting a missing FILE rather than the missing TOKEN or
+# the paused project, which is the one thing those jobs exist to say. This is
+# NOT about the two nested cases: inside `with-env -c '…'` a resolving wrapper
+# would be value-neutral anyway, because dotenvx leaves an already-set value
+# alone. It is about the BARE runs in the orphan-audit and prune jobs, and the
+# same entry point is used in both places so there is one answer rather than
+# two.
 #
-# Everything downstream of write-env uses `run ci:env`: the quiet CI entry
-# point that resolves the tier and loads the env file write-env composed
-# (`bin/devtools-ci.mjs` -> `src/launch-ci.ts`) before `ci.ts` runs. Reading
-# those values is the entire point, while keeping clack banners away from
-# credential-bearing stdout.
+# Everything downstream of write-env uses `pnpm exec devtools-ci`: the quiet
+# CI entry point that resolves the tier and loads the env file write-env
+# composed before `ci.ts` runs. Reading those values is the entire point,
+# while keeping clack banners away from credential-bearing stdout.
 #
 # ⚠️ NOTHING here may run a deploy command through a wrapper that writes to
-# stdout. `deploy secrets-file` emits `::add-mask::<token>`, which GitHub
-# recognises only on a line of its own, and `deploy mint-token` (which
-# `--mint` runs) emits a JWT its caller takes whole. pnpm's own `$ <command>`
-# banner goes to stderr — measured — which is why `pnpm --filter … run` is
-# safe here; `intro()` does not, which is why ci.ts suppresses it for this
-# group.
+# stdout. A deploy command's stdout is a channel something downstream may
+# PARSE — a GitHub workflow command recognised only on a line of its own, or a
+# credential its caller takes whole, either of which a decorative banner would
+# corrupt. Measured empirically for both entry points used here: `pnpm exec
+# <bin>` prints nothing of its own to stdout, and `pnpm run <script>`'s own
+# `$ <command>` banner goes to stderr — `intro()` does not, which is why
+# ci.ts suppresses it for this group.
 
 jobs:
   # ── staging ─────────────────────────────────────────────────────────────────
@@ -133,20 +142,14 @@ jobs:
       paused: ${{ steps.probe.outputs.paused }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
       # This job used to skip `pnpm install` entirely — the probe was a
       # standalone script importing nothing outside node: builtins, and that
       # kept the job to a few seconds. It is a devtools command now, so the
-      # install is back. The trade is deliberate: a cached install is a few
-      # tens of seconds against a probe that shares the CLI's error reporting
-      # and is covered by the same suite as everything else here, rather than
-      # being the one step in the pipeline that nothing tests.
-      - run: pnpm install --frozen-lockfile
+      # install (part of setup-workspace) is back. The trade is deliberate: a
+      # cached install is a few tens of seconds against a probe that shares the
+      # CLI's error reporting and is covered by the same suite as everything
+      # else here, rather than being the one step in the pipeline nothing tests.
+      - uses: ./.github/actions/setup-workspace
       # run ci — there is no env file in this job, and there must not be:
       # it holds `vars` only, so that one unauthenticated request classifies
       # the project before any credential is in scope.
@@ -156,15 +159,14 @@ jobs:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy preflight
+          pnpm exec devtools-ci-bare deploy preflight
 
   # Staging had no migrate job at all, which meant staging ran whatever schema
-  # it happened to be left with. The sandbox proxy made that visible: migration
-  # 20260805000002 creates `resolve_sandbox_credential`, `log_proxy_request` and
-  # the `sandbox_proxy` grants, and without it the staging proxy's every request
-  # fails against functions that are not there. Production has had this job
-  # since the beginning; staging deploying code against an unmigrated database
-  # is the asymmetry, not this.
+  # it happened to be left with. A migration that added a function some
+  # deployed Worker called made that visible: without this job, staging's
+  # first request after such a deploy fails against a function that is not
+  # there yet. Production has had this job since the beginning; staging
+  # deploying code against an unmigrated database is the asymmetry, not this.
   #
   # Before staging-deploy for the usual reason: a Worker that expects a column
   # is easier to reason about than a column that expects a Worker.
@@ -172,8 +174,8 @@ jobs:
   # No `staging-config` counterpart. `production-config` pushes config.toml
   # behind a reviewer, is gated on `production-plan`'s config-changed output,
   # and staging has no plan job to gate on — inventing one is a larger change
-  # than this fix, and config.toml governs auth providers and site URLs rather
-  # than anything the sandbox proxy reads.
+  # than this fix, and config.toml governs auth providers and site URLs, which
+  # this job's migrations do not touch.
   staging-migrate:
     needs: staging-preflight
     if: needs.staging-preflight.outputs.paused != 'true'
@@ -182,102 +184,25 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
+      # run ci — one credential (DB_URL) in the step's env:, no composed env
+      # file. `deploy migrate` is the bare `supabase db push --yes`; it does NOT
+      # regenerate types, so nothing is written back into the checkout.
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          set -euo pipefail
-          pnpm exec supabase db push --db-url "$DB_URL" --yes
+        run: pnpm exec devtools-ci-bare deploy migrate
 
+  # The per-tier deploy recipe lives in the reusable `deploy-app.yaml`; this
+  # caller is the gating in front of it. `secrets: inherit` is load-bearing —
+  # see that file's header for why the compose step needs it.
   staging-deploy:
     needs: [staging-preflight, staging-migrate]
     if: needs.staging-preflight.outputs.paused != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: staging
-    strategy:
-      # The three Workers are independent deploy targets. One failing is worth
-      # knowing about on its own; it is not a reason to leave the other two on
-      # the previous version.
-      fail-fast: false
-      matrix:
-        include:
-          - app: platform
-            mint: ""
-          - app: schedule-builder
-            mint: ""
-          # The sandbox proxy's credential is SIGNED at deploy time rather than
-          # stored, so it cannot arrive through the env file. `--mint` is a
-          # BARE FLAG now: it runs `devtools deploy mint-token`, a sibling of
-          # the command that calls it, and derives WHICH variable the token
-          # fills from the app's own manifest. It used to name a script to run
-          # and take the stdout of, which made a workflow edit enough to point
-          # the composer at any executable on the runner.
-          - app: sandbox
-            mint: --mint
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      # The ONLY step in this file that reads the `secrets` and `vars` contexts.
-      # After it, the checkout looks like a devops laptop and every later step
-      # is the command a person would run by hand.
-      - name: Compose .env.staging from the environment
-        env:
-          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
-          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # ⚠️ run ci — this step CREATES the file `with-env` would insist on
-        # reading, so routing it through the wrapper would fail on
-        # MissingEnvFileError for its own output.
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy write-env
-      - name: Build the workspace packages this app depends on
-        run: pnpm turbo run build --filter='${{ matrix.app }}^...'
-      # `next build` through OpenNext, with the env schema ENFORCED. sandbox is
-      # a plain Worker and wrangler bundles it during the deploy itself.
-      - name: Build ${{ matrix.app }}
-        if: matrix.app != 'sandbox'
-        run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
-      # Written to a mkdtemp 0700 directory and removed below whatever happens.
-      - name: Compose the Worker secrets file
-        id: secrets
-        # `run ci:env` — the quiet CI entry point that loads the env file — because
-        # the whole job of this step is to read the values write-env composed. Its
-        # stdout carries `::add-mask::` and nothing else; see the note above.
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
-          --app ${{ matrix.app }} ${{ matrix.mint }}
-      # One step for all three Workers via devtools-ci deploy — the
-      # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for sandbox,
-      # `--var PLATFORM_REST_URL:$REST_URL`. That --var is a deploy-time value
-      # rather than a committed wrangler.jsonc entry: one committed value
-      # cannot be right for three environments, and the placeholder that
-      # shipped in all three is the measurement of how often it got edited by
-      # hand.
-      - name: Deploy ${{ matrix.app }}
-        env:
-          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
-      # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
-      # so this is for the self-hosted case and for a job that fails between
-      # composing the file and using it.
-      - name: Remove the Worker secrets file
-        if: always()
-        env:
-          DIR: ${{ steps.secrets.outputs.dir }}
-        run: if [ -n "$DIR" ]; then rm -rf "$DIR"; fi
+    uses: ./.github/workflows/deploy-app.yaml
+    with:
+      tier: staging
+    secrets: inherit
 
   # ── plan against production, on merge to main (§3.5 stage 1) ────────────────
 
@@ -299,13 +224,7 @@ jobs:
     environment: preflight
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # ⚠️ Before the dry run, because the dry run cannot tell the difference.
       # This environment's DB_URL must be the migration_planner role — SELECT
       # on supabase_migrations.schema_migrations and nothing else — and a full
@@ -319,52 +238,23 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy require-planner
+          pnpm exec devtools-ci-bare deploy require-planner
       # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
       # push` exits 1 on a connection failure, and a pipeline without it reports
       # the exit code of `tee` — so a dry run that never connected reads as a
       # clean plan.
+      # run ci — one credential (the planner-role DB_URL) in the step's env:,
+      # no composed env file. `deploy plan` captures `supabase db push
+      # --dry-run` and writes the labelled, fenced plan to the job summary
+      # itself; its throw on a failed connection is what the old `set -o
+      # pipefail` protected — a dead connection fails the step rather than
+      # reading as a clean plan.
       - name: What would these migrations do to production?
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          set -euo pipefail
-          { echo '### Migration plan — production (from `main`)'; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          pnpm exec supabase db push --dry-run --db-url "$DB_URL" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-      # The other half of §3.5 stage 1. It used to be a comment here saying it
-      # could not be done: the Airtable commands read AIRTABLE_PAT, which is
-      # declared `secrecy: "never-store"`, so no CI job could legitimately hold
-      # a credential they would use.
-      #
-      # What closed it is a THIRD token rather than a wider one.
-      # AIRTABLE_PLAN_PAT carries `schema.bases:read` on the one base — a
-      # records read and a schema write both answered 403 when it was probed —
-      # and the client now picks its token by CAPABILITY, preferring the
-      # narrowest that can do the job. `deploy airtable-plan` asks for `read`,
-      # which never consults AIRTABLE_APPLY_PAT at all.
-      #
-      # ⚠️ NO `if: secrets.AIRTABLE_PLAN_PAT != ''`, DELIBERATELY. That guard
-      # is how the old Airtable job passed for months without ever running. The
-      # command REFUSES by name when the credential is missing, and a red job
-      # saying which variable is unset is the entire value of the step.
-      #
-      # No AIRTABLE_BASE_ID here any more. It is committed as `BASE_ID` in
-      # packages/airtable/src/registry.ts, beside the field ids of the same
-      # base, so this job needs one credential and nothing else. It was an
-      # environment variable routed by `env push`, and before 2026-08-17 a
-      # hand-set REPOSITORY variable visible to every environment — a stale
-      # copy of which stayed invisible behind the environment one. A constant
-      # cannot be shadowed by a store nobody thought to check.
-      - name: What would this commit do to the Airtable base?
-        env:
-          AIRTABLE_PLAN_PAT: ${{ secrets.AIRTABLE_PLAN_PAT }}
-        # run ci, like the other steps in jobs that hold one narrow
-        # credential and compose no env file: `with-env` would report a missing
-        # FILE rather than the missing TOKEN, which is the one thing this step
-        # exists to say.
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy airtable-plan
+          pnpm exec devtools-ci-bare deploy plan
+          --label 'Migration plan — production (from `main`)'
 
   # ── production ──────────────────────────────────────────────────────────────
 
@@ -377,27 +267,20 @@ jobs:
     environment: production
     outputs:
       config-changed: ${{ steps.config.outputs.changed }}
-      airtable-changed: ${{ steps.airtable.outputs.changed }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # Both ends of the push, so the config diff below can be taken.
           fetch-depth: 0
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
+      # See main-plan's note: `deploy plan` owns the summary framing and fails
+      # the step on a dead connection rather than logging a clean plan.
       - name: What will these migrations do to production?
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          set -euo pipefail
-          { echo '### Migration plan — production'; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          pnpm exec supabase db push --dry-run --db-url "$DB_URL" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+        run: >-
+          pnpm exec devtools-ci-bare deploy plan
+          --label 'Migration plan — production'
       # `supabase config` has exactly one subcommand — `push`. No pull, no diff,
       # no --dry-run. So config.toml is the highest blast radius (site_url and
       # every OAuth provider) with the least visibility, and its COMMITTED DIFF
@@ -426,24 +309,6 @@ jobs:
             git diff "$BEFORE" "$GITHUB_SHA" -- supabase/config.toml >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
-      # The same read-only plan the `main` job ran, recomputed seconds before
-      # the apply — stage 1 goes stale the moment another promotion lands
-      # first, which is the whole reason §3.5 has two stages.
-      #
-      # It also GATES the apply, the way the config diff above gates its own
-      # approval: `changed` is true only when the base is missing a table or a
-      # field the registry declares. Asking for a reviewer on every promotion
-      # is how approvals stop being read.
-      #
-      # AIRTABLE_PLAN_PAT is plan-tier, so `env push` routes it to `production`
-      # as well as to `preflight`; this job needs no write credential and must
-      # not be given one — that is what the job below is for.
-      - name: What will this promotion do to the Airtable base?
-        id: airtable
-        env:
-          AIRTABLE_PLAN_PAT: ${{ secrets.AIRTABLE_PLAN_PAT }}
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy airtable-plan
 
   # Applying the migrations. In `production` rather than `production-apply`,
   # and that placement follows the tiering rather than working around it:
@@ -461,24 +326,16 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          set -euo pipefail
-          pnpm exec supabase db push --db-url "$DB_URL" --yes
+        run: pnpm exec devtools-ci-bare deploy migrate
 
   # The one mutation with no dry run gets its own approval step, which is what
   # `production-apply` is: the same Bitwarden project as `production`, split
   # across two GitHub environments, with required reviewers on this half. That
-  # split IS the gate — see packages/devtools/src/gh/environments.ts.
+  # split IS the gate — see Backstage's packages/devtools/src/gh/environments.ts.
   #
   # Skipped when config.toml did not change, so the approval is asked for when
   # there is something to approve rather than on every promotion.
@@ -490,13 +347,7 @@ jobs:
     environment: production-apply
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # `--source supabase` composes exactly what config.toml reads — the four
       # OAuth provider pairs, the two site URLs and their callbacks — and
       # demands every secret among them rather than only the schema-required
@@ -521,7 +372,7 @@ jobs:
         # run ci for the same bootstrap reason as the other write-env
         # steps: this composes .env.production, which nothing has written yet.
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy write-env
+          pnpm exec devtools-ci-bare deploy write-env
           --source supabase
       # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
       # the operator manifest, not to supabase's, and `with-env` leaves a value
@@ -533,132 +384,26 @@ jobs:
           set -euo pipefail
           pnpm exec with-env -c 'supabase config push --project-ref $PROJECT_REF'
 
-  # The Airtable schema apply — the other mutation that needs a reviewer, and
-  # the only write-capable Airtable credential in the pipeline.
-  #
-  # ⚠️ ITS OWN JOB, NOT A STEP IN production-config, and the reason is that
-  # job's `if:`. `production-config` is skipped unless config.toml changed, so
-  # an Airtable step living there would never run on a promotion that changed
-  # `registry.ts` and nothing else — which is exactly the promotion the schema
-  # apply exists for. A step that silently does not run is the failure mode
-  # this whole section was written to remove.
-  #
-  # Gated on the plan instead, the same way the config job is gated on its own
-  # diff: an approval requested on every promotion is an approval nobody reads.
-  # `scaffoldBase` is idempotent, so a re-run after a partial failure creates
-  # only what is still missing.
-  #
-  # Needs production-migrate for ordering rather than for data: both mutate,
-  # and doing them in a fixed order makes a half-finished promotion legible.
-  production-airtable:
-    needs: [production-plan, production-migrate]
-    if: needs.production-plan.outputs.airtable-changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: production-apply
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      # AIRTABLE_APPLY_PAT is the only Airtable token this environment holds
-      # that `production` does NOT — apply-tier routes here and nowhere else,
-      # which is what makes the reviewer gate mean something. The command asks
-      # for `write` and never falls back to AIRTABLE_PLAN_PAT: that token
-      # cannot write, so a fallback would turn a named refusal into a 403 with
-      # the base half changed.
-      #
-      # ⚠️ Both are secrets ON this environment now that `production-apply`
-      # receives a superset. The `env:` block below is what keeps this step to
-      # one token — the plan PAT is never in the process environment, so
-      # capability selection has nothing to get wrong here.
-      #
-      # AIRTABLE_BASE_ID is not passed: the base id is committed in the
-      # registry, so the only thing this step needs from the environment is
-      # the one token whose reach the reviewer gate exists to bound.
-      - name: Apply the Airtable schema
-        env:
-          AIRTABLE_APPLY_PAT: ${{ secrets.AIRTABLE_APPLY_PAT }}
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy airtable-apply
-
+  # Same reusable recipe as staging-deploy; the gate here is the promotion PR's
+  # reviewers plus the `production` environment. See deploy-app.yaml.
   production-deploy:
     needs:
       - production-plan
       - production-migrate
       - production-config
-      - production-airtable
-    # A dependency that was SKIPPED normally skips its dependents, and both the
-    # config and Airtable jobs are skipped on most promotions — config.toml
-    # rarely changes and the base rarely gains a field. So the condition is
-    # spelled out: migrations must have succeeded, and neither gated job may
-    # have FAILED (skipped is fine). `!cancelled()` rather than `always()`, so
-    # cancelling the run still cancels the deploy.
+    # A dependency that was SKIPPED normally skips its dependents, and the
+    # config job is skipped on most promotions — config.toml rarely changes.
+    # So the condition is spelled out: migrations must have succeeded, and the
+    # gated job may not have FAILED (skipped is fine). `!cancelled()` rather
+    # than `always()`, so cancelling the run still cancels the deploy.
     if: >-
       !cancelled()
       && needs.production-migrate.result == 'success'
       && needs.production-config.result != 'failure'
-      && needs.production-airtable.result != 'failure'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: production
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - app: platform
-            mint: ""
-          - app: schedule-builder
-            mint: ""
-          # See the staging matrix for why --mint takes no argument.
-          - app: sandbox
-            mint: --mint
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Compose .env.production from the environment
-        env:
-          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
-          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # ⚠️ run ci — this step CREATES the file `with-env` would insist on
-        # reading, so routing it through the wrapper would fail on
-        # MissingEnvFileError for its own output.
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy write-env
-      - name: Build the workspace packages this app depends on
-        run: pnpm turbo run build --filter='${{ matrix.app }}^...'
-      - name: Build ${{ matrix.app }}
-        if: matrix.app != 'sandbox'
-        run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
-      - name: Compose the Worker secrets file
-        id: secrets
-        # `run ci:env` — the quiet CI entry point that loads the env file — because
-        # the whole job of this step is to read the values write-env composed. Its
-        # stdout carries `::add-mask::` and nothing else; see the note above.
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
-          --app ${{ matrix.app }} ${{ matrix.mint }}
-      # One step for all three Workers; see the staging job for the
-      # PLATFORM_REST_URL note.
-      - name: Deploy ${{ matrix.app }}
-        env:
-          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
-      - name: Remove the Worker secrets file
-        if: always()
-        env:
-          DIR: ${{ steps.secrets.outputs.dir }}
-        run: if [ -n "$DIR" ]; then rm -rf "$DIR"; fi
+    uses: ./.github/workflows/deploy-app.yaml
+    with:
+      tier: production
+    secrets: inherit
 
   # ── orphaned Worker secrets (§3.6) ──────────────────────────────────────────
 
@@ -673,13 +418,7 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # No env file; run ci on both lines: this reads secret NAMES
       # from Cloudflare and needs exactly one credential to do it. The existing
       # guard is invoked rather than reimplemented, so a missing token says who
@@ -689,8 +428,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pnpm --filter @devdogsuga/devtools run ci deploy require-token
-          pnpm --filter @devdogsuga/devtools run ci deploy orphans
+          pnpm exec devtools-ci-bare deploy require-token
+          pnpm exec devtools-ci-bare deploy orphans
 
   # Deleting them is a separate, deliberate, human-triggered run — never
   # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
@@ -716,17 +455,11 @@ jobs:
     environment: production-apply
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: Prune orphaned Worker secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pnpm --filter @devdogsuga/devtools run ci deploy require-token
-          pnpm --filter @devdogsuga/devtools run ci deploy orphans --prune
+          pnpm exec devtools-ci-bare deploy require-token
+          pnpm exec devtools-ci-bare deploy orphans --prune

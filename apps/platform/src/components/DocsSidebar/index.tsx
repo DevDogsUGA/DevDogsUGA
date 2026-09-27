@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SidebarIcon } from "@phosphor-icons/react/ssr";
 import { groupDocsProjects } from "~/config/docs";
-import type { DocsTreeNode } from "~/lib/docsTree";
+import type { DocsSidebarTree } from "~/lib/docsTree";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
 import {
@@ -19,7 +19,7 @@ import Tree from "./Tree";
 export interface DocsSidebarProps {
   projects: { slug: string; name: string; description: string | null }[];
   project: string;
-  tree: DocsTreeNode[];
+  tree: DocsSidebarTree;
 }
 
 function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
@@ -78,7 +78,7 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
         </Select>
       )}
 
-      <Tree nodes={tree} ctx={{ project, activePath }} />
+      <Tree tree={tree} ctx={{ project, activePath }} />
     </div>
   );
 }

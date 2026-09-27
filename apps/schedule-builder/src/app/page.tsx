@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
-import { APPS } from "@devdogsuga/og";
+import { APPS } from "@devdogsuga/open-graph";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

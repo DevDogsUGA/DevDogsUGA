@@ -1,165 +1,230 @@
 // @vitest-environment node
-import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { db } from "~/server/db";
-import { applyPullRequestEvent } from "./pullRequest";
+import { eq, sql } from "drizzle-orm";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type * as EnvModule from "~/env";
+import type { PullRequestFields } from "./pullRequest";
 
 /**
- * The PR webhook against a real database.
+ * `applyPullRequest` and `reconcileEntries` against a real database.
  *
- * The case worth a test is the one with no `opened` event: the entry triple
- * (`submissionUrl`, `submissionState`, `submittedAt`) is constrained to be all
- * null or all set, so a handler that stamps `submittedAt` only on `opened`
- * writes two of three and is rejected outright. That ordering is not
- * hypothetical. A webhook added to an existing repo, a hook that was down at
- * creation, or a redelivery replayed out of order all deliver `closed` or
- * `merged` first.
+ * `~/env` is mocked the same way `competitions.db-test.ts` mocks it, so
+ * `GITHUB_ORG`/`GITHUB_COMPETITION_REPO` are fixed values this file's own
+ * fixtures can target. `../alerts`' `postAlert` is mocked so
+ * `reconcileEntries`'s anomaly reporting does not depend on Sentry being
+ * configured.
  */
 
-const IDS = {
-  project: "a1111111-1111-1111-1111-111111111111",
-  meeting: "a2222222-2222-2222-2222-222222222222",
-  workshop: "a3333333-3333-3333-3333-333333333333",
-  competition: "a4444444-4444-4444-4444-444444444444",
-  team: "a5555555-5555-5555-5555-555555555555",
-  lead: "a9999999-9999-9999-9999-999999999999",
-};
+const REPO = "DevDogsUGA/DevDogsUGA";
 
-const COMP_SLUG = "2026-fall/w02/pr-webhook-test";
-const TEAM_SLUG = "sicem";
+vi.mock("~/env", async () => {
+  const actual = await vi.importActual<typeof EnvModule>("~/env");
+  return {
+    ...actual,
+    env: {
+      ...actual.env,
+      GITHUB_ORG: "DevDogsUGA",
+      GITHUB_COMPETITION_REPO: "DevDogsUGA",
+    },
+  };
+});
+
+const alerts = vi.hoisted(() => ({
+  postAlert: vi.fn(
+    (_title: string, _lines: string[], _footer?: string): Promise<void> =>
+      Promise.resolve(),
+  ),
+}));
+vi.mock("../alerts", () => alerts);
+
+const { applyPullRequest, reconcileEntries } = await import("./pullRequest");
+const { db } = await import("~/server/db");
+const { competitionEntries } = await import("~/server/db/schema");
+
+const IDS = {
+  team: "d1000000-0000-4000-a000-000000000001",
+  otherTeam: "d1000000-0000-4000-a000-000000000002",
+  creator: "d1000000-0000-4000-a000-000000000099",
+  openCompetition: "d2000000-0000-4000-a000-000000000001",
+  closedCompetition: "d2000000-0000-4000-a000-000000000002",
+};
 
 async function cleanup() {
   await db.execute(
-    sql`delete from platform.meetings where id = ${IDS.meeting}::uuid`,
+    sql`delete from platform."competitionEntries" where "prNodeId" like 'PR_dbtest%'`,
   );
   await db.execute(
-    sql`delete from platform.projects where id = ${IDS.project}::uuid`,
+    sql`delete from platform.competitions where id in (${IDS.openCompetition}::uuid, ${IDS.closedCompetition}::uuid)`,
   );
-  await db.execute(sql`delete from auth.users where id = ${IDS.lead}::uuid`);
+  await db.execute(
+    sql`delete from platform.teams where id in (${IDS.team}::uuid, ${IDS.otherTeam}::uuid)`,
+  );
 }
 
-beforeAll(async () => {
+beforeEach(async () => {
   await cleanup();
-
   await db.execute(sql`
-    insert into auth.users (id, instance_id, aud, role, email)
-    values (${IDS.lead}::uuid, '00000000-0000-0000-0000-000000000000',
-            'authenticated', 'authenticated', 'pr-webhook-test@uga.edu')
-    on conflict (id) do nothing
+    insert into platform.teams (id, slug, name, "joinCode", "createdBy")
+    values
+      (${IDS.team}::uuid, 'pr-db-test-team', 'PR DB Test Team', 'ABC234', ${IDS.creator}::uuid),
+      (${IDS.otherTeam}::uuid, 'pr-db-test-other', 'PR DB Test Other', 'DEF234', ${IDS.creator}::uuid)
   `);
   await db.execute(sql`
-    insert into platform.projects (id, slug, "displayName")
-    values (${IDS.project}::uuid, 'pr-webhook-test', 'PR Webhook Test')
-  `);
-  await db.execute(sql`
-    insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
-    values (${IDS.meeting}::uuid, 'pr-webhook-test-meeting', 'PR Webhook Test',
-            now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
-  `);
-  await db.execute(sql`
-    insert into platform.workshops (id, "meetingId", "projectId")
-    values (${IDS.workshop}::uuid, ${IDS.meeting}::uuid, ${IDS.project}::uuid)
-  `);
-  await db.execute(sql`
-    insert into platform.competitions (id, slug, "workshopId")
-    values (${IDS.competition}::uuid, ${COMP_SLUG}, ${IDS.workshop}::uuid)
-  `);
-  // Deliberately no submission at all: the entry triple starts entirely null,
-  // which is the state a team is in before its first PR event arrives.
-  await db.execute(sql`
-    insert into platform.teams (id, "competitionId", slug, name, "joinCode", "createdBy")
-    values (${IDS.team}::uuid, ${IDS.competition}::uuid, ${TEAM_SLUG}, 'Sicem',
-            'LANTRN', ${IDS.lead}::uuid)
+    insert into platform.competitions
+      (id, slug, "issueNodeId", "issueNumber", repo, url, title, "kickedOffAt", "closedAt")
+    values
+      (${IDS.openCompetition}::uuid, 'pr-db-test-open', 'I_dbtest_pr_open', 101,
+       ${REPO}, ${`https://github.com/${REPO}/issues/101`}, 'Open Competition',
+       now() - interval '10 days', null),
+      (${IDS.closedCompetition}::uuid, 'pr-db-test-closed', 'I_dbtest_pr_closed', 102,
+       ${REPO}, ${`https://github.com/${REPO}/issues/102`}, 'Closed Competition',
+       now() - interval '20 days', now() - interval '2 days')
   `);
 });
-
 afterAll(cleanup);
 
-function event(action: string, merged: boolean, base = `comp/${COMP_SLUG}`) {
+function pr(overrides: Partial<PullRequestFields> = {}): PullRequestFields {
   return {
-    action,
+    nodeId: "PR_dbtest_1",
     number: 1,
-    htmlUrl: "https://github.com/example/repo/pull/1",
-    baseRef: base,
-    headRef: `team/${COMP_SLUG}/${TEAM_SLUG}`,
-    merged,
+    url: "https://github.com/DevDogsUGA/DevDogsUGA/pull/1",
+    title: "Enter the competition",
+    body: "Closes #101",
+    headRef: "team/pr-db-test-team",
+    baseRef: "main",
+    createdAt: "2026-09-20T12:00:00Z",
+    mergedAt: null,
+    closedAt: null,
+    ...overrides,
   };
 }
 
-async function entryState() {
-  const [row] = await db.execute<{
-    submissionState: string | null;
-    submissionUrl: string | null;
-    submittedAt: Date | null;
-  }>(sql`
-    select "submissionState", "submissionUrl", "submittedAt"
-    from platform.teams where id = ${IDS.team}::uuid
-  `);
-  return row!;
+async function entryFor(prNodeId: string) {
+  const [row] = await db
+    .select()
+    .from(competitionEntries)
+    .where(eq(competitionEntries.prNodeId, prNodeId));
+  return row ?? null;
 }
 
-describe("applyPullRequestEvent", () => {
-  it("accepts a merge as the FIRST event a team ever gets", async () => {
-    // The regression. Stamping `submittedAt` only on `opened` makes this write
-    // violate teams_submission_url_submittedAt_together, so the entry never
-    // registers and the team silently loses its star.
-    const outcome = await applyPullRequestEvent(event("closed", true));
+describe("applyPullRequest", () => {
+  it("creates an entry for a team branch that links a mirrored open competition", async () => {
+    await applyPullRequest(db, pr());
+    const row = await entryFor("PR_dbtest_1");
+    expect(row?.teamId).toBe(IDS.team);
+    expect(row?.competitionId).toBe(IDS.openCompetition);
+    expect(row?.mergedAt).toBeNull();
+    expect(row?.closedAt).toBeNull();
+  });
 
-    expect(outcome).toEqual({
-      applied: true,
-      teamId: IDS.team,
-      state: "merged",
+  it("is idempotent: applying the same state twice is a no-op the second time", async () => {
+    await applyPullRequest(db, pr());
+    await applyPullRequest(db, pr());
+    const rows = await db
+      .select()
+      .from(competitionEntries)
+      .where(eq(competitionEntries.prNodeId, "PR_dbtest_1"));
+    expect(rows).toHaveLength(1);
+  });
+
+  it("sets mergedAt and clears closedAt on a merged PR", async () => {
+    await applyPullRequest(db, pr());
+    await applyPullRequest(
+      db,
+      pr({
+        mergedAt: "2026-09-22T12:00:00Z",
+        closedAt: "2026-09-22T12:00:00Z",
+      }),
+    );
+    const row = await entryFor("PR_dbtest_1");
+    expect(row?.mergedAt).toEqual(new Date("2026-09-22T12:00:00Z"));
+    expect(row?.closedAt).toBeNull();
+  });
+
+  it("sets closedAt, not mergedAt, on a PR closed without merging", async () => {
+    await applyPullRequest(db, pr());
+    await applyPullRequest(
+      db,
+      pr({ mergedAt: null, closedAt: "2026-09-22T12:00:00Z" }),
+    );
+    const row = await entryFor("PR_dbtest_1");
+    expect(row?.mergedAt).toBeNull();
+    expect(row?.closedAt).toEqual(new Date("2026-09-22T12:00:00Z"));
+  });
+
+  it("does not create an entry for a head that is not a team branch", async () => {
+    await applyPullRequest(db, pr({ headRef: "fix-typo" }));
+    expect(await entryFor("PR_dbtest_1")).toBeNull();
+  });
+
+  it("does not create an entry whose base is not main", async () => {
+    await applyPullRequest(db, pr({ baseRef: "production" }));
+    expect(await entryFor("PR_dbtest_1")).toBeNull();
+  });
+
+  it("does not create an entry for a team this platform does not mirror", async () => {
+    await applyPullRequest(db, pr({ headRef: "team/not-a-real-team" }));
+    expect(await entryFor("PR_dbtest_1")).toBeNull();
+  });
+
+  it("does not create an entry that links nothing", async () => {
+    await applyPullRequest(db, pr({ title: "Bump a dependency", body: null }));
+    expect(await entryFor("PR_dbtest_1")).toBeNull();
+  });
+
+  it("does not create an entry opened after the competition already closed", async () => {
+    await applyPullRequest(
+      db,
+      pr({
+        body: "Closes #102",
+        // After closedCompetition's closedAt (`now() - 2 days`); relative,
+        // because a fixed date stops being "after" once the clock passes it.
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    );
+    expect(await entryFor("PR_dbtest_1")).toBeNull();
+  });
+
+  it("deletes an unmerged entry when an edit removes the issue link", async () => {
+    await applyPullRequest(db, pr());
+    expect(await entryFor("PR_dbtest_1")).not.toBeNull();
+
+    await applyPullRequest(db, pr({ title: "Retitled", body: null }));
+    expect(await entryFor("PR_dbtest_1")).toBeNull();
+  });
+
+  it("keeps a merged entry even if a later edit removes the issue link", async () => {
+    await applyPullRequest(db, pr());
+    await applyPullRequest(
+      db,
+      pr({
+        mergedAt: "2026-09-21T12:00:00Z",
+        closedAt: "2026-09-21T12:00:00Z",
+      }),
+    );
+    await applyPullRequest(db, pr({ title: "Retitled", body: null }));
+
+    const row = await entryFor("PR_dbtest_1");
+    expect(row).not.toBeNull();
+    expect(row?.mergedAt).not.toBeNull();
+  });
+});
+
+describe("reconcileEntries", () => {
+  it("applies every PR a fake GitHub client reports", async () => {
+    const report = await reconcileEntries(db, {
+      pullRequestsIntoMain: () =>
+        Promise.resolve([
+          pr(),
+          pr({
+            nodeId: "PR_dbtest_2",
+            number: 2,
+            headRef: "team/pr-db-test-other",
+          }),
+        ]),
     });
-
-    const state = await entryState();
-    expect(state.submissionState).toBe("merged");
-    expect(state.submittedAt).not.toBeNull();
-  });
-
-  it("preserves the original submittedAt across later events", async () => {
-    const before = await entryState();
-    await applyPullRequestEvent(event("reopened", false));
-    const after = await entryState();
-
-    // `coalesce` rather than a fresh timestamp: "when this team first entered"
-    // must not move because somebody reopened their PR.
-    expect(after.submittedAt).toEqual(before.submittedAt);
-    expect(after.submissionState).toBe("open");
-  });
-
-  it("distinguishes a close from a merge", async () => {
-    await applyPullRequestEvent(event("closed", false));
-    expect((await entryState()).submissionState).toBe("closed");
-  });
-
-  it("ignores a PR opened against the wrong base", async () => {
-    const before = await entryState();
-    const outcome = await applyPullRequestEvent(event("opened", false, "main"));
-
-    expect(outcome).toEqual({ applied: false, reason: "wrong_base" });
-    // Nothing written: a mistaken base must not register as an entry.
-    expect(await entryState()).toEqual(before);
-  });
-
-  it("ignores an action that does not change the entry", async () => {
-    const before = await entryState();
-    expect(await applyPullRequestEvent(event("synchronize", false))).toEqual({
-      applied: false,
-      reason: "ignored_action",
-    });
-    expect(await entryState()).toEqual(before);
-  });
-
-  it("keeps advancing state after the freeze but stops deciding", async () => {
-    await db.execute(sql`
-      update platform.teams set "competedAt" = now() where id = ${IDS.team}::uuid
-    `);
-
-    const outcome = await applyPullRequestEvent(event("closed", false));
-
-    // The record stays accurate, it just stops deciding anything. Closing the
-    // PR the evening after judging must not cost the star.
-    expect(outcome).toEqual({ applied: false, reason: "competed" });
-    expect((await entryState()).submissionState).toBe("closed");
+    expect(report.checked).toBe(2);
+    expect(report.anomalies).toEqual([]);
+    expect(await entryFor("PR_dbtest_1")).not.toBeNull();
+    expect(await entryFor("PR_dbtest_2")).not.toBeNull();
   });
 });

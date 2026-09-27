@@ -2,6 +2,7 @@
 name: Identity
 description: The two DevDogs identities — the OAuth provider other projects sign users in with, and the GitHub App the platform authenticates as — and which one you actually need.
 order: 1
+section: infrastructure
 ---
 
 # Identity

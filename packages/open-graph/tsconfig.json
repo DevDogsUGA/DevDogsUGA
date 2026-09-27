@@ -1,0 +1,22 @@
+{
+  // Emits for production consumers. Repo tooling selects `devdogs-source` so
+  // image edits appear immediately; templates import React explicitly because
+  // that loader may select the classic JSX runtime. `scripts` is checked
+  // separately (tsconfig.typecheck.json) and never reaches `dist`.
+  "extends": "@devdogsuga/config/tsconfig/lib.json",
+  "compilerOptions": {
+    "lib": ["ES2025"],
+    // The templates are JSX but nothing here ever mounts: Satori consumes the
+    // plain {type, props} objects the automatic runtime produces. `react-jsx`
+    // keeps React out of every template's import list.
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  // Tests are typechecked (tsconfig.typecheck.json includes them) but never
+  // emitted: `dist` is what the platform bundles into a Cloudflare Worker, and
+  // a `.test.js` in there is dead weight that still has to be parsed.
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

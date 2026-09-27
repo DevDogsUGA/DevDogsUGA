@@ -1,79 +1,65 @@
+import type { db } from "~/server/db";
+import { applyPullRequest, type PullRequestFields } from "./pullRequest";
+
 /**
- * The pure half of the PR handler: what a webhook payload means.
+ * The live half of the competition-entries mirror: one webhook event type,
+ * wired from `/github/webhook` after the signature is verified.
  *
- * Separated from the database write so it can be tested without one. Both
- * decisions here are silent when wrong, which is why each has a test. A
- * mis-parsed branch means the PR never registers as an entry, and a mis-mapped
- * close costs a team its star.
+ * `pull_request` carries everything `applyPullRequest` needs -- title, body,
+ * head/base refs, the merge/close timestamps -- so unlike the competitions
+ * mirror's `projects_v2_item` handling, there is no GraphQL fetch here: the
+ * payload IS the fact, the same reasoning `webhookEvents.ts`'s module doc
+ * gives for the team mirror.
+ *
+ * Four actions matter -- `opened`, `edited`, `reopened`, `closed` -- and all
+ * four route through the same `applyPullRequest`, because GitHub always
+ * sends the PR's full CURRENT state on every delivery regardless of which
+ * action fired it, not a diff. Re-applying the current state is what makes
+ * this idempotent under redelivery, and it is what makes `closed` need no
+ * branch of its own: a closed (or closed-by-merge) PR's `merged_at`/
+ * `closed_at` are just two more fields of that same current state.
+ * `edited` covers the one case that is NOT idempotent-by-construction --
+ * removing an issue link, or retargeting the base off `main` -- and
+ * `applyPullRequest` deletes the (not-yet-merged) entry when either happens.
+ *
+ * Every other action (`assigned`, `labeled`, `synchronize`, ...) is ignored.
  */
-
-export type SubmissionState = "open" | "closed" | "merged";
-
-export interface PullRequestEvent {
+export interface PullRequestEventPayload {
   action: string;
-  number: number;
-  htmlUrl: string;
-  baseRef: string;
-  headRef: string;
-  merged: boolean;
+  pull_request: {
+    node_id: string;
+    number: number;
+    html_url: string;
+    title: string;
+    body: string | null;
+    created_at: string;
+    merged_at: string | null;
+    closed_at: string | null;
+    head: { ref: string };
+    base: { ref: string };
+  };
 }
 
-export type PullRequestOutcome =
-  | { applied: true; teamId: string; state: SubmissionState }
-  | { applied: false; reason: PullRequestSkip };
+const HANDLED_ACTIONS = new Set(["opened", "edited", "reopened", "closed"]);
 
-export type PullRequestSkip =
-  | "not_a_team_branch"
-  | "wrong_base"
-  | "unknown_team"
-  | "ignored_action"
-  | "competed";
+export async function handlePullRequestEvent(
+  database: typeof db,
+  payload: PullRequestEventPayload,
+): Promise<void> {
+  if (!HANDLED_ACTIONS.has(payload.action)) return;
 
-/**
- * Which state a PR event means.
- *
- * **Merged is not closed.** `pull_request.closed` fires for both, but a merged
- * entry won the merge and a closed one withdrew, so this reads the `merged`
- * flag rather than treating every close alike. Getting that wrong costs a team
- * its star silently, because `closed` unlocks the roster and `merged` does not.
- */
-export function stateFor(event: PullRequestEvent): SubmissionState | null {
-  switch (event.action) {
-    case "opened":
-    case "reopened":
-    case "ready_for_review":
-      return "open";
-    case "closed":
-      return event.merged ? "merged" : "closed";
-    default:
-      // edited, synchronize, labeled, review_requested… none of which change
-      // whether the PR exists as an entry.
-      return null;
-  }
-}
-
-/**
- * Reads a team branch back into the pair that names it.
- *
- * `team/<competitionSlug>/<teamSlug>`, where the competition slug itself
- * contains slashes (`2026-fall/w02/study-group-finder`), so the split is
- * "first segment after the prefix through the last slash" rather than a fixed
- * number of parts. `slugify` in the team actions generates the team slug, so it
- * can never contain a slash, which is what makes the last segment unambiguous.
- */
-export function parseTeamBranch(
-  ref: string,
-): { competitionSlug: string; teamSlug: string } | null {
-  const branch = ref.replace(/^refs\/heads\//, "");
-  if (!branch.startsWith("team/")) return null;
-
-  const rest = branch.slice("team/".length);
-  const lastSlash = rest.lastIndexOf("/");
-  if (lastSlash <= 0) return null;
-
-  const competitionSlug = rest.slice(0, lastSlash);
-  const teamSlug = rest.slice(lastSlash + 1);
-  if (!competitionSlug || !teamSlug) return null;
-
-  return { competitionSlug, teamSlug };
+  const pr = payload.pull_request;
+  const fields: PullRequestFields = {
+    nodeId: pr.node_id,
+    number: pr.number,
+    url: pr.html_url,
+    title: pr.title,
+    body: pr.body,
+    headRef: pr.head.ref,
+    baseRef: pr.base.ref,
+    createdAt: pr.created_at,
+    mergedAt: pr.merged_at,
+    closedAt: pr.closed_at,
+  };
+  await applyPullRequest(database, fields);
 }

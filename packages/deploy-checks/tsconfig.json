@@ -1,0 +1,12 @@
+{
+  // Test-only-at-build-time package: no dist, nothing published, nothing
+  // else in the workspace imports it. Same shape as packages/repo-checks'
+  // tsconfig, for the same reason -- these files are run through tsx (dev
+  // deps only) rather than compiled ahead of time.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}

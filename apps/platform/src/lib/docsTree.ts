@@ -1,6 +1,29 @@
 /** The docs sidebar tree, folded from the flat (path, title, order) page rows. */
 import { toTitleCase } from "./toTitleCase";
 
+/**
+ * The fixed sidebar sections every documented project is grouped into, in the
+ * order they are always drawn: Overview first (handled separately, see
+ * `buildDocsSidebarSections`), then these four. A project's pages rarely fill
+ * all four — a small app may have no Infrastructure page at all — so an empty
+ * section is dropped rather than drawn as a heading over nothing.
+ */
+export const DOCS_SECTION_IDS = [
+  "getting-started",
+  "guides",
+  "infrastructure",
+  "reference",
+] as const;
+
+export type DocsSectionId = (typeof DOCS_SECTION_IDS)[number];
+
+export const DOCS_SECTION_LABELS: Record<DocsSectionId, string> = {
+  "getting-started": "Getting started",
+  guides: "Guides",
+  infrastructure: "Infrastructure",
+  reference: "Reference",
+};
+
 export interface DocsTreePage {
   type: "page";
   /** Slash-joined slug below docs/, e.g. "guides/setup". */
@@ -30,7 +53,7 @@ export type DocsTreeNode = DocsTreePage | DocsTreeFolder;
 
 /**
  * Where a page or folder that declares no `order` sits. The same number
- * `@devdogsuga/docs-build`'s compiler defaults projects to, and deliberately
+ * `@devdogsuga/docs-compiler`'s compiler defaults projects to, and deliberately
  * mid-range: a page can be promoted above the pages that never think about
  * ordering as well as demoted below them. This module is handed plain rows
  * rather than that package's types and has no dependency on it, so the constant
@@ -263,11 +286,11 @@ export function allFolders(nodes: DocsTreeNode[]): DocsTreeFolder[] {
  * Depth-first first page, where `/docs/<project>` redirects to. It walks the
  * array as `buildDocsTree` left it rather than as the sidebar draws it, and the
  * two do disagree at the top level: the sidebar's partition gathers folders
- * below the pages, while the array leaves them interleaved by title, so
- * `docs/platform` sorts `Documentation System/` between `Database & Migrations`
- * and `Elections`. What keeps this from descending into a section there is the
- * project's own `index.md`, which leads its folder whatever else is around
- * it.
+ * below the pages, while the array leaves them interleaved by title, so a
+ * folder can sort between two loose pages there instead of trailing every page
+ * the way the sidebar draws it. What keeps this from descending into a section
+ * there is the project's own `index.md`, which leads its folder whatever else
+ * is around it.
  *
  * Where a project has no root index page, `order` is what moves this target.
  * `/docs/toolkit` lands on `reference/components/index` rather than on the
@@ -282,4 +305,88 @@ export function firstPagePath(nodes: DocsTreeNode[]): string | null {
     if (nested) return nested;
   }
   return null;
+}
+
+/** One row's worth of input to `buildDocsSidebarSections`: everything
+ * `buildDocsTree` itself takes, plus the section a page's compiled frontmatter
+ * resolved to. `null` marks the project's own root index page, the one page
+ * that sits outside the four sections entirely (see `DocsSidebarTree.overview`). */
+export interface DocsSidebarPageInput {
+  path: string;
+  title: string;
+  order: number | null;
+  section: DocsSectionId | null;
+}
+
+export interface DocsSidebarSection {
+  id: DocsSectionId;
+  label: string;
+  nodes: DocsTreeNode[];
+}
+
+export interface DocsSidebarTree {
+  /** The project's own root index page, drawn as "Overview" ahead of every
+   * section rather than folded into one. Null for a project with no root
+   * index.md, which is not a real case in `docs/` today but costs nothing to
+   * leave unhandled-safe. */
+  overview: DocsTreePage | null;
+  /** Only the sections that ended up with at least one page, in the fixed
+   * Getting started / Guides / Infrastructure / Reference order. */
+  sections: DocsSidebarSection[];
+}
+
+/**
+ * Whether a page IS the project's own root index — as opposed to a folder's
+ * own index page one or more levels down (`guides/index`), which is still a
+ * normal member of its section. Only a path with no folder segment at all
+ * (`index`, not `guides/index`) is the project's Overview.
+ */
+function isProjectOverviewPath(path: string): boolean {
+  if (path.includes("/")) return false;
+  const name = path.toLowerCase();
+  return name === "index" || name === "readme";
+}
+
+/**
+ * Groups one project's pages into the sidebar's fixed sections, per the docs
+ * contract: Overview (the project's own index page, no section of its own),
+ * then Getting started, Guides, Infrastructure, Reference, each dropped when
+ * it holds nothing.
+ *
+ * Each section is its own call to `buildDocsTree` over just the pages that
+ * landed in it, not a partition of one big tree — the sections are a grouping
+ * frontmatter declares per page, orthogonal to the folder path a page happens
+ * to live under (a shared page mounted at `getting-started/troubleshooting`
+ * and a hand-written one at `guides/troubleshooting-advanced` can both declare
+ * `section: getting-started`). That keeps every existing ordering rule
+ * (index-page-first, the `order` cascade, the folder-order derivation) intact
+ * WITHIN a section, unchanged from what `buildDocsTree` already did before
+ * sections existed — this function only decides which section a page's own
+ * little tree belongs to.
+ */
+export function buildDocsSidebarSections(
+  pages: DocsSidebarPageInput[],
+): DocsSidebarTree {
+  const overviewInput = pages.find((page) => isProjectOverviewPath(page.path));
+  const rest = pages.filter((page) => page !== overviewInput);
+
+  const overview: DocsTreePage | null = overviewInput
+    ? {
+        type: "page",
+        path: overviewInput.path,
+        title: overviewInput.title,
+        order: overviewInput.order,
+      }
+    : null;
+
+  const sections = DOCS_SECTION_IDS.map((id) => {
+    const inSection = rest.filter((page) => (page.section ?? "guides") === id);
+    return {
+      id,
+      label: DOCS_SECTION_LABELS[id],
+      nodes: buildDocsTree(inSection),
+    };
+  }).filter((section) => section.nodes.length > 0);
+
+  return { overview, sections };
 }

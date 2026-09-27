@@ -44,12 +44,12 @@ export interface TitleableMeeting {
 
 /**
  * A workshop as this module needs it: whatever it is called, however that was
- * arrived at. `title` is the officer's word for the session; the project name
- * is the fallback the loader already applies.
+ * arrived at. `title` is the officer's word for the session; the free-text
+ * project recommendation is the fallback the loader already applies.
  */
 export interface TitleableWorkshop {
   title: string | null;
-  projectName: string | null;
+  project: string | null;
 }
 
 const WEEKDAY_DATE = new Intl.DateTimeFormat("en-US", {
@@ -91,13 +91,13 @@ export function workshopLabel(workshop: TitleableWorkshop): string {
  * for a night would come out "Workshop: Workshop".
  */
 export function workshopName(workshop: TitleableWorkshop): string | null {
-  return workshop.title ?? workshop.projectName;
+  return workshop.title ?? workshop.project;
 }
 
 /**
  * What an unnamed workshop is called.
  *
- * Reachable: `workshops.projectId` is nullable and `title` is optional, so a
+ * Reachable: `workshops.project` is nullable and `title` is optional, so a
  * session created for a skill and not yet named has neither.
  */
 export const WORKSHOP_FALLBACK_LABEL = "Workshop";
@@ -106,7 +106,7 @@ export const WORKSHOP_FALLBACK_LABEL = "Workshop";
  * The meeting's name, in descending order of how much somebody meant it.
  *
  * 1. `nameOverride`: an officer wrote this night a name, so use it.
- * 2. `kind`: "Build Session", "Study Session". Authored, just not bespoke.
+ * 2. `kind`: "Dev Session", "Study Session". Authored, just not bespoke.
  * 3. the workshops it teaches: "Workshop: Next.js & Flutter".
  * 4. the date, always available, since `startsAt` is `not null`.
  *

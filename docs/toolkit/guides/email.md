@@ -2,6 +2,7 @@
 name: email
 description: react-email templates compiled at build time into two string arrays, so sending one is an interleave with no React in the Worker.
 order: 8
+section: guides
 ---
 
 # email

@@ -25,9 +25,6 @@ const PERMISSION_LABELS: Record<string, string> = {
   canManageVerification: "Manage verification",
   canManageAttendance: "Manage attendance",
   canExportStars: "Export stars",
-  canTriggerSync: "Trigger Airtable sync",
-  canVoteAsOfficer: "Vote as an officer",
-  canAuditBallots: "Audit ballots",
 };
 
 const PERMISSION_KEYS = Object.keys(

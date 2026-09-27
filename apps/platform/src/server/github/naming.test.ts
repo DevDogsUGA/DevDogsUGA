@@ -1,49 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
   githubTeamSlug,
-  integrationBranch,
-  isEntryBase,
-  isTeamHead,
   normalizeRef,
+  platformSlugFromGithubTeamSlug,
   teamBranch,
-  teamBranchPattern,
+  teamSlugFromBranch,
 } from "./naming";
-import { parseTeamBranch, stateFor } from "./prEvent";
 
 /**
- * The naming rules and the PR state mapping. Both fail silently: a mismatched
- * branch name means the PR never registers as an entry, and a mis-mapped close
- * costs a team its star.
+ * The naming rules. They fail silently: a mismatched branch name means a
+ * team's push grant and its branch stop agreeing with each other, invisible
+ * until somebody cannot push.
  */
 
-const COMP = "2026-fall/w02/study-group-finder";
-
-describe("branch names", () => {
-  it("derives the layout from the competition slug", () => {
-    expect(integrationBranch(COMP)).toBe(
-      "comp/2026-fall/w02/study-group-finder",
-    );
-    expect(teamBranch(COMP, "sicem")).toBe(
-      "team/2026-fall/w02/study-group-finder/sicem",
-    );
-    expect(teamBranchPattern(COMP)).toBe(
-      "team/2026-fall/w02/study-group-finder/*",
-    );
-  });
-
-  it("keeps the week segment, so a recurring project does not collide", () => {
-    // The whole reason the branch is named from the slug rather than from the
-    // project: the same project runs again next week.
-    const week2 = integrationBranch("2026-fall/w02/study-group-finder");
-    const week3 = integrationBranch("2026-fall/w03/study-group-finder");
-    expect(week2).not.toBe(week3);
+describe("team branch", () => {
+  it("derives the branch from the team slug, off main", () => {
+    expect(teamBranch("study-group-finder")).toBe("team/study-group-finder");
   });
 });
 
 describe("github team slug", () => {
   it("survives GitHub's own slugification unchanged", () => {
-    const slug = githubTeamSlug(COMP, "sicem");
-    expect(slug).toBe("comp-2026-fall-w02-study-group-finder-sicem");
+    const slug = githubTeamSlug("study-group-finder");
+    expect(slug).toBe("team-study-group-finder");
     // What GitHub does to a team name. If this were not already a fixed point,
     // the API would have to be asked what slug it chose before anything could
     // address the team.
@@ -51,96 +30,42 @@ describe("github team slug", () => {
   });
 });
 
-describe("entry matching", () => {
-  it("accepts a PR into the competition's integration branch", () => {
-    expect(isEntryBase("comp/2026-fall/w02/study-group-finder", COMP)).toBe(
-      true,
-    );
-    expect(
-      isEntryBase("refs/heads/comp/2026-fall/w02/study-group-finder", COMP),
-    ).toBe(true);
-  });
-
-  it("rejects a PR opened against main by mistake", () => {
-    // A perfectly valid team/... head with the wrong base. Checking the head
-    // alone would accept it and register an entry that was never submitted.
-    expect(isEntryBase("main", COMP)).toBe(false);
-  });
-
-  it("rejects another week's integration branch", () => {
-    expect(isEntryBase("comp/2026-fall/w03/study-group-finder", COMP)).toBe(
-      false,
-    );
-  });
-
-  it("rejects a base that merely shares a prefix", () => {
-    // `comp/…/study-group` is a prefix of `comp/…/study-group-finder`, so a
-    // startsWith check would let one competition's PR count for another.
-    expect(isEntryBase("comp/2026-fall/w02/study-group", COMP)).toBe(false);
-  });
-
-  it("matches a team's own head branch and not a sibling's", () => {
-    expect(
-      isTeamHead("team/2026-fall/w02/study-group-finder/sicem", COMP, "sicem"),
-    ).toBe(true);
-    expect(
-      isTeamHead("team/2026-fall/w02/study-group-finder/marble", COMP, "sicem"),
-    ).toBe(false);
-  });
-
+describe("normalizeRef", () => {
   it("normalizes refs/heads/ off either form", () => {
     expect(normalizeRef("refs/heads/main")).toBe("main");
     expect(normalizeRef("main")).toBe("main");
   });
 });
 
-describe("parseTeamBranch", () => {
-  it("splits a competition slug containing slashes from the team slug", () => {
-    expect(
-      parseTeamBranch("team/2026-fall/w02/study-group-finder/sicem"),
-    ).toEqual({
-      competitionSlug: "2026-fall/w02/study-group-finder",
-      teamSlug: "sicem",
-    });
+describe("teamSlugFromBranch", () => {
+  it("is the exact inverse of teamBranch", () => {
+    expect(teamSlugFromBranch(teamBranch("sicem"))).toBe("sicem");
   });
 
-  it("round-trips with teamBranch", () => {
-    const parsed = parseTeamBranch(teamBranch(COMP, "marble"));
-    expect(parsed).toEqual({ competitionSlug: COMP, teamSlug: "marble" });
+  it("normalizes refs/heads/ the same as normalizeRef", () => {
+    expect(teamSlugFromBranch("refs/heads/team/sicem")).toBe("sicem");
   });
 
-  it("ignores branches outside the team namespace", () => {
-    expect(parseTeamBranch("main")).toBeNull();
-    expect(parseTeamBranch("comp/2026-fall/w02/study-group-finder")).toBeNull();
-    expect(parseTeamBranch("team/sicem")).toBeNull();
+  it("is null for a branch that is not a team branch", () => {
+    expect(teamSlugFromBranch("main")).toBeNull();
+    expect(teamSlugFromBranch("production")).toBeNull();
   });
 });
 
-describe("stateFor", () => {
-  const base = { number: 1, htmlUrl: "", baseRef: "", headRef: "" };
-
-  it("maps opened and reopened to open", () => {
-    expect(stateFor({ ...base, action: "opened", merged: false })).toBe("open");
-    expect(stateFor({ ...base, action: "reopened", merged: false })).toBe(
-      "open",
+describe("platformSlugFromGithubTeamSlug", () => {
+  it("is the exact inverse of githubTeamSlug for a slug already in slug form", () => {
+    expect(platformSlugFromGithubTeamSlug(githubTeamSlug("sicem"))).toBe(
+      "sicem",
     );
   });
 
-  it("distinguishes merged from closed", () => {
-    // `pull_request.closed` fires for both. Treating every close alike costs a
-    // team its star silently, because closed unlocks the roster and merged
-    // does not.
-    expect(stateFor({ ...base, action: "closed", merged: true })).toBe(
-      "merged",
-    );
-    expect(stateFor({ ...base, action: "closed", merged: false })).toBe(
-      "closed",
+  it("strips only the leading team- literal, even from a slug that itself starts with it", () => {
+    expect(platformSlugFromGithubTeamSlug(githubTeamSlug("team-awesome"))).toBe(
+      "team-awesome",
     );
   });
 
-  it("ignores actions that do not change whether the PR is an entry", () => {
-    for (const action of ["edited", "synchronize", "labeled", "assigned"]) {
-      expect(stateFor({ ...base, action, merged: false })).toBeNull();
-    }
+  it("is null for a GitHub team slug this platform never made", () => {
+    expect(platformSlugFromGithubTeamSlug("some-other-team")).toBeNull();
   });
 });

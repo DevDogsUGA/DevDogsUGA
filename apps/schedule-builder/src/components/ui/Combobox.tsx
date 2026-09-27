@@ -458,7 +458,11 @@ export default function Combobox<T extends Record<string, ReactNode>>({
       </Popover.Trigger>
 
       <Popover.Portal>
-        <Popover.Content className="border-muted bg-surface -mt-(--radix-popover-trigger-height) flex max-h-56 w-(--radix-popover-trigger-width) max-w-[calc(100dvw-1rem)] flex-col gap-1 rounded-md border-2 px-1 py-1 shadow-lg">
+        {/* z-50, the same layer as ui/Dialog: the popover is portalled to
+            <body>, and without a z-index it painted underneath a dialog's
+            fixed z-50 layer, so a Combobox inside CreatePlanDialog looked
+            like it never opened. Opened after the dialog, it stacks above. */}
+        <Popover.Content className="border-muted bg-surface z-50 -mt-(--radix-popover-trigger-height) flex max-h-56 w-(--radix-popover-trigger-width) max-w-[calc(100dvw-1rem)] flex-col gap-1 rounded-md border-2 px-1 py-1 shadow-lg">
           <label className="peer bg-surface-muted flex w-full items-center gap-2 rounded-sm px-2 py-1">
             <MagnifyingGlassIcon className="text-foreground/80" />
             <input

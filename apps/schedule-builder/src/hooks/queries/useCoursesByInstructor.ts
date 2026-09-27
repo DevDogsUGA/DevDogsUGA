@@ -14,10 +14,42 @@ type RawInstructorOfferingRow = {
 };
 
 /**
- * Distinct courses an instructor teaches in the given term. Read from the
- * `offerings` table (which carries the instructor→course link) and deduped by
- * course, since an instructor may teach several sections of the same course.
+ * Fetch distinct courses an instructor teaches in the given term. Read from
+ * the `offerings` table (which carries the instructor→course link) and deduped
+ * by course, since an instructor may teach several sections of the same course.
+ * Only includes non-cancelled offerings.
  */
+export async function fetchCoursesByInstructor(
+  instructorId: number,
+  academicPeriod: number,
+): Promise<CourseOption[]> {
+  const { data, error } = await supabase
+    .from("offerings")
+    .select("courseId, courses(id, abbr, courseNumber, title, maxCreditHours)")
+    .eq("instructorId", instructorId)
+    .eq("academicPeriod", academicPeriod)
+    .eq("cancelled", false);
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as RawInstructorOfferingRow[];
+  const byCourse = new Map<number, CourseOption>();
+  for (const row of rows) {
+    const course = row.courses;
+    if (!course || byCourse.has(course.id)) continue;
+    byCourse.set(course.id, {
+      courseId: course.id,
+      abbr: course.abbr,
+      courseNumber: course.courseNumber,
+      title: course.title,
+      maxCreditHours: course.maxCreditHours,
+    });
+  }
+  return [...byCourse.values()].sort((a, b) =>
+    a.courseNumber.localeCompare(b.courseNumber),
+  );
+}
+
+/** Distinct courses an instructor teaches (not cancelled) in the given term. */
 export function useCoursesByInstructor(
   instructorId: number | undefined,
   academicPeriod: number | null | undefined,
@@ -26,31 +58,7 @@ export function useCoursesByInstructor(
     queryKey: ["courses-by-instructor", instructorId, academicPeriod],
     enabled: instructorId != null && academicPeriod != null,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("offerings")
-        .select(
-          "courseId, courses(id, abbr, courseNumber, title, maxCreditHours)",
-        )
-        .eq("instructorId", instructorId!)
-        .eq("academicPeriod", academicPeriod!);
-      if (error) throw error;
-
-      const rows = (data ?? []) as unknown as RawInstructorOfferingRow[];
-      const byCourse = new Map<number, CourseOption>();
-      for (const row of rows) {
-        const course = row.courses;
-        if (!course || byCourse.has(course.id)) continue;
-        byCourse.set(course.id, {
-          courseId: course.id,
-          abbr: course.abbr,
-          courseNumber: course.courseNumber,
-          title: course.title,
-          maxCreditHours: course.maxCreditHours,
-        });
-      }
-      return [...byCourse.values()].sort((a, b) =>
-        a.courseNumber.localeCompare(b.courseNumber),
-      );
+      return fetchCoursesByInstructor(instructorId!, academicPeriod!);
     },
   });
 }

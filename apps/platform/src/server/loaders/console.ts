@@ -91,13 +91,18 @@ export const getProfilePageData = cache(async () => {
   };
 });
 
+export type OAuthClientSummary = {
+  clientId: string;
+  label: string;
+  redirectUris: string[];
+};
+
 export const getOAuthPageData = cache(async () => {
   const { profile, githubIdentity, testAccounts } = await expectUserWith({
     profile: {
       with: {
-        oauthRegistration: {
-          columns: { clientId: true },
-          with: {},
+        oauthRegistrations: {
+          columns: { clientId: true, label: true },
         },
       },
     },
@@ -113,13 +118,16 @@ export const getOAuthPageData = cache(async () => {
     },
   }).catch(() => redirect("/auth"));
 
-  const clientId = profile?.oauthRegistration?.clientId ?? null;
+  const registrations = profile?.oauthRegistrations ?? [];
 
-  const redirectUris: string[] = [];
-  if (clientId) {
-    const { data } = await supabaseAdmin.auth.admin.oauth.getClient(clientId);
-    if (data) redirectUris.push(...data.redirect_uris);
-  }
+  // One OAuth client per project since migration 32 -- fetch each
+  // registration's live redirect URIs from the Admin SDK in parallel.
+  const clients: OAuthClientSummary[] = await Promise.all(
+    registrations.map(async ({ clientId, label }) => {
+      const { data } = await supabaseAdmin.auth.admin.oauth.getClient(clientId);
+      return { clientId, label, redirectUris: data?.redirect_uris ?? [] };
+    }),
+  );
 
   const mappedTestAccounts: TestAccount[] = testAccounts.map(
     ({ user, createdAt }) => ({
@@ -136,8 +144,8 @@ export const getOAuthPageData = cache(async () => {
   );
 
   return {
-    clientId,
-    redirectUris,
+    clients,
+    hasAnyClient: clients.length > 0,
     hasGithub: githubIdentity !== null,
     testAccounts: mappedTestAccounts,
   };

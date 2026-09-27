@@ -2,6 +2,7 @@
 name: database
 description: The devtools db group — start, migrate and reset the session's Supabase database, plus migrations, types, seeding, introspection and hosted infrastructure.
 order: 4
+section: guides
 ---
 
 # Database commands
@@ -109,7 +110,7 @@ could.
 
 ## The rest of the group
 
-`db migration new`/`db migration generate` create or draft migration files;
+`db migration new` creates an empty migration file for you to write by hand;
 `db types` regenerates the Database types on their own; `db seed buckets`/
 `db seed roles` seed storage or the built-in roles; `db introspect` pulls an
 app's live schema into its generated Drizzle files; `db config push` pushes

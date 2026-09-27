@@ -1,4 +1,4 @@
-import { createEnv } from "@t3-oss/env-nextjs";
+import { createEnv } from "@devdogsuga/env/nextjs";
 import { z } from "zod";
 
 import {
@@ -91,6 +91,29 @@ const server = {
       secrecy: "secret",
     },
   ),
+  // Sentry ingest DSN for the "platform" project (see @devdogsuga/telemetry).
+  // Optional and empty by default, deliberately: the org is not onboarded in
+  // every environment yet, and `buildSentryOptions` treats a falsy DSN as
+  // "skip Sentry.init entirely" -- no init, no network calls, no console
+  // noise. A DSN is not a secret (it identifies a project, not a credential
+  // -- anyone can only submit events, never read them), but it reaches the
+  // Worker the same way every other environment variable does: Bitwarden ->
+  // `env push` -> the next deploy. wrangler.jsonc carries no secrets and
+  // never will for this value.
+  // Prefixed with the app, unlike most keys here: every app has its own
+  // Sentry project, and a deploy environment holds one value per name, so a
+  // shared SENTRY_DSN would send every app's events to one project (and the
+  // release step uploads each app's source maps to its own project).
+  PLATFORM_SENTRY_DSN: define(z.string().url().optional(), {
+    doc:
+      "Sentry ingest DSN for this app's Sentry project (see " +
+      "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
+      "entirely, which is the state before the org is onboarded and the " +
+      "state of local development. Reaches the Worker like every other " +
+      "environment variable.",
+    scope: "environment",
+    secrecy: "public",
+  }),
   ATTENDANCE_TOKEN_SECRET: define(
     switchEnvironment({
       local: z.string().default("local-attendance-secret-not-for-deployment"),
@@ -136,21 +159,6 @@ const server = {
     doc: "The Discord bot token, for role sync and slash commands.",
     scope: "environment",
     secrecy: "secret",
-  }),
-  // Channel for operational alerts (see server/discord/alerts.ts). Empty means
-  // "do not post", the same convention AIRTABLE_BASE_ID and GH_WEBHOOK_SECRET
-  // use, so local development and any environment that has not opted in stay
-  // quiet. The default is not tidiness: staging shares the club's real Discord
-  // guild, so a required value would have staging posting into the officers'
-  // channel.
-  DISCORD_ALERT_CHANNEL_ID: define(z.string().default(""), {
-    doc:
-      "Channel for operational alerts. Empty means do not post -- the right " +
-      "value everywhere except production, because staging shares the " +
-      "club's real Discord guild and a stray value here reaches the " +
-      "officers' channel. Production uses 1532424905193160794.",
-    scope: "environment",
-    secrecy: "public",
   }),
   // Same "default" reasoning as DISCORD_GUILD_ID, schema default included.
   GITHUB_ORG: define(z.string().default("DevDogsUGA"), {
@@ -212,10 +220,36 @@ const server = {
         "-----BEGIN RSA PRIVATE KEY-----\\nPLACEHOLDER-NOT-A-REAL-KEY-see-docs-platform-env-md\\n-----END RSA PRIVATE KEY-----\\n",
     },
   ),
-  // The repository competition branches live in. Defaulted rather than
-  // required: every existing deployment predates competitions, and a new
-  // required variable would stop them booting over a feature they do not use
-  // yet.
+  // Shared secret configured on the App's webhook (`/github/webhook`),
+  // which is how the team mirror stays live rather than waiting out the
+  // nightly reconcile: GitHub signs every delivery with it, and the route
+  // verifies `X-Hub-Signature-256` before trusting a membership, team or
+  // branch event -- see server/github/webhookSignature.ts. Same shape as
+  // CRON_SECRET: an empty local default lets `next dev` boot with no
+  // webhook configured (the route only enforces the check when deployed),
+  // deployed environments require at least 32 characters.
+  //
+  // The `GH_` (not `GITHUB_`) prefix reuses the shape GitHub Actions already
+  // forces onto the App credentials -- it refuses secret/variable names
+  // starting with `GITHUB_`, which `env/completeness.test.ts` asserts so
+  // this does not get relearned.
+  GH_WEBHOOK_SECRET: define(
+    switchEnvironment({
+      local: z.string().default(""),
+      deployed: z.string().min(32),
+    }),
+    {
+      doc:
+        "Shared secret configured on the DevDogs GitHub App's webhook. " +
+        "Verifies X-Hub-Signature-256 on every delivery to /github/webhook " +
+        "before any team-mirror event is trusted.",
+      scope: "environment",
+      secrecy: "secret",
+    },
+  ),
+  // The repository team branches live in. Defaulted rather than required:
+  // every existing deployment predates teams, and a new required variable
+  // would stop them booting over a feature they do not use yet.
   //
   // The old default, "DevDogs-Website", stopped being a real repository name
   // when this repo was renamed to "DevDogsUGA". Reads survived on GitHub's
@@ -223,125 +257,49 @@ const server = {
   // addOrUpdateRepoPermissionsInOrg, are not guaranteed to follow one.
   //
   // This IS the deploy repo, deliberately: the `production` branch, not a
-  // second repository, is the deploy boundary. The cost is that a competition
-  // team granted push here can reach every other team's branch, because a
-  // GitHub team grant is repository-wide with no branch dimension.
-  //
-  // The isolation therefore has to come from branch rulesets, one per team,
-  // restricting pushes to that team's prefix. Until those exist the isolation
-  // is nominal. See the per-team ruleset step in the security plan; the
-  // 75-rulesets-per-repository ceiling is the real limit on team count.
+  // second repository, is the deploy boundary. The cost is that a team
+  // granted push here can reach every other team's branch, because a GitHub
+  // team grant is repository-wide with no branch dimension. The isolation
+  // comes from the branch ruleset `server/github/rulesets.ts` creates per
+  // team, restricting pushes on that team's own branch to that team; the
+  // 75-rulesets-per-repository ceiling is the real limit on how many teams
+  // can exist concurrently.
   GITHUB_COMPETITION_REPO: define(z.string().default("DevDogsUGA"), {
     doc:
-      "The repository competition branches are cut in -- this one, " +
-      "deliberately: the production branch, not a second repo, is the " +
-      "deploy boundary. The schema default is right; set it only if that " +
-      "ever stops being true.",
+      "The repository team branches are cut in -- this one, deliberately: " +
+      "the production branch, not a second repo, is the deploy boundary. " +
+      "The schema default is right; set it only if that ever stops being " +
+      "true.",
     scope: "default",
     secrecy: "public",
     example: "DevDogsUGA",
     commented: true,
   }),
-  // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the webhook
-  // route refuses every request; see the route for why that beats accepting
-  // unsigned payloads.
-  GH_WEBHOOK_SECRET: define(z.string().default(""), {
+  // The private "Competitions" GitHub Project's GraphQL node id (a
+  // `PVT_...` string, not the project's number). Optional: Sloan has to
+  // create the Project by hand and note its id, so the platform has to boot
+  // without one -- `server/github/
+  // competitions.ts` treats an unset value as "competitions ingestion is not
+  // configured yet" and no-ops every webhook delivery and reconcile pass
+  // rather than failing to start. A committed constant would work for
+  // GITHUB_ORG and GITHUB_COMPETITION_REPO because both name things this repo
+  // already controls; a Project's node id is assigned by GitHub the moment
+  // the Project is created and cannot be predicted ahead of that, so this is
+  // `scope: "environment"` -- routed to a real GitHub Actions secret/variable
+  // once Sloan sets it. `GH_`, not `GITHUB_`, for the same reason every other
+  // routed key naming something GitHub does is `GH_APP_ID`/`GH_WEBHOOK_SECRET`
+  // and not `GITHUB_APP_ID`: GitHub Actions reserves the `GITHUB_` prefix for
+  // its own automatic variables and refuses to let a workflow define a
+  // secret or variable that starts with it.
+  GH_COMPETITIONS_PROJECT_ID: define(z.string().default(""), {
     doc:
-      "Verifies X-Hub-Signature-256 on the pull-request webhook, and it is " +
-      "the same value pasted into the App's webhook-secret field. Empty " +
-      "makes the route refuse every request (503) -- the right local " +
-      "default, because an unsigned endpoint that writes submissionState " +
-      "would let anyone mark a team as merged. Full setup: " +
-      "docs/platform/github-app.md.",
+      'The private "Competitions" GitHub Project\'s GraphQL node id ' +
+      "(PVT_...). Empty means competition ingestion is a no-op -- the " +
+      "platform boots without it. Find it with `gh project view <number> " +
+      "--owner DevDogsUGA --format json --jq .id`.",
     scope: "environment",
-    secrecy: "secret",
-  }),
-  // Airtable. Optional because the base is provisioned separately and the
-  // platform has to boot without it: the sync refuses with a named error
-  // rather than the app failing to start. The sync token moved HERE from
-  // Supabase Vault ("airtable_pat") on 2026-08-19, by decision: one storage
-  // mechanism, auditable by `env audit`, delivered like every other Worker
-  // secret. That traded away officer rotation without a deploy. Rotating it is
-  // now Bitwarden → `env push` → next deploy. See
-  // docs/platform/airtable-setup.md.
-  //
-  // The base ID is no longer routed. It is `BASE_ID` in
-  // packages/airtable/src/registry.ts, committed beside the tbl/fld ids that
-  // belong to the same base. A second base would need a second registry, so
-  // parameterising this one value never bought the portability it looked like
-  // it was buying. That deletes an entry from three Bitwarden projects, a
-  // variable from four GitHub environments, and the `narrowed` opt-in that
-  // existed only to carry it into `preflight`.
-  //
-  // ⚠️ Until 2026-08-17 this was left unmarked and set by hand as a
-  // repository-level GitHub variable instead, which every environment sees: a
-  // wider blast radius than the routing, arrived at by trying to be careful.
-  AIRTABLE_BASE_ID: define(z.string().default(""), {
-    doc:
-      "Override for the committed Airtable base id (BASE_ID in " +
-      "@devdogsuga/airtable). Empty in every ordinary deployment -- set it " +
-      "only to aim the tooling at a scratch base. Public rather than secret: " +
-      "it is in every Airtable dashboard URL and identifies without " +
-      "authorising, since every capability belongs to the token. Full " +
-      "setup: docs/platform/airtable-setup.md.",
-    scope: "default",
     secrecy: "public",
-  }),
-  AIRTABLE_SYNC_PAT: define(z.string().default(""), {
-    doc:
-      "The runtime sync token: schema.bases:read, data.records:read and " +
-      "data.records:write on the one officers' base, and nothing else -- it " +
-      "can rewrite every dues record, which is why it is the only one of " +
-      "the three Airtable tokens that touches data at all. Empty means the " +
-      "sync refuses with a named error (the platform boots without it). " +
-      "Reaches the Worker like every other secret; rotating it is " +
-      "Bitwarden -> `env push` -> next deploy. NOT the CI pair (PLAN/APPLY, " +
-      "schema-only) -- though devtools reads this one for a local " +
-      "`verify --duplicates`, which needs a record read the plan token " +
-      "does not carry.",
-    scope: "environment",
-    secrecy: "secret",
     commented: true,
-  }),
-  AIRTABLE_AUTOMATION_SECRET: define(
-    switchEnvironment({
-      local: z.string().default("local-airtable-automation-secret"),
-      deployed: z.string().min(32),
-    }),
-    {
-      doc:
-        "Narrow bearer secret used only by the Airtable Officer Changes " +
-        "automation endpoint. It must not match AIRTABLE_SYNC_PAT or " +
-        "CRON_SECRET, and staging must never be wired to the live automation.",
-      scope: "environment",
-      secrecy: "secret",
-      commented: true,
-    },
-  ),
-  // Supabase OAuth, for sandbox environments. Optional for the same reason as
-  // Airtable: the app is registered separately and the platform has to boot
-  // without it, so provisioning refuses with `not_configured` rather than the
-  // whole app failing to start. See docs/platform/sandbox-environments.md.
-  //
-  // The client id is public, like every OAuth client id: it travels in the
-  // clear on each authorization redirect, so treating it as a secret would
-  // only make logs harder to read. (The hand-maintained bws arrays pushed it
-  // as a secret by omission; this classification is the deliberate one.)
-  SUPABASE_OAUTH_CLIENT_ID: define(z.string().default(""), {
-    doc:
-      "OAuth client id for 'Sign in with DevDogs' against sandbox " +
-      "environments. Empty means provisioning refuses with not_configured, " +
-      "so leave both halves empty unless you are working on sandboxes. " +
-      "Full setup: docs/platform/sandbox-environments.md.",
-    scope: "environment",
-    secrecy: "public",
-  }),
-  SUPABASE_OAUTH_CLIENT_SECRET: define(z.string().default(""), {
-    doc:
-      "OAuth client secret paired with SUPABASE_OAUTH_CLIENT_ID, for " +
-      "sandbox-environment provisioning.",
-    scope: "environment",
-    secrecy: "secret",
   }),
   // Derived (.env / .env.generated). `localStack: true` throughout: when the
   // local Docker stack is running, `.env.generated` supplies these and wins
@@ -463,6 +421,40 @@ const server = {
  * prefixed and public by construction.
  */
 const client = {
+  // Derived, like the Supabase pair: the "platform" Sentry project has one
+  // DSN, and a DSN is safe in a browser bundle (it can only submit events,
+  // never read them), so `.env` assigns this from $PLATFORM_SENTRY_DSN rather
+  // than asking for the same value twice. Optional for the same reason: no
+  // DSN means `instrumentation-client.ts` skips `Sentry.init()` entirely.
+  NEXT_PUBLIC_PLATFORM_SENTRY_DSN: define(z.string().url().optional(), {
+    doc:
+      "Browser-side copy of PLATFORM_SENTRY_DSN. Derived -- .env assigns " +
+      "it from $PLATFORM_SENTRY_DSN -- so it is never set by hand. Empty " +
+      "skips client-side Sentry.init() entirely.",
+    scope: "environment",
+    secrecy: "public",
+    example: "$PLATFORM_SENTRY_DSN",
+  }),
+  // The browser has no access to the server-only DEPLOY_ENV (@t3-oss's proxy
+  // would throw), and Sentry's `environment` tag needs to distinguish staging
+  // from production on the client too. Not derived automatically the way
+  // NEXT_PUBLIC_SUPABASE_URL is from API_URL: DEPLOY_ENV itself is set by
+  // wrangler.jsonc's per-env `vars` block and the cf:build:* scripts rather
+  // than an `.env` file, so there is nothing for a `.env` assignment to
+  // mirror. The cf:build:* scripts set this alongside DEPLOY_ENV instead.
+  NEXT_PUBLIC_DEPLOY_ENV: define(
+    z.enum(DEPLOY_ENVIRONMENTS).default("development"),
+    {
+      doc:
+        "Browser-side copy of DEPLOY_ENV, for the Sentry `environment` tag on " +
+        "client-captured errors. Set alongside DEPLOY_ENV by the cf:build:* " +
+        "scripts; defaults to development because that is what an unset " +
+        "value means everywhere else in this schema.",
+      scope: "environment",
+      secrecy: "public",
+      example: "staging",
+    },
+  ),
   // The Supabase pair is derived, not set by hand: `.env` assigns each from
   // its server-side counterpart ($API_URL / $PUBLISHABLE_KEY), which is also
   // how the local stack's generated values reach the browser.
@@ -518,6 +510,9 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_AVATARS_BUCKET: process.env.NEXT_PUBLIC_AVATARS_BUCKET,
+    NEXT_PUBLIC_PLATFORM_SENTRY_DSN:
+      process.env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
+    NEXT_PUBLIC_DEPLOY_ENV: process.env.NEXT_PUBLIC_DEPLOY_ENV,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

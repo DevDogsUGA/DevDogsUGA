@@ -15,6 +15,10 @@ export function extractBearerToken(authHeader: string | null): string | null {
 /**
  * Returns true when a user ID belongs to a test account that is owned by the
  * developer of the given OAuth client (via oauthTestAccounts → oauthRegistrations).
+ *
+ * A developer can hold several clients since migration 32 (one per
+ * project), so this checks whether ANY of the owner's registrations name
+ * `clientId`, not a single one.
  */
 export async function isTestAccountForClient(
   userId: string,
@@ -30,7 +34,7 @@ export async function isTestAccountForClient(
       user: {
         columns: { id: true },
         with: {
-          oauthRegistration: {
+          oauthRegistrations: {
             columns: { clientId: true },
           },
         },
@@ -38,7 +42,9 @@ export async function isTestAccountForClient(
     },
   });
 
-  return row?.user?.oauthRegistration?.clientId === clientId;
+  return (
+    row?.user?.oauthRegistrations.some((r) => r.clientId === clientId) ?? false
+  );
 }
 
 /**

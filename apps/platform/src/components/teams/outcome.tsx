@@ -20,15 +20,18 @@ import Callout from "~/ui/callout";
  * hypothetical. `name_taken` was added to the union and this table caught it.
  */
 export const TEAM_PROBLEM_MESSAGES: Record<TeamProblemCode, string> = {
-  competition_closed:
-    "Judging has begun for this competition, so its teams can no longer change.",
-  roster_locked:
-    "That roster is closed. The team's own page says which of the three reasons it is — an open entry can be reopened by closing the pull request; judging cannot.",
   github_not_linked:
-    "Joining a team provisions your access to the competition repository, so your GitHub account has to be linked first.",
-  team_full: "That team is already at the size limit for this competition.",
-  already_on_team:
-    "You are already on a team for this competition. It is one team per member per competition.",
+    "Joining a team provisions your access to the team's repository branch, so your GitHub account has to be linked first.",
+  github_unavailable:
+    "GitHub did not apply this. Nothing was saved — try again in a moment.",
+  github_2fa_required:
+    "Team membership grants push access to the org's repository, so your GitHub account needs two-factor authentication turned on first.",
+  github_2fa_unverifiable:
+    "We could not confirm your GitHub account has two-factor authentication on. Nothing was saved — try again in a moment.",
+  team_full: "That team is already at its member limit.",
+  too_many_teams:
+    "You are already active on as many teams as one contributor can be on at once.",
+  already_on_team: "You are already on that team.",
   not_a_member: "You are not on that team.",
   not_the_lead: "Only the team's lead can do that.",
   lead_must_transfer_first:
@@ -37,9 +40,12 @@ export const TEAM_PROBLEM_MESSAGES: Record<TeamProblemCode, string> = {
     "That join code does not match. Codes are six characters; spacing and capitals do not matter.",
   request_not_actionable:
     "This one is no longer open — it has been answered or withdrawn already.",
-  name_taken:
-    "Another team in this competition already has that name. Pick a different one.",
-  not_found: "That team or competition no longer exists.",
+  name_taken: "Another team already has that name. Pick a different one.",
+  invitee_not_found:
+    "Nobody on the platform matches that email or GitHub username exactly. Have them sign up on the platform and link GitHub, then invite them again.",
+  not_found: "That team or request no longer exists.",
+  rate_limited:
+    "That's too many attempts in a short time. Wait a bit and try again.",
   unknown:
     "Something went wrong on our side and nothing was saved. Try again in a moment.",
 };
@@ -66,6 +72,20 @@ export function TeamProblem({ code }: { code: TeamProblemCode }) {
             Link GitHub on your account
           </Link>
           .
+        </>
+      )}
+      {code === "github_2fa_required" && (
+        <>
+          {" "}
+          <a
+            href="https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/configuring-two-factor-authentication"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            Set up two-factor authentication on GitHub
+          </a>
+          , then try again.
         </>
       )}
     </Callout>

@@ -1,4 +1,4 @@
-import type { createDb } from "@devdogsuga/drizzle";
+import type { createDb } from "@devdogsuga/db/server";
 import { and, eq, inArray, type SQL } from "drizzle-orm";
 import {
   buildings,

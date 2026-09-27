@@ -1,23 +1,22 @@
 {
-  "compilerOptions": {
-    /* Base Options */
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "target": "es2025",
-    "allowJs": true,
-    "resolveJsonModule": true,
-    "moduleDetection": "force",
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    /* Strictness */
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "checkJs": true,
-    /* Modules */
-    "lib": ["dom", "dom.iterable", "ES2025"],
-    "noEmit": true,
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "incremental": true
-  }
+  // Forwards to @devdogsuga/config's own base preset (packages/config in
+  // Backstage) rather than restating its options here. Kept as a thin
+  // repo-root file, not deleted, because several programs outside
+  // packages/*/tsconfig.json still extend it by this historical repo-relative
+  // path: apps/*/cloudflare/tsconfig.json, apps/sandbox/tsconfig.json,
+  // apps/study-group-finder/tsconfig.json (env.ts only), packages/supabase,
+  // packages/repo-checks, and supabase/tsconfig.json (env.ts only, invoked
+  // from packages/supabase's typecheck script). `packages/devtools` used to
+  // be in this list; it moved to Backstage in the devtools cutover and no
+  // longer lives in this repo at all. None of those is itself a
+  // published package that could extend "@devdogsuga/config/tsconfig/base.json"
+  // safely from every depth, so the repo-relative indirection stays.
+  //
+  // @devdogsuga/config's base additionally sets
+  // forceConsistentCasingInFileNames: true, which this file did not set
+  // before the cutover. Verified harmless here: the repo's filesystem is
+  // case-sensitive (Linux), so the option only rejects an import whose casing
+  // already disagrees with the file on disk -- something that would already
+  // be broken on this filesystem regardless of the option.
+  "extends": "@devdogsuga/config/tsconfig/base.json"
 }

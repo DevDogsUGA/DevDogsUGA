@@ -1,6 +1,7 @@
 import { type Config } from "drizzle-kit";
 
-// DB_URL is provided by dotenvx (see package.json db:* scripts).
+// DB_URL is supplied by `pnpm devtools db introspect --app <slug>`, which runs
+// this config with the session's database URL.
 
 export default {
   out: "./src/server/db/schema/generated",
