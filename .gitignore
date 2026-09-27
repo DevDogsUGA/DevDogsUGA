@@ -81,6 +81,8 @@ volumes/
 .claude
 .idea
 .mcp.json
+# the Playwright MCP's screenshots, snapshots and console logs
+.playwright-mcp/
 
 # agent instructions — local to each contributor's setup, not shared source
 AGENTS.md
