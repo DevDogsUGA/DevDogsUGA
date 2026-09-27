@@ -1,58 +1,17 @@
 # DevDogs Monorepo
 
-Every DevDogs project in one pnpm workspace: four apps, seven shared
-packages, and one Supabase Postgres database. Three of the apps own a Postgres
-schema each — `platform`, `schedule_builder`, `study_group_finder` — and
-Row-Level Security, not the schema boundary, is what isolates one app's data
-from another's. The fourth, `sandbox`, owns no schema: it is a Cloudflare Worker
-proxying each competition team's own Supabase project.
+DevDogs is the UGA student developer club running two competitions this year: pick your team's docs to get started.
 
-## Layout
-
-```
-apps/
-  platform/            Next.js — the DevDogs site, console, docs, and OAuth server
-  schedule-builder/    Next.js — course schedule planning
-  study-group-finder/  Flutter — study groups (scaffold)
-  sandbox/             Cloudflare Worker — the proxy in front of each team's Supabase project
-packages/
-  supabase/            @devdogsuga/supabase — Supabase client factories and generated types
-  devtools/            @devdogsuga/devtools — the `pnpm devtools` contributor CLI
-  env/                 @devdogsuga/env — the env-variable registry, and the `with-env` bin
-  docs-build/          @devdogsuga/docs-build — compiles docs/ into the site's page data
-  drizzle/             @devdogsuga/drizzle — the shared Drizzle client factory
-  email/               @devdogsuga/email — transactional email templates
-  config/              @devdogsuga/config — shared tsconfig/eslint/vitest presets
-supabase/              config.toml, migrations, and seeds — one history, every schema
-docs/                  Markdown for every project, rendered on the platform site
-```
+- [Schedule Builder](https://devdogsuga.org/docs/schedule-builder) — course schedule planning (Next.js)
+- [Study Group Finder](https://devdogsuga.org/docs/study-group-finder) — study groups (Flutter)
 
 ## Quickstart
 
 ```bash
-git clone https://github.com/DevDogsUGA/DevDogsUGA.git
-cd DevDogsUGA
-corepack enable && pnpm install
-pnpm devtools setup       # asks which projects you're on, writes your .env
-pnpm devtools db start    # boots the local Docker stack (no credentials); or `db connect <ref>` for a hosted project
-pnpm devtools db reset    # replays migrations, then seeds, then regenerates types
-pnpm dev                  # pick the app you set up — e.g. `pnpm dev --filter schedule-builder`
+git clone https://github.com/DevDogsUGA/DevDogsUGA.git && cd DevDogsUGA
+fnm install && npm install -g pnpm
+pnpm install
+pnpm devtools setup
 ```
 
-Prerequisites, the hosted-Supabase path, and what each step does:
-[Quickstart](docs/monorepo/guides/quickstart.md).
-
-## Docs
-
-| Page                                                        | What it covers                                                     |
-| ----------------------------------------------------------- | ------------------------------------------------------------------ |
-| [Monorepo](docs/monorepo/index.md)                          | Start here — which app owns what, and where to go next             |
-| [Quickstart](docs/monorepo/guides/quickstart.md)            | Clone to a running app                                             |
-| [Contributing](docs/monorepo/guides/contributing.md)        | Branch, pull request, the checks CI runs                           |
-| [Secrets and environments](docs/monorepo/guides/secrets.md) | Which env file is which, and how yours gets filled                 |
-| [Stack](docs/monorepo/stack/index.md)                       | Every technology, its pinned version, and where we depart from it  |
-| [Schedule Builder](docs/schedule-builder/index.md)          | Course schedule planning (Next.js) — start here if you're new      |
-| [Study Group Finder](docs/study-group-finder/index.md)      | The Flutter study-group app — start here if you're new             |
-| [Platform](docs/platform/index.md)                          | Shared auth server, site, and console — infra the others depend on |
-| [Sandbox](docs/sandbox/index.md)                            | Shared proxy Worker in front of each team's Supabase project       |
-| [Toolkit](docs/toolkit/index.md)                            | The shared packages, and the generated API reference               |
+Full docs: [devdogsuga.org/docs](https://devdogsuga.org/docs)

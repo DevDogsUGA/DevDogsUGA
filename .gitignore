@@ -82,6 +82,12 @@ volumes/
 .idea
 .mcp.json
 
+# agent instructions — local to each contributor's setup, not shared source
+AGENTS.md
+**/AGENTS.md
+CLAUDE.md
+**/CLAUDE.md
+
 # eslint
 /.eslintcache
 .idea/inspectionProfiles/Project_Default.xml

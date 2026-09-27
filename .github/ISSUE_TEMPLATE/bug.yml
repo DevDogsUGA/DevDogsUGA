@@ -1,0 +1,33 @@
+name: Bug report
+description: Something isn't working the way it should
+labels: [bug]
+body:
+  - type: dropdown
+    id: project
+    attributes:
+      label: Project
+      options:
+        - schedule-builder
+        - study-group-finder
+        - platform
+        - toolkit / infrastructure
+        - sandbox
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Logs, screenshots, or `pnpm devtools doctor --report` output

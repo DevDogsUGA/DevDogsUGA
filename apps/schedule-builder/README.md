@@ -3,7 +3,7 @@
 The DevDogs course schedule builder (branded "DogDays") — a
 Next.js app on the shared DevDogs Supabase project, owning the
 **`schedule_builder`** Postgres schema
-(`supabase/migrations/*_schedule_builder_init.sql`).
+(`supabase/migrations/<timestamp>_schedule_builder_<desc>.sql`).
 
 For monorepo setup, env handling, and the contribution workflow, see
 [Monorepo](../../docs/monorepo/index.md); project-facing docs are
