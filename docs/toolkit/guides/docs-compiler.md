@@ -52,11 +52,9 @@ warns and carries on.
 
 ## Running it
 
-This repo wraps both modes behind a caching layer — `docs/scripts/cached-build.ts`,
-run as `docs`' own `build` script (`tsx scripts/cached-build.ts`) — which
-fingerprints every markdown file, manifest, and TypeScript/Dart source the
-compiler would read, skips both `gen` and the bare compile when nothing
-changed, and otherwise runs them in order:
+`docs`' own `build` script is `docs-compiler build`, which runs `gen` and then
+the bare compile, and skips both when no markdown file, manifest, lockfile or
+generator source it would read has changed since the last successful build:
 
 ```bash
 pnpm --filter @devdogsuga/docs build          # cached: `docs-compiler gen && docs-compiler`

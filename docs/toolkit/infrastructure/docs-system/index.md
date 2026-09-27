@@ -11,7 +11,7 @@ Everything under `docs/` is compiled into the platform site at build time, so a 
 
 ## From markdown to page
 
-`docs/` is a workspace package — `@devdogsuga/docs` — holding markdown and a `package.json` and nothing else. Its build script (`tsx scripts/cached-build.ts`, a caching wrapper — see that file's own header) runs `docs-compiler`, the CLI from `@devdogsuga/docs-compiler`, a package published from the sibling Backstage repository. `docs-compiler` treats its working directory as the content root, walks it for `*.md`, parses each file, and emits `dist/index.js` plus a hand-written `dist/index.d.ts`. Emitting the declarations by hand rather than running `tsc` is what keeps the content package free of a TypeScript toolchain.
+`docs/` is a workspace package — `@devdogsuga/docs` — holding markdown and a `package.json` and nothing else. Its build script is `docs-compiler build`, from `@devdogsuga/docs-compiler`, a package published from the sibling Backstage repository. It skips the whole build when none of its inputs changed since the last one. Otherwise `docs-compiler` treats its working directory as the content root, walks it for `*.md`, parses each file, and emits `dist/index.js` plus a hand-written `dist/index.d.ts`. Emitting the declarations by hand rather than running `tsc` is what keeps the content package free of a TypeScript toolchain.
 
 Being a package is what makes the rest work. The platform depends on it, so pnpm's dependency-ordered recursive runs produce the artifact before `build`, `dev`, `typecheck`, `lint` or `test` runs against anything that needs it. There is no bespoke file watcher; see [Local preview](/docs/toolkit/infrastructure/docs-system/preview) for the manual re-run this takes instead.
 

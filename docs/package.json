@@ -11,19 +11,9 @@
     }
   },
   "scripts": {
-    "build": "tsx scripts/cached-build.ts",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "build": "docs-compiler build"
   },
   "dependencies": {
-    "@devdogsuga/docs-compiler": "^0.1.2"
-  },
-  "devDependencies": {
-    "@devdogsuga/config": "^0.1.1",
-    "@types/node": "catalog:",
-    "tsx": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "@devdogsuga/docs-compiler": "^0.1.3"
   }
 }
