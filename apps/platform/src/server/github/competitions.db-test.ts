@@ -52,7 +52,6 @@ const { db } = await import("~/server/db");
 const { competitions } = await import("~/server/db/schema");
 
 const GOOD_FIELDS: ProjectFieldConfig = {
-  titleField: { __typename: "ProjectV2Field", name: "Title", dataType: "TEXT" },
   plannedEndDateField: {
     __typename: "ProjectV2Field",
     name: "Judging/End Date",
@@ -68,7 +67,6 @@ function issue(
   overrides: Partial<RawProjectItemFields> = {},
 ): RawProjectItemFields {
   return {
-    titleValue: null,
     plannedEndDateValue: null,
     content: {
       __typename: "Issue",
@@ -178,7 +176,10 @@ describe("ingestCompetitionItem", () => {
 
   it("keeps the slug stable across a title change", async () => {
     const item = issue("I_dbtest_slug", 103, {
-      titleValue: { text: "Original Title" },
+      content: {
+        ...issue("I_dbtest_slug", 103).content!,
+        title: "Original Title",
+      },
     });
     await ingestCompetitionItem("PVTI_3", db, {
       projectItem: () => Promise.resolve({ project: GOOD_PROJECT, item }),
@@ -190,7 +191,10 @@ describe("ingestCompetitionItem", () => {
       projectItem: () =>
         Promise.resolve({
           project: GOOD_PROJECT,
-          item: { ...item, titleValue: { text: "Renamed Title" } },
+          item: {
+            ...item,
+            content: { ...item.content!, title: "Renamed Title" },
+          },
         }),
       projectItems: unreachableProjectItems,
     });
@@ -228,7 +232,7 @@ describe("ingestCompetitionItem", () => {
       projectItem: () =>
         Promise.resolve({
           project: GOOD_PROJECT,
-          item: { titleValue: null, plannedEndDateValue: null, content: null },
+          item: { plannedEndDateValue: null, content: null },
         }),
       projectItems: unreachableProjectItems,
     };
@@ -262,7 +266,7 @@ describe("ingestCompetitionItem", () => {
         Promise.resolve({
           project: {
             ...GOOD_PROJECT,
-            titleField: { __typename: "ProjectV2SingleSelectField" },
+            plannedEndDateField: { __typename: "ProjectV2SingleSelectField" },
           },
           item: issue("I_dbtest_drift", 106),
         }),
@@ -275,24 +279,27 @@ describe("ingestCompetitionItem", () => {
     expect(alerts.postAlert).toHaveBeenCalledOnce();
     expect(alerts.postAlert).toHaveBeenCalledWith(
       expect.stringMatching(/no longer matches the expected shape/),
-      expect.arrayContaining([expect.stringMatching(/Title/)]),
+      expect.arrayContaining([expect.stringMatching(/Judging\/End Date/)]),
       expect.any(String),
     );
   });
 
   it("skips and alerts, rather than throwing, on a title over the column's length cap", async () => {
-    // A real GitHub issue title (up to 256 characters) or Project "Title"
-    // field value can exceed the `competitions_title_length` check
-    // constraint's 160-character cap -- nothing upstream of that constraint
-    // enforces one. This has to be caught before the write, not surfaced as
-    // an unhandled webhook 500 GitHub would just retry forever.
+    // A real GitHub issue title can run up to 256 characters -- nothing
+    // upstream of the `competitions_title_length` check constraint's
+    // 160-character cap enforces one. This has to be caught before the
+    // write, not surfaced as an unhandled webhook 500 GitHub would just
+    // retry forever.
     alerts.postAlert.mockClear();
     const client: CompetitionsGithubClient = {
       projectItem: () =>
         Promise.resolve({
           project: GOOD_PROJECT,
           item: issue("I_dbtest_long_title", 107, {
-            titleValue: { text: "T".repeat(200) },
+            content: {
+              ...issue("I_dbtest_long_title", 107).content!,
+              title: "T".repeat(200),
+            },
           }),
         }),
       projectItems: unreachableProjectItems,
@@ -321,7 +328,7 @@ describe("reconcileCompetitions", () => {
           items: [
             issue("I_dbtest_page_a", 201),
             // Still a draft -- no content.
-            { titleValue: null, plannedEndDateValue: null, content: null },
+            { plannedEndDateValue: null, content: null },
             issue("I_dbtest_page_b", 202, {
               content: {
                 ...issue("I_dbtest_page_b", 202).content!,
@@ -355,7 +362,7 @@ describe("reconcileCompetitions", () => {
       projectItem: unreachableProjectItem,
       projectItems: () =>
         Promise.resolve({
-          fields: { titleField: null, plannedEndDateField: null },
+          fields: { plannedEndDateField: null },
           items: [issue("I_dbtest_page_drift", 203)],
         }),
     };
@@ -377,7 +384,10 @@ describe("reconcileCompetitions", () => {
           fields: GOOD_FIELDS,
           items: [
             issue("I_dbtest_page_bad_title", 204, {
-              titleValue: { text: "T".repeat(200) },
+              content: {
+                ...issue("I_dbtest_page_bad_title", 204).content!,
+                title: "T".repeat(200),
+              },
             }),
             issue("I_dbtest_page_after", 205),
           ],

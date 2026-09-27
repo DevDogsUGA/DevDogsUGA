@@ -5,13 +5,6 @@ query CompetitionProjectItem($itemId: ID!) {
 
       project {
         id
-        titleField: field(name: "Title") {
-          __typename
-          ... on ProjectV2Field {
-            name
-            dataType
-          }
-        }
         plannedEndDateField: field(name: "Judging/End Date") {
           __typename
           ... on ProjectV2Field {
@@ -21,11 +14,6 @@ query CompetitionProjectItem($itemId: ID!) {
         }
       }
 
-      titleValue: fieldValueByName(name: "Title") {
-        ... on ProjectV2ItemFieldTextValue {
-          text
-        }
-      }
       plannedEndDateValue: fieldValueByName(name: "Judging/End Date") {
         ... on ProjectV2ItemFieldDateValue {
           date

@@ -25,9 +25,12 @@ import {
  *
  * A competition's source of truth is a draft item in the private
  * "Competitions" GitHub Project (`env.GH_COMPETITIONS_PROJECT_ID`),
- * authored with two custom fields -- "Title" (text) and "Judging/End Date"
- * (date, display-only) -- and a markdown body that becomes the brief.
- * Converting the draft into a real issue in `GITHUB_ORG/GITHUB_COMPETITION_REPO`
+ * authored with one custom field -- "Judging/End Date" (date, display-only)
+ * -- and a markdown body that becomes the brief. Its title is the draft's own
+ * title: GitHub Projects v2 already has a BUILT-IN "Title" field
+ * (`ProjectV2FieldType.TITLE`), so there is no custom field to add for it,
+ * and none of this module's GraphQL reads a "Title" field by name. Converting
+ * the draft into a real issue in `GITHUB_ORG/GITHUB_COMPETITION_REPO`
  * is KICKOFF, and that conversion is the only thing that makes a Project item
  * a competition this table knows about: a still-draft item has no row, and
  * this module never creates one for it. That is also the membership test the
@@ -56,16 +59,16 @@ import {
  *
  * ## Project-shape drift
  *
- * `checkProjectShape` is this module's `verifyBase`: the Project's "Title"
- * and "Judging/End Date" fields are read by NAME, and GraphQL returns null
- * for a name that does not resolve to a field just as happily as it returns
- * null for a field with no value set on one item -- the two are
- * indistinguishable from an item-level read alone. So the field CONFIG is
- * checked separately, once per Project (not per item), and a missing or
- * retyped field is reported to Sentry and the run for that item (or every
- * item, when the reconcile catches it at the top of a page) is skipped
- * rather than applied with a guessed value. Never partially applied, the
- * same rule `server/config/reconcile.ts` follows for config-as-code.
+ * `checkProjectShape` is this module's `verifyBase`: the Project's
+ * "Judging/End Date" field is read by NAME, and GraphQL returns null for a
+ * name that does not resolve to a field just as happily as it returns null
+ * for a field with no value set on one item -- the two are indistinguishable
+ * from an item-level read alone. So the field CONFIG is checked separately,
+ * once per Project (not per item), and a missing or retyped field is
+ * reported to Sentry and the run for that item (or every item, when the
+ * reconcile catches it at the top of a page) is skipped rather than applied
+ * with a guessed value. Never partially applied, the same rule
+ * `server/config/reconcile.ts` follows for config-as-code.
  *
  * ## `deleted` / `archived` project items
  *
@@ -181,7 +184,6 @@ function liveGithubClient(): CompetitionsGithubClient {
             ? null
             : {
                 id: project.id,
-                titleField: project.titleField,
                 plannedEndDateField: project.plannedEndDateField,
               },
         item,
@@ -207,7 +209,6 @@ function liveGithubClient(): CompetitionsGithubClient {
         );
         if (result.node === null) return null;
         fields ??= {
-          titleField: result.node.titleField,
           plannedEndDateField: result.node.plannedEndDateField,
         };
         for (const { id: _id, ...rest } of result.node.items.nodes) {
@@ -228,12 +229,13 @@ function liveGithubClient(): CompetitionsGithubClient {
  * Mirrors the migration's `competitions_title_length` check constraint
  * (`supabase/migrations/20260829040000_11_platform_events_core.sql`).
  * `parseProjectItem` has no length opinion -- a GitHub issue title allows up
- * to 256 characters and the Project's free-text "Title" field enforces
- * nothing -- so an ordinary issue can genuinely exceed what this table's
- * heading is allowed to hold. Checked here, before the write that would
- * otherwise be the first and only place to learn that.
+ * to 256 characters -- so an ordinary issue can genuinely exceed what this
+ * table's heading is allowed to hold. Checked here, before the write that
+ * would otherwise be the first and only place to learn that. Exported so
+ * `competitionEvents.ts`'s `issues.edited` handler can apply the same cap
+ * to a title update rather than duplicating the number.
  */
-const COMPETITION_TITLE_MAX_LENGTH = 160;
+export const COMPETITION_TITLE_MAX_LENGTH = 160;
 
 export interface ApplyReport {
   upserted: number;
@@ -293,7 +295,7 @@ async function applyItem(
         `${outcome.competition.repo}#${outcome.competition.issueNumber}: ` +
           (error instanceof Error ? error.message : String(error)),
       ],
-      "That item was skipped; every other item in this run still applied. Fix the issue (or its Project 'Title' field) and this will pick back up on the next webhook delivery or nightly reconcile.",
+      "That item was skipped; every other item in this run still applied. Fix the issue's title and this will pick back up on the next webhook delivery or nightly reconcile.",
     );
   }
 }

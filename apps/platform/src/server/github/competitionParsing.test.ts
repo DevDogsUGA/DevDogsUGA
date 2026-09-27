@@ -21,45 +21,18 @@ import type { RawFieldConfig, RawProjectItemFields } from "./queries";
  * `competitions.db-test.ts` instead.
  */
 
-const TEXT_FIELD: RawFieldConfig = {
-  __typename: "ProjectV2Field",
-  name: "Title",
-  dataType: "TEXT",
-};
 const DATE_FIELD: RawFieldConfig = {
   __typename: "ProjectV2Field",
   name: "Judging/End Date",
   dataType: "DATE",
 };
 const GOOD_FIELDS: ProjectFieldConfig = {
-  titleField: TEXT_FIELD,
   plannedEndDateField: DATE_FIELD,
 };
 
 describe("checkProjectShape", () => {
-  it("passes a Project whose fields match by name and type", () => {
+  it("passes a Project whose field matches by name and type", () => {
     expect(checkProjectShape(GOOD_FIELDS)).toEqual([]);
-  });
-
-  it("reports a missing title field", () => {
-    const findings = checkProjectShape({
-      ...GOOD_FIELDS,
-      titleField: null,
-    });
-    expect(findings).toHaveLength(1);
-    expect(findings[0]).toMatch(/"Title".*missing/);
-  });
-
-  it("reports a title field retyped to a single-select", () => {
-    const findings = checkProjectShape({
-      ...GOOD_FIELDS,
-      titleField: {
-        __typename: "ProjectV2SingleSelectField",
-        name: "Title",
-      },
-    });
-    expect(findings).toHaveLength(1);
-    expect(findings[0]).toMatch(/"Title".*not a text field/);
   });
 
   it("reports a missing planned end date field", () => {
@@ -79,12 +52,6 @@ describe("checkProjectShape", () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatch(/"Judging\/End Date".*not a date field/);
   });
-
-  it("reports both fields at once, never just the first", () => {
-    expect(
-      checkProjectShape({ titleField: null, plannedEndDateField: null }),
-    ).toHaveLength(2);
-  });
 });
 
 const REPO = "DevDogsUGA/DevDogsUGA";
@@ -93,13 +60,12 @@ function issueItem(
   overrides: Partial<RawProjectItemFields["content"]> = {},
 ): RawProjectItemFields {
   return {
-    titleValue: { text: "  Recreate Pong  " },
     plannedEndDateValue: { date: "2026-10-05" },
     content: {
       __typename: "Issue",
       id: "I_kwDOissue1",
       number: 42,
-      title: "Recreate Pong (issue title)",
+      title: "Recreate Pong",
       body: "Build the classic in your framework of choice.",
       url: "https://github.com/DevDogsUGA/DevDogsUGA/issues/42",
       createdAt: "2026-09-20T18:05:00Z",
@@ -120,33 +86,12 @@ describe("parseProjectItem", () => {
       issueNumber: 42,
       repo: REPO,
       url: "https://github.com/DevDogsUGA/DevDogsUGA/issues/42",
-      // The Project's Title field, trimmed -- not the issue's own title.
       title: "Recreate Pong",
       brief: "Build the classic in your framework of choice.",
       plannedEndAt: new Date("2026-10-05T00:00:00Z"),
       kickedOffAt: new Date("2026-09-20T18:05:00Z"),
       closedAt: null,
     });
-  });
-
-  it("falls back to the issue's own title when the Title field is unset", () => {
-    const outcome = parseProjectItem(
-      { ...issueItem(), titleValue: null },
-      REPO,
-    );
-    expect(outcome.kind).toBe("competition");
-    if (outcome.kind !== "competition") return;
-    expect(outcome.competition.title).toBe("Recreate Pong (issue title)");
-  });
-
-  it("falls back to the issue's own title when the Title field is blank", () => {
-    const outcome = parseProjectItem(
-      { ...issueItem(), titleValue: { text: "   " } },
-      REPO,
-    );
-    expect(outcome.kind).toBe("competition");
-    if (outcome.kind !== "competition") return;
-    expect(outcome.competition.title).toBe("Recreate Pong (issue title)");
   });
 
   it("leaves plannedEndAt null when the date field is unset", () => {

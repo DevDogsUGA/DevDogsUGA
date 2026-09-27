@@ -18,8 +18,9 @@ import { competitions } from "~/server/db/schema";
 export interface CompetitionHeader {
   id: string;
   slug: string;
-  /** From the Project's "Title" field, falling back to the issue's own
-   *  title. Never null -- see the migration's comment on the column. */
+  /** The converted issue's own title -- GitHub Projects v2 has no custom
+   *  "Title" field to read instead (it owns a BUILT-IN one of that name).
+   *  Never null -- see the migration's comment on the column. */
   title: string;
   /** The issue body, markdown. Render with `DocsMarkdown`, never as plain
    *  text: officers write this expecting headings, links and code blocks. */

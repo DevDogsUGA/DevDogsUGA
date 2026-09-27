@@ -18,9 +18,11 @@ exported functions, see the generated
 ## How an officer runs one
 
 1. **Create a draft item** in the private "Competitions" GitHub Project (a
-   Projects v2 board, org-level). Fill in its "Title" field and, optionally,
-   "Judging/End Date" — display-only, never a deadline the platform enforces.
-   Write the brief as the draft item's own body, in markdown.
+   Projects v2 board, org-level). Its own title (every Project item has one —
+   GitHub's built-in field, not a custom one) becomes the competition's title
+   once it converts. Optionally fill in "Judging/End Date" — display-only,
+   never a deadline the platform enforces. Write the brief as the draft
+   item's own body, in markdown.
 2. **Convert the draft into a real issue** in `GITHUB_ORG/GITHUB_COMPETITION_REPO`
    (GitHub's own "Convert to issue" action on the item). This is **kickoff**.
    The platform mirrors the new issue into `platform.competitions` within
@@ -44,26 +46,38 @@ exported functions, see the generated
    is over" — `competitions."closedAt"`, set by the `issues` webhook the
    moment GitHub reports the close, or by the nightly reconcile.
 
-## Two custom fields, read by name
+## One custom field, read by name
 
-The Project needs exactly two custom fields, **"Title"** (text) and
-**"Judging/End Date"** (date) — the names matter, because
-`server/github/competitions.ts` reads GraphQL fields by name, not by id.
-Renaming either field, deleting it, or retyping it (a single-select "Title",
-say) is **Project-shape drift**: the ingestion refuses to guess at a missing
-or retyped field, reports the drift to Sentry (the same channel Airtable's
-`verifyBase` used to alert through, before Airtable stopped being competitions'
-CMS), and skips the item it was reading rather than applying a half-parsed
-row. The next successful webhook delivery or nightly reconcile picks up right
-where the drift left off, once the field is fixed.
+The Project needs exactly one custom field, **"Judging/End Date"** (date) —
+the name matters, because `server/github/competitions.ts` reads it by name,
+not by id. There is deliberately no custom "Title" field: GitHub Projects v2
+already has a BUILT-IN field of that name (`ProjectV2FieldType.TITLE`), a
+custom field can only be DATE/ITERATION/MULTI_SELECT/NUMBER/SINGLE_SELECT/TEXT
+— never TITLE — so a custom "Title" field cannot exist, and a competition's
+title is simply the converted issue's own title. Renaming "Judging/End Date",
+deleting it, or retyping it (a single-select, say) is **Project-shape
+drift**: the ingestion refuses to guess at a missing or retyped field,
+reports the drift to Sentry (the same channel Airtable's `verifyBase` used to
+alert through, before Airtable stopped being competitions' CMS), and skips
+the item it was reading rather than applying a half-parsed row. The next
+successful webhook delivery or nightly reconcile picks up right where the
+drift left off, once the field is fixed.
+
+The Project also carries fields the platform never reads, kept for the
+Roadmap view only: **"Project"** (single-select, which DevDogs project the
+competition belongs to) and **"Start Date"** (date, planned kickoff) — the
+Roadmap plots each item from Start Date to Judging/End Date. Likewise, a
+converted issue gets the org-level issue type **"Competition"** for humans
+browsing the repo's issue list; the platform never reads it. Board membership
+— the item having gone through this Project at all — remains the only test
+this platform runs.
 
 ## What the platform mirrors, and what it does not
 
 `platform.competitions` carries the issue's node id (unique — the identity
 every write keys on), number, repo, url, a **slug** derived from the title
-and issue number for the platform's own URLs, the **title** (the Project's
-"Title" field, falling back to the issue's own title when that field is
-empty), the **brief** (the issue body, markdown), `plannedEndAt`
+and issue number for the platform's own URLs, the **title** (the converted
+issue's own title), the **brief** (the issue body, markdown), `plannedEndAt`
 (display-only), `kickedOffAt` (when the draft converted), `closedAt`, and
 `githubSyncedAt` (freshness, mirroring `teams."githubSyncedAt"`'s role).
 
@@ -111,11 +125,11 @@ mirror.
 
 Two things only Sloan can do:
 
-- **Create the "Competitions" Project** with its two custom fields, note its
-  GraphQL node id (`gh project view <number> --owner DevDogsUGA --format json
---jq .id`), and set `GH_COMPETITIONS_PROJECT_ID`. Unset, ingestion is a
-  logged no-op — the platform boots without a Project configured, the same
-  contract the Airtable integration used to have.
+- **Create the "Competitions" Project** with its "Judging/End Date" custom
+  field, note its GraphQL node id (`gh project view <number> --owner
+DevDogsUGA --format json --jq .id`), and set `GH_COMPETITIONS_PROJECT_ID`.
+  Unset, ingestion is a logged no-op — the platform boots without a Project
+  configured, the same contract the Airtable integration used to have.
 - **Enable the `projects_v2_item`, `issues` and `pull_request` webhooks**,
   and grant the GitHub App org-level Projects **read** permission — without
   it, GraphQL reads against the Project fail even with the node id

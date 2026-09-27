@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 import type { db } from "~/server/db";
 import { competitions } from "~/server/db/schema";
-import { ingestCompetitionItem } from "./competitions";
+import {
+  COMPETITION_TITLE_MAX_LENGTH,
+  ingestCompetitionItem,
+} from "./competitions";
 
 /**
  * The live half of the competitions mirror: two GitHub event types, wired
@@ -19,12 +22,13 @@ import { ingestCompetitionItem } from "./competitions";
  * ONLY for an issue this table already mirrors -- membership was already
  * proven the moment that row was created, through the `projects_v2_item`
  * path, and an `issues` payload carries no Project information at all to
- * re-prove it with. `edited` updates the brief (the issue body) and
- * deliberately leaves `title` alone: this table's title prefers the
- * Project's "Title" field over the issue's own, and an `issues` payload has
- * no way to say which one changed, so trusting it would risk silently
- * clobbering an officer's Project-field title with the issue's raw one.
- * `opened` is not handled: an issue "opens" the moment a draft converts,
+ * re-prove it with. `edited` updates the brief (the issue body) and the
+ * title (the issue's own -- there is no Project field to prefer over it, see
+ * `competitions.ts`'s header), guarded by the same `COMPETITION_TITLE_MAX_LENGTH`
+ * cap `competitions.ts` enforces on ingest: an over-length title is left
+ * unchanged here rather than failing the write, since GitHub allows issue
+ * titles this table's column cannot hold. `opened` is not handled: an issue
+ * "opens" the moment a draft converts,
  * which the `projects_v2_item.converted` delivery for the SAME event already
  * covers, matching this file's own kickoff path rather than a second one.
  */
@@ -55,6 +59,7 @@ export interface CompetitionIssueEventPayload {
   action: string;
   issue: {
     node_id: string;
+    title: string;
     body: string | null;
     closed_at: string | null;
   };
@@ -99,9 +104,23 @@ export async function handleCompetitionIssueEvent(
       .set({ closedAt: null, githubSyncedAt: new Date() })
       .where(eq(competitions.id, row.id));
   } else {
+    // The title rides along with the brief on every `edited` delivery, but
+    // capped the same way `competitions.ts`'s `applyItem` caps a freshly
+    // ingested one: GitHub allows issue titles up to 256 characters, 96 more
+    // than the `competitions_title_length` check constraint permits, and an
+    // officer editing the body is not expecting an over-length title (of
+    // theirs, typed before this table existed, or after) to suddenly fail
+    // the webhook. Left unchanged rather than truncated -- guessing at a cut
+    // point is worse than leaving the previous, still-valid title in place.
     await database
       .update(competitions)
-      .set({ brief: payload.issue.body, githubSyncedAt: new Date() })
+      .set({
+        brief: payload.issue.body,
+        ...(payload.issue.title.length <= COMPETITION_TITLE_MAX_LENGTH
+          ? { title: payload.issue.title }
+          : {}),
+        githubSyncedAt: new Date(),
+      })
       .where(eq(competitions.id, row.id));
   }
 }

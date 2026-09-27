@@ -2,13 +2,6 @@ query CompetitionsProjectItems($projectId: ID!, $cursor: String) {
   node(id: $projectId) {
     ... on ProjectV2 {
       id
-      titleField: field(name: "Title") {
-        __typename
-        ... on ProjectV2Field {
-          name
-          dataType
-        }
-      }
       plannedEndDateField: field(name: "Judging/End Date") {
         __typename
         ... on ProjectV2Field {
@@ -25,11 +18,6 @@ query CompetitionsProjectItems($projectId: ID!, $cursor: String) {
         nodes {
           id
 
-          titleValue: fieldValueByName(name: "Title") {
-            ... on ProjectV2ItemFieldTextValue {
-              text
-            }
-          }
           plannedEndDateValue: fieldValueByName(name: "Judging/End Date") {
             ... on ProjectV2ItemFieldDateValue {
               date

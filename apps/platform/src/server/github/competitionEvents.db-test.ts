@@ -57,6 +57,7 @@ describe("handleCompetitionIssueEvent", () => {
       action: "closed",
       issue: {
         node_id: ISSUE_NODE_ID,
+        title: "Events DB Test Competition",
         body: "Original brief.",
         closed_at: "2026-09-28T12:00:00Z",
       },
@@ -71,6 +72,7 @@ describe("handleCompetitionIssueEvent", () => {
       action: "closed",
       issue: {
         node_id: ISSUE_NODE_ID,
+        title: "Events DB Test Competition",
         body: "Original brief.",
         closed_at: null,
       },
@@ -89,6 +91,7 @@ describe("handleCompetitionIssueEvent", () => {
       action: "reopened",
       issue: {
         node_id: ISSUE_NODE_ID,
+        title: "Events DB Test Competition",
         body: "Original brief.",
         closed_at: null,
       },
@@ -96,17 +99,38 @@ describe("handleCompetitionIssueEvent", () => {
     expect((await currentRow())?.closedAt).toBeNull();
   });
 
-  it("updates only the brief on 'edited', leaving title untouched", async () => {
+  it("updates the brief and the title on 'edited'", async () => {
     await handleCompetitionIssueEvent(db, {
       action: "edited",
       issue: {
         node_id: ISSUE_NODE_ID,
+        title: "Renamed Events DB Test Competition",
         body: "Updated brief from the issue body.",
         closed_at: null,
       },
     });
     const row = await currentRow();
     expect(row?.brief).toBe("Updated brief from the issue body.");
+    expect(row?.title).toBe("Renamed Events DB Test Competition");
+  });
+
+  it("leaves the title unchanged on 'edited' when the new title is over the column's length cap", async () => {
+    // Same cap `competitions.ts`'s `applyItem` enforces on ingest
+    // (`COMPETITION_TITLE_MAX_LENGTH`, the `competitions_title_length` check
+    // constraint) -- an officer editing an already-mirrored issue should not
+    // have the whole webhook fail because the new title is too long, so the
+    // brief still lands and the title is simply left as it was.
+    await handleCompetitionIssueEvent(db, {
+      action: "edited",
+      issue: {
+        node_id: ISSUE_NODE_ID,
+        title: "T".repeat(200),
+        body: "Updated brief, title too long to keep.",
+        closed_at: null,
+      },
+    });
+    const row = await currentRow();
+    expect(row?.brief).toBe("Updated brief, title too long to keep.");
     expect(row?.title).toBe("Events DB Test Competition");
   });
 
@@ -115,6 +139,7 @@ describe("handleCompetitionIssueEvent", () => {
       action: "assigned",
       issue: {
         node_id: ISSUE_NODE_ID,
+        title: "Should not land.",
         body: "Should not land.",
         closed_at: "2026-09-28T12:00:00Z",
       },
@@ -133,6 +158,7 @@ describe("handleCompetitionIssueEvent", () => {
         action: "closed",
         issue: {
           node_id: "I_dbtest_events_unmirrored",
+          title: "Unmirrored",
           body: null,
           closed_at: "2026-09-28T12:00:00Z",
         },

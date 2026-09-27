@@ -36,7 +36,7 @@ export { default as ClosedIssues } from "./ClosedIssues.gql?raw";
 //
 // See `server/github/competitions.ts` for the ingestion these back. Both
 // queries select the SAME per-item shape (field config on the Project, this
-// item's two field VALUES, and its content narrowed to `Issue`) because the
+// item's one field VALUE, and its content narrowed to `Issue`) because the
 // single-item query is what a webhook fetches after a `projects_v2_item`
 // delivery names one item, and the paginated query is what the nightly
 // reconcile fetches for every item at once; `parseProjectItem` in
@@ -44,10 +44,11 @@ export { default as ClosedIssues } from "./ClosedIssues.gql?raw";
 // cannot drift on what counts as a valid competition.
 
 /** A GraphQL project field, narrowed to the plain (non-select, non-iteration)
- *  shape `ProjectV2Field` is -- text and date fields both take this shape,
- *  distinguished by `dataType`. Null means the field does not exist on the
- *  Project at all, or exists as a different field type (a single-select
- *  "Title", say) -- both are Project-shape drift. */
+ *  shape `ProjectV2Field` is -- the one custom field this module reads,
+ *  "Judging/End Date", takes this shape, distinguished by `dataType: "DATE"`.
+ *  Null means the field does not exist on the Project at all, or exists as a
+ *  different field type (a single-select "Judging/End Date", say) -- both
+ *  are Project-shape drift. */
 export interface RawFieldConfig {
   __typename: string;
   name?: string;
@@ -73,7 +74,6 @@ export interface RawIssueContent {
 
 /** The one item shape both competition queries resolve to. */
 export interface RawProjectItemFields {
-  titleValue: { text: string } | null;
   plannedEndDateValue: { date: string } | null;
   content: RawIssueContent | null;
 }
@@ -85,7 +85,6 @@ export interface CompetitionProjectItemResult {
         id: string;
         project: null | {
           id: string;
-          titleField: RawFieldConfig | null;
           plannedEndDateField: RawFieldConfig | null;
         };
       } & RawProjectItemFields);
@@ -96,7 +95,6 @@ export { default as CompetitionProjectItem } from "./CompetitionProjectItem.gql?
 export interface CompetitionsProjectItemsResult {
   node: null | {
     id: string;
-    titleField: RawFieldConfig | null;
     plannedEndDateField: RawFieldConfig | null;
     items: {
       pageInfo: { hasNextPage: boolean; endCursor: string | null };

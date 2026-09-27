@@ -15,7 +15,6 @@ import type { RawFieldConfig, RawProjectItemFields } from "./queries";
  * and nightly-reconcile triggers -- none of which lives here.
  */
 
-const TITLE_FIELD_NAME = "Title";
 const PLANNED_END_DATE_FIELD_NAME = "Judging/End Date";
 
 export interface ParsedCompetition {
@@ -31,15 +30,15 @@ export interface ParsedCompetition {
 }
 
 export interface ProjectFieldConfig {
-  titleField: RawFieldConfig | null;
   plannedEndDateField: RawFieldConfig | null;
 }
 
 /**
- * A plain, single-select-free field of the right type -- text for "Title",
- * date for "Judging/End Date". `ProjectV2Field` is GraphQL's shape for both;
- * `dataType` is what tells them apart. Anything else (missing, a
- * single-select, an iteration, the wrong `dataType`) is drift.
+ * A plain, single-select-free date field -- "Judging/End Date", the one
+ * custom field this module still validates. `ProjectV2Field` is GraphQL's
+ * shape for it; `dataType` is what confirms it is really a date. Anything
+ * else (missing, a single-select, an iteration, the wrong `dataType`) is
+ * drift.
  */
 function fieldMatches(field: RawFieldConfig | null, dataType: string): boolean {
   return (
@@ -60,11 +59,6 @@ function fieldMatches(field: RawFieldConfig | null, dataType: string): boolean {
  */
 export function checkProjectShape(fields: ProjectFieldConfig): string[] {
   const findings: string[] = [];
-  if (!fieldMatches(fields.titleField, "TEXT")) {
-    findings.push(
-      `"${TITLE_FIELD_NAME}" field is missing or is not a text field (found: ${fields.titleField?.dataType ?? fields.titleField?.__typename ?? "missing"})`,
-    );
-  }
   if (!fieldMatches(fields.plannedEndDateField, "DATE")) {
     findings.push(
       `"${PLANNED_END_DATE_FIELD_NAME}" field is missing or is not a date field (found: ${fields.plannedEndDateField?.dataType ?? fields.plannedEndDateField?.__typename ?? "missing"})`,
@@ -108,18 +102,13 @@ export function parseProjectItem(
     return { kind: "wrong_repo" };
   }
 
-  // An `if`, not `??` or `||`: an officer can type nothing but spaces into a
-  // GitHub Project text field, and GraphQL hands that back as a non-null,
-  // non-empty-until-trimmed string, so `titleValue?.text.trim()` can itself
-  // be an empty string, not just `undefined`. Both operators treat those
-  // differently (`??` keeps the empty string, `||` and this codebase's lint
-  // config disagree on how to fall back on one), so the empty case is
-  // spelled out rather than folded into either.
-  let title = content.title;
-  const titleFieldValue = item.titleValue?.text.trim();
-  if (titleFieldValue) {
-    title = titleFieldValue;
-  }
+  // The issue's own title, full stop. A custom Project field named "Title"
+  // cannot exist -- GitHub Projects v2 already has a BUILT-IN field of that
+  // name (`ProjectV2FieldType.TITLE`), so `field(name: "Title")` always
+  // resolves to it rather than to any custom field an officer tries to add,
+  // and a custom field can only be DATE/ITERATION/MULTI_SELECT/NUMBER/
+  // SINGLE_SELECT/TEXT -- never TITLE. There is nothing else to read here.
+  const title = content.title;
   const plannedEndAt =
     item.plannedEndDateValue === null
       ? null
