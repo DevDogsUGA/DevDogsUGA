@@ -24,9 +24,7 @@ docs-compiler gen [--dry-run]    # regenerate the API reference from source
 Those are the CLI's modes, not lines to paste. The bin is linked into
 `docs/node_modules/.bin` and nowhere else, so typing the bare name gets you
 `command not found` — see [Running it](#running-it) below for the forms that
-work. Its own log lines still print the bracketed tag `[docs-build]`, a
-holdover from the package's name before the Backstage carve-out; the binary
-and the package are `docs-compiler`, only that one string did not get renamed.
+work.
 
 **Bare** takes no arguments and never will. The working directory is the content
 root; the output is `dist/index.js` plus `dist/index.d.ts`, a typed data module

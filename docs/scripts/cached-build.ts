@@ -245,7 +245,7 @@ export function main(): void {
     const cached = readCache(cacheFile);
     if (cached?.signature === signature) {
       console.log(
-        `[docs-build:cache] ${entries.length} input(s) unchanged since ${cached.builtAt} — skipping docs-compiler`,
+        `[docs-compiler:cache] ${entries.length} input(s) unchanged since ${cached.builtAt} — skipping docs-compiler`,
       );
       return;
     }

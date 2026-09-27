@@ -1,4 +1,4 @@
-// The Dart half of `docs-build gen`. Everything else the generator documents is
+// The Dart half of `docs-compiler gen`. Everything else the generator documents is
 // TypeScript, which it reads in-process with the TS compiler API; there is no
 // equivalent for Dart from Node, so this script runs under the Flutter SDK's
 // own analyzer and hands the result across as JSON. The shape it writes is a
