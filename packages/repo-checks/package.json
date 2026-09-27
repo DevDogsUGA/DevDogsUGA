@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.1",
-    "@devdogsuga/devtools": "0.1.6",
+    "@devdogsuga/devtools": "0.1.7",
     "@devdogsuga/env": "^0.1.1",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
