@@ -1,16 +1,22 @@
 ---
-name: Getting Started
-description: What a member needs to enter a feature competition — signing in, linking GitHub, forming or joining a team, and opening the entry pull request.
-order: 1
+name: Entering a competition
+description: What a member needs to enter a feature competition — signing in, linking GitHub, the 2FA gate, forming or joining a team, and opening the entry pull request.
+order: 2
+section: getting-started
 ---
 
-# Getting Started
+# Entering a competition
 
-This is the path from "I want to enter" to an open pull request, for a member entering a feature competition. Each step links to the guide that covers its mechanics in depth; this page is only the order they happen in.
+This is the path from "I want to enter" to an open pull request, for a member
+entering a feature competition. It does not need a running dev server or a
+database unless the competition brief says so — see
+[Getting started](/docs/platform/getting-started) for that, if it does. Each
+step below links to the guide that covers its mechanics in depth; this page
+is only the order they happen in.
 
 ## 1. Sign in
 
-[devdogsuga.org](https://devdogsuga.org) signs you in with your UGA Google account — the "Sign In" button redirects to Google OAuth restricted to `@uga.edu`. There is no separate DevDogs password.
+[devdogsuga.org](https://devdogsuga.org) signs you in with your UGA Google account — the "Sign In" button redirects to Google OAuth restricted to `@uga.edu`. There is no separate DevDogs password. This is a different thing from [Sign in with DevDogs](/docs/platform/guides/identity/oauth), which is the platform _issuing_ identity to other apps, not the way you sign in here.
 
 ## 2. Link GitHub
 
@@ -37,10 +43,11 @@ You can be active on up to two teams at once, and a team caps out at four member
 ```bash
 git clone https://github.com/DevDogsUGA/DevDogsUGA.git
 cd DevDogsUGA
-corepack enable && pnpm install
+npm install -g pnpm
+pnpm install
 ```
 
-Every workspace dependency, including the shared `@devdogsuga/*` packages, resolves from the install — there is no sibling repository to check out alongside this one. See [Quickstart](/docs/monorepo/guides/quickstart) if you also need a running dev server and a database; entering a competition does not require either unless the brief does.
+Every workspace dependency, including the shared `@devdogsuga/*` packages, resolves from the install — there is no sibling repository to check out alongside this one. See [Getting started](/docs/platform/getting-started) if you also need a running dev server and a database; entering a competition does not require either unless the brief does.
 
 ## 5. Push to your team's branch
 
@@ -61,9 +68,12 @@ Open a pull request from `team/<slug>` into `main` that links the competition's 
 
 CI runs lint, typecheck, tests and a build on every pull request. That job holds no credentials, so nothing in it depends on secrets. Every pull request needs a review from `@DevDogsUGA/reviewers` before it can merge.
 
+Competition briefs are GitHub issues, not docs pages — see the open
+[competition issues](https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition).
+
 ## Read next
 
 - [Teams](/docs/platform/guides/meetings-and-teams/teams) — the two caps, invitations and requests as one table, and disbanding.
 - [Competitions](/docs/platform/guides/meetings-and-teams/competitions) — kickoff, entries, and how a winner is recorded.
 - [Identity](/docs/platform/guides/identity) — the difference between signing in and linking GitHub.
-- [Quickstart](/docs/monorepo/guides/quickstart) — running the app and a database locally, if your entry needs either.
+- [Getting started](/docs/platform/getting-started) — running the app and a database locally, if your entry needs either.

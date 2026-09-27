@@ -2,6 +2,7 @@
 name: Moderation
 description: How a table becomes reportable and quarantinable — the one column that registers it, what quarantine means for different kinds of content, and why a freeze has to cover every surface the content reaches.
 order: 1
+section: guides
 ---
 
 # Moderation

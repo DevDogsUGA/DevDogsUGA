@@ -2,6 +2,7 @@
 name: Integrating your own app
 description: The policy predicates every app must add, the eight steps to make a table moderatable, and the three traps that let an integration look finished while doing nothing.
 order: 2
+section: guides
 ---
 
 # Integrating your own app
@@ -44,7 +45,7 @@ An app that hides should freeze as well. Without it an author can rewrite quaran
 5. Find every other surface the same content reaches — a second table, a storage object — and freeze those too.
 6. For content that is reportable but **not** quarantinable, write one `platform."contentTypes"` row with no foreign key. Resolving such a report with `quarantine` raises and rolls the decision back, which is what makes the outcome atomic.
 7. Add the schema to `[api] schemas` in `supabase/config.toml` and to the exclusion list in `drizzle-introspection.config.ts`. See Trap 2.
-8. Verify with `pnpm devtools doctor --app <slug>`, then `pnpm devtools roundtrip` — the step that matters, because it exercises _your_ policy.
+8. Verify with `pnpm devtools moderation check --app <slug>`, then `pnpm devtools moderation roundtrip` — the step that matters, because it exercises _your_ policy.
 
 ⚠️ **`config.toml` changes need a restart, not a reset.** `[api] schemas` becomes PostgREST's `db-schemas` at `supabase start`, so `supabase db reset` leaves the old list in place — and a schema on it that no longer exists stops PostgREST building its schema cache at all: every request returns `PGRST002`. Run `pnpm devtools db restart`, which is exactly that stop/start pair.
 

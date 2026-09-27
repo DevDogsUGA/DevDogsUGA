@@ -2,6 +2,7 @@
 name: Stars & Streaks
 description: How authoritative meeting attendance and competition participation become the member passport and weekly streaks.
 order: 5
+section: guides
 ---
 
 # Stars & streaks

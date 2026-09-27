@@ -2,11 +2,12 @@
 name: Meetings & Teams
 description: The shape of club participation — meetings, workshops, git-native competitions, and git-native teams — and why none of the three hang off each other any more.
 order: 1
+section: guides
 ---
 
 # Meetings & Teams
 
-DevDogs meets weekly. Each meeting runs one or more **workshops** in parallel, one per project. A workshop usually ends by announcing a feature; an officer turns that into a **competition** by hand, on GitHub, and the platform mirrors it — there is no schedule relationship between a workshop and the competition it announces any more. Read this page before touching anything that reads `platform.meetings`, `workshops`, `competitions` or `teams`. If you only need a function signature, skip to the generated [`server/teams`](/docs/platform/reference/server/teams) reference instead.
+DevDogs meets weekly. Each meeting runs one or more **workshops** in parallel, one per project. A workshop usually ends by announcing a feature; an officer turns that into a **competition** by hand, on GitHub, and the platform mirrors it — there is no schedule relationship between a workshop and the competition it announces any more. Read this page before touching anything that reads `platform.meetings`, `workshops`, `competitions` or `teams`. If you only need a function signature, skip to `server/teams/` source instead.
 
 **Not every workshop opens a competition.** A supplementary workshop is complete on its own, and announcing a competition off one is an officer's manual GitHub action rather than anything the schema tracks between the two rows.
 

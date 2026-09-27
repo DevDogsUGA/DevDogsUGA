@@ -2,6 +2,7 @@
 name: Competitions
 description: A competition is a GitHub issue mirror now — the private Competitions Project, draft-to-issue conversion as kickoff, and merging the winning pull request as the only persisted outcome.
 order: 3
+section: guides
 ---
 
 # Competitions
@@ -12,7 +13,7 @@ is a mirror of a GitHub branch. Read this before changing
 `server/github/competitions.ts`, `server/github/competitionEvents.ts`,
 `server/github/pullRequest.ts` or `server/github/prEvent.ts`; for the
 exported functions, see the generated
-[`server/github`](/docs/platform/reference/server/github) reference.
+`server/github` source.
 
 ## How an officer runs one
 

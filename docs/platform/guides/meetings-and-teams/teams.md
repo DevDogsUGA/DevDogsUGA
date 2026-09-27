@@ -2,11 +2,12 @@
 name: Teams
 description: How a git-native team forms — GitHub-first membership grants, the two caps and the advisory locks that hold them, invitations and join requests as one table, the lead, and disbanding.
 order: 2
+section: guides
 ---
 
 # Teams
 
-A team is a **persistent project team**, not tied to any competition: it is a git branch, `team/<slug>` off `main`, and membership is push access to that branch. GitHub is the source of truth; `platform."teams"`/`"teamMembers"` is a mirror of it. Read this before changing `server/actions/teams.ts` or `server/teams/`; for signatures alone, use the generated [`server/teams`](/docs/platform/reference/server/teams) and [Server Actions](/docs/platform/reference/server-actions) references.
+A team is a **persistent project team**, not tied to any competition: it is a git branch, `team/<slug>` off `main`, and membership is push access to that branch. GitHub is the source of truth; `platform."teams"`/`"teamMembers"` is a mirror of it. Read this before changing `server/actions/teams.ts` or `server/teams/`; for signatures alone, read `server/teams/` and `server/actions/teams.ts` directly.
 
 ## Forming one
 

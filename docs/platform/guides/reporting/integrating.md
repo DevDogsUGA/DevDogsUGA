@@ -2,6 +2,7 @@
 name: Integrating an app
 description: Calling the reporting RPCs from Next.js and from Flutter, and the three ways to check the integration actually works before you ship it.
 order: 2
+section: guides
 ---
 
 # Integrating an app
@@ -28,7 +29,7 @@ const { data, error } = await supabase.schema("platform").rpc("file_report", {
 
 Argument names and result shapes both come from `supabase gen types`, so the compiler checks them against the actual functions. `supabase` is your app's ordinary client, scoped to your own schema; `.schema("platform")` is the hop. The labels come free too: `Database["platform"]["Enums"]["reportReason"]` as a union, `Constants.platform.Enums.reportReason` as a runtime array, both from `@devdogsuga/supabase`.
 
-There is also a `<ReportDialog>` in `apps/platform/src/components/moderation/`, themed by `--dd-*` custom properties through its `theme` and `classNames` props — the generated [Moderation components](/docs/platform/reference/components/moderation) reference has the full prop list. An app outside this repository copies it; nothing here is published.
+There is also a `<ReportDialog>` in `apps/platform/src/components/moderation/`, themed by `--dd-*` custom properties through its `theme` and `classNames` props — the full prop list is in `apps/platform/src/components/moderation/ReportDialog.tsx`. An app outside this repository copies it; nothing here is published.
 
 ```tsx
 import { ReportDialog } from "~/components/moderation";
@@ -59,14 +60,14 @@ await Supabase.instance.client
     });
 ```
 
-Write the reason enum by hand and check it against `pnpm devtools catalog`; Postgres rejects an unknown label by type before `file_report` runs, so a mistake fails loudly. The Flutter team writes their own widgets — React components cannot be shared — but they implement **no protocol**.
+Write the reason enum by hand and check it against `pnpm devtools moderation catalog`; Postgres rejects an unknown label by type before `file_report` runs, so a mistake fails loudly. The Flutter team writes their own widgets — React components cannot be shared — but they implement **no protocol**.
 
 ## Testing it
 
-Everything below runs on your own database. `pnpm devtools` opens a menu whose Moderation group holds `catalog`, `doctor`, `roundtrip` and `grant-root`. None of it can be aimed at live data, and that is structural rather than a check: these commands find their database by reading `supabase status`, which describes the Docker stack on this machine and nothing else.
+Everything below runs on your own database. `pnpm devtools` opens a menu whose Moderation group holds `check`, `catalog`, `roundtrip` and `grant-root`. None of it can be aimed at live data, and that is structural rather than a check: these commands find their database by reading `supabase status`, which describes the Docker stack on this machine and nothing else.
 
-**The conformance check.** `pnpm devtools doctor --app <slug>` runs `platform.conformance_check()` as the seeded moderator and answers "did I declare my content correctly?" before you write any app code. Per content type it reports whether rows are addressable, whether an author can be derived, whether `resolve_content` works against a real row, whether quarantine has a column to write to, whether clients can still write that column, and whether your policies mention it. The last two read policy text and say so — a false alarm gets looked at, a false pass does not.
+**The conformance check.** `pnpm devtools moderation check --app <slug>` runs `platform.conformance_check()` as the seeded moderator and answers "did I declare my content correctly?" before you write any app code. Per content type it reports whether rows are addressable, whether an author can be derived, whether `resolve_content` works against a real row, whether quarantine has a column to write to, whether clients can still write that column, and whether your policies mention it. The last two read policy text and say so — a false alarm gets looked at, a false pass does not.
 
-**The round trip is the one that matters.** `pnpm devtools roundtrip` is the check the catalog cannot do for you. Against `platform."profile"`, it creates a throwaway member with an abusive display name and a name of record, files a report, resolves it with `quarantine` as the moderator, then asserts the remedy held — the name reset, and the member unable to set it back (`quarantineRoundTrip` in Backstage's `packages/devtools/src/doctor.ts`). Fixtures are deleted afterwards either way. The equivalent against your own app is the only proof that quarantine does anything, because the effect lives in your policies rather than the platform's.
+**The round trip is the one that matters.** `pnpm devtools moderation roundtrip` is the check the catalog cannot do for you. Against `platform."profile"`, it creates a throwaway member with an abusive display name and a name of record, files a report, resolves it with `quarantine` as the moderator, then asserts the remedy held — the name reset, and the member unable to set it back (`quarantineRoundTrip` in Backstage's `packages/devtools/src/doctor.ts`). Fixtures are deleted afterwards either way. The equivalent against your own app is the only proof that quarantine does anything, because the effect lives in your policies rather than the platform's.
 
 **Still worth checking by hand.** Suspend a persona and try to write as them, then sign in as another — `member@`, `author@` or `moderator@devdogs.test`, password `password`. You are always Root on your own instance, so switching personas is the only way to encounter a permission boundary. Reports are worked at `/console/moderation`.

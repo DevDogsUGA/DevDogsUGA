@@ -2,6 +2,7 @@
 name: Attendance
 description: Rotating meeting check-in, authoritative attendance records, and EL reflections.
 order: 4
+section: guides
 ---
 
 # Attendance

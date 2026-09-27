@@ -2,6 +2,7 @@
 name: The DevDogs GitHub App
 description: The App the platform authenticates as on GitHub — why it replaced an owner's personal token, why it does not replace the OAuth app, and how to create, install and rotate it.
 order: 3
+section: infrastructure
 ---
 
 # The DevDogs GitHub App

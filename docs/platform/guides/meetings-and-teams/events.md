@@ -2,6 +2,7 @@
 name: Events (meetings & workshops)
 description: Where meetings and workshops come from — versioned config in the Backstage repo, validated at Backstage CI, reconciled into Postgres after every deploy and on a keep-alive schedule.
 order: 6
+section: infrastructure
 ---
 
 # Events
