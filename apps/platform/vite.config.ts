@@ -58,9 +58,9 @@ export default defineConfig({
     },
   },
   server: { https },
-  // Off by default; CI resolves Sentry stack traces against the deployed
-  // Worker bundle (see devtools' `ci.ts` sourcemap upload), which needs these
-  // on disk in `dist/**` after `vinext build`.
+  // Off by default. deploy-app.yaml's `getsentry/action-release` step uploads
+  // these from `dist/**` so Sentry can resolve stack traces, and
+  // `public/.assetsignore` keeps the client ones out of the deployed assets.
   build: {
     sourcemap: true,
   },
