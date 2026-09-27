@@ -229,8 +229,8 @@ jobs:
       #
       # ⚠️ The devtools entrypoint and RLS suite run through `with-env`, which
       # REFUSES a missing .env by design. Seed it before the stack writes the
-      # local connection overlay; the synthetic-environment step later replaces
-      # this file and appends those generated values for the builds.
+      # local connection overlay; the synthetic-environment step right after
+      # the stack starts replaces this file and appends the generated values.
       - name: Seed the env file for wrapped checks
         run: cp .github/ci.env .env
       # config.toml enables four OAuth providers with `env()` credentials that
@@ -238,6 +238,21 @@ jobs:
       # error.
       - name: Start the local Supabase stack
         run: pnpm exec devtools db start
+      # The Supabase half comes from .env.generated, so the suites and the
+      # build run against a real Postgres and a real PostgREST rather than a
+      # mock. The NEXT_PUBLIC pair is derived rather than hardcoded: it has to
+      # match the running stack, and the CLI's local keys are not guaranteed
+      # stable across versions. Written before the test suites, not just
+      # before the build: schedule-builder's query hooks create the browser
+      # Supabase client at import, so its db-tests need the pair too.
+      - name: Synthetic environment for the suites and the build
+        run: |
+          cp .github/ci.env .env
+          set -a; . ./.env.generated; set +a
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+          } >> .env
       # Catches a migration that changed the schema without the committed types
       # being regenerated -- which typechecks fine everywhere until something
       # reads a column the types still claim exists.
@@ -284,19 +299,6 @@ jobs:
         run: |
           pnpm -r --if-present --filter 'schedule-builder^...' run build
           pnpm --filter schedule-builder run test:db
-      # The Supabase half comes from .env.generated, so the build renders
-      # against a real Postgres and a real PostgREST rather than a mock. The
-      # NEXT_PUBLIC pair is derived rather than hardcoded: it has to match the
-      # stack being rendered against, and the CLI's local keys are not
-      # guaranteed stable across versions.
-      - name: Synthetic environment for the build
-        run: |
-          cp .github/ci.env .env
-          set -a; . ./.env.generated; set +a
-          {
-            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
-            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
-          } >> .env
       # Validation ENFORCED, unlike everywhere else in this file. That is what
       # makes this worth running: a newly added required variable with no
       # default fails here rather than at deploy time.
