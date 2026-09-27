@@ -256,9 +256,13 @@ jobs:
       # stage B to re-home. Needs the `.env`/`.env.generated` this job
       # already composed above (every `devtools` command resolves a session
       # tier before dispatch), same reason the RLS suite lives here rather
-      # than in the default `pnpm test` lane.
+      # than in the default `pnpm test` lane. `devtools emails` imports the
+      # email package's compiled templates (src/generated/, untracked), which
+      # a fresh checkout doesn't have until `compile` runs.
       - name: devtools / devtools-ci process contracts
-        run: pnpm --filter @devdogsuga/repo-checks run test:live
+        run: |
+          pnpm --filter @devdogsuga/email run compile
+          pnpm --filter @devdogsuga/repo-checks run test:live
       # 124 tests, including the privilege-surface guards in
       # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
       # nothing else can see: a function reachable by every role in the cluster
