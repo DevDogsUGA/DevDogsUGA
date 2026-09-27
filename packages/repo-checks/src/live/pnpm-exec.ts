@@ -36,6 +36,10 @@ export async function pnpmExec(
       env: {
         PATH: process.env.PATH ?? "",
         HOME: process.env.HOME ?? "",
+        // pnpm records its settings at install time, and `CI` changes them.
+        // Drop it and pnpm sees a mismatch, reinstalls before running the
+        // bin, and prints the install to stdout (racing any parallel test).
+        ...(process.env.CI ? { CI: process.env.CI } : {}),
         ...env,
       },
     });
