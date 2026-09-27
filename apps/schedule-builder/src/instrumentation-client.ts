@@ -27,7 +27,7 @@ import { env } from "~/env";
 const options = buildSentryOptions({
   service: "schedule-builder",
   environment: env.NEXT_PUBLIC_DEPLOY_ENV,
-  dsn: env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: env.NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN,
   // See `apps/platform/src/instrumentation-client.ts` for why this reads
   // `process.env` directly rather than `env.*` from `~/env`.
   release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,

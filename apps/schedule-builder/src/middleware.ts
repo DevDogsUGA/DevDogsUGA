@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
   const cspInput = {
     environment: env.DEPLOY_ENV,
     supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
-    sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+    sentryDsn: env.NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN,
     nonce,
     // `global-error.tsx`'s inline theme script can't carry the nonce (see
     // `theme-init-script.ts`'s doc comment), so it earns trust through a

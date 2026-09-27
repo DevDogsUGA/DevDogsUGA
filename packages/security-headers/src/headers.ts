@@ -38,7 +38,7 @@ export interface HeaderEntry {
  *       headers: buildSecurityHeaders({
  *         environment: env.DEPLOY_ENV,
  *         supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
- *         sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+ *         sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
  *         nonce: "unused-static-fallback",
  *       }),
  *     },
@@ -140,7 +140,7 @@ export function buildSecurityHeaders(
  *   applySecurityHeaders(response.headers, {
  *     environment: env.DEPLOY_ENV,
  *     supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
- *     sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+ *     sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
  *   });
  *   return response;
  * }

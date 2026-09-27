@@ -28,7 +28,7 @@
  *     from `NEXT_PUBLIC_SUPABASE_URL` -- prod, staging, and local all differ,
  *     so this is computed from the env var rather than hardcoded.
  *   - `connect-src` includes the Sentry ingest origin, taken from
- *     `NEXT_PUBLIC_SENTRY_DSN` when a DSN is configured (see
+ *     the app's `NEXT_PUBLIC_<APP>_SENTRY_DSN` when a DSN is configured (see
  *     `apps/*\/src/instrumentation-client.ts` -- both apps browser-init
  *     Sentry error capture only, no tracing/replay).
  *   - `img-src` includes `avatars.githubusercontent.com`: the GitHub OAuth
@@ -51,7 +51,7 @@ export interface CspInput {
   /** `NEXT_PUBLIC_SUPABASE_URL` -- the app's Supabase project URL. */
   supabaseUrl: string;
   /**
-   * `NEXT_PUBLIC_SENTRY_DSN`, if the service has been onboarded to Sentry.
+   * the app's `NEXT_PUBLIC_<APP>_SENTRY_DSN`, if the service has been onboarded to Sentry.
    * Falsy (`undefined`/`null`/`""`) is the normal state before onboarding
    * and in every local dev run -- treated the same as "no Sentry ingest
    * host to allow."

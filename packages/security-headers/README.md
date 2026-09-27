@@ -22,7 +22,7 @@ const config = {
         headers: buildSecurityHeaders({
           environment: env.DEPLOY_ENV,
           supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
-          sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+          sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
         }),
       },
     ];
@@ -58,7 +58,7 @@ in production first.
   (`https://api.devdogsuga.org`), staging, and local (`http://127.0.0.1:...`)
   all differ, so this is never hardcoded.
 - `connect-src` carries the Sentry ingest **origin**, derived from
-  `NEXT_PUBLIC_SENTRY_DSN` when a DSN is configured, omitted entirely
+  the app's `NEXT_PUBLIC_<APP>_SENTRY_DSN` when a DSN is configured, omitted entirely
   otherwise (the normal state before the org is onboarded, and every local
   dev run -- see `@devdogsuga/telemetry`'s no-op-without-DSN contract).
 - `img-src` carries `https://avatars.githubusercontent.com` unconditionally:

@@ -100,7 +100,11 @@ const server = {
   // Worker the same way every other environment variable does: Bitwarden ->
   // `env push` -> the next deploy. wrangler.jsonc carries no secrets and
   // never will for this value.
-  SENTRY_DSN: define(z.string().url().optional(), {
+  // Prefixed with the app, unlike most keys here: every app has its own
+  // Sentry project, and a deploy environment holds one value per name, so a
+  // shared SENTRY_DSN would send every app's events to one project (and the
+  // release step uploads each app's source maps to its own project).
+  PLATFORM_SENTRY_DSN: define(z.string().url().optional(), {
     doc:
       "Sentry ingest DSN for this app's Sentry project (see " +
       "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
@@ -417,17 +421,17 @@ const server = {
  * prefixed and public by construction.
  */
 const client = {
-  // Browser-side counterpart of SENTRY_DSN -- the "platform" Sentry project's
+  // Browser-side counterpart of PLATFORM_SENTRY_DSN -- the "platform" Sentry project's
   // public DSN is the same value in both places (a DSN is safe in a browser
   // bundle; it can only submit events, never read them), so this is not
-  // derived from SENTRY_DSN by code, it is set alongside it. Optional for the
+  // derived from PLATFORM_SENTRY_DSN by code, it is set alongside it. Optional for the
   // same reason: no DSN means `instrumentation-client.ts` skips
   // `Sentry.init()` entirely.
-  NEXT_PUBLIC_SENTRY_DSN: define(z.string().url().optional(), {
+  NEXT_PUBLIC_PLATFORM_SENTRY_DSN: define(z.string().url().optional(), {
     doc:
       "Browser-side Sentry DSN for this app's Sentry project. Optional -- " +
       "empty skips client-side Sentry.init() entirely, same contract as " +
-      "SENTRY_DSN.",
+      "PLATFORM_SENTRY_DSN.",
     scope: "environment",
     secrecy: "public",
   }),
@@ -506,7 +510,8 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_AVATARS_BUCKET: process.env.NEXT_PUBLIC_AVATARS_BUCKET,
-    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_PLATFORM_SENTRY_DSN:
+      process.env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
     NEXT_PUBLIC_DEPLOY_ENV: process.env.NEXT_PUBLIC_DEPLOY_ENV,
   },
   /**

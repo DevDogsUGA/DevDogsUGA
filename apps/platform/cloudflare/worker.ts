@@ -24,7 +24,7 @@
  * request context instead, which sidesteps the crash and still captures
  * every unhandled error thrown inside a route, a Server Component render, a
  * Server Action, or the cron dispatcher below -- they all run inside this
- * `fetch`/`scheduled` call. `SENTRY_DSN` reaches this Worker like every
+ * `fetch`/`scheduled` call. `PLATFORM_SENTRY_DSN` reaches this Worker like every
  * other secret/env var (Bitwarden -> `env push` -> deploy); wrangler.jsonc
  * itself carries none.
  */
@@ -35,7 +35,7 @@ import { scheduled, type CronEnv } from "./scheduled";
 import type { env as platformEnv } from "~/env";
 
 /**
- * The bindings this entry reads, borrowed by type from `~/env`. `SENTRY_DSN`
+ * The bindings this entry reads, borrowed by type from `~/env`. `PLATFORM_SENTRY_DSN`
  * is a Worker secret; `DEPLOY_ENV` is set by wrangler.jsonc's per-env `vars`
  * block and the cf:build:* scripts.
  *
@@ -57,7 +57,10 @@ import type { env as platformEnv } from "~/env";
  * and shares no property names with the rest of this type otherwise. See
  * apps/schedule-builder/cloudflare/worker.ts for the identical shape.
  */
-type WorkerEnv = Pick<typeof platformEnv, "SENTRY_DSN" | "DEPLOY_ENV"> &
+type WorkerEnv = Pick<
+  typeof platformEnv,
+  "PLATFORM_SENTRY_DSN" | "DEPLOY_ENV"
+> &
   CronEnv &
   NonNullable<Parameters<typeof handler.fetch>[1]> & {
     readonly SENTRY_RELEASE?: string;
@@ -68,7 +71,7 @@ export default Sentry.withSentry(
     buildSentryOptions({
       service: "platform",
       environment: env.DEPLOY_ENV,
-      dsn: env.SENTRY_DSN,
+      dsn: env.PLATFORM_SENTRY_DSN,
       release: env.SENTRY_RELEASE,
     }),
   {

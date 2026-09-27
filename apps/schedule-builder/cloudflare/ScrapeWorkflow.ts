@@ -60,12 +60,12 @@ export type ScrapeWorkflowParams = Record<string, never>;
  * Hand-rolled, structural, and deliberately not imported from `~/env` -- same
  * reasoning as `WorkflowDatabaseEnv` in `./database-url.ts`: this module
  * evaluates during Worker startup validation, before the request-scoped `env`
- * barrel is safe to import. `SENTRY_DSN` is a Worker secret, invisible to
+ * barrel is safe to import. `SCHEDULE_BUILDER_SENTRY_DSN` is a Worker secret, invisible to
  * `wrangler types`' generated `CloudflareEnv`, so `CloudflareEnv` is passed
  * here structurally rather than cast.
  */
 interface WorkflowSentryEnv {
-  readonly SENTRY_DSN?: string;
+  readonly SCHEDULE_BUILDER_SENTRY_DSN?: string;
   readonly DEPLOY_ENV?: string;
   /** Git SHA of the deploy; see `cloudflare/worker.ts`'s `WorkerEnv` for why
    * this isn't part of `~/env`'s schema. Reaches this Worker (and so this
@@ -323,7 +323,7 @@ function scrapeWorkflowSentryOptions(env: WorkflowSentryEnv) {
     buildSentryOptions({
       service: "schedule-builder",
       environment: env.DEPLOY_ENV ?? "development",
-      dsn: env.SENTRY_DSN,
+      dsn: env.SCHEDULE_BUILDER_SENTRY_DSN,
       release: env.SENTRY_RELEASE,
     }) ?? {}
   );
@@ -335,7 +335,7 @@ function scrapeWorkflowSentryOptions(env: WorkflowSentryEnv) {
  * name this export -- neither needs to change for the wrapping to apply.
  *
  * `scrapeWorkflowSentryOptions` returning `{}` when `buildSentryOptions`
- * returns `undefined` (no `SENTRY_DSN` configured), rather than skipping
+ * returns `undefined` (no `SCHEDULE_BUILDER_SENTRY_DSN` configured), rather than skipping
  * `instrumentWorkflowWithSentry` altogether, still satisfies the no-DSN
  * no-op contract: `@sentry/core`'s `Client` constructor makes no transport
  * and does no network I/O when `options.dsn` is falsy (see

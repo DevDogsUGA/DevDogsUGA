@@ -112,7 +112,11 @@ declare({
     // network calls, no console noise, which matches local `wrangler dev`
     // too. A DSN is not a secret (it identifies a project, not a credential
     // -- anyone can only submit events, never read them).
-    SENTRY_DSN: define(z.string().url().optional(), {
+    // Prefixed with the app, unlike most keys here: every app has its own
+    // Sentry project, and a deploy environment holds one value per name, so a
+    // shared SENTRY_DSN would send every app's events to one project (and the
+    // release step uploads each app's source maps to its own project).
+    SANDBOX_SENTRY_DSN: define(z.string().url().optional(), {
       doc:
         "Sentry ingest DSN for this app's Sentry project (see " +
         "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +

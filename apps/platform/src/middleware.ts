@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
   const cspInput = {
     environment: env.DEPLOY_ENV,
     supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
-    sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+    sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
     nonce,
   };
   // Mutates the live Headers instance on `request` -- `updateSession` below

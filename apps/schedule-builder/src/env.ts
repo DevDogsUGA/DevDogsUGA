@@ -97,7 +97,11 @@ const server = {
   // it reaches the Worker the same way every other environment variable
   // does: Bitwarden -> `env push` -> the next deploy. wrangler.jsonc carries
   // no secrets and never will for this value.
-  SENTRY_DSN: define(z.string().url().optional(), {
+  // Prefixed with the app, unlike most keys here: every app has its own
+  // Sentry project, and a deploy environment holds one value per name, so a
+  // shared SENTRY_DSN would send every app's events to one project (and the
+  // release step uploads each app's source maps to its own project).
+  SCHEDULE_BUILDER_SENTRY_DSN: define(z.string().url().optional(), {
     doc:
       "Sentry ingest DSN for this app's Sentry project (see " +
       "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
@@ -258,17 +262,17 @@ const server = {
 };
 
 const client = {
-  // Browser-side counterpart of SENTRY_DSN -- the "schedule-builder" Sentry
+  // Browser-side counterpart of SCHEDULE_BUILDER_SENTRY_DSN -- the "schedule-builder" Sentry
   // project's public DSN is the same value in both places (a DSN is safe in
   // a browser bundle; it can only submit events, never read them), so this
-  // is not derived from SENTRY_DSN by code, it is set alongside it. Optional
+  // is not derived from SCHEDULE_BUILDER_SENTRY_DSN by code, it is set alongside it. Optional
   // for the same reason: no DSN means `instrumentation-client.ts` skips
   // `Sentry.init()` entirely.
-  NEXT_PUBLIC_SENTRY_DSN: define(z.string().url().optional(), {
+  NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN: define(z.string().url().optional(), {
     doc:
       "Browser-side Sentry DSN for this app's Sentry project. Optional -- " +
       "empty skips client-side Sentry.init() entirely, same contract as " +
-      "SENTRY_DSN.",
+      "SCHEDULE_BUILDER_SENTRY_DSN.",
     scope: "environment",
     secrecy: "public",
   }),
@@ -348,7 +352,8 @@ export const env = createEnv({
    * `undefined` in the browser.
    */
   experimental__runtimeEnv: {
-    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN:
+      process.env.NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN,
     NEXT_PUBLIC_DEPLOY_ENV: process.env.NEXT_PUBLIC_DEPLOY_ENV,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:

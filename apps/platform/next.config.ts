@@ -18,7 +18,7 @@ const config = {
         headers: buildSecurityHeaders({
           environment: env.DEPLOY_ENV,
           supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
-          sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+          sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
           // This static `headers()` declaration is evaluated once at
           // build/dev-server start, not per request, so it can never mint a
           // real nonce -- and never needs to: it is a fallback purely for

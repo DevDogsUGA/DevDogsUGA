@@ -26,7 +26,7 @@ import { env } from "~/env";
 const options = buildSentryOptions({
   service: "platform",
   environment: env.NEXT_PUBLIC_DEPLOY_ENV,
-  dsn: env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
   // `process.env.NEXT_PUBLIC_SENTRY_RELEASE` directly, not `env.*` from
   // `~/env` -- it is the deploy's git SHA, set only by `deploy.yaml`'s
   // `Build` step, not a value that fits `@devdogsuga/env`'s `EnvScope`

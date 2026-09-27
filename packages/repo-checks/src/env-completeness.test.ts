@@ -100,7 +100,7 @@ describe("registry completeness", () => {
     // (`secrecy: "secret"`, stored in Bitwarden) its app's own manifest
     // declares, excluding `:tooling` sources -- PLUS every `secrecy:
     // "public"` key it declares, which is how `PLATFORM_REST_URL`,
-    // `DEPLOY_ENV`, and `SENTRY_DSN` reach the Worker despite none of them
+    // `DEPLOY_ENV`, and `SANDBOX_SENTRY_DSN` reach the Worker despite none of them
     // being Bitwarden secrets. What must stay EMPTY here is the
     // `storableKeys()` set: `SANDBOX_PROXY_TOKEN` is minted on the runner and
     // excluded from it by construction, and a `secrecy: "secret"` key this
@@ -124,7 +124,7 @@ describe("registry completeness", () => {
       "DEPLOY_ENV",
       "PLATFORM_REST_URL",
       "SANDBOX_PROXY_TOKEN",
-      "SENTRY_DSN",
+      "SANDBOX_SENTRY_DSN",
     ]);
 
     const storable = new Set(storableKeys());

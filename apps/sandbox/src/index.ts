@@ -14,7 +14,7 @@ import { handleProxyRequest, type ProxyDeps, type Resolution } from "./proxy";
  * `withSentry` around the default export below, the same pattern
  * `apps/schedule-builder/cloudflare/worker.ts` uses and for the same
  * reason: this is a plain Worker (case 2 of the telemetry cheatsheet), not
- * a framework runtime with its own instrumentation hook. `SENTRY_DSN`
+ * a framework runtime with its own instrumentation hook. `SANDBOX_SENTRY_DSN`
  * reaches this Worker like every other environment variable; this file
  * carries none.
  */
@@ -43,7 +43,7 @@ export interface Env {
    * returns `undefined` for a falsy DSN, so `withSentry` below no-ops
    * cleanly: no init, no network calls, no console spam.
    */
-  SENTRY_DSN: string | undefined;
+  SANDBOX_SENTRY_DSN: string | undefined;
   /**
    * Git SHA of the deploy, becoming the Sentry `release` tag. Not a
    * `wrangler.jsonc` var (it changes every deploy) -- `devtools`' `ci.ts`
@@ -351,7 +351,7 @@ export default Sentry.withSentry(
     buildSentryOptions({
       service: "sandbox",
       environment: env.DEPLOY_ENV,
-      dsn: env.SENTRY_DSN,
+      dsn: env.SANDBOX_SENTRY_DSN,
       release: env.SENTRY_RELEASE,
     }),
   worker,
