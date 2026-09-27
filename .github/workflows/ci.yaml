@@ -184,8 +184,11 @@ jobs:
       #
       # Unconditional rather than --affected: any manifest edit anywhere can
       # change the output, and it costs about a second.
+      # `pnpm exec devtools`, not `pnpm devtools`: the root script is
+      # `pnpm dlx @devdogsuga/devtools` (always the newest publish), and CI
+      # runs the exact version package.json pins, like deploys do.
       - name: .env.example agrees with the env manifests
-        run: pnpm devtools env example --check
+        run: pnpm exec devtools env example --check
       - name: Cloudflare binding types match the Worker configuration
         run: pnpm --filter platform cf:typegen:check && pnpm --filter schedule-builder cf:typegen:check
       # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
@@ -234,13 +237,13 @@ jobs:
       # CI does not have. Verified: unset resolves to a WARN and exit 0, not an
       # error.
       - name: Start the local Supabase stack
-        run: pnpm devtools db start
+        run: pnpm exec devtools db start
       # Catches a migration that changed the schema without the committed types
       # being regenerated -- which typechecks fine everywhere until something
       # reads a column the types still claim exists.
       - name: Generated Database types match the migrations
         run: |
-          pnpm devtools db types
+          pnpm exec devtools db types
           git diff --exit-code -- packages/supabase/src/database.types.ts
       # 59 tests. All app schemas share one PostgREST endpoint and one anon key,
       # so RLS -- not the schema boundary -- is what isolates one app's data from
