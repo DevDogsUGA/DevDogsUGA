@@ -5,7 +5,8 @@ Start with your project's contributing guide, not this file:
 - [Schedule Builder](https://devdogsuga.org/docs/schedule-builder/guides/contributing)
 - [Study Group Finder](https://devdogsuga.org/docs/study-group-finder/guides/contributing)
 - [Platform](https://devdogsuga.org/docs/platform/guides/contributing)
-- [Toolkit](https://devdogsuga.org/docs/toolkit/guides/contributing) (shared packages, CI, deploys)
+
+Maintaining shared packages, CI, or deploys? See [Shared packages & tooling](https://devdogsuga.org/docs/toolkit).
 
 Competitions are GitHub issues labeled `competition`:
 https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition
