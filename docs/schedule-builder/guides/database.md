@@ -2,6 +2,7 @@
 name: Database
 description: The schedule_builder schema — where it's defined, its tables, the per-request Drizzle client, and why migrations are drafted from the schema but authored by hand.
 order: 4
+section: guides
 ---
 
 # Database
@@ -29,10 +30,12 @@ The tables fall into three groups:
 - **User data**, all RLS-guarded via `crudPolicy`: `userPreferences`,
   `userPlanDrafts`, `userPlanDraftCourses`, `userSavedPlans`.
 
-Two derived objects back search: the `availableTerms` view and the
-`offeringSearch` **materialized view**, which carries a Postgres `to_tsvector`
-full-text vector. Ingestion refreshes it after each scrape (see
-[Ingestion](/docs/schedule-builder/guides/ingestion)).
+One derived object backs the term selector: the `availableTerms` view, one row
+per academic period that has at least one offering. There used to be a second
+one — an `offeringSearch` materialized view backing free-text course search —
+but it was removed when that search was replaced with subject / instructor /
+CRN filters that read the base tables directly. If you find code that still
+refreshes it, that code is stale, not the schema.
 
 ## Migrations are drafted, not authored
 
@@ -67,9 +70,12 @@ their hand-written schema was silently dropped.
 ## The Drizzle client
 
 `src/server/db/index.ts` exports a `db` proxy that builds a **per-request**
-Drizzle client, keyed on the OpenNext Cloudflare context through a `WeakMap`.
-Deployed, it connects through the `HYPERDRIVE` binding; locally it uses
-`env.DB_URL`.
+Drizzle client, keyed through `vinext/cache`'s `cacheForRequest` against
+vinext's own per-request store (an `AsyncLocalStorage`-backed context torn down
+once the request finishes). Deployed, it connects through the `HYPERDRIVE`
+binding and closes the pool after the response streams (`after`, from
+`next/server`); with no `HYPERDRIVE` binding — the development environment —
+it falls back to a single process-wide client built from `env.DB_URL`.
 
 Because the proxy needs a request context, code that runs **outside** one — a
 Cloudflare Workflow step, a script — must build its own client with the exported
