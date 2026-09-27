@@ -119,7 +119,12 @@ export default async function DocsPage({
     );
   }
 
-  const githubUrl = `https://github.com/${env.GITHUB_ORG}/${DOCS_REPO}/blob/${DOCS_BRANCH}/docs/${projectPath(projectSlug, path.join("/"))}.md`;
+  // A mounted page's real source is the shared file the compiler copied it
+  // from (contract item 2), not this project's own copy — see `mountedFrom`
+  // on `DocsPageContent`.
+  const sourcePath =
+    page.mountedFrom ?? projectPath(projectSlug, path.join("/"));
+  const githubUrl = `https://github.com/${env.GITHUB_ORG}/${DOCS_REPO}/blob/${DOCS_BRANCH}/docs/${sourcePath}.md`;
 
   return (
     <DocPageContent

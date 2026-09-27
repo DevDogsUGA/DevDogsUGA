@@ -12,7 +12,7 @@ pnpm dev --filter platform   # local stack auto-detected, else the linked remote
 ```
 
 Monorepo setup, env handling, and the contribution flow:
-[Monorepo](../../docs/monorepo/index.md).
+[Toolkit](../../docs/toolkit/index.md).
 
 ## Docs
 

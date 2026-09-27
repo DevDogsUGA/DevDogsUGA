@@ -6,8 +6,11 @@ import {
 } from "@devdogsuga/docs";
 import { projectPath, splitProjectPath } from "~/lib/docsSlug";
 import {
+  buildDocsSidebarSections,
   buildDocsTree,
   findFolder,
+  type DocsSectionId,
+  type DocsSidebarTree,
   type DocsTreeFolder,
   type DocsTreeNode,
 } from "~/lib/docsTree";
@@ -25,9 +28,48 @@ const pagesByPath = new Map<string, DocsPage>(
   pages.map((page) => [page.path, page]),
 );
 
+/**
+ * `DocsPage.section`, read defensively.
+ *
+ * TODO(docs-overhaul): drop this fallback once `@devdogsuga/docs-compiler`
+ * ships `DocsPage.section` directly (contract item 1) — this repo's install
+ * of `@devdogsuga/docs-compiler` predates that change (see the docs
+ * contract), so `section` never actually appears on a real `DocsPage` yet.
+ * Reads `frontmatter.section` in the meantime, which the compiler already
+ * carries today, and falls back to the same default the contract specifies:
+ * a page under `reference/` is `reference`, everything else is `guides`. The
+ * project's own root index page is `null` regardless — see
+ * `isProjectOverviewPath` in `~/lib/docsTree`, which this mirrors for the one
+ * path shape that means "no section" rather than "the default section".
+ */
+function pageSection(page: DocsPage): DocsSectionId | null {
+  const relPath = splitProjectPath(page.path).path;
+  if (!relPath.includes("/") && /^(index|readme)$/i.test(relPath)) return null;
+
+  const declared = (page as DocsPage & { section?: DocsSectionId | null })
+    .section;
+  if (declared) return declared;
+
+  const frontmatterSection = page.frontmatter?.section;
+  if (typeof frontmatterSection === "string") {
+    return frontmatterSection as DocsSectionId;
+  }
+
+  return relPath === "reference" || relPath.startsWith("reference/")
+    ? "reference"
+    : "guides";
+}
+
 /** The projects shown on the docs landing page and the sidebar selector. */
 export function getDocsProjects(): DocsProject[] {
-  return projects;
+  // TODO(docs-overhaul): drop this filter once `@devdogsuga/docs-compiler`
+  // understands `docs/_shared/`'s `mount:` frontmatter (contract item 2) and
+  // stops surfacing it as a project of its own. Until then the installed
+  // compiler treats `_shared` exactly like `platform` or `toolkit` — an
+  // immediate subfolder of `docs/` with pages in it — and this repo's own
+  // contract is explicit that it is not one: "_shared is not itself a
+  // project."
+  return projects.filter((project) => project.slug !== "_shared");
 }
 
 /**
@@ -42,6 +84,26 @@ export function getDocsTree(project: string): DocsTreeNode[] {
         path: splitProjectPath(page.path).path,
         title: page.title,
         order: page.order,
+      })),
+  );
+}
+
+/**
+ * The sidebar's grouped view of one project: Overview, then the four fixed
+ * sections, each dropped when empty. A separate call from `getDocsTree`
+ * rather than a derived view of its result — see `buildDocsSidebarSections`
+ * for why sectioning starts from the flat page list instead of partitioning
+ * the folder tree.
+ */
+export function getDocsSidebarTree(project: string): DocsSidebarTree {
+  return buildDocsSidebarSections(
+    pages
+      .filter((page) => page.project === project)
+      .map((page) => ({
+        path: splitProjectPath(page.path).path,
+        title: page.title,
+        order: page.order,
+        section: pageSection(page),
       })),
   );
 }
@@ -96,6 +158,17 @@ export interface DocsPageContent {
   description: string | null;
   headings: DocHeading[];
   content: string;
+  /**
+   * `docs/_shared/<path>` for a page the compiler mounted into this project
+   * from the shared pool (contract item 2), null for a page that lives here
+   * natively. Drives the "edit this page" link: a mounted page's real source
+   * is the shared file, not the per-project copy this route renders.
+   *
+   * TODO(docs-overhaul): `DocsPage.mountedFrom` doesn't exist on this
+   * repo's installed `@devdogsuga/docs-compiler` yet — read defensively via a
+   * type assertion until it ships, same as `pageSection` above.
+   */
+  mountedFrom: string | null;
 }
 
 export function getDocsPage(
@@ -110,5 +183,7 @@ export function getDocsPage(
     description: page.description,
     headings: page.headings,
     content: page.content,
+    mountedFrom:
+      (page as DocsPage & { mountedFrom?: string | null }).mountedFrom ?? null,
   };
 }

@@ -6,6 +6,8 @@ import { DOCS_INDEX_LABEL } from "~/config/docs";
 import { docsHref } from "~/lib/docsSlug";
 import {
   isIndexPage,
+  type DocsSidebarSection,
+  type DocsSidebarTree,
   type DocsTreeFolder,
   type DocsTreeNode,
 } from "~/lib/docsTree";
@@ -58,44 +60,57 @@ function Caret({ label, className }: { label: string; className: string }) {
 }
 
 /**
- * A first-level folder: a section heading over the pages it holds, not another
- * row in the list. The caret is its own control so the label can stay a link.
- * Selecting the section shows what is inside it, which for a folder with no
- * index page of its own is a grid of its contents.
+ * One of the sidebar's four fixed sections (Getting started, Guides,
+ * Infrastructure, Reference) — a heading over the pages it holds, not a
+ * destination of its own. Unlike a folder, a section has no `index.md` and no
+ * URL: it is a grouping the compiler's frontmatter (or this app's own
+ * fallback, see `pageSection` in `~/server/docs/queries`) assigns per page,
+ * so the heading is plain text with a caret, never a link.
  *
- * Open by default, always, not only when it holds the current page. A tree that
- * opens exactly one section shows a reader the part they already found and
- * hides the rest behind carets they have to think to press, and the sections
- * are the table of contents. Deeper folders still open on the active path only,
- * see `Folder`, because those are where the page counts get large enough for
- * open-everything to become unreadable.
+ * Open by default, always, not only when it holds the current page. A tree
+ * that opens exactly one section shows a reader the part they already found
+ * and hides the rest behind carets they have to think to press, and the
+ * sections are the table of contents. Nested folders still open on the
+ * active path only, see `Folder`, because those are where the page counts
+ * get large enough for open-everything to become unreadable.
+ *
+ * Most projects' `guides/`, `infrastructure/` and `reference/` folders map
+ * one-to-one onto a section: every page physically under `reference/` lands
+ * in the Reference section by the same fallback that names the section, so
+ * `buildDocsSidebarSections` hands this a single top-level folder named
+ * `reference` and nothing beside it. Rendering that folder as another row
+ * under the "Reference" heading would repeat the word for no reason, so this
+ * unwraps exactly that shape — one top-level folder whose OWN segment
+ * matches the section id, holding everything the section has — and shows its
+ * children directly. Anything less uniform (a section that mixes a folder
+ * with a loose page, or a folder under some other name) renders as-is: the
+ * unwrap is a cosmetic shortcut for the common case, not a rule the section
+ * depends on.
  */
-function Section({
-  folder,
+function SectionHeading({
+  section,
   ctx,
 }: {
-  folder: DocsTreeFolder;
+  section: DocsSidebarSection;
   ctx: TreeContext;
 }) {
-  const active = ctx.activePath === folder.path;
+  const [only] = section.nodes;
+  const unwrap =
+    section.nodes.length === 1 &&
+    only?.type === "folder" &&
+    only.segment === section.id;
+  const children = unwrap && only ? only.children : section.nodes;
 
   return (
     <Collapsible defaultOpen>
       <div className="flex items-center gap-0.5">
-        <Link
-          href={docsHref(ctx.project, folder.path.split("/"))}
-          data-active={active || undefined}
-          className={cn(
-            "min-w-0 flex-1 rounded-sm px-1.5 py-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase transition-colors hover:bg-mauve-800 hover:text-white",
-            "data-active:bg-mauve-800/60 data-active:text-white",
-          )}
-        >
-          {folder.name}
-        </Link>
-        <Caret label={folder.name} className="size-3" />
+        <CollapsibleTrigger className="min-w-0 flex-1 rounded-sm px-1.5 py-1 text-left text-xs font-semibold tracking-wide text-mauve-500 uppercase transition-colors hover:bg-mauve-800 hover:text-white">
+          {section.label}
+        </CollapsibleTrigger>
+        <Caret label={section.label} className="size-3" />
       </div>
       <CollapsibleContent>
-        <Nodes nodes={folder.children} ctx={ctx} depth={1} />
+        <Nodes nodes={children} ctx={ctx} depth={1} />
       </CollapsibleContent>
     </Collapsible>
   );
@@ -161,6 +176,13 @@ function Page({
   );
 }
 
+/**
+ * A run of nodes at one level. `depth` is 1 at a section's own top (the
+ * section heading itself already sits at the sidebar's true top), so a
+ * folder here is always a `Folder` row rather than a `SectionHeading` — the
+ * fixed sections are the only thing rendered like the old depth-0 partition,
+ * and `Tree` below renders those directly rather than through this function.
+ */
 function Nodes({
   nodes,
   ctx,
@@ -170,28 +192,12 @@ function Nodes({
   ctx: TreeContext;
   depth: number;
 }) {
-  // At the top level the folders are section headings, so they gather at the
-  // bottom under their own headings rather than sorting in among the loose
-  // pages. A heading stranded mid-list reads as a page that lost its icon.
-  // Deeper in, a folder is just another row and keeps its place.
-  const ordered =
-    depth === 0
-      ? [
-          ...nodes.filter((node) => node.type === "page"),
-          ...nodes.filter((node) => node.type === "folder"),
-        ]
-      : nodes;
-
   return (
     <ul className="flex flex-col gap-0.5">
-      {ordered.map((node) =>
+      {nodes.map((node) =>
         node.type === "folder" ? (
-          <li key={`folder:${node.path}`} className={cn(depth === 0 && "mt-4")}>
-            {depth === 0 ? (
-              <Section folder={node} ctx={ctx} />
-            ) : (
-              <Folder folder={node} ctx={ctx} depth={depth} />
-            )}
+          <li key={`folder:${node.path}`}>
+            <Folder folder={node} ctx={ctx} depth={depth} />
           </li>
         ) : (
           <li key={node.path}>
@@ -204,18 +210,32 @@ function Nodes({
 }
 
 export default function Tree({
-  nodes,
+  tree,
   ctx,
 }: {
-  nodes: DocsTreeNode[];
+  tree: DocsSidebarTree;
   ctx: TreeContext;
 }) {
-  if (nodes.length === 0) {
+  if (tree.overview === null && tree.sections.length === 0) {
     return (
       <p className="px-2 py-1.5 text-sm text-mauve-500">
         No documentation for this project yet.
       </p>
     );
   }
-  return <Nodes nodes={nodes} ctx={ctx} depth={0} />;
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {tree.overview && (
+        <div>
+          <Page page={tree.overview} ctx={ctx} />
+        </div>
+      )}
+      {tree.sections.map((section) => (
+        <div key={section.id} className="mt-4 first:mt-0">
+          <SectionHeading section={section} ctx={ctx} />
+        </div>
+      ))}
+    </div>
+  );
 }

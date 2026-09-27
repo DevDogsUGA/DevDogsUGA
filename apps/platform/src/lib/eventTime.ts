@@ -66,7 +66,7 @@ function clubDateParts(at: Date): {
  *
  * `Intl.DateTimeFormat` with an explicit `timeZone` is the pure way to ask.
  * `@date-fns/tz`'s `TZDate` constructor reads the clock and would drop a
- * calling page out of the prerendered shell (see docs/monorepo/stack/nextjs.md,
+ * calling page out of the prerendered shell (see docs/_shared/guides/stack/nextjs.md,
  * "Why does a client component that formats a date drop the page out of the
  * static shell?"). This reads no clock and touches nothing but its argument, so
  * it is safe in a client component and gives byte-identical answers on both

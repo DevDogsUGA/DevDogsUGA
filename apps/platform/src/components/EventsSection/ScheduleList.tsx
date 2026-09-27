@@ -58,7 +58,7 @@ interface Props {
    * The instant the page is rendering at, passed in rather than read here.
    *
    * A `new Date()` in this tree would drop the whole route out of the static
-   * shell with no build warning; see `docs/monorepo/stack/nextjs.md`. It is also
+   * shell with no build warning; see `docs/_shared/guides/stack/nextjs.md`. It is also
    * the only way the countdown on every row agrees with the calendar's "today":
    * one read, threaded down, instead of a dozen a few ms apart.
    */
