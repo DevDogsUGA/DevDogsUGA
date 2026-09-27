@@ -68,7 +68,13 @@ export function SearchByCRN({ searchParams, setParams }: PanelProps) {
         </p>
       )}
 
-      {result && (
+      {crn != null && !isFetching && !error && result?.cancelled && (
+        <p className="text-muted text-sm">
+          CRN {crn} was cancelled for this term.
+        </p>
+      )}
+
+      {result && !result.cancelled && (
         <CourseSearchResult
           course={{ ...result.course, offerings: [] }}
           includeOnlyCrn={result.crn}
