@@ -12,9 +12,9 @@
     "check:migration-order": "tsx src/check-migration-order.ts"
   },
   "devDependencies": {
-    "@devdogsuga/config": "^0.1.0",
-    "@devdogsuga/devtools": "0.1.0",
-    "@devdogsuga/env": "^0.1.0",
+    "@devdogsuga/config": "^0.1.1",
+    "@devdogsuga/devtools": "0.1.4",
+    "@devdogsuga/env": "^0.1.1",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tsx": "catalog:",

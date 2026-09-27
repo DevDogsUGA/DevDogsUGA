@@ -12,13 +12,13 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@devdogsuga/telemetry": "^0.1.0",
+    "@devdogsuga/telemetry": "^0.1.1",
     "@sentry/cloudflare": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",
-    "@devdogsuga/config": "^0.1.0",
-    "@devdogsuga/env": "^0.1.0",
+    "@devdogsuga/config": "^0.1.1",
+    "@devdogsuga/env": "^0.1.1",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",

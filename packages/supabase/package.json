@@ -30,9 +30,9 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@devdogsuga/config": "^0.1.0",
-    "@devdogsuga/db": "^0.1.0",
-    "@devdogsuga/env": "^0.1.0",
+    "@devdogsuga/config": "^0.1.1",
+    "@devdogsuga/db": "^0.1.1",
+    "@devdogsuga/env": "^0.1.1",
     "@supabase/supabase-js": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

@@ -1,7 +1,7 @@
 {
   "$comment": "The version manifest @devdogsuga/devtools' dlx preflight fetches from this repo's `main` branch on every `pnpm devtools …` invocation (never `devtools-ci`, which pins an exact version on purpose — see Backstage's packages/devtools/src/repo/preflight.ts). `latest`: the newest published version; devtools nudges anyone behind it. `minimum`: the floor; devtools below this re-execs itself as `pnpm dlx @devdogsuga/devtools@<latest>`. `latest` is bumped automatically: Renovate's grouped `@devdogsuga/*` PR (see renovate.json5's customManagers regex manager) rewrites it in the same PR as the root package.json `@devdogsuga/devtools` pin it must equal, and packages/repo-checks/src/devtools-minimums.test.ts fails CI if the two ever disagree, or if `minimum` ever exceeds `latest`. `minimum` stays manual and is NOT touched by that automation — drop it to a hotfix version ONLY when an older devtools is actively broken (a bad publish, a bug that corrupts state) and every contributor needs to move off it within the ~10-minute cache window — see .github/CODEOWNERS for who reviews that.",
   "devtools": {
-    "latest": "0.1.0",
+    "latest": "0.1.4",
     "minimum": "0.1.0"
   }
 }

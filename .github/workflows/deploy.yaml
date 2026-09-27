@@ -63,10 +63,8 @@ env:
 # ── the two devtools entry points, and why every step names one ──────────────
 #
 # Every step below runs a `devtools-ci deploy <step>` command against
-# `@devdogsuga/devtools`, now consumed as a published-style dependency (the
-# `.packs/` tarball bridge until the first real npm publish — see this repo's
-# root `pnpm-workspace.yaml` `overrides:` and Backstage's `CUTOVER.md`), not a
-# workspace package. Which entry point a step uses is still NOT a style
+# `@devdogsuga/devtools`, consumed from npm at the exact version the root
+# `package.json` pins (published from Backstage), not a workspace package. Which entry point a step uses is still NOT a style
 # choice, but the shapes changed in the Backstage cutover (Wave 2, stage B):
 #
 #   pnpm exec devtools-ci-bare   the installed `devtools-ci-bare` bin

@@ -24,11 +24,11 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@devdogsuga/brand": "^0.1.0",
+    "@devdogsuga/brand": "^0.1.1",
     "react": "catalog:"
   },
   "devDependencies": {
-    "@devdogsuga/config": "^0.1.0",
+    "@devdogsuga/config": "^0.1.1",
     "@phosphor-icons/react": "^2.1.10",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

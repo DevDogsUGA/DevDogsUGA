@@ -17,10 +17,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@devdogsuga/docs-compiler": "^0.1.0"
+    "@devdogsuga/docs-compiler": "^0.1.1"
   },
   "devDependencies": {
-    "@devdogsuga/config": "^0.1.0",
+    "@devdogsuga/config": "^0.1.1",
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",

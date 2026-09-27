@@ -37,9 +37,8 @@ const require = createRequire(import.meta.url);
  * devtools' own operator manifest (`BWS_ACCESS_TOKEN`, `CLOUDFLARE_API_TOKEN`
  * et al.) — the same gap Backstage's `env/discovery.ts` closed with its own
  * `ownManifestPath()`, mirrored here: devtools is not one of THIS repo's
- * workspace packages any more (it's an installed dependency via the
- * `.packs/` tarball bridge — see this repo's root `pnpm-workspace.yaml`
- * `overrides:`), so the scan below would never see it, and every consumer of
+ * workspace packages any more (it's installed from npm), so the scan below
+ * would never see it, and every consumer of
  * this registry (this file's own completeness assertions, plus anything else
  * that reads `applyOnlyKeys()`/`neverStoreKeys()` from it) would silently
  * miss those keys. `@devdogsuga/devtools` ships its `env.ts` at the package

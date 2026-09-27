@@ -160,13 +160,10 @@ export function collectDocsInputs(
 
 /**
  * A string that changes whenever the installed `@devdogsuga/docs-compiler`
- * would produce different output for the same content — a real version bump
- * once it publishes to npm, or (today, mid interim `.packs/` bridge — see
- * `pnpm-workspace.yaml`) a repack of the pinned tarball, which pnpm resolves
- * into a content-addressed store path even though `package.json` still says
- * the same "0.1.0". Resolving through the symlink is what turns "repacked
- * the tarball but forgot to bump the version" from a silently stale cache
- * into a correct rebuild.
+ * would produce different output for the same content. Every npm publish is
+ * a new version, and the resolved store path changes with it; resolving
+ * through the symlink also catches a locally linked or repacked copy that
+ * still reports the old version, instead of trusting a stale cache.
  */
 export function resolveCompilerIdentity(docsRoot: string): string {
   const link = join(docsRoot, "node_modules", "@devdogsuga", "docs-compiler");
