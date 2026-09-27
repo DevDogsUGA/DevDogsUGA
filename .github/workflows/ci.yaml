@@ -86,7 +86,7 @@ jobs:
       # it runs here rather than in the `database` job, and needs the base
       # ref this job already resolved above rather than re-deriving it.
       - name: Migrations are added in timestamp order
-        run: pnpm --filter @devdogsuga/repo-checks run check:migration-order -- "${{ steps.base.outputs.ref }}"
+        run: pnpm --filter @devdogsuga/repo-checks run check:migration-order "${{ steps.base.outputs.ref }}"
       # Both apps' GENERATED route types (the `VinextRouteTypes` namespace,
       # next-env.d.ts's `vinext/types/augmentations` reference) exist on
       # every laptop that has ever run `vinext dev`/`vinext build` and on no

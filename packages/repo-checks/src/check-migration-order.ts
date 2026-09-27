@@ -36,7 +36,8 @@ function listFiles(output: string): string[] {
 }
 
 function main() {
-  const baseRef = process.argv[2];
+  // pnpm 11 forwards a `--` separator to the script instead of consuming it.
+  const baseRef = process.argv.slice(2).find((arg) => arg !== "--");
   if (!baseRef) {
     console.error("usage: check-migration-order <base-ref>");
     process.exit(2);
