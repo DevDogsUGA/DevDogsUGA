@@ -48,7 +48,7 @@ export interface ChangelogIssue {
   signoff: string;
 }
 
-const BUILD_BLURB =
+const DEV_SESSION_BLURB =
   "Catch up on workshop materials, meet your teammates for hackathons, get unblocked by focus leads and officers, or just come hang out and get work done.";
 
 const EVENTS = {
@@ -76,16 +76,16 @@ const EVENTS = {
     blurb:
       "The inaugural meeting for the 2026–2027 year. Get set up to contribute to this year's projects. Plus, a collaborative coding workshop: an introduction to Git, GitHub, and how to contribute to a team project.",
   },
-  build1: {
-    chip: "Build Session",
+  dev1: {
+    chip: "Dev Session",
     color: KIND.build,
-    title: "Build Session",
+    title: "Dev Session #1",
     dow: "WED",
     date: "Sep 16",
     time: "6:00 – 7:00 PM",
     loc: "DLW 124",
     rsvp: "https://uga.campuslabs.com/engage/event/12664183",
-    blurb: BUILD_BLURB,
+    blurb: DEV_SESSION_BLURB,
   },
   // The three workshop nights have no summary in events yet — these
   // blurbs are authored from their linked workshop topics; swap in the real
@@ -102,16 +102,16 @@ const EVENTS = {
     blurb:
       "A framework double-header: build for the web with Next.js and go cross-platform with Flutter.",
   },
-  build2: {
-    chip: "Build Session",
+  dev2: {
+    chip: "Dev Session",
     color: KIND.build,
-    title: "Build Session",
+    title: "Dev Session #2",
     dow: "WED",
     date: "Sep 23",
     time: "6:00 – 7:00 PM",
     loc: "DLW 124",
     rsvp: "https://uga.campuslabs.com/engage/event/12664184",
-    blurb: BUILD_BLURB,
+    blurb: DEV_SESSION_BLURB,
   },
   supabase: {
     chip: "Workshop",
@@ -125,16 +125,16 @@ const EVENTS = {
     blurb:
       "Get hands-on with Supabase: Postgres, auth, and realtime data for this year's projects.",
   },
-  build3: {
-    chip: "Build Session",
+  dev3: {
+    chip: "Dev Session",
     color: KIND.build,
-    title: "Build Session",
+    title: "Dev Session #3",
     dow: "WED",
     date: "Sep 30",
     time: "6:00 – 7:00 PM",
     loc: "DLW 124",
     rsvp: "https://uga.campuslabs.com/engage/event/12664184",
-    blurb: BUILD_BLURB,
+    blurb: DEV_SESSION_BLURB,
   },
   career: {
     chip: "Workshop",
@@ -142,7 +142,7 @@ const EVENTS = {
     title: "Workshop: Career Fair Readiness",
     dow: "MON",
     date: "Oct 5",
-    time: "6:30 – 8:00 PM",
+    time: "6:00 – 8:00 PM",
     loc: "DLW 110",
     rsvp: null,
     blurb:
@@ -166,11 +166,11 @@ export const ISSUES: ChangelogIssue[] = [
     featured: EVENTS.coldstart,
     cta: "RSVP for Cold Start",
     upcoming: [
-      EVENTS.build1,
+      EVENTS.dev1,
       EVENTS.nextflutter,
-      EVENTS.build2,
+      EVENTS.dev2,
       EVENTS.supabase,
-      EVENTS.build3,
+      EVENTS.dev3,
       EVENTS.career,
     ],
     signoff:
@@ -190,7 +190,7 @@ export const ISSUES: ChangelogIssue[] = [
     featuredLabel: "happening_tonight",
     featured: EVENTS.nextflutter,
     cta: "RSVP for Cold Start",
-    upcoming: [EVENTS.build2, EVENTS.supabase, EVENTS.build3, EVENTS.career],
+    upcoming: [EVENTS.dev2, EVENTS.supabase, EVENTS.dev3, EVENTS.career],
     signoff:
       "Doors tonight at 6 in DLW 124. Bring a laptop if you have one, but we'll get you set up to ship either way.",
   },

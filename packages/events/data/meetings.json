@@ -41,9 +41,9 @@
     },
     {
       "id": "rec1BrdXl7u8bYGXH",
-      "title": "Build Session",
+      "title": "Dev Session #1",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
-      "kind": "Build Session",
+      "kind": "Dev Session",
       "building": "DLW",
       "location": "124",
       "startsAt": "2026-09-16T22:00:00.000Z",
@@ -86,9 +86,9 @@
     },
     {
       "id": "recGqvQqUDFlrXPRc",
-      "title": "Build Session",
+      "title": "Dev Session #2",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
-      "kind": "Build Session",
+      "kind": "Dev Session",
       "building": "DLW",
       "location": "124",
       "startsAt": "2026-09-23T22:00:00.000Z",
@@ -125,9 +125,9 @@
     },
     {
       "id": "rec6aLjA2ZhT45xuh",
-      "title": "Build Session",
+      "title": "Dev Session #3",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
-      "kind": "Build Session",
+      "kind": "Dev Session",
       "building": "DLW",
       "location": "124",
       "startsAt": "2026-09-30T22:00:00.000Z",
@@ -146,7 +146,7 @@
       "kind": null,
       "building": "DLW",
       "location": "110",
-      "startsAt": "2026-10-05T22:30:00.000Z",
+      "startsAt": "2026-10-05T22:00:00.000Z",
       "endsAt": "2026-10-06T00:00:00.000Z",
       "rsvpUrl": null,
       "cancelledAt": null,
@@ -161,6 +161,22 @@
           "project": null
         }
       ]
+    },
+    {
+      "id": "touch-grass-1-2026",
+      "title": "DevDogs Touch Grass #1",
+      "summary": "No laptops required -- just come outside, get some air, and hang out with the club before the semester gets busy again.",
+      "kind": "Social",
+      "building": null,
+      "location": "TBD",
+      "startsAt": "2026-10-07T22:00:00.000Z",
+      "endsAt": "2026-10-07T23:00:00.000Z",
+      "rsvpUrl": null,
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "countsForCredit": false,
+      "surveyUrl": null,
+      "agenda": []
     }
   ]
 }
