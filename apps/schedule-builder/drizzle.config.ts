@@ -1,0 +1,15 @@
+import { type Config } from "drizzle-kit";
+
+// DB_URL is provided by dotenvx (see package.json db:* scripts).
+
+export default {
+  out: "./src/server/db/schema/generated",
+  dialect: "postgresql",
+  schemaFilter: ["schedule_builder"],
+  dbCredentials: {
+    url: process.env.DB_URL!,
+  },
+  introspect: {
+    casing: "camel",
+  },
+} satisfies Config;

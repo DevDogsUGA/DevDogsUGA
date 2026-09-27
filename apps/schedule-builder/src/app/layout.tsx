@@ -39,7 +39,15 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const initialTerms = await db.select().from(availableTerms);
+  // `availableTerms` is a view: Postgres carries no NOT NULL on a view's
+  // columns even though this one's can never be null (an inner join on a
+  // non-null key, grouped by non-null columns), so introspection types them
+  // as nullable. Same non-null assertion `TermProvider`'s own PostgREST
+  // query already makes for the identical reason.
+  const initialTerms = (await db.select().from(availableTerms)).map((term) => ({
+    academicPeriod: term.academicPeriod!,
+    description: term.description!,
+  }));
   // Minted per-request in `middleware.ts`, carried on the plain `x-nonce`
   // request header for exactly this purpose -- see that file's doc comment.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
