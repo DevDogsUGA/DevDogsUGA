@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@devdogsuga/docs-compiler": "^0.1.1"
+    "@devdogsuga/docs-compiler": "^0.1.2"
   },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.1",
