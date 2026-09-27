@@ -79,6 +79,14 @@ jobs:
           else
             echo "since=" >> "$GITHUB_OUTPUT"
           fi
+      # `supabase/migrations/` is one flat directory; a new file timestamped
+      # before the newest one already on the base branch would apply out of
+      # the order its author tested it in the next time someone runs
+      # migrations from scratch. Credential-free — pure git, no database — so
+      # it runs here rather than in the `database` job, and needs the base
+      # ref this job already resolved above rather than re-deriving it.
+      - name: Migrations are added in timestamp order
+        run: pnpm --filter @devdogsuga/repo-checks run check:migration-order -- "${{ steps.base.outputs.ref }}"
       # Both apps' GENERATED route types (the `VinextRouteTypes` namespace,
       # next-env.d.ts's `vinext/types/augmentations` reference) exist on
       # every laptop that has ever run `vinext dev`/`vinext build` and on no
