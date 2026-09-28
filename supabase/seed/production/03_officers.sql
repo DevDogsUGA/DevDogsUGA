@@ -8,14 +8,12 @@
 -- `03_officers.sql` says what it holds in a way a timestamped migration
 -- cannot.
 --
--- Lives in `seed/production/`, alongside `01_roles.sql` and not the
--- development-only `seed/development/02_moderation.sql`: this is content
+-- Lives in `seed/production/`, alongside `01_roles.sql`: this is content
 -- every tier needs, so it is part of the set `devtools db seed production`
 -- (Backstage `packages/devtools`) applies directly to a staging or
 -- production target, without a `db reset` -- which, on a hosted database,
--- would erase everything else on it. `supabase db reset` still runs it too,
--- on a LOCAL reset, because `config.toml`'s `[db.seed]` lists
--- `seed/production/*.sql` first and `seed/development/*.sql` second.
+-- would erase everything else on it. A development `db reset` runs it too,
+-- because `config.toml`'s `[db.seed]` lists `seed/production/*.sql`.
 --
 -- A reset erases the database. That is fine on a fresh local stack, and it
 -- stops being fine the moment production carries attendance, awards or teams
@@ -341,8 +339,7 @@ insert into "officer_submissions" (
 -- Accounts
 -- ============================================================
 --
--- The four empty strings are not decoration, and 02_moderation.sql explains
--- why: GoTrue scans confirmation_token, recovery_token,
+-- The four empty strings are not decoration: GoTrue scans confirmation_token, recovery_token,
 -- email_change_token_new and email_change into non-nullable Go strings, and
 -- those columns have no database default, so a row without them exists but
 -- fails every sign-in with an error naming neither the column nor the user.
