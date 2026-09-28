@@ -4,6 +4,7 @@ import EmptyState from "~/components/participation/EmptyState";
 import RequestActions from "~/components/teams/RequestActions";
 import PageShell from "~/components/PageShell";
 import Callout from "~/ui/callout";
+import { ConsoleCard } from "~/ui/card";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import { respondToMembership } from "~/server/actions/teams";
 import { requireSession } from "~/server/auth/require";
@@ -87,35 +88,32 @@ export default async function TeamRequestsPage() {
       ) : (
         <>
           {invitations.length > 0 && (
-            <section className="flex flex-col gap-3">
-              <h2 className="px-1 font-semibold text-white">
-                Invitations to you
-              </h2>
-              <p className="max-w-prose px-1 text-sm text-mauve-400">
-                Several at once is fine — you can be active on up to{" "}
-                {MAX_CONCURRENT_TEAMS_PER_USER} teams, so accepting one does not
-                automatically clear the rest. Accepting past that cap fails at
-                the button; decline the ones you do not want to keep pending.
-              </p>
-              <ul className="flex flex-col gap-3">
-                {invitations.map((row) => (
-                  <RequestCard key={row.request.id} row={row} />
-                ))}
-              </ul>
-            </section>
+            <ConsoleCard.Root id="invitations">
+              <ConsoleCard.Header
+                title="Invitations to You"
+                description={`Several at once is fine — you can be active on up to ${MAX_CONCURRENT_TEAMS_PER_USER} teams, so accepting one does not automatically clear the rest. Accepting past that cap fails at the button; decline the ones you do not want to keep pending.`}
+              />
+              <ConsoleCard.Content>
+                <ul className="flex flex-col gap-3">
+                  {invitations.map((row) => (
+                    <RequestCard key={row.request.id} row={row} />
+                  ))}
+                </ul>
+              </ConsoleCard.Content>
+            </ConsoleCard.Root>
           )}
 
           {requests.length > 0 && (
-            <section className="flex flex-col gap-3">
-              <h2 className="px-1 font-semibold text-white">
-                Asking to join your team
-              </h2>
-              <ul className="flex flex-col gap-3">
-                {requests.map((row) => (
-                  <RequestCard key={row.request.id} row={row} />
-                ))}
-              </ul>
-            </section>
+            <ConsoleCard.Root id="requests">
+              <ConsoleCard.Header title="Asking to Join Your Team" />
+              <ConsoleCard.Content>
+                <ul className="flex flex-col gap-3">
+                  {requests.map((row) => (
+                    <RequestCard key={row.request.id} row={row} />
+                  ))}
+                </ul>
+              </ConsoleCard.Content>
+            </ConsoleCard.Root>
           )}
         </>
       )}

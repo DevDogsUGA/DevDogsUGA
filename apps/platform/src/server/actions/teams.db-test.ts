@@ -361,7 +361,7 @@ describe("joinTeam", () => {
       detail: "boom",
     });
 
-    const result = await joinTeam(IDS.seatedTeam, "ABC234");
+    const result = await joinTeam("ABC234");
     expect(result).toEqual({ ok: false, code: "github_unavailable" });
 
     const row = await activeRow(IDS.seatedTeam, IDS.freshJoiner);
@@ -371,7 +371,7 @@ describe("joinTeam", () => {
   it("refuses a full team without calling GitHub", async () => {
     session.userId = IDS.freshJoiner;
 
-    const result = await joinTeam(IDS.fullTeam, "DEF456");
+    const result = await joinTeam("DEF456");
     expect(result).toEqual({ ok: false, code: "team_full" });
     expect(github.addMember).not.toHaveBeenCalled();
   });
@@ -379,7 +379,7 @@ describe("joinTeam", () => {
   it("refuses past the concurrent-team cap", async () => {
     session.userId = IDS.capped;
 
-    const result = await joinTeam(IDS.disbandTeam, "MNO345");
+    const result = await joinTeam("MNO345");
     expect(result).toEqual({ ok: false, code: "too_many_teams" });
     expect(await memberCount(IDS.disbandTeam)).toBe(1);
   });
@@ -389,10 +389,19 @@ describe("joinTeam", () => {
 
     // The previous test in this block left an `api_error` mocked with
     // `mockResolvedValueOnce`, which is already consumed; this call gets the
-    // `beforeEach` default of success.
-    const result = await joinTeam(IDS.seatedTeam, "ABC234");
-    expect(result).toEqual({ ok: true, value: undefined });
+    // `beforeEach` default of success. Spaced and lower-cased the way a
+    // code read aloud arrives.
+    const result = await joinTeam("  abc234 ");
+    expect(result).toEqual({ ok: true, value: "actions-db-test-seated" });
     expect(await activeRow(IDS.seatedTeam, IDS.freshJoiner)).not.toBeNull();
+  });
+
+  it("refuses a code no team holds without calling GitHub", async () => {
+    session.userId = IDS.freshJoiner;
+
+    const result = await joinTeam("ZZZ999");
+    expect(result).toEqual({ ok: false, code: "bad_join_code" });
+    expect(github.addMember).not.toHaveBeenCalled();
   });
 });
 
@@ -414,7 +423,7 @@ describe("leaveTeam", () => {
     expect(after?.leftAt).not.toBeNull();
 
     // Rejoining starts a second stint rather than reviving the first.
-    const rejoined = await joinTeam(IDS.historyTeam, "PQR678");
+    const rejoined = await joinTeam("PQR678");
     expect(rejoined.ok).toBe(true);
 
     const rows = await db.execute<{ leftAt: string | null }>(sql`
