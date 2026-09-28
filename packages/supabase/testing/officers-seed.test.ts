@@ -90,7 +90,7 @@ describe("03_officers.sql account matching", () => {
     const { count } = (
       await sql()`select count(*)::int as count from platform.profile`
     )[0] as { count: number };
-    expect(count).toBe(14);
+    expect(count).toBe(11); // one per officer in 03_officers.sql
   });
 
   describe("a real account later matching an officer's altEmail", () => {
@@ -145,7 +145,7 @@ describe("03_officers.sql account matching", () => {
       const { count } = (
         await sql()`select count(*)::int as count from platform.profile`
       )[0] as { count: number };
-      expect(count).toBe(14);
+      expect(count).toBe(11); // one per officer in 03_officers.sql
     });
   });
 
