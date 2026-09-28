@@ -11,13 +11,25 @@ export { createScheduleBuilderDb } from "./create";
 let localDatabase: ScheduleBuilderDb | undefined;
 
 /**
- * The DB_URL fallback is process-wide, not per-request: memoized at module
- * scope so `next dev`/`wrangler dev` and any call outside a request scope
+ * The DB_URL fallback under Node, process-wide rather than per-request:
+ * memoized at module scope so `next dev` and any call outside a request scope
  * (tests, build-time module evaluation) reuse one Postgres.js pool instead of
  * opening a fresh one on every call. It is intentionally never closed --
  * there is no per-request boundary to close it against here, and the process
  * owns it for its lifetime.
  */
+/**
+ * workerd (`wrangler dev`, the Cloudflare preview, and `vinext dev` through
+ * @cloudflare/vite-plugin) refuses to let one request use a socket another
+ * request opened. A module-scope pool there hands request B the connection
+ * request A is holding, B waits on I/O it can never perform, and the runtime
+ * cancels it as hung; a browser's parallel RSC prefetches were enough to wedge
+ * the whole Worker. Only Node can share one pool, so only Node gets `localDb`.
+ */
+const IN_WORKERD =
+  typeof navigator !== "undefined" &&
+  navigator.userAgent === "Cloudflare-Workers";
+
 function localDb(): ScheduleBuilderDb {
   return (localDatabase ??= createDb(env.DB_URL, relations));
 }
@@ -31,9 +43,9 @@ function localDb(): ScheduleBuilderDb {
  * more than once inside the same request reuses the same client instead of
  * opening a fresh Postgres.js pool per query. Outside a request scope (tests,
  * build-time module evaluation) it runs on every call with no caching -- see
- * `vinext/cache`'s own doc comment; the Hyperdrive branch below stays
- * per-request (see `closeAfterResponse`), while the DB_URL fallback in
- * `localDb` is memoized at module scope instead. This is the boundary direct
+ * `vinext/cache`'s own doc comment; every workerd branch below is
+ * per-request (see `closeAfterResponse`), and only Node's DB_URL fallback in
+ * `localDb` is memoized at module scope. This is the boundary direct
  * Postgres.js pools cannot cross in Workers.
  */
 const currentDb = cacheForRequest((): ScheduleBuilderDb => {
@@ -48,8 +60,14 @@ const currentDb = cacheForRequest((): ScheduleBuilderDb => {
       );
     }
     // No HYPERDRIVE binding in the development environment's wrangler.jsonc
-    // block (see there); fall back to DB_URL the same way local `next
-    // dev`/`wrangler dev` always has.
+    // block (see there); fall back to DB_URL. In workerd that has to be a
+    // pool per request, closed like the Hyperdrive one below (see
+    // IN_WORKERD).
+    if (IN_WORKERD) {
+      const database = createScheduleBuilderDb(env.DB_URL, 5);
+      closeAfterResponse(database);
+      return database;
+    }
     return localDb();
   }
 
@@ -84,11 +102,9 @@ function closeAfterResponse(database: ScheduleBuilderDb): void {
       }
     });
   } catch {
-    // `after` throws outside a request scope. `closeAfterResponse` is only
-    // ever reached from inside `currentDb`'s Hyperdrive branch, which only
-    // runs with a live HYPERDRIVE binding (never in the request-less
-    // fallback); if a scope slips through anyway, leave the pool to GC
-    // rather than fail the query that needed it.
+    // `after` throws outside a request scope, which workerd reaches only while
+    // evaluating a module. Leave that pool to GC rather than fail the query
+    // that needed it.
   }
 }
 
