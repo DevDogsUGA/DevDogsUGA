@@ -254,7 +254,7 @@ insert into "officer_submissions" (
     'nandan-praveen', 'np43598@uga.edu', 'Nandan Praveen',
     'Nandan', 'Praveen',
     'Project Manager',
-    'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as DogPack Project Manager at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
+    'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as Project Manager for both DogPack and DogDays at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
     array[45516]::integer[], 2029, 'spring',
     array['nandan@uga.edu']::text[],
     array['he', 'him']::text[], true, false,
