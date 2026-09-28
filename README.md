@@ -2,8 +2,9 @@
 
 DevDogs is UGA's student developer club. This repo holds the club's apps. Pick your team's docs to get started:
 
-- [Schedule Builder](https://devdogsuga.org/docs/schedule-builder) — course schedule planning (Next.js)
-- [Study Group Finder](https://devdogsuga.org/docs/study-group-finder) — study groups (Flutter)
+- [Platform](https://devdogsuga.org/docs/platform/getting-started/prerequisites) — the site, console, docs, and OAuth server (Next.js)
+- [Schedule Builder](https://devdogsuga.org/docs/schedule-builder/getting-started/prerequisites) — course schedule planning (Next.js)
+- [Study Group Finder](https://devdogsuga.org/docs/study-group-finder/getting-started/prerequisites) — study groups (Flutter)
 
 ## Quickstart
 
