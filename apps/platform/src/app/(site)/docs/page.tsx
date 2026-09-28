@@ -53,6 +53,16 @@ export default function DocsLandingPage() {
             Which team are you on?
           </h2>
           <DocsTileGrid tiles={large.map((project) => tile(project, "lg"))} />
+          <p className="text-sm text-mauve-400">
+            Not on a team yet?{" "}
+            <a
+              href="/discord"
+              className="font-medium text-mauve-200 underline-offset-4 hover:text-white hover:underline"
+            >
+              Ask in Discord
+            </a>
+            .
+          </p>
         </section>
 
         {/* Everyone touches these two regardless of team, so they stay one
