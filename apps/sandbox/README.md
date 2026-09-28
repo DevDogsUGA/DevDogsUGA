@@ -1,23 +1,19 @@
 # sandbox
 
-The per-environment proxy Worker sitting in front of each team's Supabase
-project. Every request to a competition team's own instance arrives here; the
-Worker asks the platform database who the caller's token belongs to, then
-forwards to that team's upstream.
+A dormant Cloudflare Worker. It used to proxy each competition team's own
+Supabase project; that integration was removed in the platform redesign, and
+nothing provisions, credentials or deploys it any more. The code stays in case
+the design is revisited. Run today, it refuses every request.
 
-It owns **no Postgres schema** in the shared database — every schema there
-belongs to one of the other three apps.
+It owns **no Postgres schema** in the shared database.
 
 ## Develop
 
 ```bash
-pnpm dev --filter sandbox   # wrangler dev, against the local Supabase stack
+pnpm dev --filter sandbox   # wrangler dev
 ```
-
-Monorepo setup, env handling, and the contribution flow:
-[Toolkit](../../docs/toolkit/index.md).
 
 ## Docs
 
-[Sandbox](../../docs/sandbox/index.md) — where an instance comes from, what the
-proxy does per request, and who may reach it.
+[Sandbox](../../docs/sandbox/index.md) — what the Worker used to do, kept as
+history.

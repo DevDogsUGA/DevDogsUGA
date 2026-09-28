@@ -61,7 +61,7 @@ Staging's `triggers.crons` is empty on purpose rather than merely omitted: stagi
 
 ```bash
 pnpm -r --filter '<app>^...' run build   # the app's workspace dependencies
-pnpm --filter <app> run cf:build:<tier>  # with-env vinext build, env validation enforced
+pnpm --filter <app> run cf:build:<staging|production>  # with-env vinext build, env validation enforced
 ```
 
 `sandbox` is not part of this pipeline — there is no team-sandbox integration for it to proxy any more, so deploying it is a manual `pnpm --filter sandbox exec wrangler deploy`.

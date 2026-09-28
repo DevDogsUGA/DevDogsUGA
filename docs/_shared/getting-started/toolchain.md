@@ -22,7 +22,7 @@ repo, and it's a single native binary with no shell-startup cost worth
 noticing.
 
 ```bash
-curl -fsSL https://fnm.vm.dev/install | bash   # macOS/Linux/WSL
+curl -fsSL https://fnm.vercel.app/install | bash   # macOS/Linux/WSL
 fnm install                                     # reads .nvmrc (pins Node 24)
 fnm use
 node --version

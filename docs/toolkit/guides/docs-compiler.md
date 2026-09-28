@@ -64,8 +64,7 @@ pnpm --filter @devdogsuga/docs build --force  # bypass the cache
 To run the compiler directly instead, from `docs/`:
 
 ```bash
-cd docs && pnpm exec docs-compiler check                  # resolves the linked bin
-cd docs && node ./node_modules/.bin/docs-compiler check   # no PATH at all
+cd docs && pnpm exec docs-compiler check
 ```
 
 What the rules mean for a page you are writing is
