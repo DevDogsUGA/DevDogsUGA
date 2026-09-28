@@ -20,6 +20,11 @@ function teamBranchUrl(teamSlug: string): string {
   return `https://github.com/${env.GITHUB_ORG}/${env.GITHUB_COMPETITION_REPO}/tree/${teamBranch(teamSlug)}`;
 }
 
+/** What `git clone` takes for the competition repo every team branch is on. */
+function competitionRepoCloneUrl(): string {
+  return `https://github.com/${env.GITHUB_ORG}/${env.GITHUB_COMPETITION_REPO}.git`;
+}
+
 /**
  * Reads for the team pages.
  *
@@ -46,6 +51,10 @@ export interface TeamDetail {
   joinCode: string | null;
   /** Where the team actually lives -- the branch, on GitHub. */
   branchUrl: string;
+  /** The branch's name, for the checkout commands the page prints. */
+  branch: string;
+  /** The competition repo's clone URL, for the same. */
+  cloneUrl: string;
   /** Last time something confirmed this row against GitHub. Null only for a
    *  row that predates the mirror's freshness column, which should not
    *  exist outside a bug -- see the migration comment on `githubSyncedAt`. */
@@ -104,6 +113,8 @@ export const getTeamDetail = cache(
       members,
       joinCode: isMember ? row.joinCode : null,
       branchUrl: teamBranchUrl(row.slug),
+      branch: teamBranch(row.slug),
+      cloneUrl: competitionRepoCloneUrl(),
       githubSyncedAt: row.githubSyncedAt,
     };
   },

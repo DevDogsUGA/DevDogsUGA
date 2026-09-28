@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import BranchCommands from "~/components/teams/BranchCommands";
 import InviteForm from "~/components/teams/InviteForm";
 import JoinByCodeForm from "~/components/teams/JoinByCodeForm";
 import RosterActions from "~/components/teams/RosterActions";
@@ -88,7 +89,7 @@ export default async function TeamPage({
               rel="noreferrer"
               className="underline underline-offset-2 hover:text-mauve-200"
             >
-              team/{team.slug} on GitHub
+              {team.branch} on GitHub
             </a>
             {isMirrorStale(team.githubSyncedAt, checkedAt) && (
               <span>
@@ -102,6 +103,9 @@ export default async function TeamPage({
               </span>
             )}
           </p>
+          <div className="mb-4">
+            <BranchCommands branch={team.branch} cloneUrl={team.cloneUrl} />
+          </div>
           {pendingForLead.length > 0 && (
             <Callout tone="info" title="Waiting on you" className="mb-4">
               {pendingForLead.length}{" "}
