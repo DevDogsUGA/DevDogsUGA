@@ -255,7 +255,7 @@ insert into "officer_submissions" (
   (
     'nandan-praveen', 'np43598@uga.edu', 'Nandan Praveen',
     'Nandan', 'Praveen',
-    'DogPack Project Manager',
+    'Project Manager',
     'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as DogPack Project Manager and Flutter Focus Lead at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
     array[45516]::integer[], 2029, 'spring',
     array['nandan@uga.edu']::text[],
@@ -265,7 +265,7 @@ insert into "officer_submissions" (
   (
     'shruti-mishra', 'sbm64430@uga.edu', 'Shruti Mishra',
     'Shruti', 'Mishra',
-    'Backend Integration Focus Lead',
+    'Focus Lead',
     'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Backend Integration Focus Lead on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. She is passionate about software engineering and AI.',
     array[73962]::integer[], 2027, 'spring',
     array['shruti.mishra@uga.edu', 'shrutibmishra1@gmail.com']::text[],
@@ -287,7 +287,7 @@ insert into "officer_submissions" (
   (
     'gabrielle-rose', 'glr26038@uga.edu', 'Gabrielle Rose',
     'Gabrielle', 'Rose',
-    'UI/UX Focus Lead',
+    'Focus Lead',
     'Gabrielle Rose is pursuing a degree in Computer Science with a focus on front-end development, human-computer interaction, and UI/UX design, and is passionate about creating intuitive, user-centered technologies that solve real-world problems. In the future, Gabrielle aspires to bridge the gap between people and technology by designing digital solutions that create meaningful impact and empower communities to confidently engage with technology.',
     array[73962]::integer[], 2028, 'spring',
     array['gabrielle.rose@uga.edu']::text[],
@@ -299,7 +299,7 @@ insert into "officer_submissions" (
     -- his own resume prints linkedin.com/in/kyle-quach.
     'kyle-quach', 'gq72484@uga.edu', 'Kyle Quach',
     'Gia Khang', 'Quach',
-    'Next.js Focus Lead',
+    'Focus Lead',
     'Kyle Quach is a sophomore majoring in Computer Science at the University of Georgia. Kyle''s interests span software development to AI engineering, and he sometimes develops games on the side. He has built projects with tech stacks such as Java, C#, Python, and JavaScript, as well as frameworks like React and Spring. As an aspiring software developer, Kyle looks forward to building software that contributes meaningfully to people''s daily lives.',
     array[73962]::integer[], 2028, 'spring',
     array['giakhang.quach@uga.edu']::text[],
@@ -319,7 +319,7 @@ insert into "officer_submissions" (
   (
     'sidhant-dash', 'sd04573@uga.edu', 'Sidhant Dash',
     'Sidhant', 'Dash',
-    'DogDays Project Manager',
+    'Project Manager',
     'Sidhant Dash is a fourth-year Computer Science student at the University of Georgia with a certificate in New Media. He is interested in frontend and backend development, game development, and UI/UX design. Sidhant serves as the DogDays Project Manager for DevDogs and the Marketing Chair of ACM at UGA. He recently interned at CGI as a software developer and strives to develop software that benefits others while helping developers grow.',
     array[73962, 62630]::integer[], 2027, 'spring',
     array['sidhant.dash@uga.edu']::text[],
@@ -658,7 +658,7 @@ insert into "platform"."userRoles" ("userId", "roleId")
 select s."userId", r."id"
 from "officer_submissions" s
 join (values
-  ('nandan-praveen', 'Flutter Focus Lead')
+  ('nandan-praveen', 'Focus Lead')
 ) as secondary("slug", "title") on secondary."slug" = s."slug"
 join "platform"."roles" r on r."title" = secondary."title"
 where s."userId" is not null
