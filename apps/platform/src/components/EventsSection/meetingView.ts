@@ -58,7 +58,7 @@ export const segmentBadge: Record<MeetingSegment, SegmentBadge> =
 /**
  * The badge for a night an officer NAMED, keyed by `meetings.kind`.
  *
- * The closed four-value vocabulary comes from `EVENT_KIND_VISUALS`, shared
+ * The closed five-value vocabulary comes from `EVENT_KIND_VISUALS`, shared
  * with generated event art. Each authored kind has its own hue so its calendar
  * dot, badge, image gradient, and image badge all carry the same meaning.
  */
