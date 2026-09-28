@@ -1,6 +1,6 @@
 ---
 name: Writing Docs
-description: The rules for a docs page — front matter, sections, shared pages, length budgets, collapsibles, and the markdown syntax that renders.
+description: The rules for a docs page — front matter, sections, shared pages, length budgets, collapsibles, variants, and the markdown syntax that renders.
 order: 2
 section: infrastructure
 ---
@@ -162,13 +162,52 @@ See the [local preview](/docs/toolkit/infrastructure/docs-system/preview) page.
 Anchor links work; heading ids are GitHub-style slugs of the heading text.
 
 <details>
-<summary>Every registered language</summary>
+<summary>Why can Shiki load any language now?</summary>
 
-`bash`, `css`, `dart`, `diff`, `graphql`, `html`, `http`, `java`, `javascript`, `json`, `jsx`, `markdown`, `python`, `sql`, `toml`, `tsx`, `typescript`, `yaml`.
-
-The list is registered in `apps/platform/src/components/DocsMarkdown.tsx`, which builds its own Shiki highlighter on the JavaScript regex engine — the stock plugin compiles Oniguruma's Wasm at request time, and the Workers runtime forbids that outright. Adding a language means adding an import there.
+Rendering used to happen in the platform, per request, through `react-markdown` — and the Workers runtime forbids `WebAssembly.compile()`, so that renderer ran Shiki on its JavaScript regex engine with a hand-registered, hand-imported list of grammars. That constraint is gone now that rendering happens in `@devdogsuga/docs-compiler`, at build time, in Node: the stock `@shikijs/rehype` plugin runs on Shiki's Oniguruma engine and loads any grammar on demand (`lazy: true`), so an unregistered language tag is no longer a build-time list to edit — it's just a language Shiki hasn't loaded yet, and `fallbackLanguage: "text"` is what a genuinely unsupported tag falls back to silently.
 
 </details>
+
+## Variants
+
+A page can differ by project, or by the reader's own setup, written as `remark-directive` blocks the compiler resolves at build time — every page still ships as one pre-rendered HTML string, so a reader never runs a markdown pipeline in their own browser.
+
+**By project**, settled once, when the page compiles: `:::only{project="study-group-finder"}` keeps a block only in that project's copy and drops it from every other mount. Nothing about a dropped block reaches the browser at all — this is how one `_shared` source file says something extra for one of the projects it mounts into.
+
+```md
+:::only{project="study-group-finder"}
+Build for Android first.
+:::
+```
+
+**By setup**, settled in the browser: `os` (`macos`, `linux`, `wsl`, `windows`) and `supabase` (`hosted`, `local`) are the two groups. Every variant ships in the HTML; the reader's choice is a `data-<group>` attribute on `<html>`, and CSS hides the rest — so the right variant is already on screen before any script runs, not swapped in after.
+
+```md
+:::tabs{group="os"}
+::tab{value="macos"}
+Install Homebrew.
+::tab{value="linux wsl"}
+Use apt.
+:::
+```
+
+A run of adjacent fenced code blocks can say the same thing more tersely, tagging each with the group in its info string instead of writing out a `tabs` block:
+
+````md
+```bash os=macos
+brew install fnm
+```
+
+```bash os="linux wsl"
+curl -fsSL https://fnm.vercel.app/install | bash
+```
+````
+
+`:::only{os="windows"}` (or a `windows`-only tab) works the same way, for a block that only makes sense on native Windows.
+
+**`windows` (native Windows) is opt-in per project.** It only exists as a value in a project whose own `index.md` lists it under `os:` in front matter — `os: [macos, linux, wsl, windows]`. A project that doesn't opt in never shows a `windows` tab or panel to its readers, even if the source markdown offers one: a `windows`-only variant in a page mounted into that project is silently dropped from its copy, the same way an `os`/`supabase` value with nothing in that project's `os:` list would be.
+
+**The build fails** if a `tabs` group leaves a value uncovered, covers one twice, or puts a heading inside a tab — a heading a reader might never see would be a table-of-contents entry pointing at nothing, the same rule collapsibles follow. Each value a group can take **in a given project** has to be covered exactly once, or the page does not build; a reader landing on an empty panel is the failure mode this exists to prevent.
 
 ## Why it's like this
 
