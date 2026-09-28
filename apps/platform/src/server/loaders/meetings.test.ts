@@ -67,7 +67,9 @@ describe("resolveMeetingSegments", () => {
     // night structure cannot describe, the same condition twice. Both
     // speaking would render "Unscheduled · Build Session", the fallback
     // contradicting the person who told us what the night was.
-    expect(resolveMeetingSegments(structure({ kind: "Build Session" }))).toEqual({
+    expect(
+      resolveMeetingSegments(structure({ kind: "Build Session" })),
+    ).toEqual({
       segments: [],
     });
   });
