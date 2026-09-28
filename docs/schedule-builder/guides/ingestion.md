@@ -31,7 +31,7 @@ Two entry points, same work:
 ## Populate course data
 
 A fresh database has no courses, so the generator has nothing to plan against.
-Trigger the scrape workflow through devtools — it starts a temporary Wrangler
+Trigger the scrape workflow through devtools — it starts a temporary `vinext dev`
 session for you (the workflow runtime, which `next dev` does not provide), runs
 the scrape against whichever database the session's `--tier` points at — the
 local stack, a hosted development project, staging, or production — and waits
@@ -51,9 +51,13 @@ pnpm devtools workflows run --app schedule-builder \
   --workflow SCRAPE_WORKFLOW --tier development
 ```
 
-The full scrape pulls every available term and takes a while. If a Wrangler
-session is already up (`pnpm devtools workflows serve --app schedule-builder`),
-the trigger reuses it instead of starting its own.
+If `.env` names a hosted development database while the local stack is also
+running, `--tier development` is ambiguous and devtools refuses it; pass
+`--tier development:local` or `--tier development:remote` instead.
+
+The full scrape pulls every available term and takes a while. If a session is
+already up (`pnpm devtools workflows serve --app schedule-builder`, which also
+serves the app itself), the trigger reuses it instead of starting its own.
 
 > [!NOTE]
 > The `/cron/scrape-registrar` route is a lighter alternative when you already
