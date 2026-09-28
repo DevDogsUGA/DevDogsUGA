@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vinext build",
-    "dev": "with-env vinext dev",
+    "dev": "with-env next dev",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",

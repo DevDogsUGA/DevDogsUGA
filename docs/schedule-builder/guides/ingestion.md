@@ -26,13 +26,13 @@ Two entry points, same work:
   app has, and it bypasses the Worker scheduled handler entirely.
 - **`src/app/(api)/cron/scrape-registrar/route.ts`** — the older HTTP route,
   guarded by a cron secret (`src/lib/cron/auth.ts`; the check is skipped in
-  development). Still runs the same pipeline, but needs `vinext dev` up.
+  development). Still runs the same pipeline, but needs `next dev` up.
 
 ## Populate course data locally
 
 A fresh database has no courses, so the generator has nothing to plan against.
 Trigger the scrape workflow through devtools — it starts a temporary Wrangler
-session for you (the workflow runtime, which `vinext dev` does not provide), runs
+session for you (the workflow runtime, which `next dev` does not provide), runs
 the scrape against your local Supabase stack, and waits for it to finish:
 
 ```bash
@@ -55,7 +55,7 @@ the trigger reuses it instead of starting its own.
 
 > [!NOTE]
 > The `/cron/scrape-registrar` route is a lighter alternative when you already
-> have `vinext dev` running — a plain `GET http://localhost:3001/cron/scrape-registrar`,
+> have `next dev` running — a plain `GET http://localhost:3001/cron/scrape-registrar`,
 > with no secret needed in development. It runs the same code; the workflow path
 > is just what production uses and needs no dev server.
 

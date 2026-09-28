@@ -16,12 +16,15 @@ This assumes the toolchain, database, and sign-in steps earlier in
 pnpm dev --filter schedule-builder
 ```
 
-`dev` is `with-env vinext dev` — it reads the shared root `.env` (and
-`.env.generated`, when a local Supabase stack is running) before Vite starts.
-The app serves on **port 3001** (`platform` takes 3000, so both can run
-together). Going through the `devtools run` picker (`pnpm dev --filter …`)
-rather than `pnpm --filter schedule-builder dev` also builds this app's
-workspace dependencies first — see
+`dev` is `with-env next dev` — it reads the shared root `.env` (and
+`.env.generated`, when a local Supabase stack is running) before Turbopack
+starts. Local dev runs on the standard Next.js dev server, not vinext —
+builds and deploys still go through `vinext build` / `wrangler dev` (see
+[Local setup](/docs/schedule-builder/guides/local-setup)). The app serves on
+**port 3001** (`platform` takes 3000, so both can run together). Going
+through the `devtools run` picker (`pnpm dev --filter …`) rather than
+`pnpm --filter schedule-builder dev` also builds this app's workspace
+dependencies first — see
 [Contributing](/docs/schedule-builder/guides/contributing).
 
 ## Sign-in needs the platform
@@ -37,7 +40,7 @@ until they sign in.
 
 A fresh database has no courses, so there is nothing for the generator to plan
 against yet. Trigger the registrar scrape through devtools — it starts a
-temporary local Wrangler session (the Workflow runtime `vinext dev` doesn't
+temporary local Wrangler session (the Workflow runtime `next dev` doesn't
 provide on its own), runs the scrape against your database, and waits for it
 to finish:
 

@@ -1,4 +1,6 @@
-# Cloudflare local dev vars for `wrangler dev` / `vinext dev`.
+# Cloudflare local dev vars for `wrangler dev` / `cf:preview` / `cf:dev`.
+# Not read by `pnpm dev` (plain `next dev`, no workerd underneath) — only by
+# the Worker-runtime paths that build through vinext.
 # Copy to .dev.vars (gitignored). Mirror the server env the worker needs at
 # runtime. For deployed environments, set non-secret values as wrangler `vars`
 # and secrets via `wrangler secret put`.

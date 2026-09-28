@@ -1,6 +1,6 @@
 ---
 name: Environment and Cloudflare preview
-description: The app's env contract, and testing against the deployed Worker runtime rather than vinext dev.
+description: The app's env contract, and testing against the deployed Worker runtime rather than next dev.
 order: 1
 section: guides
 ---
@@ -33,7 +33,7 @@ because the client reads it directly.
 ## Cloudflare preview
 
 The app deploys to Workers through vinext, and the preview build behaves
-differently from `vinext dev` (it runs on `workerd`, the same runtime as
+differently from local `next dev` (it runs on `workerd`, the same runtime as
 production). Copy `.dev.vars.example` to `.dev.vars`, then:
 
 ```bash
