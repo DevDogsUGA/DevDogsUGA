@@ -25,15 +25,8 @@ export interface BuildingLocation {
   lon: number | null;
 }
 
-/**
- * `quality` is always `null` — it is a dormant seam. There is no rating
- * source since RateMyProfessors was removed; downstream code should keep
- * reading this field so a future rating source can be wired back in without
- * a contract change.
- */
 export interface Professor {
   name: string;
-  quality: number | null;
 }
 
 export interface Meeting {

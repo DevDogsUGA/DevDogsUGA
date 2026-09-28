@@ -82,7 +82,4 @@ Every rule implements the interface in `src/lib/generation/rule.ts`:
 
 Existing rules to model yours on: `excludedCourses`, `excludedSections`,
 `campus`, `maxCreditHoursRule`, `minCreditHoursRule`, `preferredStartTimeRule`,
-`preferredEndTimeRule`. Two dormant rules — `professorQuality` and `distance` —
-sit in the registry with `isActive: false` as ready-made seams; `Professor.quality`
-is always `null` today (the RateMyProfessors integration was removed), so the
-quality rule stays off until a data source returns.
+`preferredEndTimeRule`.

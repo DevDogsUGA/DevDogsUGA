@@ -40,8 +40,7 @@ UGA student's semester against real registrar data.
 - **Section (offering)** — one instance of a course in one term, keyed by its
   **CRN**. Cancelled sections are kept, not deleted — saved plans reference a CRN.
 - **CRN** — Course Reference Number, the registrar's primary key for a section.
-- **Instructor** — who teaches a section. `Professor.quality` is a dormant
-  field, always `null` (no rating source is wired up).
+- **Instructor** — who teaches a section.
 - **Meeting** — one weekly time block of a section (days, times, building/room).
 - **Schedule** — a conflict-free set of sections, one per requested course.
 - **Rule** — one unit of generation logic that can reject a section, prune a

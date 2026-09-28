@@ -7,19 +7,10 @@ import {
   type GenerationCourse,
 } from "./engine";
 
-// This ports the non-walking-distance cases from
-// `../algorithm/brute-force.test.ts` onto the new rule-driven engine, run
-// with an EMPTY rule registry (see `./registry.ts`) so only the engine's own
-// behaviour — cartesian-product enumeration, the MAX_INPUT_COURSES guard,
-// and the always-on `noConflicts` pruning — is under test.
-//
-// Intentionally NOT ported: the three `validateHard` walking-distance tests.
-// Walking distance is dropped from this redesign; it returns later (if at
-// all) as its own dormant rule module, not as engine behaviour. Likewise,
-// excluded-courses/-sections, credit-hour bounds, and preference filtering
-// are not ported here either — those are now features that live in rule
-// modules (this package's five siblings), not in the engine itself, so they
-// cannot be exercised with an empty `RULES` array.
+// Runs with an EMPTY rule registry (see `./registry.ts`) so only the
+// engine's own behaviour — cartesian-product enumeration, the
+// MAX_INPUT_COURSES guard, and the always-on `noConflicts` pruning — is under
+// test. Each rule's behaviour is tested beside it in `./rules/`.
 
 const NO_CTX: GenerationConstraints = {
   excludedCourses: [],

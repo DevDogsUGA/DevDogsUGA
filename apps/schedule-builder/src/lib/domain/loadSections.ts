@@ -141,10 +141,7 @@ export function groupRowsIntoSections(rows: SectionRow[]): Section[] {
         },
         professor:
           row.instructorId !== null
-            ? {
-                name: `${row.instructorFirstName} ${row.instructorLastName}`,
-                quality: null,
-              }
+            ? { name: `${row.instructorFirstName} ${row.instructorLastName}` }
             : null,
         seatsAvailable: row.seatsAvailable,
         actualEnrollment: row.actualEnrollment,
