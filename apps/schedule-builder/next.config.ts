@@ -6,10 +6,14 @@ import { env } from "~/env";
 /**
  * A function only so it can see the phase. `next dev` runs in Node, not
  * workerd, so `~/server/db`'s `cloudflare:workers` import is aliased to an
- * empty stub (dev/cloudflare-workers-stub.ts). The alias is limited to
- * `PHASE_DEVELOPMENT_SERVER` because `vinext build` reads this same file and
- * honors `turbopack.resolveAlias` too; applied unconditionally it would
- * replace the real binding in the deployed Worker.
+ * empty stub (dev/cloudflare-workers-stub.ts). vinext reads this same file
+ * and honors `turbopack.resolveAlias` too, so the alias must reach neither
+ * `vinext build`, where it would replace the real binding in the deployed
+ * Worker, nor `vinext dev`, which runs in workerd with real bindings and
+ * crashes on boot when `ScrapeWorkflow extends WorkflowEntrypoint` gets the
+ * stub's `undefined`. vinext passes `PHASE_DEVELOPMENT_SERVER` for `vinext
+ * dev` as well, so the phase alone can't tell them apart; `TURBOPACK` is set
+ * only by Next's own CLI.
  */
 const nextConfig = (phase: string): NextConfig => ({
   reactStrictMode: true,
@@ -37,7 +41,7 @@ const nextConfig = (phase: string): NextConfig => ({
       },
     ];
   },
-  ...(phase === PHASE_DEVELOPMENT_SERVER
+  ...(phase === PHASE_DEVELOPMENT_SERVER && process.env.TURBOPACK
     ? {
         turbopack: {
           resolveAlias: {
