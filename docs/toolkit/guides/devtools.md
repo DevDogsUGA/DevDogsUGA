@@ -193,6 +193,6 @@ is available.
 The deployment pipeline uses the separate `devtools-ci` binary. CI-only deploy
 steps never appear in the contributor menu.
 
-See [Database commands](/docs/toolkit/guides/database) and
+See [`devtools db` commands](/docs/toolkit/guides/devtools-db) and
 [Environment commands](/docs/toolkit/guides/env/commands) for the two largest
 command families.

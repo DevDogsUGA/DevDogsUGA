@@ -23,7 +23,7 @@ UGA student's semester against real registrar data.
   entry is `cloudflare/worker.ts`, and the KV-backed data/CDN cache rides the
   `VINEXT_KV_CACHE` binding.
 - **`schedule_builder` Postgres schema.** Owned by this app on the shared
-  DevDogs Supabase project; see [Database](/docs/schedule-builder/guides/database).
+  DevDogs Supabase project; see [Schedule-builder schema](/docs/schedule-builder/guides/schema).
 - **Ingestion.** A Cloudflare Workflow (`cloudflare/ScrapeWorkflow.ts`) scrapes
   the UGA registrar on a daily cron, parses it, and reconciles it into
   Postgres. See [Ingestion](/docs/schedule-builder/guides/ingestion).
@@ -51,4 +51,4 @@ UGA student's semester against real registrar data.
 
 - [Getting started](/docs/schedule-builder/getting-started/prerequisites) — set up and run this app
 - [Where things live](/docs/schedule-builder/guides/where-things-live) — "I want to change X"
-- [Database](/docs/schedule-builder/guides/database), [Ingestion](/docs/schedule-builder/guides/ingestion), [Schedule generation](/docs/schedule-builder/guides/generation)
+- [Schedule-builder schema](/docs/schedule-builder/guides/schema), [Ingestion](/docs/schedule-builder/guides/ingestion), [Schedule generation](/docs/schedule-builder/guides/generation)

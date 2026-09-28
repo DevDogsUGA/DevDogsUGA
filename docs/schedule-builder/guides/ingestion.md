@@ -28,12 +28,14 @@ Two entry points, same work:
   guarded by a cron secret (`src/lib/cron/auth.ts`; the check is skipped in
   development). Still runs the same pipeline, but needs `next dev` up.
 
-## Populate course data locally
+## Populate course data
 
 A fresh database has no courses, so the generator has nothing to plan against.
 Trigger the scrape workflow through devtools — it starts a temporary Wrangler
 session for you (the workflow runtime, which `next dev` does not provide), runs
-the scrape against your local Supabase stack, and waits for it to finish:
+the scrape against whichever database the session's `--tier` points at — the
+local stack, a hosted development project, staging, or production — and waits
+for it to finish:
 
 ```bash
 pnpm devtools db start && pnpm devtools db reset          # local stack, once
@@ -92,7 +94,7 @@ the trigger reuses it instead of starting its own.
 > There used to be a fourth step here refreshing a search materialized view.
 > It's gone — free-text course search was replaced with subject / instructor /
 > CRN filters that read the base tables directly, and the view was dropped
-> with it. See [Database](/docs/schedule-builder/guides/database).
+> with it. See [Schedule-builder schema](/docs/schedule-builder/guides/schema).
 
 ## A different "sync"
 

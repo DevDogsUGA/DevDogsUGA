@@ -1,16 +1,16 @@
 ---
-name: Database
+name: Schedule-builder schema
 description: The schedule_builder schema — where it's defined, its tables, the per-request Drizzle client, and how the Drizzle schema is introspected from SQL migrations.
 order: 4
 section: guides
 ---
 
-# Database
+# Schedule-builder schema
 
 This app owns the **`schedule_builder`** Postgres schema on the shared DevDogs
 Supabase project. The monorepo-wide rules — SQL is the source of truth, RLS is
 the isolation boundary — are covered in
-[Database](/docs/platform/guides/database); this page is what is specific to
+[Writing a migration](/docs/platform/guides/migrations); this page is what is specific to
 this app.
 
 ## Where the schema lives
@@ -48,7 +48,7 @@ pnpm devtools db migration new --app schedule-builder <description>
 
 writes an empty `supabase/migrations/<timestamp>_schedule_builder_<description>.sql`.
 Put the DDL — and any RLS policies it needs — in it by hand, the same way
-platform does (see [Database](/docs/platform/guides/database)'s "What does a
+platform does (see [Writing a migration](/docs/platform/guides/migrations)'s "What does a
 table with its policies look like in one migration?"). Then replay it and
 re-introspect:
 
