@@ -35,10 +35,10 @@ its data.
 
 ## Applying a migration to a hosted tier
 
-| Target                  | How                                                       |
-| ------------------------ | ---------------------------------------------------------- |
-| the shared dev project  | `pnpm devtools --tier development:remote db migrate`      |
-| production              | `production-migrate` in `.github/workflows/deploy.yaml`    |
+| Target                 | How                                                     |
+| ---------------------- | ------------------------------------------------------- |
+| the shared dev project | `pnpm devtools --tier development:remote db migrate`    |
+| production             | `production-migrate` in `.github/workflows/deploy.yaml` |
 
 `pnpm devtools --tier development:remote db migrate` runs `supabase db push
 --db-url` against the session's database — only the migrations its history

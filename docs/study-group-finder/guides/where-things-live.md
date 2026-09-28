@@ -7,16 +7,16 @@ section: guides
 
 # Where things live
 
-| Path                     | What it is                                                                                                                              |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `lib/main.dart`          | The app: Supabase init, `AUTH_MODE`/URL/key read from `--dart-define`, `StudyGroupFinderApp`.                                           |
-| `lib/generated/`         | supadart's output — one Dart model per table. Gitignored; never hand-edit, regenerate instead.                                          |
-| `android/`, `ios/`       | The committed Android and iOS platform runner directories. No `web/` — this app doesn't target it.                                      |
-| `test/widget_test.dart`  | The smoke test: pumps the app, asserts the placeholder renders.                                                                         |
-| `tool/`                  | `docs_extract.dart`, which reads this app's declarations for the generated docs reference.                                              |
-| `pubspec.yaml`           | Dart/Flutter dependencies and the Dart SDK constraint (`^3.5.0`).                                                                       |
-| `supadart.yaml`          | Config for the Dart model generator — see [Typed models](/docs/study-group-finder/guides/typed-models).                                 |
-| `analysis_options.yaml`  | Lint rules `flutter analyze` checks against (`flutter_lints` plus `prefer_const_constructors`).                                         |
+| Path                     | What it is                                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lib/main.dart`          | The app: Supabase init, `AUTH_MODE`/URL/key read from `--dart-define`, `StudyGroupFinderApp`.                                                    |
+| `lib/generated/`         | supadart's output — one Dart model per table. Gitignored; never hand-edit, regenerate instead.                                                   |
+| `android/`, `ios/`       | The committed Android and iOS platform runner directories. No `web/` — this app doesn't target it.                                               |
+| `test/widget_test.dart`  | The smoke test: pumps the app, asserts the placeholder renders.                                                                                  |
+| `tool/`                  | `docs_extract.dart`, which reads this app's declarations for the generated docs reference.                                                       |
+| `pubspec.yaml`           | Dart/Flutter dependencies and the Dart SDK constraint (`^3.5.0`).                                                                                |
+| `supadart.yaml`          | Config for the Dart model generator — see [Typed models](/docs/study-group-finder/guides/typed-models).                                          |
+| `analysis_options.yaml`  | Lint rules `flutter analyze` checks against (`flutter_lints` plus `prefer_const_constructors`).                                                  |
 | `env.ts`, `package.json` | The pnpm task wrapper and this app's entry in the shared env registry — see [Getting started](/docs/study-group-finder/getting-started/running). |
 
 ## Where the schema lives

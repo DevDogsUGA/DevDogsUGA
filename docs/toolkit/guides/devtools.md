@@ -92,7 +92,7 @@ examples.
 
 - `moderation check` — with no argument, reports the moderatable content
   types and the reasons an app can file against them; `moderation check --app
-  <slug>` runs that app's conformance check.
+<slug>` runs that app's conformance check.
 - `persona <member|moderator>` — create a sign-in-able persona against the
   session's development tier, with a random, printed password.
 - `persona --clean` — remove personas this command created.

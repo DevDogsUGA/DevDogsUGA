@@ -21,7 +21,7 @@ pnpm devtools --tier development:remote db status     # .env's remote dev DB
 The session selector is one flag with a closed set of values:
 
 | `--tier`             | Loads                        | `db` commands act on             |
-| -------------------- | ----------------------------- | --------------------------------- |
+| -------------------- | ---------------------------- | -------------------------------- |
 | `development:local`  | `.env.generated` over `.env` | the Docker stack (must be up)    |
 | `development:remote` | `.env` alone                 | whatever `DB_URL` in `.env` says |
 | `staging`            | `.env.staging`               | the staging project              |
@@ -56,7 +56,7 @@ lifecycle commands act on the stack on this machine regardless of session,
 because a hosted project has no container here:
 
 | Command      | What it does                                               |
-| ------------ | ------------------------------------------------------------ |
+| ------------ | ---------------------------------------------------------- |
 | `db start`   | `supabase start`, writes `.env.generated`, seeds buckets   |
 | `db stop`    | `supabase stop`, and removes `.env.generated`              |
 | `db restart` | stop, then start again — how a changed `config.toml` lands |

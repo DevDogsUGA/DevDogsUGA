@@ -85,10 +85,10 @@ If `main` grew a newer migration while yours was open, recreate yours with a fre
 ## Applying a migration
 
 | Target                 | How                                                     |
-| ----------------------- | -------------------------------------------------------- |
-| your own stack          | `pnpm devtools db reset`                                |
-| the shared dev project  | `pnpm devtools --tier development:remote db migrate`    |
-| production               | `production-migrate` in `.github/workflows/deploy.yaml` |
+| ---------------------- | ------------------------------------------------------- |
+| your own stack         | `pnpm devtools db reset`                                |
+| the shared dev project | `pnpm devtools --tier development:remote db migrate`    |
+| production             | `production-migrate` in `.github/workflows/deploy.yaml` |
 
 `pnpm devtools --tier development:remote db migrate` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then regenerates the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the rest of the `devtools db` group that operates on a hosted project — covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases).
 
