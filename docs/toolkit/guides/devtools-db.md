@@ -1,11 +1,11 @@
 ---
-name: database
-description: The devtools db group — start, migrate and reset the session's Supabase database, plus migrations, types, seeding, introspection and hosted infrastructure.
+name: devtools db
+description: The devtools db group — start, migrate and reset the session's Supabase database, plus migrations, types and seeding.
 order: 4
 section: guides
 ---
 
-# Database commands
+# `devtools db` commands
 
 The `db` group of [devtools](/docs/toolkit/guides/devtools). No subcommand
 takes a database flag: the **session** you launched devtools under already
@@ -21,7 +21,7 @@ pnpm devtools --tier development:remote db status     # .env's remote dev DB
 The session selector is one flag with a closed set of values:
 
 | `--tier`             | Loads                        | `db` commands act on             |
-| -------------------- | ---------------------------- | -------------------------------- |
+| -------------------- | ----------------------------- | --------------------------------- |
 | `development:local`  | `.env.generated` over `.env` | the Docker stack (must be up)    |
 | `development:remote` | `.env` alone                 | whatever `DB_URL` in `.env` says |
 | `staging`            | `.env.staging`               | the staging project              |
@@ -43,6 +43,11 @@ _linked_ project, `db reset` to `--local`). The one exception is
 `--local` for a local session, `--project-ref <PROJECT_REF> --linked` for a
 hosted one.
 
+Staging and production operation — provisioning a hosted project, pushing
+`config.toml`, and the other maintainer-only commands in this group — are
+covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases),
+not here.
+
 ## Two layers under one name
 
 `db` covers both the **stack** — the Docker containers, the auth server,
@@ -51,7 +56,7 @@ lifecycle commands act on the stack on this machine regardless of session,
 because a hosted project has no container here:
 
 | Command      | What it does                                               |
-| ------------ | ---------------------------------------------------------- |
+| ------------ | ------------------------------------------------------------ |
 | `db start`   | `supabase start`, writes `.env.generated`, seeds buckets   |
 | `db stop`    | `supabase stop`, and removes `.env.generated`              |
 | `db restart` | stop, then start again — how a changed `config.toml` lands |
@@ -74,10 +79,6 @@ troubleshooting rather than falling back to whatever `.env` happens to name.
 `db` and the bare menu are exempt from that refusal so `db start` can fix the
 very state it reports.
 
-`pnpm devtools db connect <project-ref>` runs `supabase link` for anyone
-driving the bare `supabase` CLI by hand. Nothing in devtools reads the link
-state it writes any more.
-
 ## migrate and reset
 
 `db migrate` applies migrations that have not run yet (`supabase db push
@@ -91,10 +92,12 @@ scratch, runs the seeds, regenerates the types and re-seeds the storage
 buckets — so it always asks first, the confirmation defaults to no on
 anything but the local stack, and a production session gets the sternest
 wording of all. Non-interactively, `--yes` is the one way past any of these
-gates. It is also the command that puts a new migration into your database:
-[Database](/docs/platform/guides/database) is the change loop, including the
-introspection that `reset` deliberately does not do — that is
-`db introspect`.
+gates. Both commands run against whichever tier the session points at —
+`development:local`, `development:remote`, `staging`, or `production` — not
+only against your local stack. `db reset` is also the command that puts a new
+migration into your database: [Writing a migration](/docs/platform/guides/migrations)
+is the change loop, including the introspection that `reset` deliberately
+does not do — that is `db introspect`.
 
 ## status
 
@@ -113,10 +116,6 @@ could.
 `db migration new` creates an empty migration file for you to write by hand;
 `db types` regenerates the Database types on their own; `db seed buckets`/
 `db seed roles` seed storage or the built-in roles; `db introspect` pulls an
-app's live schema into its generated Drizzle files; `db config push` pushes
-`config.toml` to the session's hosted project (a local session is refused —
-the stack reads the file directly at `db start`); `db planner` and
-`db signing-key` manage hosted infrastructure that names its own connection;
-and `db exec -- <args…>` is the escape hatch straight to the Supabase CLI.
-`pnpm devtools db --help` lists all of it, grouped by what you have to decide
-first.
+app's live schema into its generated Drizzle files; and `db exec -- <args…>`
+is the escape hatch straight to the Supabase CLI. `pnpm devtools db --help`
+lists all of it, grouped by what you have to decide first.

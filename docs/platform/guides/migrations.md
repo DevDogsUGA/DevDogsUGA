@@ -1,11 +1,11 @@
 ---
-name: Database
-description: SQL migrations own the schema and the Drizzle types are introspected from it — the change loop, the seeds, and how a migration reaches each database.
+name: Writing a migration
+description: SQL migrations own the schema and the Drizzle types are introspected from it — the change loop, seeds, and how a migration reaches each database.
 order: 3
-section: infrastructure
+section: guides
 ---
 
-# Database
+# Writing a migration
 
 The platform's tables live in the `platform` schema of the shared Supabase Postgres database, built by the one migration history at `supabase/migrations/`. Read this before you add a table, a column, a policy, or a trigger: it covers the change loop, the seeds, how contributors keep out of each other's way, and how a migration reaches the dev project and production. If you only want to _query_ the database, you want [Database (Drizzle)](/docs/platform/guides/stack/db) instead — the client factory, both `drizzle-kit` configs, and the pooler settings that are not optional are all there.
 
@@ -61,9 +61,11 @@ Row-Level Security is the whole isolation boundary between app schemas — every
 
 ## Seeds
 
-`supabase/seed/` is split into `production/` and `development/`. `pnpm devtools db reset` runs both — `config.toml`'s `[db.seed]` block lists `seed/production/*.sql` before `seed/development/*.sql` — and `db push` applies migrations without either. `production/01_roles.sql` owns the complete role and permission catalogue without assigning Root; `production/03_officers.sql` creates officer profiles and assignments; `development/02_moderation.sql` creates three sign-in-able personas and one open report — `member@`, `author@` and `moderator@devdogs.test`, password `password` for all three; see [Integrating an app](/docs/platform/guides/reporting/integrating)'s "Testing it" for what each is for.
+`supabase/seed/production/` is the only seed directory — `pnpm devtools db reset` runs it against whichever tier the session points at, and `db push`/`db migrate` apply migrations without it. `production/01_roles.sql` owns the complete role and permission catalogue without assigning Root; `production/03_officers.sql` creates officer profiles and assignments.
 
 A staging or production target never runs `db reset` — that erases everything else on it — so it only ever gets `seed/production/`, applied on its own by the Backstage devtools' `db seed production` command.
+
+There is no seed data for sign-in-able test personas any more. Get one with `pnpm devtools persona <member|moderator>` instead — it creates the persona against whichever development tier the session points at (local or hosted) and prints a random password; `pnpm devtools persona --clean` removes personas it created. See [Integrating an app](/docs/platform/guides/reporting/integrating)'s "Testing it" for what each persona is for.
 
 Seeds are the right home for anything that must never exist in production, precisely because the reset they ride on is never pointed there. Migrations are the wrong home for the same reason.
 
@@ -83,39 +85,14 @@ If `main` grew a newer migration while yours was open, recreate yours with a fre
 ## Applying a migration
 
 | Target                 | How                                                     |
-| ---------------------- | ------------------------------------------------------- |
-| your own stack         | `pnpm devtools db reset`                                |
-| the shared dev project | `pnpm devtools --tier development:remote db migrate`    |
-| production             | `production-migrate` in `.github/workflows/deploy.yaml` |
+| ----------------------- | -------------------------------------------------------- |
+| your own stack          | `pnpm devtools db reset`                                |
+| the shared dev project  | `pnpm devtools --tier development:remote db migrate`    |
+| production               | `production-migrate` in `.github/workflows/deploy.yaml` |
 
-`pnpm devtools --tier development:remote db migrate` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then regenerates the `Database` types. Production is pushed by CI behind two dry runs: `main-plan` prints the plan on every merge to `main`, and `production-plan` recomputes it seconds before the real push, because the first goes stale as soon as another promotion lands.
-
-Staging is **not** migrated by that workflow. `staging-preflight` only classifies the project as awake or paused, and `staging-deploy` builds and deploys the Workers.
+`pnpm devtools --tier development:remote db migrate` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then regenerates the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the rest of the `devtools db` group that operates on a hosted project — covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases).
 
 > [!WARNING]
 > Never run `drizzle-kit push` against a hosted database: it writes the schema with no migration record and no rollback path. No script in this repo runs it, and none should.
 
-<details>
-<summary>Which command am I actually looking for?</summary>
-
-`pnpm devtools` with no arguments opens the grouped menu of interactive
-commands — the shortest path when you do not already know the name.
-
-Database operations live under `pnpm devtools db`. Endpoint commands such as
-`status`, `migrate`, `reset`, and `types` act on the session's database
-(`--tier development:local|development:remote|staging|production`, picked at
-launch), while `start`, `stop`, and `restart` act on this machine's
-containers. Run `pnpm devtools db --help` for the full list, grouped by
-layer.
-
-The `devtools db` commands worth knowing directly:
-
-| Command                                       | What it does                                                   |
-| --------------------------------------------- | -------------------------------------------------------------- |
-| `pnpm devtools db migration new`              | Create an empty, correctly timestamped migration               |
-| `pnpm devtools db types`                      | Regenerate `database.types.ts`, format it, rebuild the package |
-| `pnpm devtools db introspect --app <slug>`    | Re-introspect that app's Drizzle schema                        |
-| `pnpm --filter @devdogsuga/supabase test:rls` | The RLS persona suite — needs a running stack                  |
-| `pnpm devtools db seed roles`                 | Reconcile the role and permission catalogue                    |
-
-</details>
+For the rest of the `devtools db` group — `migration new`, `types`, `introspect`, `seed roles`, and what the session `--tier` flag means — see [`devtools db` commands](/docs/toolkit/guides/devtools-db).

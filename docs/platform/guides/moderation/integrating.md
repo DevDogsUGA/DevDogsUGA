@@ -45,7 +45,7 @@ An app that hides should freeze as well. Without it an author can rewrite quaran
 5. Find every other surface the same content reaches — a second table, a storage object — and freeze those too.
 6. For content that is reportable but **not** quarantinable, write one `platform."contentTypes"` row with no foreign key. Resolving such a report with `quarantine` raises and rolls the decision back, which is what makes the outcome atomic.
 7. Add the schema to `[api] schemas` in `supabase/config.toml` and to the exclusion list in `drizzle-introspection.config.ts`. See Trap 2.
-8. Verify with `pnpm devtools moderation check --app <slug>`, then `pnpm devtools moderation roundtrip` — the step that matters, because it exercises _your_ policy.
+8. Verify with `pnpm devtools moderation check <app>`, then `pnpm --filter @devdogsuga/supabase test:rls` — the step that matters, because it exercises _your_ policy through the RLS persona suite, allow and deny both.
 
 ⚠️ **`config.toml` changes need a restart, not a reset.** `[api] schemas` becomes PostgREST's `db-schemas` at `supabase start`, so `supabase db reset` leaves the old list in place — and a schema on it that no longer exists stops PostgREST building its schema cache at all: every request returns `PGRST002`. Run `pnpm devtools db restart`, which is exactly that stop/start pair.
 
@@ -84,17 +84,17 @@ Any other app's schema matches `"*"` and lands in the second module — but a ta
 
 Excluding costs nothing anyway: `src/supabase/drizzle` exists so the console can reach the **Supabase-managed** schemas, and every consumer imports only `auth` tables.
 
-## Trap 3: seeded personas need four empty strings
+## Trap 3: a sign-in-able account seeded from SQL needs four empty strings
 
-An app that seeds its own sign-in-able accounts inserts into `auth.users` from SQL: the local Docker stack is HTTP and cannot host OAuth. A naive row looks correct — it exists, `encrypted_password` holds a valid bcrypt hash, `email_confirmed_at` is set — and sign-in still fails with `"Database error querying schema"`, which names neither a column nor a user.
+Nothing in this repo seeds sign-in-able test accounts from SQL any more — `pnpm devtools persona <member|moderator>` creates one against whichever development tier the session points at, through `auth.admin.createUser()`, and GoTrue writes every column and the identity row itself. This trap is what used to bite the SQL seed this replaced, and it is worth knowing if you ever insert into `auth.users` directly: the local Docker stack is HTTP and cannot host OAuth, so a naive row looks correct — it exists, `encrypted_password` holds a valid bcrypt hash, `email_confirmed_at` is set — and sign-in still fails with `"Database error querying schema"`, which names neither a column nor a user.
 
-GoTrue scans several `auth.users` columns into **non-nullable Go strings**, so a `NULL` is a scan error, not an empty value. Four have no database default, and `supabase/seed/development/02_moderation.sql` sets them to `''` explicitly:
+GoTrue scans several `auth.users` columns into **non-nullable Go strings**, so a `NULL` is a scan error, not an empty value. Four have no database default and need to be set to `''` explicitly:
 
 - `confirmation_token`
 - `recovery_token`
 - `email_change_token_new`
 - `email_change`
 
-A second, quieter requirement: **GoTrue resolves an email/password sign-in through `auth.identities`, not `auth.users`.** A user row with no matching `provider = 'email'` identity exists, shows in the dashboard, and cannot log in. The seed backfills one per user.
+A second, quieter requirement: **GoTrue resolves an email/password sign-in through `auth.identities`, not `auth.users`.** A user row with no matching `provider = 'email'` identity exists, shows in the dashboard, and cannot log in. A hand-written seed has to backfill one per user.
 
-Neither applies to the persona test suite, which calls `auth.admin.createUser()` and lets GoTrue write both rows. Hand-writing them is only necessary from a `.sql` seed.
+Neither applies to `auth.admin.createUser()`, which is why `devtools persona` and the RLS persona suite don't need to think about either — GoTrue writes both rows itself. Hand-writing them is only ever necessary from a `.sql` seed.

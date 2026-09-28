@@ -9,7 +9,7 @@ section: infrastructure
 
 `apps/platform` authenticates as a GitHub App on every call it makes to GitHub. `env.ts` requires `GH_APP_ID`, `GH_APP_INSTALLATION_ID` and `GH_APP_PRIVATE_KEY`, so the platform will not boot without all three — though the placeholders in `.env.example` are enough to run it locally unless you are working on the organization integration.
 
-Read this if you are creating, installing, rotating or operating that App. If what you want is to let another project sign DevDogs members in, that is [Sign in with DevDogs](/docs/platform/guides/identity/oauth) instead.
+Read this if you are creating, installing, rotating or operating that App. If what you want is to let another project sign DevDogs members in, that is [Sign in with DevDogs](/docs/platform/getting-started/running) instead.
 
 ## Why an App rather than a token
 
