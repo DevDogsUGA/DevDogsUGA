@@ -21,6 +21,7 @@ import {
   pushMemberRoleChange,
 } from "~/server/discord/memberSync";
 import { fetchGuildRoles, pushRoleToDiscord } from "~/server/discord/roleSync";
+import { revalidateOfficers } from "~/server/loaders/officers";
 import { requireCustomRole, requireRankGuard } from "./permissionGuards";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -361,6 +362,7 @@ export async function updateRole(
       }),
     })
     .where(eq(roles.id, roleId));
+  revalidateOfficers();
 
   if (
     target.discordRoleId !== null &&
@@ -393,6 +395,7 @@ export async function deleteRole(roleId: string): Promise<void> {
 
   requireRankGuard(requireCustomRole(target), ctx.minRank);
   await db.delete(roles).where(eq(roles.id, roleId));
+  revalidateOfficers();
 }
 
 /**
@@ -416,6 +419,7 @@ export async function reorderRole(
   requireRankGuard(newRank, ctx.minRank);
 
   await db.update(roles).set({ rank: newRank }).where(eq(roles.id, roleId));
+  revalidateOfficers();
 }
 
 // ── User role assignment ───────────────────────────────────────────────────────
@@ -464,6 +468,7 @@ export async function assignRoleToUser(
         .onConflictDoNothing();
       await pushMemberRoleChange(discordUserId, target.discordRoleId!, "add");
     });
+    revalidateOfficers();
     return;
   }
 
@@ -471,6 +476,7 @@ export async function assignRoleToUser(
     .insert(userRoles)
     .values({ userId: targetUserId, roleId })
     .onConflictDoNothing();
+  revalidateOfficers();
 }
 
 export async function removeRoleFromUser(
@@ -509,6 +515,7 @@ export async function removeRoleFromUser(
     .where(
       and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
     );
+  revalidateOfficers();
 
   if (target.discordRoleId !== null) {
     const discordUserId = await getDiscordUserId(targetUserId);

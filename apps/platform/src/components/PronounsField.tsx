@@ -7,6 +7,7 @@ import { XIcon } from "@phosphor-icons/react/ssr";
 import SettingsField from "~/ui/settings-field";
 import type { getProfilePageData } from "~/server/loaders/console";
 import { createClient } from "~/supabase/client";
+import revalidateOfficerBoard from "~/server/actions/revalidateOfficerBoard";
 import { PROFILE_LIMITS, validatePronouns } from "~/lib/validation/profile";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
@@ -49,7 +50,10 @@ export default function PronounsField({ id, profile }: ProfileData) {
       if (error) throw error;
       return values;
     },
-    onSuccess: (values) => setSaved([...values]),
+    onSuccess: (values) => {
+      setSaved([...values]);
+      void revalidateOfficerBoard().catch(() => undefined);
+    },
   });
 
   const dirty = JSON.stringify(pronouns) !== JSON.stringify(saved);

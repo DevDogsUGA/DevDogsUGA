@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { createClient } from "~/supabase/client";
+import revalidateOfficerBoard from "~/server/actions/revalidateOfficerBoard";
 import { validateRoleDescription } from "~/lib/validation/profile";
 import { acceptRoleDescriptionInput } from "~/lib/roleDescriptionInput";
 
@@ -35,6 +36,7 @@ export function useRoleDescription(
     onSuccess: (value) => {
       setRoleDescriptionRaw(value);
       setSavedRoleDescription(value);
+      void revalidateOfficerBoard().catch(() => undefined);
     },
   });
 

@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { createClient } from "~/supabase/client";
+import revalidateOfficerBoard from "~/server/actions/revalidateOfficerBoard";
 import { validatePreferredName } from "~/lib/validation/profile";
 
 /**
@@ -28,6 +29,7 @@ export function useProfileIdentity(userId: string, initialName: string) {
     onSuccess: (preferredName) => {
       setName(preferredName);
       setSavedName(preferredName);
+      void revalidateOfficerBoard().catch(() => undefined);
     },
   });
 

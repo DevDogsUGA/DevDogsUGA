@@ -1,5 +1,5 @@
 import { asc, eq, inArray, sql } from "drizzle-orm";
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { db } from "~/server/db";
 import { env } from "~/env";
 import {
@@ -48,6 +48,19 @@ function leaderProgramType(
   return "graduate_program";
 }
 
+const OFFICERS_TAG = "officers";
+
+/**
+ * Marks the board stale after a write that changes it: a leadership role
+ * assigned, removed, renamed, reranked or deleted, or an officer's profile
+ * edited. `"max"` is stale-while-revalidate, so the next visitor still gets
+ * the old board at once while it rebuilds, and it is legal from a Route
+ * Handler as well as a Server Action. Never during render.
+ */
+export function revalidateOfficers(): void {
+  revalidateTag(OFFICERS_TAG, "max");
+}
+
 /**
  * The executive board for the homepage's Leadership section.
  *
@@ -68,15 +81,19 @@ function leaderProgramType(
  * What reaches the browser is the projection below and nothing else, notably
  * not `bio`, `legalFirstName`, `ugaEmail` or anything else on the row.
  *
- * `cacheLife` rather than a tag, for the reason `(site)/events/layout.tsx`
- * gives: the Cloudflare adapter's `tagCache` is `"dummy"`, so `revalidateTag`
- * is inert and freshness has to come from a TTL. An hour, because officers
- * edit their own role descriptions from /account and should not have to wait
- * for a deploy to see it, while the board itself changes once a year.
+ * Tagged, so every write that changes the board calls `revalidateOfficers`,
+ * and TTL'd, as the backstop for anything that doesn't: a title pulled from
+ * Discord on a Permissions page render, a direct database edit, a seed. The
+ * TTL alone was the whole mechanism under OpenNext, whose `tagCache` was
+ * `"dummy"`; vinext's KV data adapter records tag invalidations, and the tag
+ * reaches the homepage's own `"use cache"` scope and the page response
+ * through vinext's tag propagation. Should either fall short, the board is
+ * simply as fresh as the TTL, which is what it was before the tag.
  */
 export async function getCurrentOfficers(): Promise<LeaderProfile[]> {
   "use cache";
   cacheLife({ stale: 300, revalidate: 3600, expire: 86_400 });
+  cacheTag(OFFICERS_TAG);
 
   const rows = await db
     .select({

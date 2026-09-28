@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { roles } from "~/server/db/schema";
+import { revalidateOfficers } from "~/server/loaders/officers";
 import { requireManageRoles, requirePermissionGuard } from "./permissions";
 import { requireCustomRole, requireRankGuard } from "./permissionGuards";
 import {
@@ -91,6 +92,8 @@ export async function linkRoleToDiscord(
   }
 
   await _linkRoleToDiscord(roleId, discordRoleId);
+  // Linking strips the role from holders without a linked Discord account.
+  revalidateOfficers();
 }
 
 export async function createDiscordRoleFromRole(roleId: string): Promise<void> {
@@ -107,6 +110,7 @@ export async function createDiscordRoleFromRole(roleId: string): Promise<void> {
   }
 
   await _createDiscordRoleFromRole(roleId);
+  revalidateOfficers();
 }
 
 export async function unsyncRole(roleId: string): Promise<void> {

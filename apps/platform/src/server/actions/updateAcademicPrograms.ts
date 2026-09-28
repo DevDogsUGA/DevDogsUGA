@@ -9,6 +9,7 @@ import {
   profiles,
 } from "~/server/db/schema";
 import { validateAcademicProgramIds } from "~/lib/validation/profile";
+import { revalidateOfficers } from "~/server/loaders/officers";
 
 export interface UpdateAcademicProgramsResult {
   error?: string;
@@ -25,7 +26,7 @@ export default async function updateAcademicPrograms(
   const validationError = validateAcademicProgramIds(programIds);
   if (validationError) return { error: validationError };
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [status] = await tx
       .select({
         frozen: sql<boolean>`platform.is_profile_frozen(${userId})`,
@@ -81,4 +82,7 @@ export default async function updateAcademicPrograms(
 
     return { programIds };
   });
+
+  if (!result.error) revalidateOfficers();
+  return result;
 }
