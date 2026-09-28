@@ -25,7 +25,7 @@ async function cleanup() {
 function meeting(overrides: Partial<Meeting> & { id: string }): Meeting {
   return {
     title: "Reconcile Test",
-    summary: null,
+    summary: "A reconcile test meeting.",
     kind: null,
     building: "DLW",
     location: "124",
@@ -85,11 +85,13 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
 
   const otherMeetings = await db.execute<{
     configId: string;
-    nameOverride: string | null;
-    summary: string | null;
+    // Nullable columns, but a row with a `configId` came from a config
+    // meeting, and the config requires all three.
+    nameOverride: string;
+    summary: string;
     kind: Meeting["kind"];
     building: Meeting["building"];
-    location: string | null;
+    location: string;
     // `postgres.js` hands timestamptz columns back as ISO strings, not `Date`
     // instances -- verified against this driver, not assumed -- so these are
     // read as `string` and reparsed below rather than typed as `Date`.

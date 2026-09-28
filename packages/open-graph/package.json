@@ -24,7 +24,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@devdogsuga/brand": "^0.1.1",
+    "@devdogsuga/brand": "^0.1.2",
     "react": "catalog:"
   },
   "devDependencies": {
