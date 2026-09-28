@@ -33,6 +33,11 @@ via `--dart-define`. Auth mirrors the web apps: `devdogs` (platform OAuth
 server) in dev, `google` in production — selected by `NEXT_PUBLIC_AUTH_MODE`
 in `.env` (`AUTH_MODE` is only the `--dart-define` name it maps onto).
 
+The app ID is `dev.dogpack` on both platforms. OAuth returns to
+`dev.dogpack://login-callback`, registered as a URL scheme in
+`AndroidManifest.xml` and `ios/Runner/Info.plist` and allowlisted in
+`supabase/config.toml`'s `additional_redirect_urls`.
+
 ## Typed models
 
 `supabase gen types` has no Dart target, so Dart models come from the community

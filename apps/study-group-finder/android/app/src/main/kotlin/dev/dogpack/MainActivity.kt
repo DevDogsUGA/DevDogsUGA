@@ -1,4 +1,4 @@
-package com.example.study_group_finder
+package dev.dogpack
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -95,10 +95,15 @@ site_url = "env(BASE_URL)"
 # The third (Dog Pack, dogpack.dev) has no web deployment yet: its variable
 # stays unset, which the CLI treats as a WARN and an absent entry, so the
 # allowlist gains the origin the day the value is filled and not before.
+#
+# The Dog Pack mobile app returns through its own URL scheme instead, the same
+# on every environment, so it is a literal: the Android intent filter and iOS
+# CFBundleURLTypes in apps/study-group-finder register the matching scheme.
 additional_redirect_urls = [
   "env(BASE_URL_CALLBACK)",
   "env(SCHEDULE_BUILDER_URL_CALLBACK)",
   "env(STUDY_GROUP_FINDER_URL_CALLBACK)",
+  "dev.dogpack://login-callback",
 ]
 enable_manual_linking = true
 
