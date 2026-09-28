@@ -4,6 +4,13 @@
 # omission: core-js (via @bitwarden/cli) postinstalls a funding banner and
 # nothing the package needs to work. supabase is `true` here for the same
 # reason it is in the older list — its postinstall fetches the CLI binary.
+#
+# None of this reaches `pnpm devtools`: its `pnpm dlx` installs into a
+# throwaway project that ignores this file and prompts for every build
+# script (core-js, esbuild). The root package.json's `devtools` script skips
+# them all with ignore-scripts instead. devtools needs none of them: esbuild
+# finds its prebuilt @esbuild/<platform> binary without its postinstall, and
+# sharp, resvg and the Bitwarden SDK ship prebuilt too.
 allowBuilds:
   '@sentry/cli': true
   core-js: false

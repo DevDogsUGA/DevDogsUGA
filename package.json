@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "devtools": "pnpm dlx @devdogsuga/devtools",
+    "devtools": "pnpm --config.ignore-scripts=true dlx @devdogsuga/devtools",
     "build": "pnpm devtools run build",
     "dev": "pnpm devtools run dev",
     "typecheck": "pnpm devtools run typecheck",
