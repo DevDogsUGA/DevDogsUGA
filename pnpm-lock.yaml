@@ -161,8 +161,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
       '@devdogsuga/devtools':
-        specifier: 0.1.8
-        version: 0.1.8(@devdogsuga/brand@0.1.1)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.1(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
+        specifier: 0.1.12
+        version: 0.1.12(@devdogsuga/brand@0.1.1)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.1(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
       '@devdogsuga/env':
         specifier: ^0.1.1
         version: 0.1.1(typanion@3.14.0)(typescript@6.0.3)
@@ -901,8 +901,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
       '@devdogsuga/devtools':
-        specifier: 0.1.8
-        version: 0.1.8(@devdogsuga/brand@0.1.1)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.1(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
+        specifier: 0.1.12
+        version: 0.1.12(@devdogsuga/brand@0.1.1)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.1(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
       '@devdogsuga/env':
         specifier: ^0.1.1
         version: 0.1.1(typanion@3.14.0)(typescript@6.0.3)
@@ -1328,8 +1328,8 @@ packages:
       drizzle-orm: 1.0.0-rc.4
       postgres: ^3.4.9
 
-  '@devdogsuga/devtools@0.1.8':
-    resolution: {integrity: sha512-HDG+9THlEHi4ellXW6FxTZW3RULrAoDlfsbm8hY6MD6bilGApwYIWy0tMlq7zdA41EUIHdBaxXaWHUnGcaikdw==}
+  '@devdogsuga/devtools@0.1.12':
+    resolution: {integrity: sha512-cznOVHm+mtJScL5rlxJeoTJ7ghIwLXQJXk72JpRNAVFDSi9LV4gQN1rba/ehTLCkvYvwpSstsRAonULS9tUJNw==}
     hasBin: true
     peerDependencies:
       '@devdogsuga/brand': '*'
@@ -9717,7 +9717,7 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@devdogsuga/devtools@0.1.8(@devdogsuga/brand@0.1.1)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.1(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)':
+  '@devdogsuga/devtools@0.1.12(@devdogsuga/brand@0.1.1)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.1(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)':
     dependencies:
       '@bitwarden/cli': 2026.7.0
       '@bitwarden/sdk-napi': 1.0.0

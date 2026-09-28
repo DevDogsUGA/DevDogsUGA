@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.1",
-    "@devdogsuga/devtools": "0.1.8",
+    "@devdogsuga/devtools": "0.1.12",
     "@devdogsuga/env": "^0.1.1",
     "@types/node": "catalog:",
     "prettier": "3.9.6",
