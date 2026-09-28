@@ -4,26 +4,12 @@ import { buildSecurityHeaders } from "@devdogsuga/security-headers";
 import { env } from "~/env";
 
 /**
- * A function, not a plain object, only so it can see which `phase` next.js
- * (or vinext -- see below) invoked it for: local dev needs one extra key
- * that build/deploy must never see.
- *
- * `next dev` runs plain Node, not workerd, so it has nothing behind the
- * `cloudflare:workers` specifier `~/server/db`, `~/server/attendance/
- * rateLimit.ts`, and `~/server/email/send.ts` import -- Turbopack has no
- * built-in resolution for the `cloudflare:` scheme, so it fails to resolve
- * at all rather than yielding empty bindings the way workerd would outside a
- * deployed Worker. `turbopack.resolveAlias` papers over that with a stub
- * module exporting an empty `env` (dev/cloudflare-workers-stub.ts), which
- * those call sites already treat as "no bindings" and fall back accordingly.
- *
- * That alias is gated to `PHASE_DEVELOPMENT_SERVER` specifically because
- * `vinext build` reads this same `next.config.ts` and honors the identical
- * `turbopack.resolveAlias` key (see vinext's `extractTurboAliases`) --
- * applying it unconditionally would swap out the REAL `cloudflare:workers`
- * binding in the built/deployed Worker too. `vinext build` runs under
- * `PHASE_PRODUCTION_BUILD`, never this one, so the two tools never collide
- * on the same phase value.
+ * A function only so it can see the phase. `next dev` runs in Node, not
+ * workerd, so `~/server/db`'s `cloudflare:workers` import is aliased to an
+ * empty stub (dev/cloudflare-workers-stub.ts). The alias is limited to
+ * `PHASE_DEVELOPMENT_SERVER` because `vinext build` reads this same file and
+ * honors `turbopack.resolveAlias` too; applied unconditionally it would
+ * replace the real binding in the deployed Worker.
  */
 const nextConfig = (phase: string): NextConfig => ({
   reactStrictMode: true,
