@@ -50,3 +50,8 @@ hand-written.
   default PostgREST schema; see [Typed models](/docs/study-group-finder/guides/typed-models).
 - **`--dart-define`** — how Supabase config (URL, publishable key, auth mode)
   reaches the compiled app; see [Prerequisites](/docs/study-group-finder/getting-started/prerequisites).
+
+## Where to go next
+
+- [Where things live](/docs/study-group-finder/guides/where-things-live) — a map of the app tree
+- [Testing](/docs/study-group-finder/guides/testing) — `flutter analyze`/`flutter test`, and what CI runs

@@ -17,7 +17,7 @@ section: guides
 | `pubspec.yaml`           | Dart/Flutter dependencies and the Dart SDK constraint (`^3.5.0`).                                                                       |
 | `supadart.yaml`          | Config for the Dart model generator — see [Typed models](/docs/study-group-finder/guides/typed-models).                                 |
 | `analysis_options.yaml`  | Lint rules `flutter analyze` checks against (`flutter_lints` plus `prefer_const_constructors`).                                         |
-| `env.ts`, `package.json` | The pnpm task wrapper and this app's entry in the shared env registry — see [Local setup](/docs/study-group-finder/guides/local-setup). |
+| `env.ts`, `package.json` | The pnpm task wrapper and this app's entry in the shared env registry — see [Getting started](/docs/study-group-finder/getting-started/running). |
 
 ## Where the schema lives
 
@@ -36,5 +36,6 @@ Flutter or Dart through the root `with-env` helper; `lint`, `test` and
 `typecheck` call `flutter analyze`, `flutter test` and `tsc --noEmit`
 directly. None of them run JavaScript — the manifest exists so this app shows
 up in the workspace task runner like any other. See
-[Local setup](/docs/study-group-finder/guides/local-setup) for what each one
-actually does.
+[Getting started: Running](/docs/study-group-finder/getting-started/running)
+for `dev`/`build`, and [Testing](/docs/study-group-finder/guides/testing) for
+`lint`/`test`.

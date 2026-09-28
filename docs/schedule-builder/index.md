@@ -51,4 +51,5 @@ UGA student's semester against real registrar data.
 
 - [Getting started](/docs/schedule-builder/getting-started/prerequisites) — set up and run this app
 - [Where things live](/docs/schedule-builder/guides/where-things-live) — "I want to change X"
+- [Testing](/docs/schedule-builder/guides/testing) — the suites, and which ones need a database
 - [Schedule-builder schema](/docs/schedule-builder/guides/schema), [Ingestion](/docs/schedule-builder/guides/ingestion), [Schedule generation](/docs/schedule-builder/guides/generation)
