@@ -151,9 +151,9 @@ export default async function AttendancePage({
           <form
             action="/attendance/claim"
             method="post"
-            className="mt-6 grid gap-5"
+            className="mt-6 grid grid-cols-1 gap-5"
           >
-            <label className="grid gap-2 text-sm font-medium text-white">
+            <label className="grid grid-cols-1 gap-2 text-sm font-medium text-white">
               Meeting
               <select
                 name="meeting"
@@ -171,7 +171,7 @@ export default async function AttendancePage({
               </select>
             </label>
 
-            <label className="grid gap-2 text-sm font-medium text-white">
+            <label className="grid grid-cols-1 gap-2 text-sm font-medium text-white">
               Six-digit code
               <input
                 name="code"

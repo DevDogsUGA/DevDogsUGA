@@ -101,7 +101,7 @@ describe("groupRowsIntoSections", () => {
     expect(section!.professor).toBeNull();
   });
 
-  it("gives professor a name with quality always null when an instructor is present", () => {
+  it("gives professor a name when an instructor is present", () => {
     const [section] = groupRowsIntoSections([
       row({
         instructorId: 7,
@@ -110,7 +110,7 @@ describe("groupRowsIntoSections", () => {
       }),
     ]);
 
-    expect(section!.professor).toEqual({ name: "Ada Lovelace", quality: null });
+    expect(section!.professor).toEqual({ name: "Ada Lovelace" });
   });
 
   it("yields a null building for a meeting with no building", () => {

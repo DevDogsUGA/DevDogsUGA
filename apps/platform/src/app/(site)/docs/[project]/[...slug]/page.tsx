@@ -128,7 +128,7 @@ export default async function DocsPage({
 
   return (
     <DocPageContent
-      source={page.content}
+      html={page.html}
       headings={page.headings}
       breadcrumbs={breadcrumbs}
       githubUrl={githubUrl}

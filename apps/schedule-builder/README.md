@@ -25,15 +25,16 @@ specific to this app's schema.
 
 ## Course data
 
-Course and instructor data arrive via cron route (`src/app/(api)/cron/`):
-`scrape-registrar`, with parsing in `src/lib/parsers/` and
-upserts in `src/lib/sync/`. Schedule generation lives in `src/lib/algorithm/`.
+Course and instructor data arrive through the daily registrar scrape, a
+Cloudflare Workflow (`cloudflare/ScrapeWorkflow.ts`), with parsing in
+`src/lib/parsers/` and upserts in `src/lib/sync/`. Schedule generation lives in
+`src/lib/generation/`. See
+[Ingestion](../../docs/schedule-builder/guides/ingestion.md).
 
 ## Deploy
 
-Deploys to Cloudflare Workers via OpenNext like the platform app: `cf:preview`
-locally; CI runs `cf:build:*` / `cf:deploy:*` from
-`.github/workflows/deploy.yaml`. Branded **DogDays**, on its own zone:
+Deploys to Cloudflare Workers via vinext like the platform app: `cf:preview`
+locally; CI runs `cf:build:*` through `.github/workflows/deploy-app.yaml`. Branded **DogDays**, on its own zone:
 `dogdays.dev` (production) and `staging.dogdays.dev` (staging), as custom
 domains in `wrangler.jsonc` — keep `SCHEDULE_BUILDER_URL` in step, since
 nothing cross-checks them. In-app branding is DogDays throughout, drawing the

@@ -22,7 +22,8 @@ exported functions, see the generated
    GitHub's built-in field, not a custom one) becomes the competition's title
    once it converts. Optionally fill in "Judging/End Date" — display-only,
    never a deadline the platform enforces. Write the brief as the draft
-   item's own body, in markdown.
+   item's own body, in markdown, starting from the
+   [brief template](https://github.com/DevDogsUGA/Backstage/blob/main/competitions/TEMPLATE.md).
 2. **Convert the draft into a real issue** in `GITHUB_ORG/GITHUB_COMPETITION_REPO`
    (GitHub's own "Convert to issue" action on the item). This is **kickoff**.
    The platform mirrors the new issue into `platform.competitions` within

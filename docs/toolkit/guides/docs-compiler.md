@@ -28,8 +28,21 @@ work.
 
 **Bare** takes no arguments and never will. The working directory is the content
 root; the output is `dist/index.js` plus `dist/index.d.ts`, a typed data module
-the platform app imports. Anything else added to this CLI has to leave that mode
-exactly as it was.
+the platform app imports. Each page ships pre-rendered — Shiki for code, KaTeX
+for math, GitHub alerts, the variant directives described in
+[Writing docs](/docs/toolkit/infrastructure/docs-system/writing#variants) — so
+the platform app has no markdown renderer of its own; it drops the compiled
+`html` string straight into the page. Anything else added to this CLI has to
+leave that mode exactly as it was.
+
+Bare mode also runs two checks that **fail the build**: every link between
+docs pages has to resolve against pages that actually exist (mounted `_shared`
+pages included), and every documented `pnpm devtools`, `pnpm --filter` or
+`pnpm run` command inside a fenced code block has to name a real command or
+package script. A fence tagged with the extra word `nocheck` opts a block out
+of the second check — see
+[Writing docs](/docs/toolkit/infrastructure/docs-system/writing#supported-syntax)
+for the exact syntax.
 
 **`check`** is the prose lint — page length, collapsible defects, missing
 descriptions. It **warns and never fails**, and that is a decision rather than
@@ -64,8 +77,7 @@ pnpm --filter @devdogsuga/docs build --force  # bypass the cache
 To run the compiler directly instead, from `docs/`:
 
 ```bash
-cd docs && pnpm exec docs-compiler check                  # resolves the linked bin
-cd docs && node ./node_modules/.bin/docs-compiler check   # no PATH at all
+cd docs && pnpm exec docs-compiler check
 ```
 
 What the rules mean for a page you are writing is

@@ -15,9 +15,8 @@ export function requireRankGuard(targetRank: number, callerMinRank: number) {
 
 /**
  * Throws unless `target` is a `custom` role, narrowing `rank` to `number` on
- * success. The "default" (Member) and "root" (Root) roles are not directly
- * editable, deletable, reorderable, or assignable/removable: Root changes
- * hands only via `transferRootRole`, and Member is never assigned at all.
+ * success. The "default" (Member) role is not directly editable, deletable,
+ * reorderable, or assignable/removable: Member is never assigned at all.
  */
 export function requireCustomRole(target: {
   rank: number | null;

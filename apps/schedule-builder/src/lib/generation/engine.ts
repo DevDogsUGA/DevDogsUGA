@@ -8,8 +8,7 @@ import type { ScheduleRule } from "./rule";
 /**
  * The search is exhaustive over the cartesian product of each course's
  * sections, so the input has to stay small: at ~8 sections per course, eleven
- * courses is already ~8^11 branches. Ported unchanged from
- * `../algorithm/brute-force.ts`.
+ * courses is already ~8^11 branches.
  */
 export const MAX_INPUT_COURSES = 10;
 

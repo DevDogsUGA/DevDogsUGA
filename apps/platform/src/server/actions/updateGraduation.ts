@@ -5,6 +5,7 @@ import { authenticate, expectSession } from "../auth";
 import { db } from "../db";
 import { profiles } from "../db/schema";
 import { validateGraduation, type Semester } from "~/lib/validation/profile";
+import { revalidateOfficers } from "~/server/loaders/officers";
 
 /**
  * The both-or-neither rule and the not-in-the-past rule live in
@@ -27,6 +28,7 @@ export default async function updateGraduation(
     .update(profiles)
     .set({ graduationSemester: semester, graduationYear: year })
     .where(eq(profiles.userId, userId));
+  revalidateOfficers();
 
   return {};
 }

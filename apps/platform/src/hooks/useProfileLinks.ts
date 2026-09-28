@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import addProfileLink from "~/server/actions/profileLinks";
+import revalidateOfficerBoard from "~/server/actions/revalidateOfficerBoard";
 import { createClient } from "~/supabase/client";
 import type { profileLinks } from "~/server/db/schema";
 
@@ -198,6 +199,11 @@ export function useProfileLinks(
     onSuccess: (next) => {
       setCommitted(next);
       setDraft(toDraft(next));
+    },
+    // Settled, not success: a save that fails partway has still written
+    // whatever landed before the failure.
+    onSettled: () => {
+      void revalidateOfficerBoard().catch(() => undefined);
     },
   });
 

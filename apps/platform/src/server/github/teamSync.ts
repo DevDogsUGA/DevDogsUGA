@@ -32,7 +32,7 @@ import { teamRulesetName, teamRulesetPayload } from "./rulesets";
  *
  * Teams get a branch in the org rather than a fork, for one decisive reason:
  * you cannot automate collaborator grants on a student's personal fork.
- * Adding teammates to `someone/DevDogs-Website` needs that student's
+ * Adding teammates to `someone/DevDogsUGA` needs that student's
  * personal-account admin, which the org's token has no reach into.
  *
  * Keyed by SLUG, not by the mirror's `teamId`, throughout this file. Every

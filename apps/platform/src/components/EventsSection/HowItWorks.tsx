@@ -19,7 +19,7 @@ import muybridgeHorse from "~/assets/muybridge-horse.gif";
  *
  * The copy has to keep the model straight (see `docs/platform/guides/meetings-
  * and-teams`): Monday's workshop kicks a competition off, teams build all
- * week with an open dev session on Wednesday, and entries stay open --
+ * week with an open build session on Wednesday, and entries stay open --
  * there is no fixed judging night -- until an officer merges the winning
  * pull request, which closes the competition's GitHub issue. The timeline
  * strip draws the fixed part of that (the weekly cadence) and lets the build
@@ -101,7 +101,7 @@ const BEATS: Beat[] = [
     // Named, because it is a night the club runs rather than a gap in the
     // week -- unlike Unscheduled, the label for a night nobody scheduled at
     // all.
-    title: "Dev Session",
+    title: "Build Session",
     body: (
       <>
         Catch up on workshop materials, meet up with your teammates for
@@ -109,7 +109,7 @@ const BEATS: Beat[] = [
         officers, or just come hang out and get work done!
       </>
     ),
-    // No segment: a dev session is AUTHORED on the meeting rather than
+    // No segment: a build session is AUTHORED on the meeting rather than
     // derived from its structure, so there is no entry in `segmentBadge` to
     // point at and its chip comes from `kindBadge`. The card carries the name
     // on its own.

@@ -3,12 +3,24 @@ name: Database (Drizzle)
 description: Drizzle 1.0.0-rc.4 as a typed reader over a database whose schema is owned by SQL migrations, plus the connection settings the Supabase pooler forces.
 order: 4
 section: guides
-mount: [schedule-builder, platform]
+mount: [schedule-builder, platform, toolkit]
 ---
 
 # Database (Drizzle)
 
-`drizzle-orm` and `drizzle-kit` 1.0.0-rc.4, on the `postgres` (postgres-js) driver 3.4.9, used for server-side SQL in both Next apps. The one thing to understand before touching it: **Drizzle does not own the schema here.** SQL migrations under `supabase/migrations` do. Read this before adding a table; [Drizzle's docs](https://orm.drizzle.team) cover the query builder itself. `@devdogsuga/db` is the shared client factory package this page's connection settings apply to — see [Toolkit](/docs/toolkit/guides/db) for the factory itself.
+`drizzle-orm` and `drizzle-kit` 1.0.0-rc.4, on the `postgres` (postgres-js) driver 3.4.9, used for server-side SQL in both Next apps. The one thing to understand before touching it: **Drizzle does not own the schema here.** SQL migrations under `supabase/migrations` do. Read this before adding a table; [Drizzle's docs](https://orm.drizzle.team) cover the query builder itself.
+
+`@devdogsuga/db`'s `/server` subpath is the shared client factory both apps build on — one relevant export, merged with the Supabase client factories in the Backstage cutover. `createDb(url, relations)` builds the postgres-js connection and wraps it in Drizzle:
+
+```ts
+import { createDb } from "@devdogsuga/db/server";
+import { env } from "~/env";
+import { relations } from "./relations";
+
+export const db = createDb(env.DB_URL, relations);
+```
+
+Each app passes **its own** generated `relations`, because the two apps introspect different Postgres schemas and their generated modules are not interchangeable. `drizzle-orm` and `postgres` are peer dependencies — `@devdogsuga/db` brings neither version with it, so an app pins them. The full surface is documented in [`@devdogsuga/db`](https://github.com/DevDogsUGA/Backstage/tree/main/packages/db) — it ships from Backstage now, so there is no local `reference/api` page for it (the same as `config`, `env`, and the rest of the Backstage-sourced packages).
 
 Both packages are pinned to an exact version rather than a range, because the `latest` dist-tag still points at 0.45.x and a range would silently downgrade them.
 
@@ -16,7 +28,7 @@ Both packages are pinned to an exact version rather than a range, because the `l
 
 Both apps follow the same workflow: SQL migrations own the schema, and `pnpm devtools db introspect --app <slug>` (`platform` or `schedule-builder`) pulls the live database back into Drizzle. No script here runs `drizzle-kit push`, and neither app hand-declares its own tables or policies in Drizzle — `src/server/db/schema/generated/schema.ts` is written entirely by that command and never edited by hand.
 
-`db introspect` runs two `drizzle-kit pull`s per app — `drizzle-introspection.config.ts` (every schema this app doesn't own, into `src/supabase/drizzle/`) and `drizzle.config.ts` (the app's own schema, into `src/server/db/schema/generated/`) — then applies the fixups covered below. See [Database](/docs/platform/guides/database) for the full change loop: writing the migration, replaying it, and re-introspecting.
+`db introspect` runs two `drizzle-kit pull`s per app — `drizzle-introspection.config.ts` (every schema this app doesn't own, into `src/supabase/drizzle/`) and `drizzle.config.ts` (the app's own schema, into `src/server/db/schema/generated/`) — then applies the fixups covered below. See [Writing a migration](/docs/platform/guides/migrations) for the full change loop: writing the migration, replaying it, and re-introspecting.
 
 `src/server/db/relations.ts` is the one hand-maintained file next to the generated schema — a `defineRelations` call over the generated tables. The two apps introspect different schemas, so neither app's generated module or relations file is interchangeable with the other's.
 

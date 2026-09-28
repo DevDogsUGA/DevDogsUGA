@@ -147,7 +147,7 @@ pnpm devtools db start && pnpm devtools db reset
 pnpm --filter @devdogsuga/supabase test:rls
 ```
 
-See [`@devdogsuga/supabase`](/docs/toolkit/guides/supabase) for how the
+See [`@devdogsuga/supabase`](/docs/toolkit/guides/stack/supabase) for how the
 persona suite is wired up, and
 [Supabase's own RLS docs](https://supabase.com/docs/guides/database/postgres/row-level-security)
 for the mechanics beyond what's specific to this repo.

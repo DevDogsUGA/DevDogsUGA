@@ -1,6 +1,6 @@
 ---
 name: Contributing
-description: Branch to merged PR — the review flow, the PR template's checklist, migration rules, and where to find a competition brief.
+description: Branch to merged PR — the review flow, the PR template's checklist, and migration rules.
 order: 2
 section: guides
 mount: [schedule-builder, study-group-finder, platform]
@@ -87,12 +87,3 @@ git pull --rebase origin main
 pnpm devtools db reset      # or: pnpm devtools db migrate, against your branch's migrations
 pnpm devtools db types
 ```
-
-## Finding a competition brief
-
-Competition briefs live as GitHub issues, not in these docs — these pages
-teach the tools and concepts (RLS, migrations, the rule engine, and so on)
-generally, without walking through the specific answer a competition is
-asking for. See the open
-[competition issues](https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition),
-or the callout on your project's overview page.

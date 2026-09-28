@@ -51,7 +51,7 @@ export interface MeetingBilling {
    * What the STRUCTURE says, ordered; see `resolveMeetingSegments`.
    *
    * **Can be empty**, which it could not before. A night whose `kind` an officer
-   * authored, a dev session or a study session, has no structure to derive
+   * authored, a build session or a study session, has no structure to derive
    * from, and `open` is suppressed there so the two do not both speak. A caller
    * rendering chips must render `meeting.kind` alongside this or such a night
    * gets no chip at all.
@@ -81,8 +81,8 @@ export function resolveMeetingSegments(
 
   // `open` is what structural SILENCE looks like, and `kind` is the officer's
   // word for a night the structure cannot describe: the same condition said the
-  // other way round, so they must never both speak. A dev session would
-  // otherwise render "Unscheduled · Dev Session", the derived fallback
+  // other way round, so they must never both speak. A build session would
+  // otherwise render "Unscheduled · Build Session", the derived fallback
   // contradicting the person who told us what the night was.
   //
   // This is why `segments` can come back empty. A caller rendering only these

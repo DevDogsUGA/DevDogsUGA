@@ -3,7 +3,6 @@ import Callout from "~/ui/callout";
 import { ConsoleCard } from "~/ui/card";
 import PageShell from "~/components/PageShell";
 import RolesManager from "~/components/RolesManager";
-import RootAccessCard from "~/components/RootAccessCard";
 import { CardSkeleton } from "~/components/Skeletons";
 import UserRoleManager from "~/components/UserRoleManager";
 import { getPermissionsPageData } from "~/server/loaders/permissions";
@@ -13,8 +12,6 @@ async function PermissionsData() {
     roles,
     callerMinRank,
     callerPermissions,
-    rootHolder,
-    isRootHolder,
     discordSyncErrors,
     callerCapability,
   } = await getPermissionsPageData();
@@ -30,13 +27,6 @@ async function PermissionsData() {
           </ul>
         </Callout>
       )}
-
-      <ConsoleCard.Root id="root-access">
-        <ConsoleCard.Header title="Root Access" />
-        <ConsoleCard.Content>
-          <RootAccessCard rootHolder={rootHolder} isRootHolder={isRootHolder} />
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
 
       <ConsoleCard.Root id="assign-roles">
         <ConsoleCard.Header title="Assign Roles" />
@@ -69,12 +59,11 @@ export default function PermissionsPage() {
     <PageShell
       accent="violet"
       title="Permissions"
-      description="Every member starts with no permissions; Root has all permissions and can only change hands via transfer below."
+      description="Every member starts with no permissions; President holds all of them and is assigned on Discord."
     >
       <Suspense
         fallback={
           <>
-            <CardSkeleton rows={1} />
             <CardSkeleton rows={2} />
             <CardSkeleton rows={3} />
           </>

@@ -12,7 +12,7 @@ import { nodePreset } from "@devdogsuga/config/vitest/node";
  *   pnpm --filter @devdogsuga/supabase test:rls
  *
  * Single-threaded: personas share one database, and several cases assert on
- * global state (who holds Root, what the instance environment is) that
+ * global state (who holds which role, what the instance environment is) that
  * concurrent files would race on.
  */
 export default mergeConfig(

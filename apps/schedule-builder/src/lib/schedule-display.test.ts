@@ -24,7 +24,7 @@ function offering(
     courseTitle: "Title",
     creditHours: { min: 3, max: 3 },
     campus: { id: 1, abbr: "ATHENS", description: "Athens" },
-    professor: { name: "Ada Lovelace", quality: null },
+    professor: { name: "Ada Lovelace" },
     seatsAvailable: 5,
     actualEnrollment: 10,
     maximumEnrollment: 20,

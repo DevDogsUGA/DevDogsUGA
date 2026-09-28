@@ -22,9 +22,9 @@
 
 -- Resolution rules, in the order they apply:
 --
---   * Holding the Root role (the fixed uuid below) is true for everything, with
---     rank -Infinity. It is not a role with every box ticked; it short-circuits.
---   * Otherwise, only roles of "roleType" = 'custom' contribute.
+--   * Only roles of "roleType" = 'custom' contribute. Nothing short-circuits:
+--     President has every permission because every box on it is ticked, so a
+--     new permission column has to be granted to President explicitly.
 --   * Lowest rank wins, and only among roles that express an opinion. A null
 --     means "this role says nothing about this permission", not "deny". That is
 --     what lets a high role grant something without every lower role repeating
@@ -34,12 +34,7 @@
 -- Materializing this is not premature. Every console page render, the search
 -- index and every policy that calls has_permission() resolve through it.
 create materialized view "platform"."resolvedUserPermissions" as
-with root_holders as (
-  select ur."userId"
-  from "platform"."userRoles" ur
-  where ur."roleId" = '00000000-0000-0000-0000-000000000002'::uuid
-),
-user_custom_roles as (
+with user_custom_roles as (
   select
     ur."userId",
     r.rank,
@@ -79,18 +74,17 @@ all_users as (
 )
 select
   au."userId",
-  case when rh."userId" is not null then true else coalesce(fnn."canModerate", false) end as "canModerate",
-  case when rh."userId" is not null then true else coalesce(fnn."canManageRoles", false) end as "canManageRoles",
-  case when rh."userId" is not null then true else coalesce(fnn."canManageSuspensions", false) end as "canManageSuspensions",
-  case when rh."userId" is not null then true else coalesce(fnn."canViewAuditLog", false) end as "canViewAuditLog",
-  case when rh."userId" is not null then true else coalesce(fnn."canCreateCredentials", false) end as "canCreateCredentials",
-  case when rh."userId" is not null then true else coalesce(fnn."canManageVerification", false) end as "canManageVerification",
-  case when rh."userId" is not null then true else coalesce(fnn."canManageAttendance", false) end as "canManageAttendance",
-  case when rh."userId" is not null then true else coalesce(fnn."canExportStars", false) end as "canExportStars",
-  case when rh."userId" is not null then true else coalesce(fnn."isLeader", false) end as "isLeader",
-  case when rh."userId" is not null then '-Infinity'::double precision else coalesce(fnn."minRank", 'Infinity'::double precision) end as "minRank"
+  coalesce(fnn."canModerate", false) as "canModerate",
+  coalesce(fnn."canManageRoles", false) as "canManageRoles",
+  coalesce(fnn."canManageSuspensions", false) as "canManageSuspensions",
+  coalesce(fnn."canViewAuditLog", false) as "canViewAuditLog",
+  coalesce(fnn."canCreateCredentials", false) as "canCreateCredentials",
+  coalesce(fnn."canManageVerification", false) as "canManageVerification",
+  coalesce(fnn."canManageAttendance", false) as "canManageAttendance",
+  coalesce(fnn."canExportStars", false) as "canExportStars",
+  coalesce(fnn."isLeader", false) as "isLeader",
+  coalesce(fnn."minRank", 'Infinity'::double precision) as "minRank"
 from all_users au
-left join root_holders rh on rh."userId" = au."userId"
 left join first_non_null fnn on fnn."userId" = au."userId";
 
 -- Required by `refresh materialized view concurrently`, which the trigger below
@@ -117,7 +111,7 @@ refresh materialized view "platform"."resolvedUserPermissions";
 
 -- The refresh is an invariant of the source tables, so it lives in the database
 -- where no writer can bypass it, rather than in one application code path every
--- other writer has to remember to imitate. Seeding the first Root assignment,
+-- other writer has to remember to imitate. Seeding the first President,
 -- restoring a dump and editing a row in the Supabase dashboard all reach
 -- "userRoles" without going through the app.
 --

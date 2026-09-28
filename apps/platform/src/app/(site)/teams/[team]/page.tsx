@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import BranchCommands from "~/components/teams/BranchCommands";
 import InviteForm from "~/components/teams/InviteForm";
-import JoinByCodeForm from "~/components/teams/JoinByCodeForm";
+import JoinTeamForm from "~/components/teams/JoinTeamForm";
 import RosterActions from "~/components/teams/RosterActions";
 import PageShell from "~/components/PageShell";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
@@ -16,6 +17,7 @@ import {
 } from "~/server/actions/teams";
 import { requireSession } from "~/server/auth/require";
 import {
+  getAllTeams,
   getPendingForUser,
   getTeamDetail,
   getTeamEntries,
@@ -88,7 +90,7 @@ export default async function TeamPage({
               rel="noreferrer"
               className="underline underline-offset-2 hover:text-mauve-200"
             >
-              team/{team.slug} on GitHub
+              {team.branch} on GitHub
             </a>
             {isMirrorStale(team.githubSyncedAt, checkedAt) && (
               <span>
@@ -102,6 +104,9 @@ export default async function TeamPage({
               </span>
             )}
           </p>
+          <div className="mb-4">
+            <BranchCommands branch={team.branch} cloneUrl={team.cloneUrl} />
+          </div>
           {pendingForLead.length > 0 && (
             <Callout tone="info" title="Waiting on you" className="mb-4">
               {pendingForLead.length}{" "}
@@ -153,7 +158,7 @@ export default async function TeamPage({
           does not deserve. */}
       {entries.length > 0 && (
         <ConsoleCard.Root id="entries">
-          <ConsoleCard.Header title="Competition entries" />
+          <ConsoleCard.Header title="Competition Entries" />
           <ConsoleCard.Content>
             <ul className="flex flex-col gap-2">
               {entries.map((entry) => (
@@ -233,31 +238,16 @@ export default async function TeamPage({
           />
         </>
       ) : (
-        <JoinPanel team={team} />
+        // Every team, not just this one: the request half picks from all of
+        // them, starting on this one, and a stranger who landed on a closed
+        // team can still ask another from here.
+        <JoinTeamForm
+          targets={await getAllTeams()}
+          defaultTeamId={team.id}
+          joinTeam={joinTeam}
+          requestToJoin={requestToJoin}
+        />
       )}
     </PageShell>
-  );
-}
-
-type TeamDetail = NonNullable<Awaited<ReturnType<typeof getTeamDetail>>>;
-
-/**
- * How a stranger gets on. `JoinByCodeForm` itself decides whether the
- * "ask to join" half renders, from `acceptingRequests` -- the join code
- * always works regardless, so this never hides the whole panel.
- */
-function JoinPanel({ team }: { team: TeamDetail }) {
-  return (
-    <JoinByCodeForm
-      targets={[
-        {
-          id: team.id,
-          name: team.name,
-          acceptingRequests: team.acceptingRequests,
-        },
-      ]}
-      joinTeam={joinTeam}
-      requestToJoin={requestToJoin}
-    />
   );
 }

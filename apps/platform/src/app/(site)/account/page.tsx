@@ -22,6 +22,7 @@ import { CardSkeleton } from "~/components/Skeletons";
 import VerificationStatusField from "~/components/VerificationStatusField";
 import { getProfilePageData } from "~/server/loaders/console";
 import Callout from "~/ui/callout";
+import { env } from "~/env";
 
 /**
  * One person's own profile. Nothing here is the same page for two visitors,
@@ -260,6 +261,19 @@ function ConnectedAccountStatus({
         : provider === "linkedin_oidc"
           ? "LinkedIn"
           : "That account";
+  if (code === "github_invitation_pending") {
+    const invitationUrl = `https://github.com/orgs/${env.GITHUB_ORG}/invitation`;
+    return (
+      <Callout tone="info">
+        GitHub is linked. To finish joining the {env.GITHUB_ORG} organization,{" "}
+        <a href={invitationUrl} className="underline">
+          accept your invitation on GitHub
+        </a>
+        .
+      </Callout>
+    );
+  }
+
   const message =
     code === "identity_already_exists"
       ? `${providerName} profile is already linked to a DevDogs account. If it does not appear below, sign in to the other account and unlink it first, or contact an officer for help.`

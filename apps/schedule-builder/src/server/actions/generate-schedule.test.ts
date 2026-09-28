@@ -169,11 +169,10 @@ describe("getRecommendedSchedules", () => {
     expect(result.data[0]).toHaveLength(2);
   });
 
-  // The time-of-day preference is a soft score by design (see
-  // preferredTimeWindow.ts): an "HH:MM" bound reorders schedules, never
-  // filters them, and a malformed bound is dropped before it reaches the
-  // engine rather than corrupting the scoring.
-  it('ranks by an "HH:MM" start-time preference and survives a malformed one', async () => {
+  // An "HH:MM" bound filters out sections outside the window (see
+  // preferredTimeWindow.ts); a malformed bound is dropped before it reaches
+  // the engine rather than filtering on garbage.
+  it('filters by an "HH:MM" start-time preference and survives a malformed one', async () => {
     const nineAm = section({ crn: 111, meetings: [meeting("09:00", "09:50")] });
     const tenAm = section({ crn: 222, meetings: [meeting("10:10", "11:00")] });
 
@@ -189,7 +188,7 @@ describe("getRecommendedSchedules", () => {
       showFilledClasses: true,
     });
     expect(bounded.error).toBeUndefined();
-    expect(bounded.data).toEqual([[222], [111]]);
+    expect(bounded.data).toEqual([[222]]);
 
     mockLoadSections.mockResolvedValue([nineAm, tenAm]);
     const malformed = await getRecommendedSchedules({

@@ -8,12 +8,16 @@ import ConnectedAccountField from ".";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
 
+/**
+ * Supabase's Discord provider writes no `user_name` (GitHub's does). The
+ * Discord username lands in `full_name`; `name` is the legacy `username#0`.
+ */
 function getIdentityUserName(identityData: unknown): string | undefined {
   return identityData &&
     typeof identityData === "object" &&
-    "user_name" in identityData &&
-    typeof identityData.user_name === "string"
-    ? identityData.user_name
+    "full_name" in identityData &&
+    typeof identityData.full_name === "string"
+    ? identityData.full_name
     : undefined;
 }
 

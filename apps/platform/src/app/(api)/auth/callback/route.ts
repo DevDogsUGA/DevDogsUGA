@@ -103,14 +103,23 @@ export async function GET(request: NextRequest) {
   }
 
   if (session?.provider_token && intent === "link:github") {
+    let outcome: github.OrgMembershipOutcome;
     try {
-      await github.linkProfile(session.provider_token);
+      outcome = await github.linkProfile(session.provider_token);
     } catch (cause) {
       logSideEffectFailure("github", "link", cause);
       redirectWithAccountStatus(
         callbackPath,
         "warning",
         "external_side_effect_failed",
+        "github",
+      );
+    }
+    if (outcome === "invitation_pending") {
+      redirectWithAccountStatus(
+        callbackPath,
+        "warning",
+        "github_invitation_pending",
         "github",
       );
     }

@@ -4,7 +4,7 @@ import type { AccentColor } from "~/ui/accent-blobs";
  * What the title card's chip and wash key off, for a meeting kind.
  *
  * Everything the title card shows has to come off the meeting row -- see
- * the module doc on `TitleCard` -- so this maps `meetings.kind` (the four
+ * the module doc on `TitleCard` -- so this maps `meetings.kind` (the five
  * `MEETING_KIND_CHOICES` from `@devdogsuga/events`, or null) onto one of
  * `AccentBlobs`'s six colors and a chip label, rather than an officer typing
  * either per event the way a hand-authored slide deck would.
@@ -15,10 +15,11 @@ import type { AccentColor } from "~/ui/accent-blobs";
  * Session" to draw from since its decks are authored per meeting.
  */
 const KIND_ACCENT: Record<string, AccentColor> = {
-  "Dev Session": "emerald",
+  "Build Session": "emerald",
   "Study Session": "cyan",
   "Interest Meeting": "violet",
   Social: "rose",
+  "Demo Night": "blue",
 };
 
 const DEFAULT_ACCENT: AccentColor = "blue";

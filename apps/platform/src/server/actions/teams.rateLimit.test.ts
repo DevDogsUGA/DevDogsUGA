@@ -111,7 +111,7 @@ describe("teams.ts rate-limit wiring", () => {
     consumeRateLimit.mockResolvedValue(false);
     const { joinTeam } = await loadTeams();
 
-    const outcome = await joinTeam(TEAM_ID, "ABCDEF");
+    const outcome = await joinTeam("ABCDEF");
 
     expect(outcome).toEqual({ ok: false, code: "rate_limited" });
     expect(consumeRateLimit).toHaveBeenCalledWith({

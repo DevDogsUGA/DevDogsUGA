@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import AnnouncementBanner from "~/components/AnnouncementBanner";
-import AttendanceBanner from "~/components/AttendanceBanner";
 import AppSwitcher from "~/components/AppSwitcher";
 import AutoOpen from "~/components/AppSwitcher/AutoOpen";
 import { AppSwitcherProvider } from "~/components/AppSwitcher/provider";
@@ -63,9 +62,9 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
             because a fixed element contributes nothing to that layout. */}
         <AnnouncementBanner />
 
-        <Suspense>
-          <AttendanceBanner />
-        </Suspense>
+        {/* The "Check in now" AttendanceBanner is off until it stops covering
+            page content and its dismissal sticks without a flash (TASK-364).
+            Put `<Suspense><AttendanceBanner /></Suspense>` back here then. */}
 
         <AppSwitcher />
         <Suspense>

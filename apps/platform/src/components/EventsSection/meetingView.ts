@@ -58,7 +58,7 @@ export const segmentBadge: Record<MeetingSegment, SegmentBadge> =
 /**
  * The badge for a night an officer NAMED, keyed by `meetings.kind`.
  *
- * The closed four-value vocabulary comes from `EVENT_KIND_VISUALS`, shared
+ * The closed five-value vocabulary comes from `EVENT_KIND_VISUALS`, shared
  * with generated event art. Each authored kind has its own hue so its calendar
  * dot, badge, image gradient, and image badge all carry the same meaning.
  */
@@ -87,7 +87,7 @@ function neutralKindBadge(kind: string): SegmentBadge {
  * `segments[0]` alone is not enough. `resolveMeetingSegments` suppresses
  * `open` whenever a `kind` is set, so the segment list is *empty* for every
  * authored night, and a lookup that consulted only segments would fall through
- * to a default for a dev session whose own chip is sky: one night in two
+ * to a default for a build session whose own chip is sky: one night in two
  * colours, in the module whose premise is that colour is information.
  *
  * Kind wins when present because it is the more specific claim. An officer

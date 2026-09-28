@@ -1,6 +1,6 @@
 ---
 name: Writing Docs
-description: The rules for a docs page — front matter, sections, shared pages, length budgets, collapsibles, and the markdown syntax that renders.
+description: The rules for a docs page — front matter, sections, shared pages, length budgets, collapsibles, variants, and the markdown syntax that renders.
 order: 2
 section: infrastructure
 ---
@@ -162,13 +162,15 @@ See the [local preview](/docs/toolkit/infrastructure/docs-system/preview) page.
 Anchor links work; heading ids are GitHub-style slugs of the heading text.
 
 <details>
-<summary>Every registered language</summary>
+<summary>Why can Shiki load any language now?</summary>
 
-`bash`, `css`, `dart`, `diff`, `graphql`, `html`, `http`, `java`, `javascript`, `json`, `jsx`, `markdown`, `python`, `sql`, `toml`, `tsx`, `typescript`, `yaml`.
-
-The list is registered in `apps/platform/src/components/DocsMarkdown.tsx`, which builds its own Shiki highlighter on the JavaScript regex engine — the stock plugin compiles Oniguruma's Wasm at request time, and the Workers runtime forbids that outright. Adding a language means adding an import there.
+Rendering used to happen in the platform, per request, through `react-markdown` — and the Workers runtime forbids `WebAssembly.compile()`, so that renderer ran Shiki on its JavaScript regex engine with a hand-registered, hand-imported list of grammars. That constraint is gone now that rendering happens in `@devdogsuga/docs-compiler`, at build time, in Node: the stock `@shikijs/rehype` plugin runs on Shiki's Oniguruma engine and loads any grammar on demand (`lazy: true`), so an unregistered language tag is no longer a build-time list to edit — it's just a language Shiki hasn't loaded yet, and `fallbackLanguage: "text"` is what a genuinely unsupported tag falls back to silently.
 
 </details>
+
+## Variants
+
+Tabs and blocks that differ by project, platform or Supabase setup have their own page: [Variants](./variants).
 
 ## Why it's like this
 

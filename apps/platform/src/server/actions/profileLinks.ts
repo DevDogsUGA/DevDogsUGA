@@ -12,6 +12,7 @@ import {
   linkTitleSchema,
   PROFILE_LIMITS,
 } from "~/lib/validation/profile";
+import { revalidateOfficers } from "~/server/loaders/officers";
 
 export type AddLinkResult = {
   link?: typeof profileLinks.$inferSelect;
@@ -47,7 +48,7 @@ export default async function addProfileLink(
   }
   const { hostname } = new URL(url);
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [countRow] = await tx
       .select({ linkCount: count(), maxOrder: max(profileLinks.sortOrder) })
       .from(profileLinks)
@@ -108,4 +109,7 @@ export default async function addProfileLink(
 
     return { link: inserted };
   });
+
+  if (!result.error) revalidateOfficers();
+  return result;
 }

@@ -3,7 +3,6 @@
 import { and, asc, eq, ilike, inArray, or } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
-  ROOT_ROLE_ID,
   profiles,
   resolvedUserPermissions,
   roles,
@@ -21,6 +20,7 @@ import {
   pushMemberRoleChange,
 } from "~/server/discord/memberSync";
 import { fetchGuildRoles, pushRoleToDiscord } from "~/server/discord/roleSync";
+import { revalidateOfficers } from "~/server/loaders/officers";
 import { requireCustomRole, requireRankGuard } from "./permissionGuards";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -99,21 +99,11 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canExportStars: false,
 };
 
-/** Returns the userId of the current Root holder, or null if unassigned. */
-export async function getRootHolderId(): Promise<string | null> {
-  const [row] = await db
-    .select({ userId: userRoles.userId })
-    .from(userRoles)
-    .where(eq(userRoles.roleId, ROOT_ROLE_ID))
-    .limit(1);
-  return row?.userId ?? null;
-}
-
 /**
  * Resolves every permission flag for a user from the
- * `resolvedUserPermissions` materialized view. The view already handles the
- * Root role (all-true override) and rank inheritance. Users with no role
- * assignments don't appear in the view and get all-false.
+ * `resolvedUserPermissions` materialized view, which already applies rank
+ * inheritance. Users with no role assignments don't appear in the view and get
+ * all-false.
  */
 export async function resolveUserPermissions(
   userId: string,
@@ -361,6 +351,7 @@ export async function updateRole(
       }),
     })
     .where(eq(roles.id, roleId));
+  revalidateOfficers();
 
   if (
     target.discordRoleId !== null &&
@@ -393,6 +384,7 @@ export async function deleteRole(roleId: string): Promise<void> {
 
   requireRankGuard(requireCustomRole(target), ctx.minRank);
   await db.delete(roles).where(eq(roles.id, roleId));
+  revalidateOfficers();
 }
 
 /**
@@ -416,6 +408,7 @@ export async function reorderRole(
   requireRankGuard(newRank, ctx.minRank);
 
   await db.update(roles).set({ rank: newRank }).where(eq(roles.id, roleId));
+  revalidateOfficers();
 }
 
 // ── User role assignment ───────────────────────────────────────────────────────
@@ -464,6 +457,7 @@ export async function assignRoleToUser(
         .onConflictDoNothing();
       await pushMemberRoleChange(discordUserId, target.discordRoleId!, "add");
     });
+    revalidateOfficers();
     return;
   }
 
@@ -471,6 +465,7 @@ export async function assignRoleToUser(
     .insert(userRoles)
     .values({ userId: targetUserId, roleId })
     .onConflictDoNothing();
+  revalidateOfficers();
 }
 
 export async function removeRoleFromUser(
@@ -509,6 +504,7 @@ export async function removeRoleFromUser(
     .where(
       and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
     );
+  revalidateOfficers();
 
   if (target.discordRoleId !== null) {
     const discordUserId = await getDiscordUserId(targetUserId);
@@ -558,8 +554,7 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     }),
   );
 
-  // Custom roles only: Member has no assignments, and RootAccessCard shows
-  // Root separately.
+  // Custom roles only: Member has no assignments.
   const roleRows = await db
     .select({
       userId: userRoles.userId,
@@ -653,9 +648,8 @@ export type HighestRankingRole = { title: string; color: string | null };
 
 /**
  * Returns the title/color of the user's highest-ranking role, for display
- * next to their name (sidebar, profile popover). The Root holder always
- * shows the Root role; everyone else shows their min-rank `custom` role, or
- * falls back to the implicit "Member" role if they hold none.
+ * next to their name (sidebar, profile popover): their min-rank `custom` role,
+ * or the implicit "Member" role if they hold none.
  */
 export async function getHighestRankingRole(
   userId: string,
@@ -676,36 +670,4 @@ export async function getHighestRankingRole(
     .limit(1);
 
   return row ?? { title: "Member", color: null };
-}
-
-// ── Root transfer ─────────────────────────────────────────────────────────────
-
-/**
- * Transfers the singleton Root role to another user. Only the current Root
- * holder may call this, and there is no other path to assigning Root.
- */
-export async function transferRootRole(targetUserId: string): Promise<void> {
-  const callerId = await expectSession();
-
-  const currentRootId = await getRootHolderId();
-  if (currentRootId !== callerId) {
-    throw new Error(
-      "Not authorized: only the current Root holder can transfer this role",
-    );
-  }
-  if (targetUserId === callerId) {
-    throw new Error("You already hold the Root role");
-  }
-
-  const [targetProfile] = await db
-    .select({ userId: profiles.userId })
-    .from(profiles)
-    .where(eq(profiles.userId, targetUserId))
-    .limit(1);
-  if (!targetProfile) throw new Error("Target user not found");
-
-  await db
-    .update(userRoles)
-    .set({ userId: targetUserId })
-    .where(eq(userRoles.roleId, ROOT_ROLE_ID));
 }

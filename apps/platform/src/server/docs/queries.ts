@@ -1,6 +1,7 @@
 import {
   pages,
   projects,
+  variantGroups,
   type DocsPage,
   type DocsProject,
 } from "@devdogsuga/docs";
@@ -26,6 +27,11 @@ export type { DocsProject };
 const pagesByPath = new Map<string, DocsPage>(
   pages.map((page) => [page.path, page]),
 );
+
+/** The setup axes pages vary by (platform, Supabase), with their labels. */
+export function getDocsVariantGroups(): typeof variantGroups {
+  return variantGroups;
+}
 
 /** The projects shown on the docs landing page and the sidebar selector. */
 export function getDocsProjects(): DocsProject[] {
@@ -117,7 +123,8 @@ export interface DocsPageContent {
   title: string;
   description: string | null;
   headings: DocHeading[];
-  content: string;
+  /** Rendered at build time by the compiler, variants included. */
+  html: string;
   /**
    * `docs/_shared/<path>` for a page the compiler mounted into this project
    * from the shared pool (contract item 2), null for a page that lives here
@@ -138,7 +145,7 @@ export function getDocsPage(
     title: page.title,
     description: page.description,
     headings: page.headings,
-    content: page.content,
+    html: page.html,
     // The compiler's `mountedFrom` is relative to `_shared/`; this one is
     // relative to `docs/`, like every other path the edit link is built from.
     mountedFrom:

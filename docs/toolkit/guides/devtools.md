@@ -90,15 +90,20 @@ examples.
 
 ### Moderation
 
-- `moderation catalog` — list report reasons and moderatable content types.
-- `moderation check` — check an app's moderation integration and whether the
-  catalog holds up.
-- `moderation roundtrip` — file a report, quarantine it, and check the freeze,
-  end to end, then cleans up.
-- `grant-root` — grant a local account the Root role.
+- `moderation check` — with no argument, reports the moderatable content
+  types and the reasons an app can file against them; `moderation check --app
+<slug>` runs that app's conformance check.
+- `persona <member|moderator>` — create a sign-in-able persona against the
+  session's development tier, with a random, printed password.
+- `persona --clean` — remove personas this command created.
+- `grant-root [--user <email>] [--yes]` — grant an account the President role,
+  which holds every permission. It is named for the Root role President
+  replaced, and moves President from whoever it finds holding it.
 
-All four of these commands are structurally local: they discover the Supabase
-stack on this machine and cannot be pointed at production.
+`moderation check` and `persona` act on whichever development tier the
+session points at — local or a hosted development project — not only this
+machine. `grant-root` works on every tier, including staging and production,
+where it needs `--yes` or an interactive confirmation.
 
 ### Environment
 
@@ -190,6 +195,6 @@ is available.
 The deployment pipeline uses the separate `devtools-ci` binary. CI-only deploy
 steps never appear in the contributor menu.
 
-See [Database commands](/docs/toolkit/guides/database) and
+See [`devtools db` commands](/docs/toolkit/guides/devtools-db) and
 [Environment commands](/docs/toolkit/guides/env/commands) for the two largest
 command families.

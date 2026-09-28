@@ -13,7 +13,7 @@ const MEETING_ID = "aaaaaaaa-0000-4000-a000-000000000001";
 
 const MEETING: TitleCardMeeting = {
   title: "Supabase",
-  kind: "Dev Session",
+  kind: "Build Session",
   summary: "Auth, a database, and row-level security.",
   building: "DLW",
   location: "124",
@@ -56,7 +56,7 @@ describe("AttendanceDisplay", () => {
     expect(
       screen.getByRole("heading", { name: MEETING.title }),
     ).toBeInTheDocument();
-    expect(screen.getByText("DEV SESSION")).toBeInTheDocument();
+    expect(screen.getByText("BUILD SESSION")).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);

@@ -170,7 +170,7 @@ async function HomeSections({
         <MarqueeItem>Every Team at Once</MarqueeItem>
         <MarqueeItem>Weekly Workshops</MarqueeItem>
         <MarqueeItem>Ship a Pull Request</MarqueeItem>
-        <MarqueeItem>Dev Sessions</MarqueeItem>
+        <MarqueeItem>Build Sessions</MarqueeItem>
         <MarqueeItem>Show off to Your Friends</MarqueeItem>
         <MarqueeItem>Vote for the Best</MarqueeItem>
       </SectionMarquee>

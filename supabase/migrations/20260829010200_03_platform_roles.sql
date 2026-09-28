@@ -29,13 +29,15 @@
 -- Vault; "credentials" stores only the ids that point at them.
 create type "platform"."credentialType" as enum ('email_password', 'totp', 'email_password_totp');
 
--- 'default' is the role everyone gets, 'root' is the single all-permissions
--- role, 'custom' is everything the officers create. Only 'custom' roles are read
--- by the permission resolver, and only 'custom' roles carry a rank. Enum labels
--- are stored in declaration order and that order is what `order by` sees, so a
--- new label has to be added with an explicit BEFORE/AFTER rather than appended
--- to this list.
-create type "platform"."roleType" as enum ('default', 'root', 'custom');
+-- 'default' is the role everyone gets, 'custom' is everything the officers
+-- create. Only 'custom' roles are read by the permission resolver, and only
+-- 'custom' roles carry a rank. There is no all-permissions role type: the top of
+-- the ladder is President, an ordinary custom role with every permission granted,
+-- because a special-cased role could not be synced with Discord. Enum labels are
+-- stored in declaration order and that order is what `order by` sees, so a new
+-- label has to be added with an explicit BEFORE/AFTER rather than appended to
+-- this list.
+create type "platform"."roleType" as enum ('default', 'custom');
 
 
 -- ============================================================
@@ -145,10 +147,8 @@ create table "platform"."roles" (
   constraint "roles_title_key" unique ("title"),
   constraint "roles_rank_key" unique ("rank"),
   constraint "roles_discordRoleId_key" unique ("discordRoleId"),
-  -- Ranked exactly when custom, unranked exactly when not. The 'default' and
-  -- 'root' roles are outside the ordering because the resolver special-cases
-  -- them; a ranked 'root' row would place the all-permissions role somewhere in
-  -- the middle of the ladder.
+  -- Ranked exactly when custom, unranked exactly when not. The 'default' role
+  -- is outside the ordering because the resolver ignores it.
   constraint "roles_custom_requires_rank"
     check ((("roleType" = 'custom'::platform."roleType") = ("rank" is not null)))
 );
@@ -204,15 +204,6 @@ create table "platform"."userRoles" (
 );
 
 alter table "platform"."userRoles" enable row level security;
-
--- At most one person holds Root. The uuid is hardcoded here and hardcoded again
--- in the root_holders CTE of the "resolvedUserPermissions" body in file 06.
--- Nothing ties the two together, no foreign key and no constant, so a change to
--- one is a change to both. Getting them out of step means the singleton is
--- enforced on a role the resolver no longer treats as root.
-create unique index "userRoles_root_singleton"
-  on platform."userRoles" ("roleId")
-  where ("roleId" = '00000000-0000-0000-0000-000000000002'::uuid);
 
 
 -- ============================================================
@@ -340,7 +331,7 @@ using (false)
 with check (false);
 
 -- userRoles: closed on every verb. A client that could write here could grant
--- itself Root, and a client that could read it could enumerate the officers.
+-- itself President, and a client that could read it could enumerate the officers.
 -- Assignment goes through the service key.
 create policy "crud_public_policy_delete"
   on "platform"."userRoles"

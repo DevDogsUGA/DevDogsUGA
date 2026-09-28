@@ -20,7 +20,7 @@ DevDogs meets weekly. Each meeting runs one or more **workshops** in parallel, o
 | `competitions` | a mirror of a GitHub issue -- see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) |
 | `teams`        | a persistent project team -- see [Teams](/docs/platform/guides/meetings-and-teams/teams)                |
 
-There is no `projects` table any more — a workshop's project is free text on the row (`workshops."project"`, e.g. "DogDays", nullable), not a foreign key. See [Events](/docs/platform/guides/meetings-and-teams/events) for why.
+There is no `projects` table any more — a workshop's project is free text on the row (`workshops."project"`, e.g. "DogDays", nullable), not a foreign key. See [Events](/docs/platform/infrastructure/events) for why.
 
 Attendance attaches to the meeting with the workshop as a dimension, never to a competition — there is nothing in-person to attend about a GitHub issue.
 
@@ -40,7 +40,7 @@ The code is `apps/platform/src/server/` under `teams/`, `github/`, `config/` and
 - [Competitions](/docs/platform/guides/meetings-and-teams/competitions) — the Competitions Project, kickoff, entries, and closing one out.
 - [Attendance](/docs/platform/guides/meetings-and-teams/attendance) — the ledger and check-in.
 - [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards) — what participation adds up to.
-- [Events](/docs/platform/guides/meetings-and-teams/events) — where meetings and workshops come from.
+- [Events](/docs/platform/infrastructure/events) — where meetings and workshops come from.
 
 Scoring is off-platform (officer scores and live voting, run outside the site). The only per-competition state the platform persists is who won, and it is not a separate record at all — `platform.competitionEntries."mergedAt"` IS the answer, set the moment an officer merges the winning pull request — and the results page collapses to entrants plus that winner, if one has merged.
 

@@ -125,6 +125,23 @@ function generateJoinCode(length = 6): string {
   ).join("");
 }
 
+/**
+ * A code no other team holds, since `joinTeamImpl` finds the team by its code
+ * alone. At six characters from 32 a retry is all but never taken; the loop
+ * is there so it is correct rather than merely likely.
+ */
+async function unusedJoinCode(tx: Tx): Promise<string> {
+  for (;;) {
+    const code = generateJoinCode();
+    const [taken] = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.joinCode, code))
+      .limit(1);
+    if (!taken) return code;
+  }
+}
+
 function slugify(name: string): string {
   return (
     name
@@ -243,7 +260,7 @@ async function createTeamImpl(name: string): Promise<CreatedTeam> {
         .values({
           slug,
           name,
-          joinCode: generateJoinCode(),
+          joinCode: await unusedJoinCode(tx),
           createdBy: userId,
           // Just confirmed, above: the team, its branch, its ruleset and the
           // creator's grant all exist on GitHub as of this instant, so the
@@ -294,7 +311,13 @@ async function createTeamImpl(name: string): Promise<CreatedTeam> {
   });
 }
 
-async function joinTeamImpl(teamId: string, joinCode: string): Promise<void> {
+/**
+ * Joins whichever team the code belongs to. The code alone names the team, so
+ * a member holding one never has to also say which team it is for.
+ *
+ * Returns the team's slug, so the form can land the new member on it.
+ */
+async function joinTeamImpl(joinCode: string): Promise<string> {
   const userId = await expectSession();
   await guardRateLimit(
     "team:join",
@@ -304,26 +327,28 @@ async function joinTeamImpl(teamId: string, joinCode: string): Promise<void> {
   );
   await requireTwoFactor(userId);
 
-  await db.transaction(async (tx) => {
-    const { slug } = await requireCanJoin(tx, { teamId, userId });
-
-    const [team] = await tx
-      .select({ joinCode: teams.joinCode })
+  return db.transaction(async (tx) => {
+    // Nothing in the schema makes codes unique, only `createTeamImpl`'s
+    // retry, so two matches is possible for rows that predate it. A code
+    // that names two teams names neither.
+    const matches = await tx
+      .select({ id: teams.id })
       .from(teams)
-      .where(eq(teams.id, teamId))
-      .limit(1);
-
-    // Checked after requireCanJoin so a full team or an unlinked GitHub
-    // account reports itself rather than looking like a bad code.
-    if (team?.joinCode !== joinCode.trim().toUpperCase()) {
+      .where(eq(teams.joinCode, joinCode.trim().toUpperCase()))
+      .limit(2);
+    const [team] = matches;
+    if (!team || matches.length > 1) {
       throw new TeamActionError("bad_join_code");
     }
+
+    const { slug } = await requireCanJoin(tx, { teamId: team.id, userId });
 
     const granted = await addMember(slug, userId);
     if (!granted.ok) throw githubProblem(granted);
 
-    await insertMembership(tx, { teamId, userId });
-    await touchGithubSynced(tx, teamId);
+    await insertMembership(tx, { teamId: team.id, userId });
+    await touchGithubSynced(tx, team.id);
+    return slug;
   });
 }
 
@@ -980,10 +1005,9 @@ export async function createTeam(
 }
 
 export async function joinTeam(
-  teamId: string,
   joinCode: string,
-): Promise<TeamActionOutcome<void>> {
-  return attempt(() => joinTeamImpl(teamId, joinCode));
+): Promise<TeamActionOutcome<string>> {
+  return attempt(() => joinTeamImpl(joinCode));
 }
 
 export async function requestToJoin(

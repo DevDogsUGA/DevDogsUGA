@@ -1213,6 +1213,43 @@ describe("platform.conformance_check", () => {
     expect(failures).toEqual([]);
   });
 
+  it("passes for every app with moderatable content", async () => {
+    // The guarantee `pnpm devtools moderation check <app>` gives one app by
+    // hand, held for all of them on every run: an app whose migration adds a
+    // reportable table without the quarantine column, grants and policy fails
+    // here rather than in the moderation queue. Read from content_types()
+    // rather than listed, so a newly integrated app is covered the day its
+    // migration lands.
+    const apps = await sql()<{ slug: string }[]>`
+      select distinct a."slug"
+      from "platform".content_types() c
+      join "platform"."apps" a on a."id" = c."appId"
+      order by a."slug"
+    `;
+    expect(apps.map((app) => app.slug)).toContain("platform");
+
+    const failures: string[] = [];
+    for (const { slug } of apps) {
+      const { data, error } = await moderator.client.rpc("conformance_check", {
+        app_slug: slug,
+      });
+      if (error) {
+        failures.push(`${slug}: ${error.message}`);
+        continue;
+      }
+      for (const type of data as {
+        contentType: string;
+        checks: { name: string; ok: boolean }[];
+      }[]) {
+        for (const check of type.checks) {
+          if (!check.ok)
+            failures.push(`${slug}.${type.contentType}.${check.name}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
   it("checks the write policy for a freeze type, not the read policy", async () => {
     // profile declares quarantineEffect = 'freeze', so the check that applies is
     // whether an UPDATE policy consults the column. This asserts the *shape* of

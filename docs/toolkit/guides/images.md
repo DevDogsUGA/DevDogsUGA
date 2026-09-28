@@ -33,8 +33,9 @@ pnpm devtools images 'page/*' --all-formats --dry-run
 Event exports go to the gitignored `.images/` directory instead. `--dry-run`
 prints destinations and writes nothing.
 
-Event graphics are backed by meeting rows rather than committed files. They
-need the local Supabase stack and meetings reconciled from `@devdogsuga/events`
-(see [Events](/docs/platform/guides/meetings-and-teams/events)). A wildcard
-export warns and continues with static graphics when events are unavailable;
-a specific `event/*` request fails because it has nothing useful to render.
+Event graphics are backed by meetings rather than committed files. They read
+`@devdogsuga/events` directly (see
+[Events](/docs/platform/infrastructure/events)) — no database, local or
+hosted, is involved. A wildcard export warns and continues with static
+graphics when events are unavailable; a specific `event/*` request fails
+because it has nothing useful to render.

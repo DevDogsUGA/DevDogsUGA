@@ -1,14 +1,12 @@
 import type { ScheduleRule } from "./rule";
 import { campus } from "./rules/campus";
 import { maxCreditHoursRule, minCreditHoursRule } from "./rules/creditHours";
-import { distance } from "./rules/distance";
 import { excludedCourses } from "./rules/excludedCourses";
 import { excludedSections } from "./rules/excludedSections";
 import {
   preferredEndTimeRule,
   preferredStartTimeRule,
 } from "./rules/preferredTimeWindow";
-import { professorQuality } from "./rules/professorQuality";
 
 /**
  * The active rule set. This is the single integration point for the whole
@@ -26,10 +24,7 @@ export const RULES: ScheduleRule[] = [
   // complete schedules.
   maxCreditHoursRule,
   minCreditHoursRule,
-  // Soft time-of-day preferences (score only).
+  // Hard time-of-day window, per section.
   preferredStartTimeRule,
   preferredEndTimeRule,
-  // Dormant seams — permanently isActive:false until a data source exists.
-  professorQuality,
-  distance,
 ];

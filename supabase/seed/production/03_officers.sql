@@ -8,14 +8,12 @@
 -- `03_officers.sql` says what it holds in a way a timestamped migration
 -- cannot.
 --
--- Lives in `seed/production/`, alongside `01_roles.sql` and not the
--- development-only `seed/development/02_moderation.sql`: this is content
+-- Lives in `seed/production/`, alongside `01_roles.sql`: this is content
 -- every tier needs, so it is part of the set `devtools db seed production`
 -- (Backstage `packages/devtools`) applies directly to a staging or
 -- production target, without a `db reset` -- which, on a hosted database,
--- would erase everything else on it. `supabase db reset` still runs it too,
--- on a LOCAL reset, because `config.toml`'s `[db.seed]` lists
--- `seed/production/*.sql` first and `seed/development/*.sql` second.
+-- would erase everything else on it. A development `db reset` runs it too,
+-- because `config.toml`'s `[db.seed]` lists `seed/production/*.sql`.
 --
 -- A reset erases the database. That is fine on a fresh local stack, and it
 -- stops being fine the moment production carries attendance, awards or teams
@@ -28,7 +26,7 @@
 --
 -- Seeds run after migrations, so the columns below always exist by the time
 -- this runs. Filename order puts it after 01_roles.sql, which is what
--- guarantees the Member and Root definitions are already there.
+-- guarantees the Member and President definitions are already there.
 --
 -- ============================================================
 -- Filling gaps, never overwriting
@@ -255,8 +253,8 @@ insert into "officer_submissions" (
   (
     'nandan-praveen', 'np43598@uga.edu', 'Nandan Praveen',
     'Nandan', 'Praveen',
-    'DogPack Project Manager',
-    'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as DogPack Project Manager and Flutter Focus Lead at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
+    'Project Manager',
+    'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as Project Manager for both DogPack and DogDays at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the apps and their backends while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
     array[45516]::integer[], 2029, 'spring',
     array['nandan@uga.edu']::text[],
     array['he', 'him']::text[], true, false,
@@ -265,7 +263,7 @@ insert into "officer_submissions" (
   (
     'shruti-mishra', 'sbm64430@uga.edu', 'Shruti Mishra',
     'Shruti', 'Mishra',
-    'Backend Integration Focus Lead',
+    'Focus Lead',
     'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Backend Integration Focus Lead on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. She is passionate about software engineering and AI.',
     array[73962]::integer[], 2027, 'spring',
     array['shruti.mishra@uga.edu', 'shrutibmishra1@gmail.com']::text[],
@@ -287,7 +285,7 @@ insert into "officer_submissions" (
   (
     'gabrielle-rose', 'glr26038@uga.edu', 'Gabrielle Rose',
     'Gabrielle', 'Rose',
-    'UI/UX Focus Lead',
+    'Focus Lead',
     'Gabrielle Rose is pursuing a degree in Computer Science with a focus on front-end development, human-computer interaction, and UI/UX design, and is passionate about creating intuitive, user-centered technologies that solve real-world problems. In the future, Gabrielle aspires to bridge the gap between people and technology by designing digital solutions that create meaningful impact and empower communities to confidently engage with technology.',
     array[73962]::integer[], 2028, 'spring',
     array['gabrielle.rose@uga.edu']::text[],
@@ -299,7 +297,7 @@ insert into "officer_submissions" (
     -- his own resume prints linkedin.com/in/kyle-quach.
     'kyle-quach', 'gq72484@uga.edu', 'Kyle Quach',
     'Gia Khang', 'Quach',
-    'Next.js Focus Lead',
+    'Focus Lead',
     'Kyle Quach is a sophomore majoring in Computer Science at the University of Georgia. Kyle''s interests span software development to AI engineering, and he sometimes develops games on the side. He has built projects with tech stacks such as Java, C#, Python, and JavaScript, as well as frameworks like React and Spring. As an aspiring software developer, Kyle looks forward to building software that contributes meaningfully to people''s daily lives.',
     array[73962]::integer[], 2028, 'spring',
     array['giakhang.quach@uga.edu']::text[],
@@ -319,8 +317,8 @@ insert into "officer_submissions" (
   (
     'sidhant-dash', 'sd04573@uga.edu', 'Sidhant Dash',
     'Sidhant', 'Dash',
-    'DogDays Project Manager',
-    'Sidhant Dash is a fourth-year Computer Science student at the University of Georgia with a certificate in New Media. He is interested in frontend and backend development, game development, and UI/UX design. Sidhant serves as the DogDays Project Manager for DevDogs and the Marketing Chair of ACM at UGA. He recently interned at CGI as a software developer and strives to develop software that benefits others while helping developers grow.',
+    'Focus Lead',
+    'Sidhant Dash is a fourth-year Computer Science student at the University of Georgia with a certificate in New Media. He is interested in frontend and backend development, game development, and UI/UX design. Sidhant serves as a Focus Lead for DevDogs and the Marketing Chair of ACM at UGA. He recently interned at CGI as a software developer and strives to develop software that benefits others while helping developers grow.',
     array[73962, 62630]::integer[], 2027, 'spring',
     array['sidhant.dash@uga.edu']::text[],
     array['he', 'him']::text[], false, false,
@@ -341,8 +339,7 @@ insert into "officer_submissions" (
 -- Accounts
 -- ============================================================
 --
--- The four empty strings are not decoration, and 02_moderation.sql explains
--- why: GoTrue scans confirmation_token, recovery_token,
+-- The four empty strings are not decoration: GoTrue scans confirmation_token, recovery_token,
 -- email_change_token_new and email_change into non-nullable Go strings, and
 -- those columns have no database default, so a row without them exists but
 -- fails every sign-in with an error naming neither the column nor the user.
@@ -649,19 +646,6 @@ select s."userId", r."id"
 from "officer_submissions" s
 join "platform"."roles" r on r."title" = s."title"
 where s."userId" is not null and s."title" is not null
-on conflict do nothing;
-
--- Secondary leadership roles.
---
--- A person can carry more than one leadership responsibility.
-insert into "platform"."userRoles" ("userId", "roleId")
-select s."userId", r."id"
-from "officer_submissions" s
-join (values
-  ('nandan-praveen', 'Flutter Focus Lead')
-) as secondary("slug", "title") on secondary."slug" = s."slug"
-join "platform"."roles" r on r."title" = secondary."title"
-where s."userId" is not null
 on conflict do nothing;
 
 drop table "officer_submissions";

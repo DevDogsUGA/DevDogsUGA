@@ -1,4 +1,4 @@
-project_id = "DevDogs-Website"
+project_id = "DevDogsUGA"
 
 # Ports are literals, not "env(...)": `supabase seed` validates config.toml
 # against a typed schema that only interpolates env() into *string* fields, so
@@ -36,21 +36,22 @@ pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
 
-# Seeds run on `supabase db reset` only, never on `db push`, so a LOCAL reset
-# is by definition pointed at a local stack or a contributor's own project,
-# which is what makes it safe to run both sets here. `production/` (the role
-# catalogue and the officer board) is content every tier needs and is what
-# `devtools db seed production` (Backstage `packages/devtools`) applies on
-# its own to a staging or production target; `development/` (the
-# password-login personas and their worked moderation report) exists only so
-# a contributor has something to sign in as and something to moderate, and
-# must never reach a deployed tier. `production/` is listed first because
-# `03_officers.sql` assigns roles `01_roles.sql` defines, and each directory
-# is a glob rather than the default single `./seed.sql` because seeds are
-# split by concern and applied in filename order within it.
+# Seeds run on `supabase db reset` only, never on `db push`. There is one set,
+# `production/` (the role catalogue and the officer board): content every
+# tier needs, applied in filename order because `03_officers.sql` assigns
+# roles `01_roles.sql` defines. `devtools db seed production` (Backstage
+# `packages/devtools`) applies the same files to a staging or production
+# target, and `devtools db reset` on those tiers passes `--no-seed` and
+# applies them itself, so nothing listed here decides what a hosted tier gets.
+#
+# There is deliberately no `development/` set. It used to hold password-login
+# personas, and because any reset runs this list, a reset of a hosted tier
+# would have planted logins whose password is in the repo. Test logins now
+# come from `pnpm devtools persona <member|moderator>`, which creates them on
+# a development tier with a random password and removes them with `--clean`.
 [db.seed]
 enabled = true
-sql_paths = ["./seed/production/*.sql", "./seed/development/*.sql"]
+sql_paths = ["./seed/production/*.sql"]
 
 [realtime]
 enabled = false
@@ -94,10 +95,15 @@ site_url = "env(BASE_URL)"
 # The third (Dog Pack, dogpack.dev) has no web deployment yet: its variable
 # stays unset, which the CLI treats as a WARN and an absent entry, so the
 # allowlist gains the origin the day the value is filled and not before.
+#
+# The Dog Pack mobile app returns through its own URL scheme instead, the same
+# on every environment, so it is a literal: the Android intent filter and iOS
+# CFBundleURLTypes in apps/study-group-finder register the matching scheme.
 additional_redirect_urls = [
   "env(BASE_URL_CALLBACK)",
   "env(SCHEDULE_BUILDER_URL_CALLBACK)",
   "env(STUDY_GROUP_FINDER_URL_CALLBACK)",
+  "dev.dogpack://login-callback",
 ]
 enable_manual_linking = true
 
@@ -106,9 +112,9 @@ enable_manual_linking = true
 # enable_signup = false` — gotrue has one flag per provider
 # (`EmailProviderConfiguration.Enabled`), and it gates password SIGN-IN too
 # (`internal/api/token.go`'s password grant checks the same flag
-# `internal/api/signup.go` does), which would lock every seeded persona in
-# supabase/seed/development/02_moderation.sql out of the only sign-in path
-# the local Docker stack has (plain HTTP, so it cannot host OAuth). Password
+# `internal/api/signup.go` does), which would lock every test login
+# (`pnpm devtools persona`) out of the only sign-in path the local Docker
+# stack has (plain HTTP, so it cannot host OAuth). Password
 # signup is refused instead by `require_uga_signup_email` (the
 # before-user-created hook below), extended to reject the `email` provider
 # outright — see 20260924070955_30_auth_disable_email_signup.sql for why

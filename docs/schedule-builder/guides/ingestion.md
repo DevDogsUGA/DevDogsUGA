@@ -26,14 +26,16 @@ Two entry points, same work:
   app has, and it bypasses the Worker scheduled handler entirely.
 - **`src/app/(api)/cron/scrape-registrar/route.ts`** — the older HTTP route,
   guarded by a cron secret (`src/lib/cron/auth.ts`; the check is skipped in
-  development). Still runs the same pipeline, but needs `vinext dev` up.
+  development). Still runs the same pipeline, but needs `next dev` up.
 
-## Populate course data locally
+## Populate course data
 
 A fresh database has no courses, so the generator has nothing to plan against.
-Trigger the scrape workflow through devtools — it starts a temporary Wrangler
-session for you (the workflow runtime, which `vinext dev` does not provide), runs
-the scrape against your local Supabase stack, and waits for it to finish:
+Trigger the scrape workflow through devtools — it starts a temporary `vinext dev`
+session for you (the workflow runtime, which `next dev` does not provide), runs
+the scrape against whichever database the session's `--tier` points at — the
+local stack, a hosted development project, staging, or production — and waits
+for it to finish:
 
 ```bash
 pnpm devtools db start && pnpm devtools db reset          # local stack, once
@@ -49,13 +51,17 @@ pnpm devtools workflows run --app schedule-builder \
   --workflow SCRAPE_WORKFLOW --tier development
 ```
 
-The full scrape pulls every available term and takes a while. If a Wrangler
-session is already up (`pnpm devtools workflows serve --app schedule-builder`),
-the trigger reuses it instead of starting its own.
+If `.env` names a hosted development database while the local stack is also
+running, `--tier development` is ambiguous and devtools refuses it; pass
+`--tier development:local` or `--tier development:remote` instead.
+
+The full scrape pulls every available term and takes a while. If a session is
+already up (`pnpm devtools workflows serve --app schedule-builder`, which also
+serves the app itself), the trigger reuses it instead of starting its own.
 
 > [!NOTE]
 > The `/cron/scrape-registrar` route is a lighter alternative when you already
-> have `vinext dev` running — a plain `GET http://localhost:3001/cron/scrape-registrar`,
+> have `next dev` running — a plain `GET http://localhost:3001/cron/scrape-registrar`,
 > with no secret needed in development. It runs the same code; the workflow path
 > is just what production uses and needs no dev server.
 
@@ -92,7 +98,7 @@ the trigger reuses it instead of starting its own.
 > There used to be a fourth step here refreshing a search materialized view.
 > It's gone — free-text course search was replaced with subject / instructor /
 > CRN filters that read the base tables directly, and the view was dropped
-> with it. See [Database](/docs/schedule-builder/guides/database).
+> with it. See [Schedule-builder schema](/docs/schedule-builder/guides/schema).
 
 ## A different "sync"
 

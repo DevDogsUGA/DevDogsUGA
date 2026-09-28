@@ -2,6 +2,7 @@ import { unauthorized } from "next/navigation";
 import { NextResponse, connection } from "next/server";
 import { env } from "~/env";
 import { reconcileMembership } from "~/server/discord/reconcile";
+import { revalidateOfficers } from "~/server/loaders/officers";
 
 /**
  * GET /cron/sync-discord-roles
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
 
   try {
     const result = await reconcileMembership();
+    if (result.changes > 0) revalidateOfficers();
     return NextResponse.json({ success: true, ...result });
   } catch (e) {
     console.error(e);

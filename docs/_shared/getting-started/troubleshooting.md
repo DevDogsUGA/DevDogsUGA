@@ -1,7 +1,7 @@
 ---
 name: Troubleshooting
 description: The FAQ doctor and every setup page link into — organized by symptom, each with what's actually wrong and the fix.
-order: 90
+order: 4
 section: getting-started
 mount: [schedule-builder, study-group-finder, platform]
 ---
@@ -16,10 +16,11 @@ heading here. Each entry is symptom, cause, fix.
 <summary>Why these headings matter</summary>
 
 Every heading below is written so its auto-generated anchor ID is exactly the
-ID `doctor` and the setup pages link to (`#node-version`, `#supabase-paused`,
-and so on) — the renderer slugs heading text the same way GitHub does, so
-changing a heading's wording can silently change its anchor and break every
-link into it. If you edit a heading here, check that its link still resolves.
+ID `pnpm devtools doctor` and the other getting-started pages link to
+(`#node-version`, `#supabase-paused`, and so on) — the renderer slugs heading
+text the same way GitHub does, so changing a heading's wording can silently
+change its anchor and break every link into it. If you edit a heading here,
+check that its link still resolves.
 
 </details>
 
@@ -34,7 +35,7 @@ link into it. If you edit a heading here, check that its link still resolves.
 from there.
 
 **Fix:** Install through fnm and let `.nvmrc` pin the version — see
-[Toolchain](./toolchain#node-through-fnm).
+[Prerequisites](./prerequisites#node-through-fnm).
 `node --version` should read 24.x.
 
 ### fnm not found
@@ -85,7 +86,7 @@ like "cannot be loaded because running scripts is disabled on this system."
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-See [Windows (native)](./windows-native#allow-scripts-to-run).
+See [Prerequisites](./prerequisites#os-setup).
 
 ### CRLF line endings
 
@@ -100,7 +101,7 @@ checkout, and a shell interpreter or `psql` chokes on the extra `\r`.
 WSL2/Linux/macOS — then re-checkout the affected files:
 
 ```bash
-git config --global core.autocrlf true   # or input — see Toolchain
+git config --global core.autocrlf true   # or input — see Prerequisites
 git rm --cached -r . && git reset --hard
 ```
 
@@ -130,8 +131,7 @@ backend failed — often after a macOS update or low disk space.
 
 **Fix:** WSL2/Linux: `sudo systemctl start docker`, or `sudo systemctl status
 docker` for why it won't. macOS: quit Docker Desktop, check disk space, and
-restart it — or switch to [OrbStack](./macos#docker).
-Never Colima.
+restart it. Never Colima.
 
 ### Flutter missing
 
@@ -158,7 +158,7 @@ WSL2 — fighting over the same port.
 own. Without Windows 11's mirrored networking mode
 (`networkingMode=mirrored` in `.wslconfig`), the emulator and WSL2 can't
 reach each other at all — see
-[Windows (WSL2)](./windows-wsl#the-alternative-study-group-finder-under-wsl2).
+[Prerequisites](./prerequisites#running-the-sdk-inside-wsl2-against-an-emulator-on-windows).
 
 ## Environment and Supabase
 
@@ -172,8 +172,7 @@ declares as required — validated at import time on purpose, so a broken env
 fails loudly and immediately.
 
 **Fix:** Re-run `pnpm devtools env init` to append newly declared keys, or
-revisit [Supabase, hosted](./supabase-hosted)
-/ [Supabase, local](./supabase-local).
+revisit [Running the project](./running#the-database).
 `pnpm devtools doctor` reports exactly which keys are missing.
 
 ### Supabase unreachable
@@ -222,7 +221,7 @@ can't reach it.
 
 **Fix:** Use the **Session pooler** string instead (Settings → Database →
 Connection string → Session pooler, port 5432) — see
-[Supabase, hosted](./supabase-hosted#the-wizard).
+[Running the project](./running#the-database).
 
 ### DB URL: transaction pooler
 
@@ -257,7 +256,7 @@ unconfigured provider, rather than reaching DevDogs's login screen.
 **Cause:** `pnpm devtools oauth` was never run against this project, or was
 run against a different one than the app currently points at.
 
-**Fix:** Run [`pnpm devtools oauth`](./sign-in)
+**Fix:** Run [`pnpm devtools oauth`](./running#sign-in)
 against the project your `.env` points at.
 
 ### Redirect URL missing
@@ -270,7 +269,7 @@ list doesn't include your local dev URL.
 
 **Fix:** Add `http://localhost:<port>/**` there (3001 for schedule-builder,
 3000 for platform) — see
-[Supabase, hosted](./supabase-hosted#by-hand).
+[Running the project](./running#redirect-url).
 
 ## Setup night
 

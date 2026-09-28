@@ -39,7 +39,8 @@ export default async function LeadershipSection({
 }: Props) {
   // Cached in the loader, and this whole section renders inside the
   // homepage's `"use cache"` scope, so the await does not make the page
-  // dynamic. It resolves once when the prerendered shell is built.
+  // dynamic. It resolves when the prerendered shell is built, and again
+  // whenever a board edit or the loader's TTL revalidates it.
   const officers = await getCurrentOfficers();
 
   return (

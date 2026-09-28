@@ -7,7 +7,10 @@ import { env } from "~/env";
 import { asBot, asUser } from "~/server/discord/api";
 import { createSupabaseServerClient } from "~/supabase/server";
 import { removeSyncedRolesOnUnlink } from "~/server/discord/memberSync";
-import { isSuccessfulRemovalStatus } from "~/server/auth/connectedAccount";
+import {
+  guildNickname,
+  isSuccessfulRemovalStatus,
+} from "~/server/auth/connectedAccount";
 
 const CALLBACK_URL = new URL("/auth/callback", env.BASE_URL).toString();
 
@@ -73,9 +76,24 @@ export async function linkProfile(
 
   // `PUT` is idempotent here: Discord returns 204 when the user is already a
   // member, which the REST client treats as success rather than throwing.
-  await asBot().put(Routes.guildMember(env.DISCORD_GUILD_ID, discordUserId), {
-    body: { access_token: accessToken, nick: preferredName },
-  });
+  const join = (nick?: string) =>
+    asBot().put(Routes.guildMember(env.DISCORD_GUILD_ID, discordUserId), {
+      body: { access_token: accessToken, nick },
+    });
+
+  const nick = guildNickname(preferredName);
+  try {
+    await join(nick);
+  } catch (cause) {
+    // The nickname is a courtesy; the join is the point. Discord rejects the
+    // whole request (400) over a nickname it will not accept, so a rejected
+    // one retries as a join without it.
+    if (!(cause instanceof DiscordAPIError && cause.status === 400) || !nick) {
+      throw cause;
+    }
+    logDiscordFailure("set_guild_nickname", cause);
+    await join();
+  }
 }
 
 /**

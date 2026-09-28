@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { TeamProblem } from "~/components/teams/outcome";
 import type { TeamActionOutcome, TeamProblemCode } from "~/server/teams/errors";
+import { ConsoleCard } from "~/ui/card";
 
 /**
  * How a lead gets somebody specific onto the team.
@@ -36,68 +37,75 @@ export default function InviteForm({
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-white/10 bg-white/5 p-4">
-      <h2 className="font-semibold text-white">Invite somebody</h2>
-      <p className="max-w-prose text-sm text-mauve-400">
-        Their exact email or GitHub username -- there is no directory to search.
-        They will see it on{" "}
-        <span className="font-semibold text-white">/teams/requests</span>, and
-        get an email too.
-      </p>
-
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          setProblem(null);
-          setSent(null);
-          startTransition(async () => {
-            const sentIdentifier = identifier.trim();
-            const result = await inviteToTeam(teamId, sentIdentifier);
-            if (!result.ok) {
-              setProblem(result.code);
-              return;
-            }
-            setIdentifier("");
-            setSent(sentIdentifier);
-          });
-        }}
-        className="flex flex-wrap items-end gap-2"
-      >
-        <label className="flex flex-1 flex-col gap-1 text-sm">
-          <span className="font-semibold text-white">
-            Email or GitHub username
-          </span>
-          <input
-            value={identifier}
-            onChange={(event) => {
-              setIdentifier(event.target.value);
+    <ConsoleCard.Root id="invite">
+      <ConsoleCard.Header
+        title="Invite Somebody"
+        description={
+          <>
+            Their exact email or GitHub username -- there is no directory to
+            search. They will see it on{" "}
+            <span className="font-semibold text-white">/teams/requests</span>,
+            and get an email too.
+          </>
+        }
+      />
+      <ConsoleCard.Content>
+        <div className="flex flex-col gap-4">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              setProblem(null);
               setSent(null);
+              startTransition(async () => {
+                const sentIdentifier = identifier.trim();
+                const result = await inviteToTeam(teamId, sentIdentifier);
+                if (!result.ok) {
+                  setProblem(result.code);
+                  return;
+                }
+                setIdentifier("");
+                setSent(sentIdentifier);
+              });
             }}
-            autoComplete="off"
-            spellCheck={false}
-            required
-            placeholder="ada@uga.edu or adalovelace"
-            className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white outline-none placeholder:text-mauve-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={identifier.trim().length === 0 || isPending}
-          className="rounded-sm border-2 border-white bg-white px-4 py-2 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-40"
-        >
-          {isPending ? "Inviting…" : "Invite"}
-        </button>
-      </form>
+            className="flex flex-wrap items-end gap-2"
+          >
+            <label className="flex flex-1 flex-col gap-1 text-sm">
+              <span className="font-semibold text-white">
+                Email or GitHub username
+              </span>
+              <input
+                value={identifier}
+                onChange={(event) => {
+                  setIdentifier(event.target.value);
+                  setSent(null);
+                }}
+                autoComplete="off"
+                spellCheck={false}
+                required
+                placeholder="ada@uga.edu or adalovelace"
+                className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white outline-none placeholder:text-mauve-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={identifier.trim().length === 0 || isPending}
+              className="rounded-sm border-2 border-white bg-white px-4 py-2 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-40"
+            >
+              {isPending ? "Inviting…" : "Invite"}
+            </button>
+          </form>
 
-      {sent && (
-        <p role="status" className="text-sm text-mauve-300">
-          Invited {sent}. It shows up on their{" "}
-          <span className="font-semibold text-white">/teams/requests</span>{" "}
-          page, and they get an email too.
-        </p>
-      )}
+          {sent && (
+            <p role="status" className="text-sm text-mauve-300">
+              Invited {sent}. It shows up on their{" "}
+              <span className="font-semibold text-white">/teams/requests</span>{" "}
+              page, and they get an email too.
+            </p>
+          )}
 
-      {problem && <TeamProblem code={problem} />}
-    </div>
+          {problem && <TeamProblem code={problem} />}
+        </div>
+      </ConsoleCard.Content>
+    </ConsoleCard.Root>
   );
 }

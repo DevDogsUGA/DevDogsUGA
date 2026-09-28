@@ -9,6 +9,7 @@ import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
 
 import { canUserManageVerification } from "~/server/actions/permissions";
+import { revalidateOfficers } from "~/server/loaders/officers";
 
 interface CsvRow {
   "First Name": string;
@@ -129,6 +130,8 @@ export async function uploadVerificationCSV(
       }
     }
   });
+  // The import can advance a preferred name, an officer's included.
+  revalidateOfficers();
 
   return { created, updated };
 }

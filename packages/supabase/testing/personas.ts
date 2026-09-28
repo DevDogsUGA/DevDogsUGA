@@ -22,8 +22,6 @@ export const LOCAL_API_URL = process.env.API_URL ?? "http://127.0.0.1:54321";
 const SECRET_KEY = process.env.SECRET_KEY;
 const PUBLISHABLE_KEY = process.env.PUBLISHABLE_KEY;
 
-export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
-
 /**
  * Clients default to the `platform` schema, which is where everything under
  * test lives. A case needing another schema calls `.schema(name)` on the
