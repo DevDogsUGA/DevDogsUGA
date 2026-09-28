@@ -26,7 +26,7 @@
 --
 -- Seeds run after migrations, so the columns below always exist by the time
 -- this runs. Filename order puts it after 01_roles.sql, which is what
--- guarantees the Member and Root definitions are already there.
+-- guarantees the Member and President definitions are already there.
 --
 -- ============================================================
 -- Filling gaps, never overwriting

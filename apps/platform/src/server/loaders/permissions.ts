@@ -4,10 +4,9 @@ import { notFound } from "next/navigation";
 import type { APIRole } from "discord-api-types/v10";
 import { requireSession } from "~/server/auth/require";
 import { db } from "~/server/db";
-import { profiles, roles } from "~/server/db/schema";
+import { roles } from "~/server/db/schema";
 import {
   getCallerContext,
-  getRootHolderId,
   type ResolvedPermissions,
 } from "~/server/actions/permissions";
 import {
@@ -16,7 +15,6 @@ import {
 } from "~/server/discord/adminCapability";
 import { reconcileRoleDefinitions } from "~/server/discord/reconcile";
 import { fetchGuildRoles } from "~/server/discord/roleSync";
-import { supabaseAdmin } from "~/supabase/admin";
 
 export type RoleRow = {
   id: string;
@@ -40,18 +38,10 @@ export type RoleRow = {
   createdAt: string;
 };
 
-export type RootHolder = {
-  id: string;
-  preferredName: string;
-  email: string;
-};
-
 export type PermissionsPageData = {
   roles: RoleRow[];
   callerMinRank: number;
   callerPermissions: ResolvedPermissions;
-  rootHolder: RootHolder | null;
-  isRootHolder: boolean;
   discordSyncErrors: string[];
   callerCapability: DiscordSyncCapability;
 };
@@ -94,32 +84,11 @@ export const getPermissionsPageData = cache(
 
     const guildRolesById = new Map((guildRoles ?? []).map((r) => [r.id, r]));
 
-    const [roleRows, rootHolderId] = await Promise.all([
-      db
-        .select()
-        .from(roles)
-        .where(eq(roles.roleType, "custom"))
-        .orderBy(asc(roles.rank)),
-      getRootHolderId(),
-    ]);
-
-    let rootHolder: RootHolder | null = null;
-    if (rootHolderId) {
-      const [[profile], { data }] = await Promise.all([
-        db
-          .select({ preferredName: profiles.preferredName })
-          .from(profiles)
-          .where(eq(profiles.userId, rootHolderId))
-          .limit(1),
-        supabaseAdmin.auth.admin.getUserById(rootHolderId),
-      ]);
-
-      rootHolder = {
-        id: rootHolderId,
-        preferredName: profile?.preferredName ?? "",
-        email: data.user?.email ?? "",
-      };
-    }
+    const roleRows = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.roleType, "custom"))
+      .orderBy(asc(roles.rank));
 
     return {
       roles: roleRows.map((r) => ({
@@ -148,8 +117,6 @@ export const getPermissionsPageData = cache(
       })),
       callerMinRank: ctx.minRank,
       callerPermissions: ctx.resolvedPermissions,
-      rootHolder,
-      isRootHolder: rootHolderId === userId,
       discordSyncErrors,
       callerCapability,
     };

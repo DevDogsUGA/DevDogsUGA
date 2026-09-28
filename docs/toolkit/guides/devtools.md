@@ -96,7 +96,9 @@ examples.
 - `persona <member|moderator>` — create a sign-in-able persona against the
   session's development tier, with a random, printed password.
 - `persona --clean` — remove personas this command created.
-- `grant-root [--user <email>] [--yes]` — grant an account the Root role.
+- `grant-root [--user <email>] [--yes]` — grant an account the President role,
+  which holds every permission. It is named for the Root role President
+  replaced, and moves President from whoever it finds holding it.
 
 `moderation check` and `persona` act on whichever development tier the
 session points at — local or a hosted development project — not only this

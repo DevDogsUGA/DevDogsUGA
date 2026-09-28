@@ -1725,7 +1725,7 @@ export type Database = {
         | "off_topic"
         | "other";
       reportStatus: "open" | "resolved" | "dismissed";
-      roleType: "default" | "root" | "custom";
+      roleType: "default" | "custom";
       subjectAction: "warn" | "suspend" | "ban" | "no_action";
       teamRole: "lead" | "member";
     };
@@ -3111,7 +3111,7 @@ export const Constants = {
         "other",
       ],
       reportStatus: ["open", "resolved", "dismissed"],
-      roleType: ["default", "root", "custom"],
+      roleType: ["default", "custom"],
       subjectAction: ["warn", "suspend", "ban", "no_action"],
       teamRole: ["lead", "member"],
     },

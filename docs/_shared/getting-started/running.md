@@ -250,10 +250,10 @@ current development project, local or hosted; `moderator` also optionally
 files a sample report so the moderation queue isn't empty. `pnpm devtools
 persona --clean` removes them again.
 
-A fresh database has no Root user. `pnpm devtools grant-root` makes your own
-account Root, and after that nothing on your instance ever denies you
-anything, which is why a persona is the only way to see what everyone else
-sees.
+The seeds give the officers' roles, President included, to the officers' own
+accounts, not yours. `pnpm devtools grant-root` moves President to your
+account, and after that you hold every permission on your instance, which is
+why a persona is the only way to see what everyone else sees.
 
 ## Doctor
 

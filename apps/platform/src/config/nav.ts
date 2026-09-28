@@ -171,7 +171,7 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
     icon: "LockIcon",
     permission: "canManageRoles",
     description:
-      "Every member starts with no permissions; Root has all permissions and can only change hands via transfer.",
+      "Every member starts with no permissions; President holds all of them and is assigned on Discord.",
   },
 ];
 

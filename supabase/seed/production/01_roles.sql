@@ -1,8 +1,15 @@
 -- The complete role catalogue for a freshly reset DevDogs database.
 --
--- Definitions live here; people and assignments live in later seeds. In
--- particular, Root is deliberately left unassigned. A holder is chosen with
--- `pnpm devtools grant-root`, whose service key proves control of the database.
+-- Definitions live here; people and assignments live in later seeds.
+--
+-- President is the top of the ladder: every permission is granted on it, and no
+-- other role outranks it. It has the fixed id `devtools grant-root` writes, so
+-- that command bootstraps the first President on an instance with nobody on it,
+-- its service key proving control of the database. A permission column added
+-- later has to be granted to President here as well; nothing grants it
+-- implicitly. Because President is linked to Discord like the rest, anyone who
+-- holds it in the guild and links Discord gets every permission here, and loses
+-- them when the guild role goes.
 --
 -- Permission columns are nullable. TRUE grants a capability and NULL expresses
 -- no opinion, allowing another held role to grant it. These seeded roles never
@@ -38,14 +45,6 @@ values
   ),
   (
     '00000000-0000-0000-0000-000000000002',
-    'Root',
-    'Break-glass authority above the custom-role hierarchy. Singleton and transferable.',
-    'root', null, false, false,
-    null, null, null, null,
-    null, null, null, null, null, null, null, null
-  ),
-  (
-    '00000000-0000-4000-8000-000000000001',
     'President',
     'President of DevDogs.',
     'custom', 100, true, true,

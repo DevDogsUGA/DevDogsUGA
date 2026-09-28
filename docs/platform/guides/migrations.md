@@ -61,7 +61,7 @@ Row-Level Security is the whole isolation boundary between app schemas — every
 
 ## Seeds
 
-`supabase/seed/production/` is the only seed directory — `pnpm devtools db reset` runs it against whichever tier the session points at, and `db push`/`db migrate` apply migrations without it. `production/01_roles.sql` owns the complete role and permission catalogue without assigning Root; `production/03_officers.sql` creates officer profiles and assignments.
+`supabase/seed/production/` is the only seed directory — `pnpm devtools db reset` runs it against whichever tier the session points at, and `db push`/`db migrate` apply migrations without it. `production/01_roles.sql` owns the complete role and permission catalogue, President included, without assigning anyone; `production/03_officers.sql` creates officer profiles and assignments.
 
 A staging or production target never runs `db reset` — that erases everything else on it — so it only ever gets `seed/production/`, applied on its own by the Backstage devtools' `db seed production` command.
 

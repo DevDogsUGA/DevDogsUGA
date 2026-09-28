@@ -166,7 +166,6 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
   ],
 
   "/console/permissions": [
-    { id: "root-access", label: "Root Access" },
     { id: "assign-roles", label: "Assign Roles" },
     { id: "role-definitions", label: "Role Definitions" },
   ],

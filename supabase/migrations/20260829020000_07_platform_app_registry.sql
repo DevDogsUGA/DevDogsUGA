@@ -97,21 +97,22 @@ insert into "platform"."apps" ("slug", "schemaName", "displayName") values
   ('study_group_finder',  'study_group_finder',  'Study Group Finder');
 
 -- ============================================================
--- Bootstrapping Root on a fresh instance
+-- Bootstrapping the first President on a fresh instance
 -- ============================================================
 --
 -- Every console page resolves through getCallerContext(), which reads
 -- "resolvedUserPermissions". A user with no roles resolves to all-permissions-
 -- false, so on a brand new instance the console is simply invisible: no error,
 -- nothing to click. Somebody has to grant themselves the first role, and there
--- is deliberately no RPC for it. Root is granted by writing the row directly,
--- via `pnpm devtools grant-root`, the Supabase dashboard, or psql, each of
--- which needs the service key or the database password. That is a credential
--- only somebody who already controls the instance holds, which makes the
--- authorization structural rather than a self-assertion the database has to
--- take on trust.
+-- is deliberately no RPC for it. President is granted by writing the row
+-- directly, via `pnpm devtools grant-root` (named for the Root role President
+-- replaced), the Supabase dashboard, or psql, each of which needs the service
+-- key or the database password. That is a credential only somebody who already
+-- controls the instance holds, which makes the authorization structural rather
+-- than a self-assertion the database has to take on trust.
 --
 --   insert into "platform"."userRoles" ("userId", "roleId")
 --   values ('<your auth.users id>', '00000000-0000-0000-0000-000000000002');
 --
--- "userRoles_root_singleton" enforces that at most one user holds it.
+-- President's id is fixed by supabase/seed/production/01_roles.sql for exactly
+-- this purpose. It is not a singleton: Discord decides who else holds it.
