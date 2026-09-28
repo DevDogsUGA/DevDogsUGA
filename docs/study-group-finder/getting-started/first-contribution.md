@@ -1,11 +1,11 @@
 ---
-name: First contribution
+name: Your first contribution
 description: A small, low-risk UI change to prove your setup works end to end, then opening a pull request.
-order: 90
+order: 3
 section: getting-started
 ---
 
-# First contribution
+# Your first contribution
 
 A first change that touches nothing risky: edit some visible text or the
 theme on the home screen in `lib/main.dart`, see it render, and open a pull

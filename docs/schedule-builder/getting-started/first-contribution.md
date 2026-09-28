@@ -1,11 +1,11 @@
 ---
-name: Your first feature
+name: Your first contribution
 description: Replaying a real merged fix end to end, then extending it yourself.
-order: 6
+order: 3
 section: getting-started
 ---
 
-# Your first feature
+# Your first contribution
 
 The best way to learn this codebase's shape is to replay a small, real, merged
 change. This one is
@@ -63,8 +63,7 @@ cancelled, one active), then asserts the first is filtered out of both
 functions' results and the second isn't.
 
 That's a `*.db-test.ts` file — it needs a live database, so it runs under
-`pnpm --filter schedule-builder test:db`, not the default `test`. See
-[Tests](/docs/schedule-builder/guides/local-setup#tests).
+`pnpm --filter schedule-builder test:db`, not the default `test`.
 
 ## Exercise
 

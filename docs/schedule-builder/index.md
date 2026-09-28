@@ -11,7 +11,7 @@ UGA student's semester against real registrar data.
 
 > [!TIP]
 > Just getting started? Start at
-> [Getting started](/docs/schedule-builder/getting-started) instead of this
+> [Getting started](/docs/schedule-builder/getting-started/prerequisites) instead of this
 > page. Working the **schedule-builder competition**? The brief is a GitHub
 > issue, not a doc — see every open
 > [competition issue](https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition).
@@ -49,6 +49,6 @@ UGA student's semester against real registrar data.
 
 ## Where to go next
 
-- [Getting started](/docs/schedule-builder/getting-started) — set up and run this app
+- [Getting started](/docs/schedule-builder/getting-started/prerequisites) — set up and run this app
 - [Where things live](/docs/schedule-builder/guides/where-things-live) — "I want to change X"
 - [Database](/docs/schedule-builder/guides/database), [Ingestion](/docs/schedule-builder/guides/ingestion), [Schedule generation](/docs/schedule-builder/guides/generation)

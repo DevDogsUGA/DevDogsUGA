@@ -2,6 +2,7 @@
 name: Study Group Finder
 description: The Flutter app for finding study groups.
 order: 40
+os: [macos, linux, wsl, windows]
 ---
 
 # Study Group Finder
@@ -13,7 +14,7 @@ of what makes it different to work on.
 
 > [!TIP]
 > Just getting started? Head to
-> [Getting started](/docs/study-group-finder/getting-started). Working on
+> [Getting started](/docs/study-group-finder/getting-started/prerequisites). Working on
 > the team's competition? Read the brief on the
 > [competition issues board](https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition)
 > before you start.
@@ -35,7 +36,7 @@ other app does — over HTTP, never a direct database connection — and owns th
 reserves the schema and its PostgREST grants; it declares no tables yet, so
 isolation is by RLS, not by the schema boundary. Sign-in goes through the
 platform's own OAuth server (see
-[Sign in with DevDogs](/docs/platform/guides/identity/oauth)) rather than the
+[Sign-in](/docs/study-group-finder/getting-started/running#sign-in)) rather than the
 app holding its own user store. Dart models are generated from the live
 schema by [supadart](/docs/study-group-finder/guides/typed-models), not
 hand-written.
@@ -48,4 +49,4 @@ hand-written.
 - **supadart** — the community Dart codegen tool that reads Supabase's
   default PostgREST schema; see [Typed models](/docs/study-group-finder/guides/typed-models).
 - **`--dart-define`** — how Supabase config (URL, publishable key, auth mode)
-  reaches the compiled app; see [Flutter setup](/docs/study-group-finder/getting-started/flutter).
+  reaches the compiled app; see [Prerequisites](/docs/study-group-finder/getting-started/prerequisites).
