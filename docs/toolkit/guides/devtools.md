@@ -91,17 +91,17 @@ examples.
 ### Moderation
 
 - `moderation check` — with no argument, reports the moderatable content
-  types and the reasons an app can file against them; `moderation check
-  <app>` runs that app's conformance check.
+  types and the reasons an app can file against them; `moderation check --app
+  <slug>` runs that app's conformance check.
 - `persona <member|moderator>` — create a sign-in-able persona against the
   session's development tier, with a random, printed password.
 - `persona --clean` — remove personas this command created.
-- `grant-root` — grant an account the Root role.
+- `grant-root [--user <email>] [--yes]` — grant an account the Root role.
 
 `moderation check` and `persona` act on whichever development tier the
 session points at — local or a hosted development project — not only this
 machine. `grant-root` works on every tier, including staging and production,
-where it asks for a stern confirmation first.
+where it needs `--yes` or an interactive confirmation.
 
 ### Environment
 

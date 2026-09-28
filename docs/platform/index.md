@@ -32,7 +32,7 @@ also runs — see [Getting started: Running](/docs/platform/getting-started/runn
 
 ## Guides
 
-[Meetings & Teams](/docs/platform/guides/meetings-and-teams), [Reporting](/docs/platform/guides/reporting), [Moderation](/docs/platform/guides/moderation), and [Navigation](/docs/platform/guides/navigation) — the domain model and the contracts other apps build against.
+[Where things live](/docs/platform/guides/where-things-live) for a path table, [Testing](/docs/platform/guides/testing) for the suites, and [Meetings & Teams](/docs/platform/guides/meetings-and-teams), [Reporting](/docs/platform/guides/reporting), [Moderation](/docs/platform/guides/moderation), and [Navigation](/docs/platform/guides/navigation) for the domain model and the contracts other apps build against.
 
 ## Infrastructure
 
