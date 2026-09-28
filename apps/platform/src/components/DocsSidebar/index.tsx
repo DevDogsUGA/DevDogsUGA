@@ -14,15 +14,26 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "~/ui/sheet";
+import {
+  setDocsVariant,
+  useDocsVariant,
+} from "~/components/DocsVariants/store";
 import Tree from "./Tree";
 
 export interface DocsSidebarProps {
   projects: { slug: string; name: string; description: string | null }[];
   project: string;
+  /** The platforms this project's setup pages cover, in display order. */
+  platforms: { value: string; label: string }[];
   tree: DocsSidebarTree;
 }
 
-function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
+function SidebarContent({
+  projects,
+  project,
+  platforms,
+  tree,
+}: DocsSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -38,6 +49,11 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
   );
 
   const groups = useMemo(() => groupDocsProjects(projects), [projects]);
+  const offeredOs = useMemo(
+    () => platforms.map((platform) => platform.value),
+    [platforms],
+  );
+  const os = useDocsVariant("os", offeredOs);
 
   function onProjectChange(slug: string) {
     router.push(`/docs/${encodeURIComponent(slug)}`);
@@ -77,6 +93,24 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
           ))}
         </Select>
       )}
+
+      {/* The same choice as every platform tab strip on the pages: picking
+          here switches them all, and picking a tab moves this. Empty until
+          hydration rather than guessing, since the server cannot know the
+          reader's platform. */}
+      <Select
+        value={os ?? undefined}
+        onValueChange={(value) => setDocsVariant("os", value)}
+        aria-label="Your platform"
+        placeholder="Your platform"
+        className="w-full"
+      >
+        {platforms.map((platform) => (
+          <Select.Item key={platform.value} value={platform.value}>
+            {platform.label}
+          </Select.Item>
+        ))}
+      </Select>
 
       <Tree tree={tree} ctx={{ project, activePath }} />
     </div>

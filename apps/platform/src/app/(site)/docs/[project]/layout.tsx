@@ -1,5 +1,10 @@
 import DocsSidebar from "~/components/DocsSidebar";
-import { getDocsProjects, getDocsSidebarTree } from "~/server/docs/queries";
+import DocsVariants from "~/components/DocsVariants";
+import {
+  getDocsProjects,
+  getDocsSidebarTree,
+  getDocsVariantGroups,
+} from "~/server/docs/queries";
 
 export default async function DocsProjectLayout({
   children,
@@ -9,14 +14,20 @@ export default async function DocsProjectLayout({
   const projectSlug = decodeURIComponent(project);
 
   const projects = getDocsProjects();
+  const current = projects.find((p) => p.slug === projectSlug);
 
   // Unknown project: let the page render its notFound without docs chrome.
-  if (!projects.some((p) => p.slug === projectSlug)) {
+  if (!current) {
     return <>{children}</>;
   }
 
+  const groups = getDocsVariantGroups();
+
   return (
-    <div className="flex min-w-0 flex-1 items-start max-lg:flex-col">
+    <DocsVariants
+      offered={{ os: current.os, supabase: groups.supabase.values }}
+      className="flex min-w-0 flex-1 items-start max-lg:flex-col"
+    >
       <DocsSidebar
         projects={projects.map(({ slug, name, description }) => ({
           slug,
@@ -24,11 +35,15 @@ export default async function DocsProjectLayout({
           description,
         }))}
         project={projectSlug}
+        platforms={current.os.map((value) => ({
+          value,
+          label: groups.os.labels[value] ?? value,
+        }))}
         tree={getDocsSidebarTree(projectSlug)}
       />
       <div className="flex min-w-0 flex-1 flex-col self-stretch">
         {children}
       </div>
-    </div>
+    </DocsVariants>
   );
 }

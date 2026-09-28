@@ -1140,6 +1140,88 @@
   --alert-accent: var(--destructive);
 }
 
+/* Variants (`:::tabs`, `:::only{os=…}`), rendered by @devdogsuga/docs-compiler.
+   Every variant ships in the HTML; the docs layout's wrapper carries the
+   reader's choice as `data-os`/`data-supabase` (set by an inline script before
+   first paint, see DocsVariants), and these rules hide whatever does not match.
+   A panel names every value it serves in `data-values`, space-separated, hence
+   `~=`. One rule per value because CSS cannot compare two attributes. */
+.prose .docs-tabs {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  margin-block: 1.25em;
+  overflow: hidden;
+}
+
+.prose .docs-tablist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--card);
+  padding: 0.375rem;
+}
+
+.prose .docs-tab {
+  border-radius: calc(var(--radius) - 4px);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.25rem 0.625rem;
+}
+
+.prose .docs-tab:hover {
+  background-color: var(--color-mauve-800);
+  color: var(--foreground);
+}
+
+.prose .docs-tab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.prose .docs-tabpanel {
+  padding: 0 1rem;
+}
+
+.prose .docs-tabpanel > pre:only-child {
+  border: 0;
+  border-radius: 0;
+  margin: 0 -1rem;
+}
+
+[data-os="macos"]
+  :is(.docs-tabpanel, .docs-only)[data-group="os"]:not([data-values~="macos"]),
+[data-os="linux"]
+  :is(.docs-tabpanel, .docs-only)[data-group="os"]:not([data-values~="linux"]),
+[data-os="wsl"]
+  :is(.docs-tabpanel, .docs-only)[data-group="os"]:not([data-values~="wsl"]),
+[data-os="windows"]
+  :is(.docs-tabpanel, .docs-only)[data-group="os"]:not(
+    [data-values~="windows"]
+  ),
+[data-supabase="hosted"]
+  :is(.docs-tabpanel, .docs-only)[data-group="supabase"]:not(
+    [data-values~="hosted"]
+  ),
+[data-supabase="local"]
+  :is(.docs-tabpanel, .docs-only)[data-group="supabase"]:not(
+    [data-values~="local"]
+  ) {
+  display: none;
+}
+
+[data-os="macos"] .docs-tab[data-group="os"][data-value="macos"],
+[data-os="linux"] .docs-tab[data-group="os"][data-value="linux"],
+[data-os="wsl"] .docs-tab[data-group="os"][data-value="wsl"],
+[data-os="windows"] .docs-tab[data-group="os"][data-value="windows"],
+[data-supabase="hosted"] .docs-tab[data-group="supabase"][data-value="hosted"],
+[data-supabase="local"] .docs-tab[data-group="supabase"][data-value="local"] {
+  background-color: var(--color-mauve-700);
+  color: var(--foreground);
+}
+
 /* Collapsibles (`<details>`), which every guide uses to hold the layer of
    detail a first read should skip. Styled as a callout in the same family as
    the alerts above — same radius, same tinted fill, same optical weight — so

@@ -1,21 +1,21 @@
 import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
-import DocsMarkdown from "~/components/DocsMarkdown";
 import TableOfContents, {
   InlineTableOfContents,
 } from "~/components/TableOfContents";
 import type { DocHeading, TOCItem } from "~/lib/toc";
 
 interface Props {
-  source: string;
+  /** Rendered at build time by @devdogsuga/docs-compiler. */
+  html: string;
   /** Headings extracted at build time by @devdogsuga/docs. */
   headings: DocHeading[];
   breadcrumbs?: string[];
   githubUrl?: string;
 }
 
-export default async function DocPageContent({
-  source,
+export default function DocPageContent({
+  html,
   headings,
   breadcrumbs,
   githubUrl,
@@ -51,9 +51,12 @@ export default async function DocPageContent({
             </div>
           ) : null}
 
-          <article className="prose prose-invert mx-auto max-w-3xl">
-            <DocsMarkdown source={source} />
-          </article>
+          <article
+            className="prose prose-invert mx-auto max-w-3xl"
+            // Our own repo's markdown, compiled at build time; nothing a
+            // visitor wrote reaches this string.
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
         </div>
 
         {toc.length > 0 && (

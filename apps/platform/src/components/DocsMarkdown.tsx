@@ -64,7 +64,10 @@ const highlighterPromise = createHighlighterCore({
 });
 
 /**
- * The single markdown pipeline for documentation.
+ * Markdown that only exists at request time: a competition brief, read from
+ * its GitHub issue. The docs themselves no longer come through here;
+ * @devdogsuga/docs-compiler renders them to HTML at build time with the same
+ * plugins (and resolves their tabs), so keep the two lists in step.
  *
  * `"use cache"` is required, not an optimisation: something in this plugin
  * chain reads `Date.now()`, which Cache Components forbids during a prerender
