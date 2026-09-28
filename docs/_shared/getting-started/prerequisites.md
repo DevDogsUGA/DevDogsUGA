@@ -32,10 +32,8 @@ Then install Homebrew:
 ```
 
 The installer prints one or two `export PATH` lines at the end. Run those, or
-open a new terminal, before continuing. Homebrew is how you'll install Docker
-Desktop later if you want the local Supabase stack; nothing in the toolchain
-step below needs it directly, but git config, curl, and most of what comes
-after assumes it's there.
+open a new terminal, before continuing. The steps below install fnm and
+(optionally) Docker Desktop through it.
 
 ::tab{value="linux"}
 Install build tools through your distro's package manager. On Ubuntu/Debian:
@@ -68,9 +66,6 @@ sudo apt-get install -y build-essential curl git
 ```
 
 ::tab{value="windows"}
-study-group-finder is the only project here with a native Windows path
-(schedule-builder and platform recommend WSL2 instead — see the WSL2 tab).
-
 Allow local scripts to run. PowerShell blocks them by default, including the
 ones fnm and pnpm need. From a PowerShell window (not elevated — this is a
 per-user setting):
@@ -142,9 +137,10 @@ eval "$(fnm env --use-on-cd)"
 fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
 ```
 
-On native Windows, add that line to your PowerShell profile
-(`$PROFILE` — create the file if `Test-Path $PROFILE` says it doesn't exist
-yet).
+:::only{os="windows"}
+The PowerShell profile is the file at `$PROFILE`. Create it if
+`Test-Path $PROFILE` says it doesn't exist yet.
+:::
 
 **Open a new terminal after adding this line** — it does nothing
 retroactively in the one you edited it from. Without it, a fresh terminal
@@ -153,14 +149,14 @@ a confusing error instead of a clear "Node not found." See
 [fnm not found](./troubleshooting#fnm-not-found) if that still isn't
 happening.
 
-Once fnm is on your `PATH` and picking up new shells, install Node from the
-repo (do this after you clone, in [Running the project](./running)):
+For now, install any recent Node so `npm` can install pnpm below:
 
 ```bash
-fnm install   # reads .nvmrc (pins Node 24)
-fnm use
-node --version
+fnm install --lts
 ```
+
+After cloning, [Running the project](./running) switches you to the exact
+version the repo pins; fnm reads it from `.nvmrc`, so there's nothing to pick.
 
 `.nvmrc` pins **24**. The repo's actual floor is **22.12** — pnpm 11 needs
 `node:sqlite`, stable there — so 24 is the version everyone should be on, not
@@ -206,7 +202,13 @@ you want the local stack instead.
 
 :::tabs{group="os"}
 ::tab{value="macos"}
-Docker Desktop. Never Colima.
+Install Docker Desktop, then open it once so the daemon starts:
+
+```bash
+brew install --cask docker
+```
+
+Don't use Colima; the Supabase CLI doesn't work reliably against it.
 
 ::tab{value="linux wsl"}
 Docker Engine, installed directly inside the distro — never Docker Desktop:

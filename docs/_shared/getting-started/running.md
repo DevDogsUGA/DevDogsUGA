@@ -159,10 +159,14 @@ project directly — nothing to paste into the Supabase dashboard yourself.
 After configuring the provider, add your local dev URL to the project's own
 allow list if you haven't already — Dashboard → Authentication → URL
 Configuration → Redirect URLs, add `http://localhost:<port>/**` (3000 for
-platform, 3001 for schedule-builder, or whatever port study-group-finder's
-dev server prints for its emulator build). Signing in without this
-configured fails at the provider's redirect step — see
+platform, 3001 for schedule-builder). Signing in without this configured
+fails at the provider's redirect step — see
 [Redirect URL missing](./troubleshooting#redirect-url-missing).
+
+:::only{project="study-group-finder"}
+study-group-finder doesn't sign anyone in yet, so it has no redirect URL to
+add.
+:::
 
 <details>
 <summary>Google sign-in</summary>
@@ -234,8 +238,7 @@ dependencies first.
 
 ## Test logins
 
-Seeded password personas are being retired. To see the app as an ordinary
-member or moderator instead of as yourself, use:
+To see the app as an ordinary member or moderator instead of as yourself:
 
 ```bash
 pnpm devtools persona member
@@ -245,9 +248,12 @@ pnpm devtools persona moderator
 Each creates a login with a random password (printed once) against your
 current development project, local or hosted; `moderator` also optionally
 files a sample report so the moderation queue isn't empty. `pnpm devtools
-persona --clean` removes them again. You're always Root on your own
-instance — `pnpm devtools grant-root` grants that on a fresh one — so a
-persona is the only way to see what a non-Root user sees.
+persona --clean` removes them again.
+
+A fresh database has no Root user. `pnpm devtools grant-root` makes your own
+account Root, and after that nothing on your instance ever denies you
+anything, which is why a persona is the only way to see what everyone else
+sees.
 
 ## Doctor
 
