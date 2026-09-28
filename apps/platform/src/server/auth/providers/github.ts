@@ -63,13 +63,23 @@ const profileSchema = z.object({
 });
 
 /**
+ * Where a linked GitHub account stands in the DevDogs organization once
+ * `linkProfile` returns. `"invitation_pending"` means the invitation exists but
+ * could not be accepted on the user's behalf, so they have to accept it on
+ * GitHub themselves.
+ */
+export type OrgMembershipOutcome = "member" | "invitation_pending";
+
+/**
  * Fetches the GitHub profile, invites the user to the DevDogs organization,
  * and upserts the profile into `leaderboardProfiles`. Supabase owns the
  * identity link itself, in `auth.identities`.
  * @param accessToken The GitHub access token from the Supabase OAuth session.
  * @see `requestAuthorization`
  */
-export async function linkProfile(accessToken: string): Promise<void> {
+export async function linkProfile(
+  accessToken: string,
+): Promise<OrgMembershipOutcome> {
   const profile = await fetch("https://api.github.com/user", {
     headers: {
       Authorization: "Bearer " + accessToken,
@@ -101,29 +111,38 @@ export async function linkProfile(accessToken: string): Promise<void> {
       },
     });
 
-  // Invite the GitHub user as a contributor to the DevDogs organization.
-  // Authenticated as the DevDogs App: an installation token that expires in an
-  // hour, rather than an org owner's `ghp_` token that does not expire at all.
-  const invitation = await fetch(
-    `https://api.github.com/orgs/${env.GITHUB_ORG}/invitations`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + (await installationToken()),
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
+  // An existing member is already where the link is trying to put them. Asking
+  // first keeps their OAuth token away from the org, where the accept call
+  // below can be refused (OAuth App access restrictions) for no reason that
+  // matters to them.
+  const state = await orgMembershipState(profile.login);
+  if (state === "active") return "member";
+
+  if (state === null) {
+    // Invite the GitHub user as a contributor to the DevDogs organization.
+    // Authenticated as the DevDogs App: an installation token that expires in
+    // an hour, rather than an org owner's `ghp_` token that does not expire.
+    const invitation = await fetch(
+      `https://api.github.com/orgs/${env.GITHUB_ORG}/invitations`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + (await installationToken()),
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        body: JSON.stringify({
+          invitee_id: profile.id,
+          role: "direct_member",
+          team_ids: [14192632],
+        }),
       },
-      body: JSON.stringify({
-        invitee_id: profile.id,
-        role: "direct_member",
-        team_ids: [14192632],
-      }),
-    },
-  );
-  // A specific 422 body means membership or an invitation already exists.
-  // Other 422 validation failures remain errors.
-  if (!(await isSuccessfulGitHubInvitation(invitation))) {
-    throw githubApiError("invite_org_member", invitation);
+    );
+    // A specific 422 body means membership or an invitation already exists.
+    // Other 422 validation failures remain errors.
+    if (!(await isSuccessfulGitHubInvitation(invitation))) {
+      throw githubApiError("invite_org_member", invitation);
+    }
   }
 
   // Accept the organization invitation on behalf of the user
@@ -139,10 +158,40 @@ export async function linkProfile(accessToken: string): Promise<void> {
       body: JSON.stringify({ state: "active" }),
     },
   );
-  if (!membership.ok) {
-    throw githubApiError("activate_org_membership", membership);
-  }
+  if (membership.ok) return "member";
+
+  // The invitation stands either way; only the shortcut failed. The member can
+  // accept it on GitHub, which is a next step, not an error.
+  githubApiError("activate_org_membership", membership);
+  return "invitation_pending";
 }
+
+/**
+ * Reads a user's DevDogs organization membership as the App.
+ * @returns `"active"` or `"pending"`, or `null` when there is no membership.
+ */
+async function orgMembershipState(
+  login: string,
+): Promise<"active" | "pending" | null> {
+  const response = await fetch(
+    `https://api.github.com/orgs/${env.GITHUB_ORG}/memberships/${login}`,
+    {
+      headers: {
+        Authorization: "Bearer " + (await installationToken()),
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) throw githubApiError("read_org_membership", response);
+  const { state } = orgMembershipSchema.parse(await response.json());
+  return state;
+}
+
+const orgMembershipSchema = z.object({
+  state: z.enum(["active", "pending"]),
+});
 
 /**
  * Removes a GitHub user from the DevDogs organization and unlinks their GitHub
