@@ -1,4 +1,4 @@
-project_id = "DevDogs-Website"
+project_id = "DevDogsUGA"
 
 # Ports are literals, not "env(...)": `supabase seed` validates config.toml
 # against a typed schema that only interpolates env() into *string* fields, so

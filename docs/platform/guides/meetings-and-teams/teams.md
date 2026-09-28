@@ -89,7 +89,7 @@ Both take `db` as a parameter, and the reconcile pass takes its GitHub client th
 <details>
 <summary>Why a branch in the organisation rather than a fork?</summary>
 
-Ordinary contributions keep the fork-and-PR workflow. Teams get a branch inside the organisation instead, for one decisive reason: **you cannot automate collaborator grants on a student's personal fork.** Adding teammates to `someone/DevDogs-Website` needs that student's own account admin, which the org's token has no reach into — the reason is recorded beside the code that provisions, at the top of `server/github/teamSync.ts`. The secondary arguments point the same way: a pull request from a fork receives none of the repository's secrets, so anything in CI needing them cannot run on it, and GitHub Teams grant access to organisation repositories only.
+Ordinary contributions keep the fork-and-PR workflow. Teams get a branch inside the organisation instead, for one decisive reason: **you cannot automate collaborator grants on a student's personal fork.** Adding teammates to `someone/DevDogsUGA` needs that student's own account admin, which the org's token has no reach into — the reason is recorded beside the code that provisions, at the top of `server/github/teamSync.ts`. The secondary arguments point the same way: a pull request from a fork receives none of the repository's secrets, so anything in CI needing them cannot run on it, and GitHub Teams grant access to organisation repositories only.
 
 Organisation membership costs the member no extra step, because linking GitHub already does it — `server/auth/providers/github.ts` posts the invitation as the app, then sets the membership to `active` with the member's own token.
 
