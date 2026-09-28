@@ -91,7 +91,7 @@ const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
 /**
  * One week of the schedule, as the reader experiences it.
  *
- * The week is the club's real unit: the Wednesday dev session exists *because*
+ * The week is the club's real unit: the Wednesday build session exists *because*
  * of the Monday's sprint, and `CompetitionTimeline` has always drawn the format
  * that way. It also pays for itself once there are two nights most weeks: twice
  * the rows, half as many headings.
@@ -131,7 +131,7 @@ function weekLabel(key: string): string {
 /**
  * The filters offered, derived from what is actually in the list.
  *
- * A fixed set of chips would offer "Dev Session" in a summer with none, and a
+ * A fixed set of chips would offer "Build Session" in a summer with none, and a
  * filter for a kind nothing on screen has returns an empty list. Derived from
  * the rows in hand, it offers exactly what is there.
  *
