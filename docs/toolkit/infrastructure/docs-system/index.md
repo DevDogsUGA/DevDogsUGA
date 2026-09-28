@@ -27,7 +27,7 @@ The docs routes import that module and render from memory:
 
 ## Projects, sections and shared pages
 
-`docs/` is grouped by project: each immediate subfolder of `docs/` (except `_shared`, below) is one project, and its name is the first segment of the URL. The projects today are `schedule-builder`, `study-group-finder`, `platform`, `sandbox` and `toolkit`.
+`docs/` is grouped by project: each immediate subfolder of `docs/` (except `_shared`, below) is one project, and its name is the first segment of the URL. The projects today are `schedule-builder`, `study-group-finder`, `platform`, and `toolkit`.
 
 Every page other than a project's own `index.md` carries a `section` in its front matter: `getting-started`, `guides`, `infrastructure`, or `reference`. The sidebar renders a project's pages grouped by section, in that fixed order, with the project's `index.md` first as "Overview". A page with no `section` defaults to `reference` if it sits under a `reference/` folder, otherwise `guides`.
 

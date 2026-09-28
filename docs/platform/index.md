@@ -9,7 +9,7 @@ order: 10
 `apps/platform` is the Next.js app behind the DevDogs site: the public pages, the officer console, these docs, and the OAuth server sibling projects sign in against. Read a guide here when you are working on one of its subsystems.
 
 > [!TIP]
-> New here? Start at [Getting started](/docs/platform/getting-started) — installing the toolchain, a database, and running the app. Just entering a feature competition, with no local setup? [Entering a competition](/docs/platform/getting-started/competition-entry) is the shorter path.
+> New here? Start at [Getting started](/docs/platform/getting-started/prerequisites) — installing the toolchain, a database, and running the app.
 
 ## Architecture, briefly
 
@@ -19,7 +19,7 @@ talks to GitHub — provisioning teams, granting branch access, mirroring
 competitions — through the GitHub App in [Identity](/docs/platform/guides/identity/github-app).
 Sibling apps never call GitHub or the shared database directly; they can let
 a member sign in with their DevDogs account through the OAuth server this app
-also runs — see [Sign in with DevDogs](/docs/platform/guides/identity/oauth).
+also runs — see [Getting started: Running](/docs/platform/getting-started/running).
 
 ## Glossary
 
@@ -36,4 +36,4 @@ also runs — see [Sign in with DevDogs](/docs/platform/guides/identity/oauth).
 
 ## Infrastructure
 
-Maintainer and officer-only material: [Identity](/docs/platform/guides/identity) (the OAuth server and the GitHub App), [Database](/docs/platform/guides/database) (the migration loop), and [Events](/docs/platform/guides/meetings-and-teams/events) (club config).
+Maintainer and officer-only material: [Identity](/docs/platform/guides/identity) (the OAuth server), [Writing a migration](/docs/platform/guides/migrations) (the migration loop), and [Events](/docs/platform/infrastructure/events) (club config).
