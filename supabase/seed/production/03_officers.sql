@@ -317,7 +317,7 @@ insert into "officer_submissions" (
   (
     'sidhant-dash', 'sd04573@uga.edu', 'Sidhant Dash',
     'Sidhant', 'Dash',
-    'Project Manager',
+    'Focus Lead',
     'Sidhant Dash is a fourth-year Computer Science student at the University of Georgia with a certificate in New Media. He is interested in frontend and backend development, game development, and UI/UX design. Sidhant serves as the DogDays Project Manager for DevDogs and the Marketing Chair of ACM at UGA. He recently interned at CGI as a software developer and strives to develop software that benefits others while helping developers grow.',
     array[73962, 62630]::integer[], 2027, 'spring',
     array['sidhant.dash@uga.edu']::text[],
@@ -646,19 +646,6 @@ select s."userId", r."id"
 from "officer_submissions" s
 join "platform"."roles" r on r."title" = s."title"
 where s."userId" is not null and s."title" is not null
-on conflict do nothing;
-
--- Secondary leadership roles.
---
--- A person can carry more than one leadership responsibility.
-insert into "platform"."userRoles" ("userId", "roleId")
-select s."userId", r."id"
-from "officer_submissions" s
-join (values
-  ('nandan-praveen', 'Focus Lead')
-) as secondary("slug", "title") on secondary."slug" = s."slug"
-join "platform"."roles" r on r."title" = secondary."title"
-where s."userId" is not null
 on conflict do nothing;
 
 drop table "officer_submissions";
