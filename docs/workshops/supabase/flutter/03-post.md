@@ -2,6 +2,7 @@
 name: "Let Signed-In Users Post"
 description: "Let signed-in users post, with a policy that only lets them post as themselves."
 order: 3
+checkpoint: "02-supabase/03-insert-naive"
 ---
 
 <!-- Generated from Backstage apps/slides/decks/2026-09-28-supabase.md by `pnpm export:md`; edit the deck, not this file. -->
@@ -9,6 +10,10 @@ order: 3
 # Let Signed-In Users Post
 
 <!-- prettier-ignore-start -->
+
+<div class="docs-step-actions">
+
+[Review in VS Code](vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in)
 
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
@@ -34,6 +39,8 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/02-sig
 
 </details>
 
+</div>
+
 ## Allow Signed-In Posts
 
 **Dashboard → SQL Editor**:
@@ -42,7 +49,7 @@ The table and read policy from step 1. The new policy goes at the end.
 
 Only signed-in users can insert, and `with check (auth.uid() = user_id)` means only as themselves.
 
-```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql
 --- a/supabase/migrations/20260928000000_guestbook.sql
 +++ b/supabase/migrations/20260928000000_guestbook.sql
 @@ -1,22 +1,29 @@
@@ -85,7 +92,7 @@ The form from Setup Night comes back, now saving to the database.
 
 A `TextEditingController` holds what's typed in a text field.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,116 +1,119 @@
@@ -212,7 +219,7 @@ A `TextEditingController` holds what's typed in a text field.
 
 `dispose` frees the controllers when the widget goes away.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,119 +1,126 @@
@@ -346,7 +353,7 @@ A `TextEditingController` holds what's typed in a text field.
 
 `_submit` is `async`. It reads both fields and stops if either is empty.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,126 +1,136 @@
@@ -490,7 +497,7 @@ A `TextEditingController` holds what's typed in a text field.
 
 `await` the insert, then clear the fields and reload the list.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,136 +1,145 @@
@@ -643,7 +650,7 @@ A `TextEditingController` holds what's typed in a text field.
 
 `if (session != null) ...[ ]` adds the fields to the column only for signed-in users.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,145 +1,153 @@
@@ -806,7 +813,7 @@ A `TextEditingController` holds what's typed in a text field.
 
 Signed-out visitors get a hint instead of the form.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/2602d3aed596335ac990eb003f8e08af7fdb10c7...4ee8113af098be0a3737bdc0e4cf703a9a8678d7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,153 +1,164 @@

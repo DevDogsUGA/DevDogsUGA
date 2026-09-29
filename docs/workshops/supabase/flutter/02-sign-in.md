@@ -2,6 +2,7 @@
 name: "Sign In with OAuth"
 description: "Register the app with DevDogs, add it as an OIDC provider in Supabase, and add sign-in and sign-out."
 order: 2
+checkpoint: "02-supabase/02-sign-in"
 ---
 
 <!-- Generated from Backstage apps/slides/decks/2026-09-28-supabase.md by `pnpm export:md`; edit the deck, not this file. -->
@@ -9,6 +10,10 @@ order: 2
 # Sign In with OAuth
 
 <!-- prettier-ignore-start -->
+
+<div class="docs-step-actions">
+
+[Review in VS Code](vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read)
 
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
@@ -33,6 +38,8 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/01-rea
 ```
 
 </details>
+
+</div>
 
 **OIDC** (OpenID Connect) is a standard built on OAuth 2.0. It lets your app send people to another service to sign in (here, DevDogs), then tells your app who they are.
 
@@ -62,7 +69,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `kIsWeb` says whether we're in a browser: come back to this page on the web, or to the app's deep link on a phone.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,77 +1,84 @@
@@ -154,7 +161,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `Session?`: the `?` means it can be `null`, i.e. signed out.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,84 +1,85 @@
@@ -247,7 +254,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `onAuthStateChange` is a `Stream`. `listen` runs on every sign-in and sign-out, and `setState` redraws.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,85 +1,92 @@
@@ -347,7 +354,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `OAuthProvider('custom:devdogsuga')` is our custom provider, and `=>` is shorthand for a one-line function.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,92 +1,101 @@
@@ -456,7 +463,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `build` copies `_session` into a local, so Dart knows it can't change halfway through.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,101 +1,103 @@
@@ -567,7 +574,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `session == null ? … : …` picks which button to show.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,103 +1,116 @@

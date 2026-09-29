@@ -2,6 +2,7 @@
 name: "Sign In with OAuth"
 description: "Register the app with DevDogs, add it as an OIDC provider in Supabase, and add sign-in and sign-out."
 order: 2
+checkpoint: "02-supabase/02-sign-in"
 ---
 
 <!-- Generated from Backstage apps/slides/decks/2026-09-28-supabase.md by `pnpm export:md`; edit the deck, not this file. -->
@@ -9,6 +10,10 @@ order: 2
 # Sign In with OAuth
 
 <!-- prettier-ignore-start -->
+
+<div class="docs-step-actions">
+
+[Review in VS Code](vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read)
 
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
@@ -33,6 +38,8 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/01-rea
 ```
 
 </details>
+
+</div>
 
 **OIDC** (OpenID Connect) is a standard built on OAuth 2.0. It lets your app send people to another service to sign in (here, DevDogs), then tells your app who they are.
 
@@ -62,7 +69,7 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 
 `Session` is supabase-js's type for a signed-in user; `null` means nobody's signed in.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,47 +1,49 @@
@@ -119,7 +126,7 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 
 `onAuthStateChange` calls back on every sign-in and sign-out. The function `useEffect` returns unsubscribes when the component goes away.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,49 +1,60 @@
@@ -187,7 +194,7 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 
 `signInWithOAuth` sends the browser to DevDogs, then back to `redirectTo`. The cast is there because TypeScript only knows Supabase's built-in providers.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,60 +1,69 @@
@@ -264,7 +271,7 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 
 `signOut` ends the session, and `onAuthStateChange` updates the page.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,69 +1,73 @@
@@ -345,7 +352,7 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 
 `{session ? … : …}` in JSX picks which button to show.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,73 +1,83 @@
@@ -436,7 +443,7 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 
 The note under the buttons now says what's coming next.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/469df6f2a496d788b9887ffae477a40995ccc0fd...e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F02-sign-in&from=02-supabase%2F01-read&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,83 +1,89 @@

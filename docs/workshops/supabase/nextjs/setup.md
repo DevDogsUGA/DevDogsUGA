@@ -28,7 +28,7 @@ pnpm install
 - Copy the **Project URL** and the **publishable key** from Project Settings → API
 - Copy `.env.example` to `.env.local` and paste them in
 
-```dotenv file=.env.example lines=1-4 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/.env.example
+```dotenv file=.env.example lines=1-4 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/.env.example vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F05-delete&file=.env.example
 # Copy this file to .env.local and fill in your own Supabase project's values.
 # Find both on your project's dashboard under Project Settings > API.
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co

@@ -2,6 +2,7 @@
 name: "Read the Guestbook"
 description: "Create the messages table with row-level security, and load the guestbook from Supabase."
 order: 1
+checkpoint: "02-supabase/01-read"
 ---
 
 <!-- Generated from Backstage apps/slides/decks/2026-09-28-supabase.md by `pnpm export:md`; edit the deck, not this file. -->
@@ -9,6 +10,10 @@ order: 1
 # Read the Guestbook
 
 <!-- prettier-ignore-start -->
+
+<div class="docs-step-actions">
+
+[Review in VS Code](vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start)
 
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
@@ -34,6 +39,8 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/00-sta
 
 </details>
 
+</div>
+
 The guestbook is the part we didn't get to at Setup Night. It's already in your starter code, keeping messages in memory. Now we'll give it a real database.
 
 ## Create the Messages Table
@@ -42,7 +49,7 @@ The guestbook is the part we didn't get to at Setup Night. It's already in your 
 
 `create table` makes the `messages` table. `default auth.uid()` fills in `user_id` with whoever is signed in.
 
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L7-L13
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L7-L13 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=7-13
 create table public.messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
@@ -54,13 +61,13 @@ create table public.messages (
 
 Row-level security goes on: from now on, nobody can read or write a row unless a policy says so.
 
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=15 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L15-L15
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=15 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L15-L15 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=15
 alter table public.messages enable row level security;
 ```
 
 The first policy: anyone, signed in (`authenticated`) or not (`anon`), can read every message.
 
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=17-22 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L17-L22
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=17-22 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L17-L22 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=17-22
 -- Anyone (signed in or not) can read the guestbook.
 create policy "messages are readable by everyone"
   on public.messages
@@ -84,7 +91,7 @@ flutter pub add supabase_flutter gotrue
 
 `main` is now `async`, so it can `await` setup before `runApp`. `ensureInitialized` readies Flutter's plugins first.
 
-```diff file=lib/main.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-e61eb31d013d12616f5532636a88cfa63631dda8f7829e5424e68542214d1608
+```diff file=lib/main.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-e61eb31d013d12616f5532636a88cfa63631dda8f7829e5424e68542214d1608 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=lib%2Fmain.dart
 --- a/lib/main.dart
 +++ b/lib/main.dart
 @@ -1,22 +1,30 @@
@@ -123,7 +130,7 @@ flutter pub add supabase_flutter gotrue
 
 `String.fromEnvironment` reads the values that `--dart-define-from-file=.env.local` baked in when you ran the app.
 
-```diff file=lib/main.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-e61eb31d013d12616f5532636a88cfa63631dda8f7829e5424e68542214d1608
+```diff file=lib/main.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-e61eb31d013d12616f5532636a88cfa63631dda8f7829e5424e68542214d1608 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=lib%2Fmain.dart
 --- a/lib/main.dart
 +++ b/lib/main.dart
 @@ -1,30 +1,36 @@
@@ -174,7 +181,7 @@ Setup Night's guestbook kept entries in a list in memory, so they vanished on re
 
 `Supabase.instance.client` is the client `main.dart` set up, shared by the whole app.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,101 +1,93 @@
@@ -286,7 +293,7 @@ Setup Night's guestbook kept entries in a list in memory, so they vanished on re
 
 A `StatefulWidget` keeps data that changes in its `State`. `initState` runs once, when it's created: the place to start loading.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,93 +1,87 @@
@@ -391,7 +398,7 @@ A `StatefulWidget` keeps data that changes in its `State`. `initState` runs once
 
 A `Future` with `async`/`await` waits for the database without freezing the screen. `setState` redraws with the new rows.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,87 +1,90 @@
@@ -496,7 +503,7 @@ A `Future` with `async`/`await` waits for the database without freezing the scre
 
 `try`/`catch` keeps one failed request from crashing the whole screen.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,90 +1,85 @@
@@ -598,7 +605,7 @@ A `Future` with `async`/`await` waits for the database without freezing the scre
 
 The form goes away for now, and each row arrives as a `Map`: `message['body']`.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,85 +1,75 @@
@@ -697,7 +704,7 @@ The form goes away for now, and each row arrives as a `Map`: `message['body']`.
 
 `created_at` arrives as text, so `_formatTime` parses it before formatting.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c14c64dc15b4e3b0c030cbccbee20949c3884b23...7fd7904f48cb294ede0ea901345dabc44cdff2af#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,75 +1,77 @@

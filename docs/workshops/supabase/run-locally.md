@@ -54,7 +54,7 @@ pnpm dlx supabase migration new profiles
 pnpm dlx supabase db reset
 ```
 
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13,15,17-22,24-29,31-37 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/migrations/20260928000000_guestbook.sql#L7-L37
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13,15,17-22,24-29,31-37 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/migrations/20260928000000_guestbook.sql#L7-L37 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F05-delete&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=7-37
 create table public.messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
@@ -84,7 +84,7 @@ create policy "authenticated users can delete their own messages"
   using (auth.uid() = user_id);
 ```
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=6-11,13-19,21-44,46-48,50-61,63-70 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/migrations/20260928000100_profiles.sql#L6-L70
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=6-11,13-19,21-44,46-48,50-61,63-70 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/migrations/20260928000100_profiles.sql#L6-L70 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F05-delete&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=6-70
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   name text not null
@@ -149,7 +149,7 @@ alter table public.messages drop column author_name;
 
 ## Configure OAuth Sign-In
 
-```toml file=supabase/config.toml lines=321-334 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/config.toml#L321-L334
+```toml file=supabase/config.toml lines=321-334 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/config.toml#L321-L334 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F05-delete&file=supabase%2Fconfig.toml&lines=321-334
 [auth.external.apple]
 enabled = false
 client_id = ""

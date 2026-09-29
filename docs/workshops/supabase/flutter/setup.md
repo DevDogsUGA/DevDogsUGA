@@ -28,7 +28,7 @@ flutter pub get
 - Copy the **Project URL** and the **publishable key** from Project Settings → API
 - Copy `.env.example` to `.env.local` and paste them in
 
-```dotenv file=.env.example lines=1-7 href=https://github.com/DevDogsUGA/Mobile-Workshops/blob/df569b9c73159f3c90ff663a51ec3aa28a6326fa/.env.example
+```dotenv file=.env.example lines=1-7 href=https://github.com/DevDogsUGA/Mobile-Workshops/blob/df569b9c73159f3c90ff663a51ec3aa28a6326fa/.env.example vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FMobile-Workshops&ref=02-supabase%2F05-delete&file=.env.example
 # Copy this file to .env.local and fill in your own Supabase project's values.
 # Find both on your project's dashboard under Project Settings > API.
 #
