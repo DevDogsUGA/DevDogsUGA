@@ -19,7 +19,7 @@ export default function AnsweredQuestion({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <section className="bg-card flex flex-col gap-2 rounded-xl border p-4">
+      <section className="bg-card text-card-foreground flex flex-col gap-2 rounded-xl border p-4">
         <h2 className="text-muted-foreground text-xs font-semibold uppercase">
           Question
         </h2>
@@ -27,7 +27,7 @@ export default function AnsweredQuestion({
           <DiscordMarkdown content={question} users={{}} roles={{}} />
         </div>
       </section>
-      <section className="flex flex-col gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+      <section className="text-foreground flex flex-col gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
         <h2 className="flex items-center gap-1 text-xs font-semibold text-emerald-300 uppercase">
           <SealCheckIcon className="size-4" weight="fill" />
           Answer from an officer

@@ -297,7 +297,10 @@ function Spoiler({
         "rounded-sm px-1 align-baseline",
         revealed
           ? "bg-muted text-inherit"
-          : "bg-foreground cursor-pointer text-transparent select-none [&_*]:invisible",
+          : // Discord's hidden spoiler is a dark slab, not a bright one; the
+            // foreground token is white in the dark theme and read as a
+            // highlighted blank rather than something to click.
+            "bg-muted-foreground/40 hover:bg-muted-foreground/60 cursor-pointer text-transparent select-none [&_*]:invisible",
       )}
     >
       <Inline nodes={node.children} ctx={ctx} />
