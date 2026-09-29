@@ -42,7 +42,7 @@ The table and read policy from step 1. The new policy goes at the end.
 
 Only signed-in users can insert, and `with check (auth.uid() = user_id)` means only as themselves.
 
-```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
 --- a/supabase/migrations/20260928000000_guestbook.sql
 +++ b/supabase/migrations/20260928000000_guestbook.sql
 @@ -1,22 +1,29 @@
@@ -77,7 +77,7 @@ Only signed-in users can insert, and `with check (auth.uid() = user_id)` means o
 +  with check (auth.uid() = user_id);
 ```
 
-[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe/supabase/migrations/20260928000000_guestbook.sql)
+[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9b7fb5c960e2ad2086522f6f3a1f55e1720943b9/supabase/migrations/20260928000000_guestbook.sql)
 
 ## Posting a Message
 
@@ -85,7 +85,7 @@ The form from Setup Night comes back, now saving to the database.
 
 Controlled inputs: each field's text lives in state (`useState`) and updates on every keystroke.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,89 +1,91 @@
@@ -184,7 +184,7 @@ Controlled inputs: each field's text lives in state (`useState`) and updates on 
 
 `handleSubmit` is `async`, so it can `await` the database. `preventDefault` stops the browser's own page-reloading submit.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,91 +1,99 @@
@@ -291,7 +291,7 @@ Controlled inputs: each field's text lives in state (`useState`) and updates on 
 
 The insert sends the typed name and the message; `.select().single()` hands back the saved row.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,99 +1,107 @@
@@ -406,7 +406,7 @@ The insert sends the typed name and the message; `.select().single()` hands back
 
 Put the new row at the top of the list and clear the form.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,107 +1,114 @@
@@ -528,7 +528,7 @@ Put the new row at the top of the list and clear the form.
 
 `{session && (…)}` shows the form only to signed-in users; `onChange` copies each keystroke into state.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,114 +1,121 @@
@@ -660,7 +660,7 @@ Put the new row at the top of the list and clear the form.
 
 The message box works the same way, and signed-out visitors get a hint instead of the form.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,121 +1,140 @@
@@ -806,7 +806,7 @@ The message box works the same way, and signed-out visitors get a hint instead o
  }
 ```
 
-[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe/components/Guestbook.tsx)
+[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9b7fb5c960e2ad2086522f6f3a1f55e1720943b9/components/Guestbook.tsx)
 
 ## What's Wrong with This?
 

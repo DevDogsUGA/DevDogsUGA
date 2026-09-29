@@ -42,7 +42,7 @@ One more policy, at the end.
 
 Signed-in users can delete a message only when it's theirs. There's no update policy, on purpose.
 
-```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/cd01fa1e5cad6019bb5315f8c30a960c6646fd39...9c96784c95f0f1afc8ebf730e98106a3471c3dc6#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/6fc4e76029e55c0299adc31cb9b570101023b3d1...8f26e3ad3d31168d85c4e4b402f59da66376522f#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
 --- a/supabase/migrations/20260928000000_guestbook.sql
 +++ b/supabase/migrations/20260928000000_guestbook.sql
 @@ -1,29 +1,37 @@
@@ -85,7 +85,7 @@ Signed-in users can delete a message only when it's theirs. There's no update po
 +  using (auth.uid() = user_id);
 ```
 
-[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9c96784c95f0f1afc8ebf730e98106a3471c3dc6/supabase/migrations/20260928000000_guestbook.sql)
+[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/migrations/20260928000000_guestbook.sql)
 
 ## Only Your Own Delete Button
 
@@ -93,7 +93,7 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 `_delete` removes the row, then reloads the list.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/3b10b23bff5732a6487ba58887feab9a3d5c5f7c...0071976d48b00aa6f2786ac792f0273fae469f7d#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c7d9b57d87f8138568a002061fbbeac7316fa112...df569b9c73159f3c90ff663a51ec3aa28a6326fa#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,161 +1,168 @@
@@ -270,7 +270,7 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 `isOwnMessage` compares the signed-in user to the message's author; only then does the tile get a delete button.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/3b10b23bff5732a6487ba58887feab9a3d5c5f7c...0071976d48b00aa6f2786ac792f0273fae469f7d#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/c7d9b57d87f8138568a002061fbbeac7316fa112...df569b9c73159f3c90ff663a51ec3aa28a6326fa#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,168 +1,174 @@
@@ -451,6 +451,6 @@ Deleting takes a handler and a button, shown only on your own messages.
  }
 ```
 
-[The whole `lib/guestbook.dart` at this point](https://github.com/DevDogsUGA/Mobile-Workshops/blob/0071976d48b00aa6f2786ac792f0273fae469f7d/lib/guestbook.dart)
+[The whole `lib/guestbook.dart` at this point](https://github.com/DevDogsUGA/Mobile-Workshops/blob/df569b9c73159f3c90ff663a51ec3aa28a6326fa/lib/guestbook.dart)
 
 <!-- prettier-ignore-end -->

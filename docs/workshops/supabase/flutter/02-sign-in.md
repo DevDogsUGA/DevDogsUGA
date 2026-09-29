@@ -62,7 +62,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `kIsWeb` says whether we're in a browser: come back to this page on the web, or to the app's deep link on a phone.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/864da7db51e62744090c1cc3dd29bf25794d7cfb...41d9344b3662f0648003d163e1e439a4f7042bbc#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,77 +1,84 @@
@@ -154,7 +154,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `Session?`: the `?` means it can be `null`, i.e. signed out.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/864da7db51e62744090c1cc3dd29bf25794d7cfb...41d9344b3662f0648003d163e1e439a4f7042bbc#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,84 +1,85 @@
@@ -247,7 +247,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `onAuthStateChange` is a `Stream`. `listen` runs on every sign-in and sign-out, and `setState` redraws.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/864da7db51e62744090c1cc3dd29bf25794d7cfb...41d9344b3662f0648003d163e1e439a4f7042bbc#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,85 +1,92 @@
@@ -347,7 +347,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `OAuthProvider('custom:devdogsuga')` is our custom provider, and `=>` is shorthand for a one-line function.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/864da7db51e62744090c1cc3dd29bf25794d7cfb...41d9344b3662f0648003d163e1e439a4f7042bbc#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,92 +1,101 @@
@@ -456,7 +456,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `build` copies `_session` into a local, so Dart knows it can't change halfway through.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/864da7db51e62744090c1cc3dd29bf25794d7cfb...41d9344b3662f0648003d163e1e439a4f7042bbc#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,101 +1,103 @@
@@ -567,7 +567,7 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `session == null ? … : …` picks which button to show.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/864da7db51e62744090c1cc3dd29bf25794d7cfb...41d9344b3662f0648003d163e1e439a4f7042bbc#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/7fd7904f48cb294ede0ea901345dabc44cdff2af...2602d3aed596335ac990eb003f8e08af7fdb10c7#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,103 +1,116 @@
@@ -690,6 +690,6 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
  }
 ```
 
-[The whole `lib/guestbook.dart` at this point](https://github.com/DevDogsUGA/Mobile-Workshops/blob/41d9344b3662f0648003d163e1e439a4f7042bbc/lib/guestbook.dart)
+[The whole `lib/guestbook.dart` at this point](https://github.com/DevDogsUGA/Mobile-Workshops/blob/2602d3aed596335ac990eb003f8e08af7fdb10c7/lib/guestbook.dart)
 
 <!-- prettier-ignore-end -->

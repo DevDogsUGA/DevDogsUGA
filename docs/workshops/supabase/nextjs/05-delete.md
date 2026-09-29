@@ -42,7 +42,7 @@ One more policy, at the end.
 
 Signed-in users can delete a message only when it's theirs. There's no update policy, on purpose.
 
-```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/cd01fa1e5cad6019bb5315f8c30a960c6646fd39...9c96784c95f0f1afc8ebf730e98106a3471c3dc6#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/6fc4e76029e55c0299adc31cb9b570101023b3d1...8f26e3ad3d31168d85c4e4b402f59da66376522f#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
 --- a/supabase/migrations/20260928000000_guestbook.sql
 +++ b/supabase/migrations/20260928000000_guestbook.sql
 @@ -1,29 +1,37 @@
@@ -85,7 +85,7 @@ Signed-in users can delete a message only when it's theirs. There's no update po
 +  using (auth.uid() = user_id);
 ```
 
-[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9c96784c95f0f1afc8ebf730e98106a3471c3dc6/supabase/migrations/20260928000000_guestbook.sql)
+[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/migrations/20260928000000_guestbook.sql)
 
 ## Only Your Own Delete Button
 
@@ -93,7 +93,7 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 `.delete().eq("id", id)` deletes the matching row (RLS refuses anyone else's), then drops it from the list.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/cd01fa1e5cad6019bb5315f8c30a960c6646fd39...9c96784c95f0f1afc8ebf730e98106a3471c3dc6#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/6fc4e76029e55c0299adc31cb9b570101023b3d1...8f26e3ad3d31168d85c4e4b402f59da66376522f#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,140 +1,147 @@
@@ -248,7 +248,7 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 `session?.user.id === message.user_id` shows the button only on your own messages.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/cd01fa1e5cad6019bb5315f8c30a960c6646fd39...9c96784c95f0f1afc8ebf730e98106a3471c3dc6#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/6fc4e76029e55c0299adc31cb9b570101023b3d1...8f26e3ad3d31168d85c4e4b402f59da66376522f#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,147 +1,155 @@
@@ -409,6 +409,6 @@ Deleting takes a handler and a button, shown only on your own messages.
  }
 ```
 
-[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9c96784c95f0f1afc8ebf730e98106a3471c3dc6/components/Guestbook.tsx)
+[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/components/Guestbook.tsx)
 
 <!-- prettier-ignore-end -->
