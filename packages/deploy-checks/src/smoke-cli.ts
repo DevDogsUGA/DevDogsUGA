@@ -11,9 +11,10 @@
  * Covers, per TASK-300:
  *   - every listed public route answers 200
  *   - the one known protected route redirects an anonymous request
- *   - Sentry's release for this deploy is visible, and each app's Crons
- *     monitors have a check-in on record -- both skipped with a notice, not
- *     failed, when SENTRY_AUTH_TOKEN is absent (Sentry not onboarded yet)
+ *   - Sentry's release for this deploy is visible -- skipped with a notice,
+ *     not failed, when SENTRY_AUTH_TOKEN is absent (Sentry not onboarded yet)
+ *
+ * Crons monitors aren't checked; see `sentry.ts` for why.
  *
  * Deliberately does NOT re-check config-reconcile: deploy-app.yaml runs a
  * dedicated "Reconcile meetings/workshops from @devdogsuga/events" step
@@ -27,13 +28,13 @@ import {
   allPassed,
   checkProtectedRedirect,
   checkPublicRoute,
+  retryWhilePropagating,
   formatResults,
   type CheckResult,
 } from "./checks.js";
 import { configFor, hostFor, type App } from "./config.js";
 import { requireArg, requireTier } from "./args.js";
 import {
-  checkCronMonitorCheckins,
   checkSentryRelease,
   resolveSentryConfig,
   skippedSentryCheck,
@@ -57,15 +58,19 @@ async function main(): Promise<number> {
   const origin = `https://${hostFor(app, tier)}`;
 
   const results: CheckResult[] = [];
+  // A 503 while the new version propagates isn't a broken route; see
+  // `retryWhilePropagating`.
+  const fetchApp = retryWhilePropagating();
 
   for (const path of config.publicPaths) {
-    results.push(await checkPublicRoute(`${origin}${path}`));
+    results.push(await checkPublicRoute(`${origin}${path}`, fetchApp));
   }
 
   results.push(
     await checkProtectedRedirect(
       `${origin}${config.protectedPath}`,
       config.protectedRedirectPrefix,
+      fetchApp,
     ),
   );
 
@@ -76,16 +81,10 @@ async function main(): Promise<number> {
   });
   if (!sentryConfig) {
     results.push(skippedSentryCheck("Sentry release"));
-    if (config.cronMonitorSlugs.length > 0) {
-      results.push(skippedSentryCheck("Sentry Crons check-ins"));
-    }
   } else {
     const release = process.env.GITHUB_SHA;
     if (release) {
       results.push(await checkSentryRelease(sentryConfig, release));
-    }
-    for (const slug of config.cronMonitorSlugs) {
-      results.push(await checkCronMonitorCheckins(sentryConfig, slug));
     }
   }
 

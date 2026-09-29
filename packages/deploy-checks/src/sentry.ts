@@ -13,8 +13,15 @@
  * read-only and still answers "is the Sentry pipeline actually working for
  * this deploy": whether the release `deploy-app.yaml`'s own
  * `getsentry/action-release` step just created is visible back from the
- * API, and whether each app's Crons monitors have a check-in on record.
- * Both prove events are reaching Sentry without creating one.
+ * API. That proves this deploy's release reached Sentry without creating
+ * an event.
+ *
+ * There is deliberately no check on Crons monitors. The deploy token is an
+ * organization token, which Sentry never lets read monitors (403), and
+ * "some check-in on record" passed forever once a job had reported, so it
+ * could not tell a healthy deploy from a broken one. Sentry itself opens an
+ * issue when a monitored job misses a check-in or overruns (the margins are
+ * in apps/platform/cloudflare/scheduled.ts), against the real schedule.
  */
 import type { CheckResult, FetchLike } from "./checks.js";
 
@@ -71,43 +78,6 @@ export async function checkSentryRelease(
       };
     }
     return { name, status: "pass", detail: "release visible" };
-  } catch (error) {
-    return {
-      name,
-      status: "fail",
-      detail: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
-interface CheckinListResponse {
-  readonly length?: number;
-}
-
-/** At least one check-in on record for the given Crons monitor. */
-export async function checkCronMonitorCheckins(
-  config: SentryConfig,
-  monitorSlug: string,
-  fetchImpl: FetchLike = fetch,
-): Promise<CheckResult> {
-  const name = `Sentry Crons check-ins for ${monitorSlug}`;
-  const url = `${SENTRY_API}/organizations/${config.org}/monitors/${monitorSlug}/checkins/?per_page=1`;
-  try {
-    const response = await fetchImpl(url, {
-      headers: { authorization: `Bearer ${config.authToken}` },
-    });
-    if (!response.ok) {
-      return {
-        name,
-        status: "fail",
-        detail: `HTTP ${response.status} from ${url}`,
-      };
-    }
-    const body = (await response.json()) as CheckinListResponse | unknown[];
-    const count = Array.isArray(body) ? body.length : 0;
-    return count > 0
-      ? { name, status: "pass", detail: `${count} check-in(s) on record` }
-      : { name, status: "fail", detail: "no check-ins on record" };
   } catch (error) {
     return {
       name,

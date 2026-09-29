@@ -1,6 +1,6 @@
 ---
 name: Navigation
-description: The top nav and the docs sidebar, the two data sources behind them, how console items are gated by permission, and why the user cluster streams.
+description: The top nav and the docs sidebar, the two data sources behind them, how console items are gated by permission, and why the user cluster loads on the client.
 order: 4
 section: guides
 ---
@@ -19,14 +19,18 @@ Search draws on both: `src/server/search/appEntries.ts` builds entries from the 
 
 ## Permission gating
 
-Each `ConsoleItem` carries one `permission` field — a key of `ResolvedPermissions`, or the string `"credentialsAccess"` for the credentials page, whose visibility goes beyond the flat flags and is resolved by `canSeeCredentialsPage`. `visibleConsoleItems(permissions, credentialsAccess)` in `nav.ts` filters the list, and it runs on the server: the client only ever receives the items it may see. That one field is the whole visibility model, and search inherits it, because sub-entries are only generated for a page the caller could already open.
+Each `ConsoleItem` carries one `permission` field — a key of `ResolvedPermissions`, or the string `"credentialsAccess"` for the credentials page, whose visibility goes beyond the flat flags and is resolved by `canSeeCredentialsPage`. `visibleConsoleItems(permissions, credentialsAccess)` in `nav.ts` filters the list, and it runs on the server, inside `GET /me`: the client only ever receives the items it may see. That one field is the whole visibility model, and search inherits it, because sub-entries are only generated for a page the caller could already open.
 
 The items are not the enforcement. Each console page enforces its own permission server-side; `CONSOLE_ITEMS` decides what is offered, so the two are kept in step by hand.
 
-## Why the user cluster streams
+## Why the user cluster loads on the client
 
-`TopNav` renders the chrome — logo, links, search, app switcher — and wraps each per-request piece in its own `<Suspense>`: `TopNavConsole`, `TopNavProfile`, and `TopNavMobile`, all in `TopNavUser.tsx`. Each awaits `getNavUser()` (`TopNav/data.ts`), wrapped in React's `cache()` so the three share one lookup. It is deliberately **not** `"use cache"`: it reads auth cookies, so it must be a per-request memo. A cross-request cache here would serve one member's navbar to another.
+Pages under `(site)` are cached as HTML and shared by every visitor, so nothing in the navbar's server render may depend on who is asking. `TopNav` renders the chrome (logo, links, search, app switcher) plus the loading state of the per-viewer pieces, `TopNavProfile` and `TopNavMobile` in `TopNavUser.tsx`. After hydration, `NavUserProvider` fetches `GET /me` (`app/(api)/me/route.ts`) with TanStack Query and fills them in: the avatar, the role, the filtered console items, and the verification checklist data that `/account` also reads.
+
+`/me` runs `getNavUser()` (`TopNav/data.ts`) and returns `private, no-store`. It 404s to a navigation and to a cross-site request, so it isn't a page anyone lands on, and robots.txt disallows it. A visitor with no Supabase session cookie never calls it at all.
+
+It refetches when the tab regains focus after a minute, and whenever the server re-renders the `(site)` layout (a `router.refresh()`, or a server action that revalidates): `NavUserRefresh` receives a fresh object on each such render and invalidates the query. Signing out clears it immediately.
+
+Don't read the session in a `(site)` layout or in `TopNav`. One `cookies()` there makes every page uncacheable, or, worse, caches one member's navbar for everyone.
 
 `NavLinks` sits inside a boundary for a different reason — it is a client component reading `usePathname()` for active-link highlighting, and `NavLinksFallback` renders the same links without it until the pathname resolves.
-
-Partial prerendering is currently switched off, so this shape buys less than it was written for; see [Next.js](/docs/platform/guides/stack/nextjs) for what `cacheComponents` does and why it is off. The boundaries stay because the data behind them is genuinely per-request either way.

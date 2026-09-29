@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import UnderConstruction from "~/components/UnderConstruction";
 
 /**
+ * Static copy; changes only with a deploy.
+ */
+export const revalidate = false;
+
+/**
  * Title and description follow the same rule as `/community`: the description
  * is the navbar entry's, from `config/nav.ts`, and it describes the finished
  * page rather than the placeholder standing in for it.

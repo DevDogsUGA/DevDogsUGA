@@ -38,7 +38,7 @@ section: infrastructure
 ```
 
 - **`name`** — the page's title: its row in the sidebar, the browser tab, and its search result. Without it the title falls back to the first `# ` heading, then to the title-cased filename. Not breadcrumbs: that trail is the URL's own segments, title-cased.
-- **`description`** — one sentence. It is the `<meta name="description">`, the blurb beside the page in folder listings and search results, and on a project's `index.md` the card subtitle on `/docs`. The lint warns about any page with none once the file passes 300 words — the whole file, `<details>` bodies included, not the visible count below.
+- **`description`** — one sentence. It is the `<meta name="description">`, the blurb beside the page in folder listings and search results, and on a project's `index.md` the card subtitle on `/docs`. The lint warns about any page with none once the file passes 300 words of prose — `<details>` bodies included, not the visible count below.
 - **`order`** — where the page sits among its siblings. See [Sidebar ordering](#sidebar-ordering).
 - **`section`** — one of `getting-started`, `guides`, `infrastructure`, `reference`. A project's `index.md` takes no section: it is always "Overview". Every other page needs one, explicit or defaulted: a page under a `reference/` folder defaults to `reference`, anything else defaults to `guides`. `infrastructure` is maintainer/officer-only material — deploys, secrets, runbooks, OAuth/GitHub App setup, CI, the docs system itself.
 
@@ -71,7 +71,7 @@ That only works for another page also reachable from every one of this page's mo
 
 ## How long a page gets to be
 
-Counted in **visible words** — words outside every `<details>`:
+Counted in **visible words** — prose outside every `<details>`, code not counted:
 
 | Page           | Budget |
 | -------------- | ------ |
@@ -141,11 +141,19 @@ So `order` decides nothing up there right now. It would if a project lost its ro
 
 </details>
 
+## Folder settings and courses
+
+A folder takes its directory's name unless it has settings: a nested `index.md` with front matter (`name`, `order`, `steps`) and **no body**. It names and orders the folder, and is never a page.
+
+`steps: true` makes the folder a course: its pages are steps, each ending in a pager with a "Mark as done" button, and the sidebar ticks off finished ones. `steps` anywhere else is a build error.
+
 ## Supported syntax
 
 Standard GitHub Flavored Markdown renders — headings, tables, task lists, blockquotes, code fences, autolinks. Beyond that:
 
 **Code blocks** take a language tag — `typescript`, `bash`, `sql` — and are highlighted by [Shiki](https://shiki.style). An unregistered language falls back to plain text silently rather than failing the build, so check the block rendered. A fence tagged with the extra word `nocheck` (for example ` ```bash nocheck `) is skipped by the command check described in [the docs system](/docs/toolkit/infrastructure/docs-system#checks) — use it for example output or a command from a tool this repo doesn't have, never to silence a check on a command that really should exist.
+
+**File diffs**: a top-level ` ```diff file=<path> ` fence around a unified diff renders as a diff viewer.
 
 **Callouts** are GitHub-style blockquotes — `> [!NOTE]`, `> [!WARNING]`, `> [!TIP]` on the first line, the body on the lines below.
 

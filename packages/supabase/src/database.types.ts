@@ -1279,6 +1279,151 @@ export type Database = {
         };
         Relationships: [];
       };
+      supportConversations: {
+        Row: {
+          createdAt: string;
+          followedInDiscordAt: string | null;
+          guestId: string | null;
+          id: string;
+          lastReadMessageId: string | null;
+          role: string;
+          threadId: string;
+          userId: string | null;
+        };
+        Insert: {
+          createdAt?: string;
+          followedInDiscordAt?: string | null;
+          guestId?: string | null;
+          id?: string;
+          lastReadMessageId?: string | null;
+          role?: string;
+          threadId: string;
+          userId?: string | null;
+        };
+        Update: {
+          createdAt?: string;
+          followedInDiscordAt?: string | null;
+          guestId?: string | null;
+          id?: string;
+          lastReadMessageId?: string | null;
+          role?: string;
+          threadId?: string;
+          userId?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "supportConversations_guestId_fkey";
+            columns: ["guestId"];
+            isOneToOne: false;
+            referencedRelation: "supportGuests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      supportForumPosts: {
+        Row: {
+          answer: string | null;
+          answerMessageId: string | null;
+          createdAt: string;
+          isFaq: boolean;
+          isResolved: boolean;
+          lastMessageId: string | null;
+          question: string;
+          search: unknown;
+          tags: string[];
+          threadId: string;
+          title: string;
+          updatedAt: string;
+        };
+        Insert: {
+          answer?: string | null;
+          answerMessageId?: string | null;
+          createdAt?: string;
+          isFaq?: boolean;
+          isResolved?: boolean;
+          lastMessageId?: string | null;
+          question: string;
+          search?: unknown;
+          tags?: string[];
+          threadId: string;
+          title: string;
+          updatedAt?: string;
+        };
+        Update: {
+          answer?: string | null;
+          answerMessageId?: string | null;
+          createdAt?: string;
+          isFaq?: boolean;
+          isResolved?: boolean;
+          lastMessageId?: string | null;
+          question?: string;
+          search?: unknown;
+          tags?: string[];
+          threadId?: string;
+          title?: string;
+          updatedAt?: string;
+        };
+        Relationships: [];
+      };
+      supportGuests: {
+        Row: {
+          blockedAt: string | null;
+          createdAt: string;
+          id: string;
+          label: string;
+          lastSeenAt: string;
+          tokenHash: string;
+        };
+        Insert: {
+          blockedAt?: string | null;
+          createdAt?: string;
+          id?: string;
+          label: string;
+          lastSeenAt?: string;
+          tokenHash: string;
+        };
+        Update: {
+          blockedAt?: string | null;
+          createdAt?: string;
+          id?: string;
+          label?: string;
+          lastSeenAt?: string;
+          tokenHash?: string;
+        };
+        Relationships: [];
+      };
+      supportMessages: {
+        Row: {
+          createdAt: string;
+          guestId: string | null;
+          messageId: string;
+          threadId: string;
+          userId: string | null;
+        };
+        Insert: {
+          createdAt?: string;
+          guestId?: string | null;
+          messageId: string;
+          threadId: string;
+          userId?: string | null;
+        };
+        Update: {
+          createdAt?: string;
+          guestId?: string | null;
+          messageId?: string;
+          threadId?: string;
+          userId?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "supportMessages_guestId_fkey";
+            columns: ["guestId"];
+            isOneToOne: false;
+            referencedRelation: "supportGuests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       teamMembers: {
         Row: {
           id: string;

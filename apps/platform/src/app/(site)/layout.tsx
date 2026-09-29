@@ -6,6 +6,7 @@ import { AppSwitcherProvider } from "~/components/AppSwitcher/provider";
 import Footer from "~/components/Footer";
 import TopNav from "~/components/TopNav";
 import NavUserProvider from "~/components/TopNav/NavUserProvider";
+import SupportWidget from "~/components/SupportWidget";
 
 export default function SiteLayout({ children }: LayoutProps<"/">) {
   return (
@@ -70,6 +71,10 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
         <Suspense>
           <AutoOpen />
         </Suspense>
+
+        {/* The docs help widget. Its launcher shows on docs pages only, but it
+            mounts site-wide so Cmd-K's "Get help" can open it anywhere. */}
+        <SupportWidget />
       </AppSwitcherProvider>
     </NavUserProvider>
   );

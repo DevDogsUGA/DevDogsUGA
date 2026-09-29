@@ -1,63 +1,54 @@
-import {
-  ACCOUNT_ITEMS,
-  PROFILE_ITEMS,
-  visibleConsoleItems,
-} from "~/config/nav";
+"use client";
+
+import { ListIcon } from "@phosphor-icons/react/ssr";
+import { ACCOUNT_ITEMS, PROFILE_ITEMS } from "~/config/nav";
 import MobileSheet from "./MobileSheet";
-import { NavUserHydrator } from "./NavUserProvider";
+import { useMe } from "./NavUserProvider";
 import ProfilePopover from "./ProfilePopover";
 import SignInButton from "./SignInButton";
-import { getNavUser } from "./data";
+import UserClusterSkeleton from "./UserClusterSkeleton";
 
 /**
- * The dynamic (per-request) slice of the navbar, streamed inside a Suspense
- * boundary so the rest of the page stays statically prerenderable. Console
- * items are filtered server-side; clients only ever receive what they may see.
+ * The per-viewer slice of the navbar. The server renders the loading state
+ * (pages read no session, so they can be cached), and `/me` fills it in after
+ * hydration; see `NavUserProvider`.
  */
-export async function TopNavProfile() {
-  const user = await getNavUser();
+export function TopNavProfile() {
+  const me = useMe();
 
   // These land inside the navbar's right-hand cluster, which is already one
-  // <li>, so they render plainly. The hydrator renders nothing at all.
-  if (!user) {
+  // <li>, so they render plainly.
+  if (me === undefined) return <UserClusterSkeleton />;
+  if (me === null) return <SignInButton />;
+
+  return (
+    <ProfilePopover
+      user={me.user}
+      items={ACCOUNT_ITEMS}
+      consoleItems={me.consoleItems}
+    />
+  );
+}
+
+export function TopNavMobile() {
+  const me = useMe();
+
+  if (me === undefined) {
     return (
-      <>
-        <SignInButton />
-        <NavUserHydrator navUser={null} verification={null} />
-      </>
+      <span
+        aria-hidden
+        className="flex size-9 items-center justify-center text-mauve-300 md:hidden"
+      >
+        <ListIcon className="size-5" />
+      </span>
     );
   }
 
   return (
-    <>
-      <ProfilePopover
-        user={{ profile: user.profile, highestRole: user.highestRole }}
-        items={ACCOUNT_ITEMS}
-        consoleItems={visibleConsoleItems(
-          user.permissions,
-          user.credentialsAccess,
-        )}
-      />
-      <NavUserHydrator
-        navUser={{ profile: user.profile, highestRole: user.highestRole }}
-        verification={user.verification}
-      />
-    </>
-  );
-}
-
-export async function TopNavMobile() {
-  const user = await getNavUser();
-
-  return (
     <MobileSheet
-      consoleItems={
-        user
-          ? visibleConsoleItems(user.permissions, user.credentialsAccess)
-          : []
-      }
+      consoleItems={me?.consoleItems ?? []}
       profileItems={PROFILE_ITEMS}
-      signedIn={user !== null}
+      signedIn={me !== null}
     />
   );
 }

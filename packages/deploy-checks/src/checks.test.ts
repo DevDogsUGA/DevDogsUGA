@@ -5,6 +5,7 @@ import {
   checkPublicRoute,
   checkReconcile,
   formatResults,
+  retryWhilePropagating,
   type FetchLike,
 } from "./checks.js";
 
@@ -135,6 +136,67 @@ describe("checkReconcile", () => {
     );
     expect(result.status).toBe("fail");
     expect(result.detail).toContain("401");
+  });
+});
+
+describe("retryWhilePropagating", () => {
+  const noSleep = async () => undefined;
+
+  function sequence(statuses: number[]) {
+    const calls: string[] = [];
+    const fetchImpl = stubFetch((url) => {
+      calls.push(url);
+      return {
+        status: statuses[Math.min(calls.length, statuses.length) - 1]!,
+        body: { success: true },
+      };
+    });
+    return { calls, fetchImpl };
+  }
+
+  it("retries a 503 until the new version answers", async () => {
+    const { calls, fetchImpl } = sequence([503, 503, 200]);
+    const result = await checkReconcile(
+      "https://devdogsuga.org/cron/config-reconcile",
+      "secret",
+      retryWhilePropagating(fetchImpl, { sleep: noSleep }),
+    );
+    expect(result.status).toBe("pass");
+    expect(calls).toHaveLength(3);
+  });
+
+  it("gives up after the last attempt and reports the 503", async () => {
+    const { calls, fetchImpl } = sequence([503]);
+    const result = await checkReconcile(
+      "https://devdogsuga.org/cron/config-reconcile",
+      "secret",
+      retryWhilePropagating(fetchImpl, { attempts: 4, sleep: noSleep }),
+    );
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain("503");
+    expect(calls).toHaveLength(4);
+  });
+
+  it("doesn't retry any other failure", async () => {
+    const { calls, fetchImpl } = sequence([500, 200]);
+    const result = await checkPublicRoute(
+      "https://devdogsuga.org/",
+      retryWhilePropagating(fetchImpl, { sleep: noSleep }),
+    );
+    expect(result.status).toBe("fail");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("waits between attempts", async () => {
+    const waits: number[] = [];
+    const { fetchImpl } = sequence([503, 200]);
+    await retryWhilePropagating(fetchImpl, {
+      delayMs: 7,
+      sleep: async (ms) => {
+        waits.push(ms);
+      },
+    })("https://devdogsuga.org/");
+    expect(waits).toEqual([7]);
   });
 });
 

@@ -4,12 +4,10 @@
  * `crypto.getRandomValues` is available in every runtime this workspace
  * targets (Edge middleware, Workers, browsers, Node >=19) with no import.
  *
- * Callers mint one nonce per request in `middleware.ts` and thread it both
- * into the CSP header (`buildContentSecurityPolicy`/`buildSecurityHeaders`)
- * and onto the outgoing *request* headers, so vinext's renderer
- * (`getScriptNonceFromHeaderSources`) can read the same value back out and
- * stamp it on every script/style tag it emits -- see `csp.ts`'s file-level
- * doc comment.
+ * One nonce per response: `apps/schedule-builder` mints it in middleware and
+ * writes it onto the request headers for vinext's renderer to read back;
+ * `apps/platform` mints it in its Worker entry and stamps it onto the finished
+ * HTML. See `csp.ts`'s file-level doc comment.
  */
 export function generateNonce(): string {
   const bytes = new Uint8Array(16);

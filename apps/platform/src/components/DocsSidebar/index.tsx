@@ -1,9 +1,13 @@
 "use client";
 
+import Image, { type StaticImageData } from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SidebarIcon } from "@phosphor-icons/react/ssr";
-import { groupDocsProjects } from "~/config/docs";
+import apple from "~/assets/os/apple.svg";
+import linux from "~/assets/os/linux.svg";
+import windows from "~/assets/os/windows.svg";
+import { DOCS_PROJECT_LABELS } from "~/config/docs";
 import type { DocsSidebarTree } from "~/lib/docsTree";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
@@ -19,6 +23,57 @@ import {
   useDocsVariant,
 } from "~/components/DocsVariants/store";
 import Tree from "./Tree";
+
+/**
+ * The logo and one-line blurb for each platform value the setup pages offer.
+ * Keyed by the same `platform.value` the tabs and this select share; a value
+ * absent here (there shouldn't be one, `platforms` comes from the same fixed
+ * set) falls back to the plain label-only row.
+ *
+ * The OSes' own logos, in their own colors (the svg-logos set, CC0), not
+ * glyphs on a tile: an OS is not one of our apps. WSL is Linux inside
+ * Windows, so it is Tux on the Windows logo.
+ */
+const PLATFORM_MARKS: Record<
+  string,
+  { logo: StaticImageData; badge?: StaticImageData; description: string }
+> = {
+  macos: { logo: apple, description: "Apple silicon or Intel" },
+  linux: { logo: linux, description: "Ubuntu, Fedora, Arch and others" },
+  wsl: {
+    logo: windows,
+    badge: linux,
+    description: "Linux tools inside Windows",
+  },
+  windows: { logo: windows, description: "PowerShell, without WSL" },
+};
+
+function PlatformLogo({
+  logo,
+  badge,
+}: {
+  logo: StaticImageData;
+  badge?: StaticImageData;
+}) {
+  return (
+    <span aria-hidden className="relative flex size-6 shrink-0">
+      <Image
+        alt=""
+        src={logo}
+        sizes="24px"
+        className={`object-contain ${badge ? "size-5" : "size-6"}`}
+      />
+      {badge && (
+        <Image
+          alt=""
+          src={badge}
+          sizes="16px"
+          className="absolute -right-0.5 -bottom-0.5 size-3.5 object-contain"
+        />
+      )}
+    </span>
+  );
+}
 
 export interface DocsSidebarProps {
   projects: { slug: string; name: string; description: string | null }[];
@@ -48,7 +103,6 @@ function SidebarContent({
     [pathname],
   );
 
-  const groups = useMemo(() => groupDocsProjects(projects), [projects]);
   const offeredOs = useMemo(
     () => platforms.map((platform) => platform.value),
     [platforms],
@@ -72,25 +126,22 @@ function SidebarContent({
           aria-label="Project"
           className="w-full"
         >
-          {/* Descriptions are one short line each; see the `description`
-              frontmatter on every `docs/<project>/index.md`. They were longer
-              once, and at this width a sentence with an em-dash elaboration
-              wrapped to three lines and turned six choices into a wall. The
-              elaboration now lives in the page's opening paragraph. */}
-          {groups.map((group) => (
-            <Select.Group key={group.id} label={group.label}>
-              {group.projects.map((p) => (
-                <Select.Item
-                  key={p.slug}
-                  value={p.slug}
-                  icon={<DocsProjectMark slug={p.slug} />}
-                  description={p.description ?? undefined}
-                >
-                  {p.name}
-                </Select.Item>
-              ))}
-            </Select.Group>
-          ))}
+          {/* One line under each name, never wrapped: at this width a
+              sentence turned six choices into a wall. Brands and taglines
+              come from DOCS_PROJECT_LABELS. */}
+          {projects.map((p) => {
+            const label = DOCS_PROJECT_LABELS[p.slug];
+            return (
+              <Select.Item
+                key={p.slug}
+                value={p.slug}
+                icon={<DocsProjectMark slug={p.slug} />}
+                description={label?.tagline ?? p.description ?? p.name}
+              >
+                {label?.name ?? p.name}
+              </Select.Item>
+            );
+          })}
         </Select>
       )}
 
@@ -105,11 +156,21 @@ function SidebarContent({
         placeholder="Your platform"
         className="w-full"
       >
-        {platforms.map((platform) => (
-          <Select.Item key={platform.value} value={platform.value}>
-            {platform.label}
-          </Select.Item>
-        ))}
+        {platforms.map((platform) => {
+          const mark = PLATFORM_MARKS[platform.value];
+          return (
+            <Select.Item
+              key={platform.value}
+              value={platform.value}
+              icon={
+                mark && <PlatformLogo logo={mark.logo} badge={mark.badge} />
+              }
+              description={mark?.description}
+            >
+              {platform.label}
+            </Select.Item>
+          );
+        })}
       </Select>
 
       <Tree tree={tree} ctx={{ project, activePath }} />

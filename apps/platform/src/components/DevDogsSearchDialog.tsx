@@ -21,7 +21,8 @@ import {
   DialogTitle,
 } from "~/ui/dialog";
 import { highlightMatches } from "~/server/search/match";
-import type { SearchEntry } from "~/server/search/types";
+import { SUPPORT_ACTION_URL, type SearchEntry } from "~/server/search/types";
+import { openSupport } from "./SupportWidget/events";
 import * as icons from "~/config/icons";
 import { useSiteSearch } from "../hooks/useSiteSearch";
 
@@ -87,12 +88,14 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
   const { search, setSearch, data, isLoading } = useSiteSearch();
   const results = data !== "empty" ? data : [];
   const hasResults = results.length > 0;
-  const pageResults = results.filter((entry) => entry.group !== "docs");
+  const pageResults = results.filter((entry) => entry.group === "pages");
   const docsResults = results.filter((entry) => entry.group === "docs");
+  const forumResults = results.filter((entry) => entry.group === "forum");
 
   function handleSelect(url: string) {
     onOpenChange(false);
-    router.push(url);
+    if (url === SUPPORT_ACTION_URL) openSupport();
+    else router.push(url);
   }
 
   return (
@@ -156,6 +159,18 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
             {docsResults.length > 0 && (
               <CommandGroup heading="Docs">
                 {docsResults.map((entry) => (
+                  <SearchResultItem
+                    key={entry.id}
+                    entry={entry}
+                    query={search}
+                    onSelect={() => handleSelect(entry.url)}
+                  />
+                ))}
+              </CommandGroup>
+            )}
+            {forumResults.length > 0 && (
+              <CommandGroup heading="Answered questions">
+                {forumResults.map((entry) => (
                   <SearchResultItem
                     key={entry.id}
                     entry={entry}

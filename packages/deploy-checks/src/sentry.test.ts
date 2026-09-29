@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FetchLike } from "./checks.js";
 import {
-  checkCronMonitorCheckins,
   checkSentryRelease,
   resolveSentryConfig,
   skippedSentryCheck,
@@ -73,34 +72,5 @@ describe("checkSentryRelease", () => {
     );
     expect(result.status).toBe("fail");
     expect(result.detail).toContain("404");
-  });
-});
-
-describe("checkCronMonitorCheckins", () => {
-  it("passes when at least one check-in is on record", async () => {
-    const result = await checkCronMonitorCheckins(
-      config,
-      "platform-cron-config-reconcile",
-      stubFetch(() => ({ status: 200, body: [{ id: "1" }] })),
-    );
-    expect(result.status).toBe("pass");
-  });
-
-  it("fails when the check-in list is empty", async () => {
-    const result = await checkCronMonitorCheckins(
-      config,
-      "platform-cron-config-reconcile",
-      stubFetch(() => ({ status: 200, body: [] })),
-    );
-    expect(result.status).toBe("fail");
-  });
-
-  it("fails on a non-2xx status", async () => {
-    const result = await checkCronMonitorCheckins(
-      config,
-      "platform-cron-config-reconcile",
-      stubFetch(() => ({ status: 403 })),
-    );
-    expect(result.status).toBe("fail");
   });
 });

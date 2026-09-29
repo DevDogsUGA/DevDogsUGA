@@ -41,6 +41,9 @@ export default function robots(): MetadataRoute.Robots {
         "/github", // GitHub App webhook, signature-verified
         "/export", // CSV exports, permission-gated
         "/search", // JSON search API; there is no results PAGE to index
+        // The navbar's viewer lookup. `$` because Disallow is a prefix match,
+        // and a bare "/me" would also hide any public path starting "/me".
+        "/me$",
         // Not private. It 307s to the UGA Involvement Network listing, and is
         // here because a crawler following it leaves the site entirely; the
         // destination is already in the Organization JSON-LD's `sameAs`.

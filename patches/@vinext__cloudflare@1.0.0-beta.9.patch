@@ -1,0 +1,14 @@
+diff --git a/dist/cache/cdn-adapter.worker.js b/dist/cache/cdn-adapter.worker.js
+index 225cb5901e5b0682641d79ab17c5c72d574980e0..d313b7f92094e708143382123ca4dc29fdd7b25f 100644
+--- a/dist/cache/cdn-adapter.worker.js
++++ b/dist/cache/cdn-adapter.worker.js
+@@ -134,7 +134,8 @@ async function createCacheFacingRequest(request, serializedInvocation) {
+ 	return new Request(url, {
+ 		cf: { vary: { default: { action: "passthrough" } } },
+ 		headers,
+-		method: request.method
++		method: request.method,
++		redirect: "manual"
+ 	});
+ }
+ function restoreResponseStageRequest(request, requestUrl, requestMethod) {

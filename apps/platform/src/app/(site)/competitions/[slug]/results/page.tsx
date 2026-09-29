@@ -20,10 +20,15 @@ import { getEntrants } from "~/server/loaders/teams";
  * has merged.
  *
  * Nothing here reads the clock. Entrants and the winner change only when
- * somebody opens or merges a pull request, so there is no `connection()` and
- * the page is a plain uncached read inside the site layout's content
- * boundary.
+ * somebody opens or merges a pull request, so there is no `connection()`; the
+ * page is cached HTML that re-renders every minute (`revalidate` below).
  */
+
+/**
+ * Entrants and the winner change when a pull request opens or merges, and
+ * people watch this page for the result, so it re-renders every minute.
+ */
+export const revalidate = 60;
 
 /**
  * One of two competition routes not behind `expectSession()` -- this one and

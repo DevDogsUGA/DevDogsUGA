@@ -19,6 +19,11 @@ import {
  * there is exactly one copy.
  */
 
+/**
+ * Static data from `@devdogsuga/newsletter`; changes only with a deploy.
+ */
+export const revalidate = false;
+
 export function generateStaticParams() {
   return ISSUES.map((issue) => ({ version: issue.version }));
 }

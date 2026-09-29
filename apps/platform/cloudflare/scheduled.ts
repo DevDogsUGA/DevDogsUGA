@@ -90,10 +90,16 @@ export const CRON_ROUTES: Record<
   // edit that lands with no accompanying deploy, and as the floor if the
   // deploy-time call itself fails partway.
   "*/15 * * * *": {
-    label: "Config reconcile (meetings, workshops)",
+    label: "Config reconcile (meetings, workshops), support forum index",
     monitorSlug: "platform-cron-config-reconcile",
     monitor: { checkinMargin: 5, maxRuntime: 10 },
-    routes: ["/cron/config-reconcile"],
+    routes: [
+      "/cron/config-reconcile",
+      // Indexes native #tech-support posts for the docs widget's
+      // suggestions, keeps its Discord commands registered, and expires
+      // guests. Second, so a slow Discord never delays a config promotion.
+      "/cron/support",
+    ],
   },
   "*/10 * * * *": {
     label: "Discord role sync",

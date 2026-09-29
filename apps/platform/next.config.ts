@@ -5,28 +5,17 @@
 import type { NextConfig } from "next";
 import { buildSecurityHeaders } from "@devdogsuga/security-headers";
 import { env } from "~/env";
+import { platformSecurityHeaders } from "~/lib/securityHeaders";
 
 const config = {
   async headers() {
     return [
       {
         source: "/:path*",
-        // Same `??` fallback as `images.remotePatterns` below: CI's
-        // credential-free validate job loads this config under
-        // `SKIP_ENV_VALIDATION`, where `env.NEXT_PUBLIC_SUPABASE_URL` is
-        // `undefined` rather than a real URL. A real build never takes it.
-        headers: buildSecurityHeaders({
-          environment: env.DEPLOY_ENV,
-          supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
-          sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
-          // This static `headers()` declaration is evaluated once at
-          // build/dev-server start, not per request, so it can never mint a
-          // real nonce -- and never needs to: it is a fallback purely for
-          // routes middleware's matcher excludes (static assets, images),
-          // none of which carry an inline script to gate. See
-          // `applySecurityHeaders`'s doc comment.
-          nonce: "unused-static-fallback",
-        }),
+        // No nonce: a fallback purely for routes middleware's matcher
+        // excludes (static assets, images), none of which carry an inline
+        // script to gate. See `applySecurityHeaders`'s doc comment.
+        headers: buildSecurityHeaders(platformSecurityHeaders()),
       },
     ];
   },

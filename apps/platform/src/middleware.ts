@@ -1,57 +1,38 @@
 import { type NextRequest } from "next/server";
-import {
-  applySecurityHeaders,
-  buildContentSecurityPolicy,
-  generateNonce,
-} from "@devdogsuga/security-headers";
+import { applySecurityHeaders } from "@devdogsuga/security-headers";
+import { platformSecurityHeaders } from "~/lib/securityHeaders";
 import { updateSession } from "~/supabase/proxy";
-import { env } from "~/env";
 
 // Uses the legacy `middleware.ts` convention rather than Next 16's `proxy.ts`
 // because proxy.ts runs only on the Node.js runtime, which the OpenNext
 // Cloudflare adapter does not support. middleware.ts runs on the Edge runtime,
 // and the session refresh only uses edge-safe APIs (@supabase/ssr).
 export async function middleware(request: NextRequest) {
-  // Minted once per request and written onto the *request* headers below --
-  // see `@devdogsuga/security-headers`'s `csp.ts` file-level doc comment.
-  // vinext (like Next) reads the nonce for scripts/styles it emits itself
-  // (bootstrap module, __NEXT_DATA__, font preloads) off the request's
-  // Content-Security-Policy(-Report-Only) header, not the response's.
-  const nonce = generateNonce();
-  const cspInput = {
-    environment: env.DEPLOY_ENV,
-    supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
-    sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
-    nonce,
-  };
-  // Mutates the live Headers instance on `request` -- `updateSession` below
-  // eventually calls `NextResponse.next({ request })`, which reads this same
-  // instance and encodes it as the middleware request-header override vinext
-  // decodes server-side (`applyMiddlewareRequestHeaders` in
-  // vinext/dist/shims/headers.js) to rebuild the request `headers()` context
-  // every downstream Server Component and the renderer itself observe.
-  request.headers.set(
-    "Content-Security-Policy-Report-Only",
-    buildContentSecurityPolicy(cspInput),
-  );
-  // Plain carrier for `RootLayout`'s hand-written inline `<script>` tags
-  // (`headers().get("x-nonce")`) -- vinext parses the nonce back out of the
-  // CSP header above for its OWN emitted scripts, but there is no public API
-  // to ask it for that same value from application code, so it travels
-  // twice, once in each shape its two consumers need.
-  request.headers.set("x-nonce", nonce);
-  // Same idea, for the current URL: a layout (unlike a page) receives no
-  // `searchParams`, and there is no public API to ask Next for the request
-  // it is rendering inside of. `(site)/tools/layout.tsx` reads this to build
-  // a `callbackPath` that survives a sign-in redirect with the query string
-  // intact (e.g. `/tools/oauth/connect?redirect_uri=...`), rather than
-  // dropping straight to a bare `/auth`.
-  request.headers.set(
-    "x-request-path",
-    request.nextUrl.pathname + request.nextUrl.search,
-  );
+  // Middleware leaves the request alone wherever it can, because vinext serves
+  // a page from the shared cache only when middleware changed no request
+  // header. So there is no CSP nonce here: pages render without one and the
+  // Worker entry stamps a fresh one onto every response at the edge
+  // (`cloudflare/nonce.ts`).
+  //
+  // The one header it does add is for `/tools`, which is signed-in only and
+  // never cached. A layout (unlike a page) receives no `searchParams`, and
+  // there is no public API to ask Next for the request it is rendering inside
+  // of. `(site)/tools/layout.tsx` reads this to build a `callbackPath` that
+  // survives a sign-in redirect with the query string intact (e.g.
+  // `/tools/oauth/connect?redirect_uri=...`), rather than dropping straight to
+  // a bare `/auth`. Setting it mutates the live Headers instance on `request`,
+  // and `forwardRequest` makes `updateSession` pass it on as the middleware
+  // request-header override vinext decodes server-side to rebuild the
+  // `headers()` context.
+  const isTools = /^\/tools(\/|$)/.test(request.nextUrl.pathname);
+  if (isTools) {
+    request.headers.set(
+      "x-request-path",
+      request.nextUrl.pathname + request.nextUrl.search,
+    );
+  }
 
-  const response = await updateSession(request);
+  const response = await updateSession(request, { forwardRequest: isTools });
   // Authoritative header application -- see @devdogsuga/security-headers'
   // `applySecurityHeaders` doc comment for why this, not just next.config.ts's
   // `headers()`: that mechanism drops these headers on `/` specifically
@@ -63,10 +44,11 @@ export async function middleware(request: NextRequest) {
   // earlier merge that survives that reconciliation. next.config.ts's
   // `headers()` stays wired too -- vinext skips re-setting a header
   // middleware already set, so this is not a duplicate -- as a fallback for
-  // routes outside this middleware's matcher (static assets, images), which
-  // is exactly why that fallback path has no real nonce to carry (see its
-  // doc comment).
-  applySecurityHeaders(response.headers, cspInput);
+  // routes outside this middleware's matcher (static assets, images).
+  //
+  // The CSP set here has no nonce. On an HTML response the Worker entry
+  // replaces it with one that matches the nonce it stamps.
+  applySecurityHeaders(response.headers, platformSecurityHeaders());
   return response;
 }
 

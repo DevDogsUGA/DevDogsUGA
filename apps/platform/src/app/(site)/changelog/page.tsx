@@ -3,6 +3,11 @@ import Link from "next/link";
 import { ISSUES, PALETTE, UGA } from "@devdogsuga/newsletter";
 
 /**
+ * Static data from `@devdogsuga/newsletter`; changes only with a deploy.
+ */
+export const revalidate = false;
+
+/**
  * /changelog, the newsletter's archive. The description is the one
  * `config/nav.ts` gives this page under `SEARCH_ONLY_PAGES`; a search result
  * and this unfurl are the same promise about the same page.

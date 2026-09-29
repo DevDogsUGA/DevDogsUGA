@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { CaretRightIcon } from "@phosphor-icons/react/ssr";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { CaretRightIcon, CheckCircleIcon } from "@phosphor-icons/react/ssr";
+import { stepKey, useDoneSteps } from "~/components/DocsProgress/store";
 import { DOCS_INDEX_LABEL } from "~/config/docs";
 import { docsHref } from "~/lib/docsSlug";
 import {
+  firstPagePath,
   isIndexPage,
   type DocsSidebarSection,
   type DocsSidebarTree,
@@ -21,6 +25,8 @@ import {
 interface TreeContext {
   project: string;
   activePath: string;
+  /** Finished course steps, see ~/components/DocsProgress. */
+  done: ReadonlySet<string>;
 }
 
 const PAGE_LINK =
@@ -34,28 +40,23 @@ function contains(folder: DocsTreeFolder, activePath: string) {
 }
 
 /**
- * The disclosure control, drawn AFTER the label so it lands on the right edge
- * of the row. The label is `flex-1`, which pushes the caret to a rail every row
- * shares. Left of the label it sat at a different x on every nesting level, and
- * the indent already says how deep a row is.
+ * A collapsible row's caret, drawn AFTER the label so it lands on the right
+ * edge of the row: the label is `flex-1`, which pushes the caret to a rail
+ * every row shares. Left of the label it sat at a different x on every nesting
+ * level, and the indent already says how deep a row is.
  *
- * It stays a separate control from the link beside it, which is why this is not
- * a `<summary>`: the label navigates and the caret expands, so a reader who
- * wants the section's own page does not have to avoid a toggle to reach it.
+ * Decoration only. The whole row is the one toggle, label and caret alike, so
+ * there is no second, smaller target beside the label to aim for.
  */
-function Caret({ label, className }: { label: string; className: string }) {
+function Caret({ className }: { className: string }) {
   return (
-    <CollapsibleTrigger
-      aria-label={`Toggle ${label}`}
-      className="group flex size-5 shrink-0 items-center justify-center rounded-sm text-mauve-500 transition-colors hover:bg-mauve-800 hover:text-white"
-    >
-      <CaretRightIcon
-        className={cn(
-          "transition-transform group-data-[state=open]:rotate-90",
-          className,
-        )}
-      />
-    </CollapsibleTrigger>
+    <CaretRightIcon
+      aria-hidden
+      className={cn(
+        "shrink-0 text-mauve-500 transition-transform group-data-[state=open]:rotate-90",
+        className,
+      )}
+    />
   );
 }
 
@@ -103,12 +104,10 @@ function SectionHeading({
 
   return (
     <Collapsible defaultOpen>
-      <div className="flex items-center gap-0.5">
-        <CollapsibleTrigger className="min-w-0 flex-1 rounded-sm px-1.5 py-1 text-left text-xs font-semibold tracking-wide text-mauve-500 uppercase transition-colors hover:bg-mauve-800 hover:text-white">
-          {section.label}
-        </CollapsibleTrigger>
-        <Caret label={section.label} className="size-3" />
-      </div>
+      <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-sm px-1.5 py-1 text-left text-xs font-semibold tracking-wide text-mauve-500 uppercase transition-colors hover:bg-mauve-800 hover:text-white">
+        <span className="min-w-0 flex-1">{section.label}</span>
+        <Caret className="size-3" />
+      </CollapsibleTrigger>
       <CollapsibleContent>
         <Nodes nodes={children} ctx={ctx} depth={1} />
       </CollapsibleContent>
@@ -116,7 +115,13 @@ function SectionHeading({
   );
 }
 
-/** A folder below the first level: an inline row on its own rail. */
+/**
+ * A folder below the first level: one toggle row on its own rail. Opening it
+ * also navigates to its first page in sidebar order, the same target a reader
+ * would land on next anyway; closing it only closes it, since the active page
+ * stays reachable in the tree either way. A course (`steps: true`) also counts
+ * the steps the reader has finished.
+ */
 function Folder({
   folder,
   ctx,
@@ -126,25 +131,46 @@ function Folder({
   ctx: TreeContext;
   depth: number;
 }) {
-  const active = ctx.activePath === folder.path;
+  const router = useRouter();
+  const [open, setOpen] = useState(() => contains(folder, ctx.activePath));
+  const steps = folder.steps
+    ? folder.children.filter((node) => node.type === "page")
+    : [];
+  const finished = steps.filter((step) =>
+    ctx.done.has(stepKey(ctx.project, step.path)),
+  ).length;
+
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) return;
+    const path = firstPagePath(folder.children);
+    if (path) router.push(docsHref(ctx.project, path.split("/")));
+  }
 
   return (
-    <Collapsible defaultOpen={contains(folder, ctx.activePath)}>
-      <div className="flex items-center gap-0.5">
-        <Link
-          href={docsHref(ctx.project, folder.path.split("/"))}
-          data-active={active || undefined}
-          className={cn(
-            "min-w-0 flex-1 rounded-sm px-1.5 py-1.5 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white",
-            ACTIVE_LINK,
-          )}
-        >
-          {folder.name}
-        </Link>
-        <Caret label={folder.name} className="size-3.5" />
-      </div>
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-sm px-1.5 py-1.5 text-left text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white">
+        <span className="min-w-0 flex-1">{folder.name}</span>
+        {folder.steps && (
+          <span
+            aria-label={`${finished} of ${steps.length} done`}
+            className={cn(
+              "shrink-0 text-xs tabular-nums",
+              finished === steps.length ? "text-emerald-400" : "text-mauve-500",
+            )}
+          >
+            {finished}/{steps.length}
+          </span>
+        )}
+        <Caret className="size-3.5" />
+      </CollapsibleTrigger>
       <CollapsibleContent className="ml-3 border-l border-mauve-800 pl-1.5">
-        <Nodes nodes={folder.children} ctx={ctx} depth={depth + 1} />
+        <Nodes
+          nodes={folder.children}
+          ctx={ctx}
+          depth={depth + 1}
+          course={folder.steps}
+        />
       </CollapsibleContent>
     </Collapsible>
   );
@@ -153,10 +179,14 @@ function Folder({
 function Page({
   page,
   ctx,
+  course = false,
 }: {
   page: DocsTreeNode & { type: "page" };
   ctx: TreeContext;
+  /** A step of a course: marked once the reader has finished it. */
+  course?: boolean;
 }) {
+  const done = course && ctx.done.has(stepKey(ctx.project, page.path));
   // An index page keeps its real title everywhere else and gives it up here;
   // in the sidebar that title is already on the folder row above it, or in the
   // project switcher when the page is the project's own root.
@@ -171,7 +201,14 @@ function Page({
       title={label === page.title ? undefined : page.title}
       className={cn(PAGE_LINK, ACTIVE_LINK)}
     >
-      {label}
+      <span className="min-w-0 flex-1">{label}</span>
+      {done && (
+        <CheckCircleIcon
+          weight="fill"
+          aria-label="Done"
+          className="size-3.5 shrink-0 text-emerald-400"
+        />
+      )}
     </Link>
   );
 }
@@ -187,10 +224,13 @@ function Nodes({
   nodes,
   ctx,
   depth,
+  course = false,
 }: {
   nodes: DocsTreeNode[];
   ctx: TreeContext;
   depth: number;
+  /** These nodes are a course's own: its pages are steps. */
+  course?: boolean;
 }) {
   return (
     <ul className="flex flex-col gap-0.5">
@@ -201,7 +241,7 @@ function Nodes({
           </li>
         ) : (
           <li key={node.path}>
-            <Page page={node} ctx={ctx} />
+            <Page page={node} ctx={ctx} course={course} />
           </li>
         ),
       )}
@@ -211,11 +251,13 @@ function Nodes({
 
 export default function Tree({
   tree,
-  ctx,
+  ctx: base,
 }: {
   tree: DocsSidebarTree;
-  ctx: TreeContext;
+  ctx: Omit<TreeContext, "done">;
 }) {
+  const done = useDoneSteps();
+  const ctx = { ...base, done };
   if (tree.overview === null && tree.sections.length === 0) {
     return (
       <p className="px-2 py-1.5 text-sm text-mauve-500">

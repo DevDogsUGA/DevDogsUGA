@@ -1,15 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ListIcon } from "@phosphor-icons/react/ssr";
 import { Suspense } from "react";
 import devdog from "~/assets/devdog.svg";
 import { getDocsProjects } from "~/server/docs/queries";
 import AppSwitcherButton from "./AppSwitcherButton";
 import NavLinks, { NavLinksFallback } from "./NavLinks";
 import NavShell from "./NavShell";
+import { NavUserRefresh } from "./NavUserProvider";
 import SearchButton from "./SearchButton";
 import { TopNavMobile, TopNavProfile } from "./TopNavUser";
-import UserClusterSkeleton from "./UserClusterSkeleton";
 
 export default function TopNav() {
   // Parsed from `docs/` at build time, so this is an in-memory read; the whole
@@ -57,24 +56,13 @@ export default function TopNav() {
           <SearchButton />
           <AppSwitcherButton />
 
-          <Suspense fallback={<UserClusterSkeleton />}>
-            <TopNavProfile />
-          </Suspense>
-
-          <Suspense
-            fallback={
-              <span
-                aria-hidden
-                className="flex size-9 items-center justify-center text-mauve-300 md:hidden"
-              >
-                <ListIcon className="size-5" />
-              </span>
-            }
-          >
-            <TopNavMobile />
-          </Suspense>
+          <TopNavProfile />
+          <TopNavMobile />
         </li>
       </NavShell>
+      {/* A fresh object on every server render of this layout; see
+          NavUserRefresh. */}
+      <NavUserRefresh revision={{}} />
     </header>
   );
 }

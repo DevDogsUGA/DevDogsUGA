@@ -10,6 +10,12 @@ import { formatEventDate } from "~/lib/eventTime";
 import { getCompetitionBySlug } from "~/server/loaders/competitions";
 
 /**
+ * Read from the database, which changes when an officer edits the
+ * competition. A minute keeps edits prompt without a render per visit.
+ */
+export const revalidate = 60;
+
+/**
  * /competitions/[slug], the competition itself: title, brief, dates and
  * open/closed state, plus a link back to the GitHub issue it mirrors.
  *

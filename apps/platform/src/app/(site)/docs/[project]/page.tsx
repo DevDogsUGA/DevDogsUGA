@@ -3,6 +3,12 @@ import { docsHref } from "~/lib/docsSlug";
 import { firstPagePath } from "~/lib/docsTree";
 import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
 
+/**
+ * Built from `docs/` at build time, so it can't change until the next
+ * deploy.
+ */
+export const revalidate = false;
+
 export function generateStaticParams() {
   return getDocsProjects().map((project) => ({ project: project.slug }));
 }

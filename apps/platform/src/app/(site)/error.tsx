@@ -20,10 +20,10 @@ import * as Sentry from "@sentry/nextjs";
  */
 export default function SiteError({
   error,
-  retry,
+  reset,
 }: {
   error: Error & { digest?: string };
-  retry: () => void;
+  reset: () => void;
 }) {
   useEffect(() => {
     // captureException is safe unconditionally -- it no-ops with no DSN
@@ -45,7 +45,7 @@ export default function SiteError({
       </p>
       <div className="flex flex-wrap items-center gap-3 pt-2">
         <button
-          onClick={() => retry()}
+          onClick={() => reset()}
           className="rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
         >
           Try again

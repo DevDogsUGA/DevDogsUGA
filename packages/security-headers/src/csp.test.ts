@@ -69,6 +69,24 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).not.toMatch(/googleusercontent|discordapp|licdn\.com/);
   });
 
+  it("appends extraSources to img-src and adds media-src/frame-src only when given", () => {
+    const csp = buildContentSecurityPolicy({
+      ...base,
+      extraSources: {
+        img: ["https://cdn.discordapp.com"],
+        media: ["https://cdn.discordapp.com"],
+        frame: ["https://challenges.cloudflare.com"],
+      },
+    });
+    expect(csp).toMatch(/img-src [^;]*https:\/\/cdn\.discordapp\.com/);
+    expect(csp).toContain("media-src 'self' https://cdn.discordapp.com");
+    expect(csp).toContain("frame-src 'self' https://challenges.cloudflare.com");
+
+    const plain = buildContentSecurityPolicy(base);
+    expect(plain).not.toContain("media-src");
+    expect(plain).not.toContain("frame-src");
+  });
+
   it("denies framing and object embeds", () => {
     const csp = buildContentSecurityPolicy(base);
     expect(csp).toContain("frame-ancestors 'none'");
@@ -143,6 +161,14 @@ describe("buildContentSecurityPolicy", () => {
       expect(without).not.toContain("sha256-xyz");
       expect(withExtra).not.toBe(without);
     });
+  });
+
+  it("leaves the nonce and 'strict-dynamic' out when no nonce is given", () => {
+    const { nonce: _, ...withoutNonce } = base;
+    const csp = buildContentSecurityPolicy(withoutNonce);
+    expect(csp).toMatch(/script-src 'self'(;|$)/);
+    expect(csp).not.toContain("'nonce-");
+    expect(csp).not.toContain("'strict-dynamic'");
   });
 
   it("keeps style-src 'unsafe-inline' (no nonce/hash wiring for style yet)", () => {

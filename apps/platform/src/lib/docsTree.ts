@@ -44,9 +44,25 @@ export interface DocsTreeFolder {
    * folder's own URL is built from.
    */
   path: string;
-  /** Derived, not declared. See `folderOrder`. Null means the default. */
+  /**
+   * Its settings' `order` when it has settings, else derived. See
+   * `folderOrder`. Null means the default.
+   */
   order: number | null;
+  /** Its settings say `steps: true`: its pages are read in order. */
+  steps: boolean;
   children: DocsTreeNode[];
+}
+
+/**
+ * A folder's own settings, from a body-less `index.md` (see the compiler's
+ * `DocsFolder`), keyed by project-relative path when handed to the builders.
+ */
+export interface DocsFolderSettings {
+  path: string;
+  name: string;
+  order: number | null;
+  steps: boolean;
 }
 
 export type DocsTreeNode = DocsTreePage | DocsTreeFolder;
@@ -152,7 +168,14 @@ function effectiveOrder(node: DocsTreeNode): number {
  * the propagation is safe because both ends come from the same generator run
  * over the same project.
  */
-function folderOrder(folder: DocsTreeFolder, depth: number): number | null {
+function folderOrder(
+  folder: DocsTreeFolder,
+  depth: number,
+  settings: DocsFolderSettings | undefined,
+): number | null {
+  // A folder's settings are the folder speaking for itself, which is what the
+  // index page's number stands in for below.
+  if (settings?.order != null) return settings.order;
   const index = indexPageOf(folder);
   if (index?.order != null) return index.order;
   if (depth === 0) return null;
@@ -191,18 +214,30 @@ function sortNodes(nodes: DocsTreeNode[]): DocsTreeNode[] {
  * nested folder's `order` while it was still the null `folderFor` seeded it
  * with.
  */
-function sortTree(nodes: DocsTreeNode[], depth: number): DocsTreeNode[] {
+function sortTree(
+  nodes: DocsTreeNode[],
+  depth: number,
+  settings: ReadonlyMap<string, DocsFolderSettings>,
+): DocsTreeNode[] {
   for (const node of nodes) {
     if (node.type !== "folder") continue;
-    sortTree(node.children, depth + 1);
-    node.order = folderOrder(node, depth);
+    sortTree(node.children, depth + 1, settings);
+    node.order = folderOrder(node, depth, settings.get(node.path));
   }
   return sortNodes(nodes);
 }
 
+/**
+ * `folderSettings` are the project's folder settings, project-relative. A
+ * folder with none is named after its directory and placed by what it holds.
+ */
 export function buildDocsTree(
   pages: { path: string; title: string; order: number | null }[],
+  folderSettings: readonly DocsFolderSettings[] = [],
 ): DocsTreeNode[] {
+  const settings = new Map(
+    folderSettings.map((folder) => [folder.path, folder]),
+  );
   const root: DocsTreeNode[] = [];
   const folders = new Map<string, DocsTreeFolder>();
 
@@ -213,10 +248,11 @@ export function buildDocsTree(
     if (!folder) {
       folder = {
         type: "folder",
-        name: toTitleCase(segments.at(-1)!),
+        name: settings.get(key)?.name ?? toTitleCase(segments.at(-1)!),
         segment: segments.at(-1)!,
         path: key,
         order: null,
+        steps: settings.get(key)?.steps ?? false,
         children: [],
       };
       folders.set(key, folder);
@@ -235,7 +271,7 @@ export function buildDocsTree(
     });
   }
 
-  return sortTree(root, 0);
+  return sortTree(root, 0, settings);
 }
 
 /** The folder at a project-relative path, or null if no such folder exists. */
@@ -366,6 +402,7 @@ function isProjectOverviewPath(path: string): boolean {
  */
 export function buildDocsSidebarSections(
   pages: DocsSidebarPageInput[],
+  folderSettings: readonly DocsFolderSettings[] = [],
 ): DocsSidebarTree {
   const overviewInput = pages.find((page) => isProjectOverviewPath(page.path));
   const rest = pages.filter((page) => page !== overviewInput);
@@ -384,9 +421,36 @@ export function buildDocsSidebarSections(
     return {
       id,
       label: DOCS_SECTION_LABELS[id],
-      nodes: buildDocsTree(inSection),
+      nodes: buildDocsTree(inSection, folderSettings),
     };
   }).filter((section) => section.nodes.length > 0);
 
   return { overview, sections };
+}
+
+/** Where a page sits in the ordered course its folder is, if it is in one. */
+export interface DocsStepPosition {
+  folder: DocsTreeFolder;
+  /** The folder's pages, in reading order. */
+  steps: DocsTreePage[];
+  /** This page's position in `steps`, from 0. */
+  index: number;
+}
+
+/**
+ * The course a page belongs to: its parent folder, when that folder declares
+ * `steps: true`. Its steps are the folder's own pages in sidebar order; a
+ * subfolder inside a course is not a step.
+ */
+export function stepPositionOf(
+  nodes: DocsTreeNode[],
+  path: string,
+): DocsStepPosition | null {
+  const folder = findFolder(nodes, path.split("/").slice(0, -1).join("/"));
+  if (!folder?.steps) return null;
+  const steps = folder.children.filter(
+    (node): node is DocsTreePage => node.type === "page",
+  );
+  const index = steps.findIndex((step) => step.path === path);
+  return index === -1 ? null : { folder, steps, index };
 }

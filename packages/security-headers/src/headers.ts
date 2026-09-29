@@ -15,6 +15,13 @@ export interface SecurityHeadersInput extends CspInput {
   environment: Environment;
 }
 
+/**
+ * The header the CSP travels in. Report-Only for now; switching this to
+ * `Content-Security-Policy` is the one-line change that enforces the policy
+ * everywhere, the platform's edge-nonce path included.
+ */
+export const CSP_HEADER = "Content-Security-Policy-Report-Only";
+
 /** One header, in the `{ key, value }` shape Next's `headers()` expects. */
 export interface HeaderEntry {
   key: string;
@@ -39,20 +46,18 @@ export interface HeaderEntry {
  *         environment: env.DEPLOY_ENV,
  *         supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
  *         sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
- *         nonce: "unused-static-fallback",
  *       }),
  *     },
  *   ];
  * }
  * ```
  *
- * `nonce` is required, but the static `headers()` fallback above can never
- * mint a real per-request one (see `applySecurityHeaders`'s doc comment for
- * why `headers()` is a fallback for non-middleware routes only, not the
+ No `nonce` above: the static `headers()` fallback can never mint a real
+ * per-request one (see `applySecurityHeaders`'s doc comment for why
+ * `headers()` is a fallback for non-middleware routes only, not the
  * authoritative path). Those routes are exactly the ones with no inline
  * script to nonce (`_next/static`, `_next/image`, favicons, image
- * extensions), so the placeholder value above never gates anything real --
- * it exists only so this call type-checks.
+ * extensions).
  */
 export function buildSecurityHeaders(
   input: SecurityHeadersInput,
@@ -98,10 +103,7 @@ export function buildSecurityHeaders(
     // header is kept alongside it for the handful of older browsers/crawlers
     // that only honor `X-Frame-Options`.
     { key: "X-Frame-Options", value: "DENY" },
-    {
-      key: "Content-Security-Policy-Report-Only",
-      value: buildContentSecurityPolicy(input),
-    },
+    { key: CSP_HEADER, value: buildContentSecurityPolicy(input) },
   );
 
   return headers;

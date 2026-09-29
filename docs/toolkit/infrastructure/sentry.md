@@ -44,14 +44,16 @@ Sandbox is not in the deploy pipeline. It deploys by hand with `wrangler deploy`
 
 `deploy-app.yaml` tags every event with the deploy's commit SHA as the release (`SENTRY_RELEASE` for the Worker, `NEXT_PUBLIC_SENTRY_RELEASE` for the browser), then creates that release in Sentry and uploads the app's source maps from `dist/`. `public/.assetsignore` keeps the browser maps out of the deployed assets.
 
-The release step needs two values that no env manifest declares, so `env push` and `env audit` don't manage them. Set both by hand on the `staging` and `production` GitHub environments:
+The release step needs two values. devtools' own manifest declares both, beside `CLOUDFLARE_API_TOKEN`, because no app reads them:
 
-| Name                | Kind     | Value                                               |
-| ------------------- | -------- | --------------------------------------------------- |
-| `SENTRY_ORG`        | variable | the Sentry organization slug                        |
-| `SENTRY_AUTH_TOKEN` | secret   | an organization auth token that can create releases |
+| Name                | Kind            | Value                                               |
+| ------------------- | --------------- | --------------------------------------------------- |
+| `SENTRY_ORG`        | committed       | `devdogsuga`, the same everywhere                   |
+| `SENTRY_AUTH_TOKEN` | per-environment | an organization auth token that can create releases |
 
-Without `SENTRY_AUTH_TOKEN` the step logs a warning and the deploy continues. With it, a failed release or upload fails the deploy. The deploy smoke test also uses both to confirm the release exists and each cron monitor has checked in.
+`SENTRY_ORG` needs no setting: the deploy reads it from `.env.example`. For the token, fill in `SENTRY_AUTH_TOKEN` in `.env.staging` and `.env.production` (one token serves both), then run `pnpm devtools env push --target <target>` for each. Create it under Sentry's **Settings → Developer Settings → Organization Tokens**.
+
+Without `SENTRY_AUTH_TOKEN` the step logs a warning and the deploy continues. With it, a failed release or upload fails the deploy. The deploy smoke test also uses both to confirm the release exists. It doesn't check cron monitors: the organization token can't read them, and Sentry already opens an issue when a monitored job misses a check-in.
 
 ## devtools
 

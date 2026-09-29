@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, varchar, pgEnum, integer, boolean, text, timestamp, smallint, date, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, boolean, text, integer, pgEnum, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -687,6 +687,85 @@ export const seasonsInPlatform = platform.table.withRLS("seasons", {
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("seasons_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),]);
 
+export const supportConversationsInPlatform = platform.table.withRLS("supportConversations", {
+	id: uuid().defaultRandom().primaryKey(),
+	threadId: text().notNull(),
+	userId: uuid().references(() => users.id, { onDelete: "cascade" } ),
+	guestId: uuid().references(() => supportGuestsInPlatform.id, { onDelete: "cascade" } ),
+	role: text().default("asker").notNull(),
+	lastReadMessageId: text(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	followedInDiscordAt: timestamp({ withTimezone: true }),
+}, (table) => [
+	index("supportConversations_guestId_idx").using("btree", table.guestId.asc().nullsLast()),
+	uniqueIndex("supportConversations_thread_guest_idx").using("btree", table.threadId.asc().nullsLast(), table.guestId.asc().nullsLast()).where(sql`("guestId" IS NOT NULL)`),
+	uniqueIndex("supportConversations_thread_user_idx").using("btree", table.threadId.asc().nullsLast(), table.userId.asc().nullsLast()).where(sql`("userId" IS NOT NULL)`),
+	index("supportConversations_userId_idx").using("btree", table.userId.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+check("supportConversations_owner_check", sql`(("userId" IS NULL) <> ("guestId" IS NULL))`),check("supportConversations_role_check", sql`(role = ANY (ARRAY['asker'::text, 'follower'::text]))`),]);
+
+export const supportForumPostsInPlatform = platform.table.withRLS("supportForumPosts", {
+	threadId: text().primaryKey(),
+	title: text().notNull(),
+	question: text().notNull(),
+	answerMessageId: text(),
+	answer: text(),
+	tags: text().array().default([]).notNull(),
+	isResolved: boolean().default(false).notNull(),
+	isFaq: boolean().default(false).notNull(),
+	lastMessageId: text(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	search: customType({ dataType: () => 'tsvector' })().generatedAlwaysAs(sql`((setweight(to_tsvector('english'::regconfig, COALESCE(title, ''::text)), 'A'::"char") || setweight(to_tsvector('english'::regconfig, COALESCE(question, ''::text)), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, COALESCE(answer, ''::text)), 'C'::"char"))`),
+}, (table) => [
+	index("supportForumPosts_search_idx").using("gin", table.search.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const supportGuestsInPlatform = platform.table.withRLS("supportGuests", {
+	id: uuid().defaultRandom().primaryKey(),
+	tokenHash: text().notNull(),
+	label: text().notNull(),
+	blockedAt: timestamp({ withTimezone: true }),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	lastSeenAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("supportGuests_lastSeenAt_idx").using("btree", table.lastSeenAt.asc().nullsLast()),
+	uniqueIndex("supportGuests_tokenHash_idx").using("btree", table.tokenHash.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const supportMessagesInPlatform = platform.table.withRLS("supportMessages", {
+	messageId: text().primaryKey(),
+	threadId: text().notNull(),
+	userId: uuid().references(() => users.id, { onDelete: "set null" } ),
+	guestId: uuid().references(() => supportGuestsInPlatform.id, { onDelete: "set null" } ),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("supportMessages_threadId_idx").using("btree", table.threadId.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
 export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
 	id: uuid().defaultRandom().primaryKey(),
 	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -895,6 +974,10 @@ export { roleTypeInPlatform as roleType };
 export { rolesInPlatform as roles };
 export { seasonsInPlatform as seasons };
 export { subjectActionInPlatform as subjectAction };
+export { supportConversationsInPlatform as supportConversations };
+export { supportForumPostsInPlatform as supportForumPosts };
+export { supportGuestsInPlatform as supportGuests };
+export { supportMessagesInPlatform as supportMessages };
 export { teamMembersInPlatform as teamMembers };
 export { teamMembershipRequestsInPlatform as teamMembershipRequests };
 export { teamRoleInPlatform as teamRole };

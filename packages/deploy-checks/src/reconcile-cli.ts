@@ -18,7 +18,11 @@
  * Only platform serves this route; the config being reconciled (meetings,
  * workshops) is platform's alone.
  */
-import { checkReconcile, formatResults } from "./checks.js";
+import {
+  checkReconcile,
+  formatResults,
+  retryWhilePropagating,
+} from "./checks.js";
 import { hostFor } from "./config.js";
 import { requireTier } from "./args.js";
 
@@ -30,7 +34,9 @@ async function main(): Promise<number> {
     return 1;
   }
   const url = `https://${hostFor("platform", tier)}/cron/config-reconcile`;
-  const result = await checkReconcile(url, cronSecret);
+  // A 503 right after the deploy is the new version still propagating, not a
+  // failed reconcile; see `retryWhilePropagating`.
+  const result = await checkReconcile(url, cronSecret, retryWhilePropagating());
   process.stdout.write(`${formatResults([result])}\n`);
   return result.status === "fail" ? 1 : 0;
 }

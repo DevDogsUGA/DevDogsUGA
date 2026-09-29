@@ -81,6 +81,15 @@ jobs:
         # `devtools-ci-bare` (`@devdogsuga/devtools`'s own third bin).
         run: >-
           pnpm exec devtools-ci-bare deploy write-env
+      # The Sentry release action runs in its own container and never sees the
+      # file above, so the org slug (a committed value in devtools' manifest,
+      # not a GitHub variable) is lifted into the job environment for it and
+      # the smoke test. `write-env` single-quotes every value, and GITHUB_ENV
+      # keeps quotes literally, so both quote styles are stripped here; with
+      # them left in, the smoke test asked Sentry for org `'devdogsuga'` and
+      # got a 404.
+      - name: Export SENTRY_ORG from .env.${{ inputs.tier }}
+        run: grep -m1 '^SENTRY_ORG=' ".env.$DEPLOY_ENV" | tr -d "\"'" >> "$GITHUB_ENV"
       - name: Build the workspace packages this app depends on
         run: pnpm -r --filter '${{ matrix.app }}^...' run build
       # `vinext build`, with the env schema ENFORCED.
@@ -117,7 +126,6 @@ jobs:
         uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ matrix.app }}
         with:
           environment: ${{ env.DEPLOY_ENV }}
@@ -191,15 +199,13 @@ jobs:
       # Read-only smoke test against the Worker version just deployed: every
       # listed public route answers 200, the one known protected route
       # redirects an anonymous request, and — only when SENTRY_AUTH_TOKEN is
-      # configured — this deploy's Sentry release is visible and each app's
-      # Crons monitors have a check-in on record. Does NOT re-check
+      # configured — this deploy's Sentry release is visible. Does NOT re-check
       # config-reconcile: the step immediately above is now the one and
       # only place that runs, so this would otherwise trigger it twice.
       # Fails the job (and so this deploy) on any non-skipped failure. No
       # state-changing request of any kind.
       - name: Smoke test ${{ matrix.app }} (${{ env.DEPLOY_ENV }})
         env:
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ matrix.app }}
         run: >-
           pnpm --filter @devdogsuga/deploy-checks run smoke-test

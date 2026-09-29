@@ -6,10 +6,12 @@
  * vinext's Cloudflare integration normally deploys straight from
  * `vinext/server/app-router-entry` as `main` with no custom entry at all --
  * see the migrate-to-vinext skill's config-examples.md. This app keeps a
- * custom entry anyway, for the one thing that integration doesn't cover:
- * composing Sentry's `withSentry` around `fetch`/`scheduled` (see below).
- * Unlike apps/schedule-builder/cloudflare/worker.ts there is no Workflow
- * class to re-export here.
+ * custom entry anyway, for the two things that integration doesn't cover:
+ * composing Sentry's `withSentry` around `fetch`/`scheduled` (see below), and
+ * stamping the CSP nonce onto every HTML response (./nonce), which is what
+ * lets pages render, and cache, without one. Unlike
+ * apps/schedule-builder/cloudflare/worker.ts there is no Workflow class to
+ * re-export here.
  *
  * Server-side Sentry capture is wired HERE, via `@sentry/cloudflare`'s
  * `withSentry`, and deliberately NOT via `@sentry/nextjs`'s usual
@@ -31,6 +33,7 @@
 import * as Sentry from "@sentry/cloudflare";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
 import handler from "vinext/server/app-router-entry";
+import { withEdgeNonce } from "./nonce";
 import { scheduled, type CronEnv } from "./scheduled";
 import type { env as platformEnv } from "~/env";
 
@@ -67,15 +70,31 @@ type WorkerEnv = Pick<
   };
 
 export default Sentry.withSentry(
-  (env: WorkerEnv) =>
-    buildSentryOptions({
+  (env: WorkerEnv) => {
+    const options = buildSentryOptions({
       service: "platform",
       environment: env.DEPLOY_ENV,
       dsn: env.PLATFORM_SENTRY_DSN,
       release: env.SENTRY_RELEASE,
-    }),
+    });
+    // `enableLogs` alone only ships `Sentry.logger` calls, and this code logs
+    // through `console`. Forwarding warn/error makes the `console.error(e)`
+    // in a route's catch-all visible in Sentry Logs instead of only in the
+    // Worker's own log tail.
+    return (
+      options && {
+        ...options,
+        integrations: [
+          Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] }),
+        ],
+      }
+    );
+  },
   {
-    fetch: (request, env, ctx) => handler.fetch(request, env, ctx),
+    // Every HTML response gets its CSP nonce here, cache hits included; see
+    // ./nonce.
+    fetch: async (request, env, ctx) =>
+      withEdgeNonce(await handler.fetch(request, env, ctx)),
     scheduled: (event, env) => scheduled(event, env),
   },
 );

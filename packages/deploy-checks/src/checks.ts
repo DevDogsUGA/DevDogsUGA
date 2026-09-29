@@ -23,6 +23,41 @@ export type FetchLike = (
   json(): Promise<unknown>;
 }>;
 
+/**
+ * Retries a request that got a 503 while a new Worker version is still
+ * propagating.
+ *
+ * Right after `wrangler deploy`, vinext's Cloudflare gateway can reach a
+ * response-stage entrypoint still running the previous build. It refuses to
+ * forward that response and answers a bare 503 instead
+ * (`validateResponseStageBuildIdentity` in `@vinext/cloudflare`'s
+ * `cdn-adapter.worker.js`). The platform hit this on its first deploy with
+ * cached pages: the post-deploy reconcile got a 503, and the same call
+ * succeeded a few minutes later. Every route these checks call is safe to
+ * repeat (reconcile upserts), so a 503 is retried and anything else is
+ * returned as-is.
+ */
+export function retryWhilePropagating(
+  fetchImpl: FetchLike = fetch,
+  {
+    attempts = 12,
+    delayMs = 10_000,
+    sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)),
+  }: {
+    attempts?: number;
+    delayMs?: number;
+    sleep?: (ms: number) => Promise<void>;
+  } = {},
+): FetchLike {
+  return async (url, init) => {
+    for (let attempt = 1; ; attempt++) {
+      const response = await fetchImpl(url, init);
+      if (response.status !== 503 || attempt >= attempts) return response;
+      await sleep(delayMs);
+    }
+  };
+}
+
 /** A public route must answer 200. */
 export async function checkPublicRoute(
   url: string,

@@ -1,8 +1,12 @@
+import type { ReactNode } from "react";
 import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
+import DocsCodeCopy from "~/components/DocsCodeCopy";
+import DocsDiff from "~/components/DocsDiff";
 import TableOfContents, {
   InlineTableOfContents,
 } from "~/components/TableOfContents";
+import { splitDocsDiffs } from "~/lib/docsDiffs";
 import type { DocHeading, TOCItem } from "~/lib/toc";
 
 interface Props {
@@ -12,6 +16,8 @@ interface Props {
   headings: DocHeading[];
   breadcrumbs?: string[];
   githubUrl?: string;
+  /** Under the article: a course page's step pager. */
+  footer?: ReactNode;
 }
 
 export default function DocPageContent({
@@ -19,6 +25,7 @@ export default function DocPageContent({
   headings,
   breadcrumbs,
   githubUrl,
+  footer,
 }: Props) {
   const toc: TOCItem[] = headings.map((h) => ({
     title: h.title,
@@ -51,12 +58,32 @@ export default function DocPageContent({
             </div>
           ) : null}
 
-          <article
-            className="prose prose-invert mx-auto max-w-3xl"
-            // Our own repo's markdown, compiled at build time; nothing a
-            // visitor wrote reaches this string.
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <article className="prose prose-invert mx-auto max-w-3xl">
+            {splitDocsDiffs(html).map((part, i) =>
+              part.kind === "diff" ? (
+                <DocsDiff
+                  key={i}
+                  file={part.file}
+                  lang={part.lang}
+                  patch={part.patch}
+                  oldContent={part.oldContent}
+                  newContent={part.newContent}
+                  href={part.href}
+                />
+              ) : (
+                // Our own repo's markdown, compiled at build time; nothing a
+                // visitor wrote reaches this string. `contents`, so the
+                // prose styles see its elements as the article's own.
+                <div
+                  key={i}
+                  className="contents"
+                  dangerouslySetInnerHTML={{ __html: part.html }}
+                />
+              ),
+            )}
+          </article>
+          {footer}
+          <DocsCodeCopy />
         </div>
 
         {toc.length > 0 && (
