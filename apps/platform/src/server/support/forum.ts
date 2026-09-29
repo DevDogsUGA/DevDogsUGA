@@ -1,5 +1,5 @@
 import {
-  AllowedMentionsTypes,
+  type AllowedMentionsTypes,
   Routes,
   type APIGuildForumChannel,
   type APIMessage,

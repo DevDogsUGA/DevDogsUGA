@@ -21,6 +21,8 @@ export async function expireGuests(): Promise<number> {
     .returning({ id: supportGuests.id });
   await db
     .delete(supportMessages)
-    .where(and(isNull(supportMessages.userId), isNull(supportMessages.guestId)));
+    .where(
+      and(isNull(supportMessages.userId), isNull(supportMessages.guestId)),
+    );
   return expired.length;
 }

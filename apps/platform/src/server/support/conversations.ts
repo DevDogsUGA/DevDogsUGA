@@ -31,11 +31,7 @@ import {
   withStatusTag,
   type ForumTags,
 } from "./forum";
-import {
-  answerMessageIdFor,
-  forumTitle,
-  upsertForumPost,
-} from "./forumIndex";
+import { answerMessageIdFor, forumTitle, upsertForumPost } from "./forumIndex";
 import { displayName, owner, type Visitor } from "./identity";
 import { roleNames, toSupportMessages, webhookIdOf } from "./messages";
 
@@ -56,7 +52,10 @@ function newer(a: string | null | undefined, b: string | null | undefined) {
   return BigInt(a) > BigInt(b);
 }
 
-function statusOf(tags: ForumTags, appliedTagIds: readonly string[]): SupportStatus {
+function statusOf(
+  tags: ForumTags,
+  appliedTagIds: readonly string[],
+): SupportStatus {
   const resolved = tagId(tags, SUPPORT_TAGS.resolved);
   return resolved && appliedTagIds.includes(resolved) ? "resolved" : "open";
 }
@@ -78,12 +77,16 @@ async function conversationFor(visitor: Visitor, threadId: string) {
 }
 
 function avatarOf(visitor: Visitor): string | null {
-  return visitor.kind === "member" ? (visitor.discord?.avatarUrl ?? null) : null;
+  return visitor.kind === "member"
+    ? (visitor.discord?.avatarUrl ?? null)
+    : null;
 }
 
 /** Pings only the visitor's own linked account, which also joins them to the thread. */
 function pingIds(visitor: Visitor): string[] {
-  return visitor.kind === "member" && visitor.discord ? [visitor.discord.id] : [];
+  return visitor.kind === "member" && visitor.discord
+    ? [visitor.discord.id]
+    : [];
 }
 
 /**
@@ -103,7 +106,11 @@ export async function getInbox(
 
   const viewer =
     visitor.kind === "member"
-      ? { kind: "member" as const, name: visitor.name, discordLinked: visitor.discord !== null }
+      ? {
+          kind: "member" as const,
+          name: visitor.name,
+          discordLinked: visitor.discord !== null,
+        }
       : { kind: "guest" as const, label: visitor.label };
 
   const rows = await db
@@ -136,7 +143,9 @@ export async function getInbox(
       visitor.userId,
       visitor.discord.id,
       rows
-        .filter((row) => !row.followedInDiscordAt && activeById.has(row.threadId))
+        .filter(
+          (row) => !row.followedInDiscordAt && activeById.has(row.threadId),
+        )
         .map((row) => row.threadId),
     );
   }
@@ -194,7 +203,9 @@ async function followInDiscord(
 function projectOf(path: string): { slug: string; name: string } | null {
   const slug = /^\/docs\/([^/]+)/.exec(path)?.[1];
   if (!slug) return null;
-  return getDocsProjects().find((p) => p.slug === decodeURIComponent(slug)) ?? null;
+  return (
+    getDocsProjects().find((p) => p.slug === decodeURIComponent(slug)) ?? null
+  );
 }
 
 export interface NewConversation {
@@ -296,7 +307,7 @@ async function forumThread(
   threadId: string,
 ): Promise<APIThreadChannel> {
   const thread = await getThread(threadId);
-  if (!thread || thread.parent_id !== config.forumId) {
+  if (thread?.parent_id !== config.forumId) {
     throw new SupportError(404, "That post no longer exists.");
   }
   if (thread.thread_metadata?.locked) {
@@ -445,7 +456,8 @@ export async function readThread(
       messages.filter((m) => !m.webhook_id).map((m) => m.content),
       threadId,
     );
-    if (target) duplicateOf = { threadId: target, title: await forumTitle(target) };
+    if (target)
+      duplicateOf = { threadId: target, title: await forumTitle(target) };
   }
 
   return {

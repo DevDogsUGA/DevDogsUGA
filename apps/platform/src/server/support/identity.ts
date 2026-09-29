@@ -119,7 +119,9 @@ async function currentGuest(): Promise<Extract<
       ),
     )
     .returning({ id: supportGuests.id, label: supportGuests.label });
-  return guest ? { kind: "guest", guestId: guest.id, label: guest.label } : null;
+  return guest
+    ? { kind: "guest", guestId: guest.id, label: guest.label }
+    : null;
 }
 
 /**

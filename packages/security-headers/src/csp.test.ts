@@ -69,6 +69,24 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).not.toMatch(/googleusercontent|discordapp|licdn\.com/);
   });
 
+  it("appends extraSources to img-src and adds media-src/frame-src only when given", () => {
+    const csp = buildContentSecurityPolicy({
+      ...base,
+      extraSources: {
+        img: ["https://cdn.discordapp.com"],
+        media: ["https://cdn.discordapp.com"],
+        frame: ["https://challenges.cloudflare.com"],
+      },
+    });
+    expect(csp).toMatch(/img-src [^;]*https:\/\/cdn\.discordapp\.com/);
+    expect(csp).toContain("media-src 'self' https://cdn.discordapp.com");
+    expect(csp).toContain("frame-src 'self' https://challenges.cloudflare.com");
+
+    const plain = buildContentSecurityPolicy(base);
+    expect(plain).not.toContain("media-src");
+    expect(plain).not.toContain("frame-src");
+  });
+
   it("denies framing and object embeds", () => {
     const csp = buildContentSecurityPolicy(base);
     expect(csp).toContain("frame-ancestors 'none'");

@@ -17,3 +17,6 @@ export interface SearchEntry {
   /** Pre-escaped HTML with <mark> highlights, from docs full-text search. */
   snippet?: string;
 }
+
+/** The `url` of Cmd-K's "Get help" entry, which opens the support widget. */
+export const SUPPORT_ACTION_URL = "#get-help";

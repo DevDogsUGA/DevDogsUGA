@@ -62,7 +62,9 @@ const COMMANDS: RESTPutAPIApplicationGuildCommandsJSONBody = [
  * this is safe to call from a cron without spending that budget.
  */
 export async function ensureSupportCommands(): Promise<boolean> {
-  const app = (await asBot().get(Routes.currentApplication())) as { id: string };
+  const app = (await asBot().get(Routes.currentApplication())) as {
+    id: string;
+  };
   const route = Routes.applicationGuildCommands(app.id, env.DISCORD_GUILD_ID);
   const existing = (await asBot().get(route)) as APIApplicationCommand[];
   const names = new Set(existing.map((command) => command.name));
@@ -85,7 +87,9 @@ function ephemeral(content: string) {
  * response, so they defer (an ephemeral "thinking…") and finish in `after`,
  * editing the deferred reply with the outcome.
  */
-export async function handleInteraction(request: NextRequest): Promise<Response> {
+export async function handleInteraction(
+  request: NextRequest,
+): Promise<Response> {
   const signature = request.headers.get("x-signature-ed25519");
   const timestamp = request.headers.get("x-signature-timestamp");
   const raw = await request.text();
@@ -159,7 +163,7 @@ async function markAsAnswer(
 ): Promise<string> {
   const threadId = command.channel.id;
   const thread = await getThread(threadId);
-  if (!thread || thread.parent_id !== config.forumId) {
+  if (thread?.parent_id !== config.forumId) {
     return "Mark as answer only works inside a support forum post.";
   }
   const answer = command.data.resolved.messages[command.data.target_id];
@@ -170,9 +174,9 @@ async function markAsAnswer(
   await upsertForumPost(thread, starter, tags);
   await setForumAnswer(threadId, answer);
 
-  await asBot().put(Routes.channelMessagesPin(threadId, answer.id)).catch(
-    (error: unknown) => console.error("[support] pin failed", error),
-  );
+  await asBot()
+    .put(Routes.channelMessagesPin(threadId, answer.id))
+    .catch((error: unknown) => console.error("[support] pin failed", error));
   await updateThread(threadId, {
     tagIds: withStatusTag(tags, thread.applied_tags ?? [], "resolved"),
   });

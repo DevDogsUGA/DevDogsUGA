@@ -26,7 +26,10 @@ export function supportRoute<Ctx>(
       return await handler(request, config, context);
     } catch (error) {
       if (error instanceof SupportError) {
-        return NextResponse.json({ error: error.message }, { status: error.status });
+        return NextResponse.json(
+          { error: error.message },
+          { status: error.status },
+        );
       }
       if (error instanceof z.ZodError) {
         return NextResponse.json(
@@ -36,7 +39,10 @@ export function supportRoute<Ctx>(
       }
       console.error("[support]", error);
       return NextResponse.json(
-        { error: "Something went wrong reaching Discord. Try again in a minute." },
+        {
+          error:
+            "Something went wrong reaching Discord. Try again in a minute.",
+        },
         { status: 502 },
       );
     }
@@ -60,7 +66,10 @@ export const BUDGETS = {
 
 export async function spend(budget: Budget, subjectId: string): Promise<void> {
   if (!(await consumeRateLimit({ ...budget, subjectId }))) {
-    throw new SupportError(429, "You're sending messages too quickly. Try again later.");
+    throw new SupportError(
+      429,
+      "You're sending messages too quickly. Try again later.",
+    );
   }
 }
 
@@ -96,9 +105,12 @@ export async function visitorOrNewGuest(
 
 export async function requireVisitor(): Promise<Visitor> {
   const visitor = await currentVisitor();
-  if (!visitor) throw new SupportError(401, "Your session ended. Ask again to continue.");
+  if (!visitor)
+    throw new SupportError(401, "Your session ended. Ask again to continue.");
   return visitor;
 }
 
 /** A Discord snowflake from a route segment. */
-export const snowflake = z.string().regex(/^\d{17,20}$/, "Unknown conversation.");
+export const snowflake = z
+  .string()
+  .regex(/^\d{17,20}$/, "Unknown conversation.");

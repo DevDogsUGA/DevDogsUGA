@@ -40,7 +40,11 @@ export interface SupportEmbed {
   authorName: string | null;
   providerName: string | null;
   footer: string | null;
-  thumbnail: { url: string; width: number | null; height: number | null } | null;
+  thumbnail: {
+    url: string;
+    width: number | null;
+    height: number | null;
+  } | null;
   image: { url: string; width: number | null; height: number | null } | null;
   fields: { name: string; value: string; inline: boolean }[];
 }
@@ -71,7 +75,12 @@ export interface SupportMessage {
   reference: { id: string; authorName: string; excerpt: string } | null;
   poll: {
     question: string;
-    answers: { id: number; text: string; emoji: SupportEmoji | null; count: number }[];
+    answers: {
+      id: number;
+      text: string;
+      emoji: SupportEmoji | null;
+      count: number;
+    }[];
     finalized: boolean;
   } | null;
   /** Display names for the `<@id>` mentions in `content`, from the payload. */

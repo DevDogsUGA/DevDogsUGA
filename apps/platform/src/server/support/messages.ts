@@ -101,13 +101,21 @@ function avatarUrl(message: APIMessage): string | null {
 }
 
 function emoji(e: APIPartialEmoji): SupportEmoji {
-  return { id: e.id ?? null, name: e.name ?? null, animated: e.animated ?? false };
+  return {
+    id: e.id ?? null,
+    name: e.name ?? null,
+    animated: e.animated ?? false,
+  };
 }
 
 function embed(e: APIEmbed): SupportEmbed {
   const media = (m: APIEmbed["image"]) =>
     m?.url
-      ? { url: m.proxy_url ?? m.url, width: m.width ?? null, height: m.height ?? null }
+      ? {
+          url: m.proxy_url ?? m.url,
+          width: m.width ?? null,
+          height: m.height ?? null,
+        }
       : null;
   return {
     url: e.url ?? null,
@@ -127,22 +135,29 @@ function embed(e: APIEmbed): SupportEmbed {
   };
 }
 
+/** Message types that are someone saying something, rendered as messages. */
+const SPOKEN = new Set<MessageType>([
+  MessageType.Default,
+  MessageType.Reply,
+  MessageType.ChatInputCommand,
+  MessageType.ContextMenuCommand,
+  MessageType.ThreadStarterMessage,
+]);
+
+/**
+ * A system line for the few notices worth showing, null for an ordinary
+ * message, and "" for everything else (boosts, joins, stage events), which
+ * is noise in a support thread and gets dropped.
+ */
 function systemText(message: APIMessage): string | null {
-  switch (message.type) {
-    case MessageType.Default:
-    case MessageType.Reply:
-    case MessageType.ChatInputCommand:
-    case MessageType.ContextMenuCommand:
-      return null;
-    case MessageType.ChannelPinnedMessage:
-      return `${message.author.username} pinned a message.`;
-    case MessageType.ThreadStarterMessage:
-      return null;
-    case MessageType.ChannelNameChange:
-      return `${message.author.username} renamed the post to ${message.content}.`;
-    default:
-      return "";
+  if (SPOKEN.has(message.type)) return null;
+  if (message.type === MessageType.ChannelPinnedMessage) {
+    return `${message.author.username} pinned a message.`;
   }
+  if (message.type === MessageType.ChannelNameChange) {
+    return `${message.author.username} renamed the post to ${message.content}.`;
+  }
+  return "";
 }
 
 /**
@@ -170,7 +185,9 @@ export async function toSupportMessages(
 ): Promise<SupportMessage[]> {
   const humanAuthorIds = [
     ...new Set(
-      messages.filter((m) => !m.webhook_id && !m.author.bot).map((m) => m.author.id),
+      messages
+        .filter((m) => !m.webhook_id && !m.author.bot)
+        .map((m) => m.author.id),
     ),
   ];
   const [officers, mine] = await Promise.all([

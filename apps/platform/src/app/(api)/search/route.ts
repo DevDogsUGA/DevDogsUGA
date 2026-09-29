@@ -7,6 +7,23 @@ import { searchDocs } from "~/server/search/docsSearch";
 import { matchEntries } from "~/server/search/match";
 import { supportConfig } from "~/server/support/config";
 import { searchForumEntries } from "~/server/support/search";
+import { SUPPORT_ACTION_URL, type SearchEntry } from "~/server/search/types";
+
+/**
+ * Cmd-K's way into the support widget. Not a page, so the dialog special-cases
+ * its `url` and opens the widget instead of navigating (see
+ * `SUPPORT_ACTION_URL`).
+ */
+const GET_HELP: SearchEntry = {
+  id: "action:support",
+  title: "Get help",
+  description: "Ask the officers in the DevDogs Discord",
+  url: SUPPORT_ACTION_URL,
+  icon: "ChatCircleIcon",
+  breadcrumbs: [],
+  group: "pages",
+};
+const HELP_QUERY = /\b(help|support|ask|stuck|question|discord|officer)/i;
 
 export async function GET(request: Request) {
   const query = (new URL(request.url).searchParams.get("query") ?? "").trim();
@@ -43,5 +60,10 @@ export async function GET(request: Request) {
       : [],
   ]);
 
-  return NextResponse.json([...pages, ...docs, ...forum]);
+  return NextResponse.json([
+    ...(supportConfig() && HELP_QUERY.test(query) ? [GET_HELP] : []),
+    ...pages,
+    ...docs,
+    ...forum,
+  ]);
 }

@@ -96,7 +96,11 @@ export async function syncForumIndex(
 
   const index = async (thread: APIThreadChannel, force: boolean) => {
     const seen = known.get(thread.id);
-    if (!force && seen !== undefined && seen === (thread.last_message_id ?? null))
+    if (
+      !force &&
+      seen !== undefined &&
+      seen === (thread.last_message_id ?? null)
+    )
       return;
     // A forum post's starter message shares the thread's id.
     const starter = await getMessage(thread.id, thread.id);

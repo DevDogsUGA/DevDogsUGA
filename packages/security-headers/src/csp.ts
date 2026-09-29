@@ -84,6 +84,17 @@ export interface CspInput {
    * ignores).
    */
   extraScriptSources?: string[];
+  /**
+   * Extra host sources for the fetch directives an app's own features need
+   * beyond the shared baseline. Kept per app rather than widened here for
+   * everyone: apps/platform's docs support widget renders Discord's CDN and
+   * frames Turnstile, and schedule-builder has no reason to allow either.
+   */
+  extraSources?: {
+    img?: string[];
+    media?: string[];
+    frame?: string[];
+  };
 }
 
 /** Origin (`scheme://host[:port]`) of a URL string, or `null` if unparseable. */
@@ -111,6 +122,7 @@ export function buildContentSecurityPolicy(input: CspInput): string {
     "blob:",
     ...(supabaseOrigin ? [supabaseOrigin] : []),
     "https://avatars.githubusercontent.com",
+    ...(input.extraSources?.img ?? []),
   ];
 
   const directives: Record<string, string[]> = {
@@ -148,6 +160,12 @@ export function buildContentSecurityPolicy(input: CspInput): string {
     ],
     "connect-src": connectSrc,
     "worker-src": ["'self'", "blob:"],
+    ...(input.extraSources?.media
+      ? { "media-src": ["'self'", ...input.extraSources.media] }
+      : {}),
+    ...(input.extraSources?.frame
+      ? { "frame-src": ["'self'", ...input.extraSources.frame] }
+      : {}),
     "manifest-src": ["'self'"],
   };
 

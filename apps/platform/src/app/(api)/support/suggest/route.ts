@@ -13,7 +13,9 @@ import type { SupportSuggestion } from "~/lib/support/types";
  * anonymized index or the public docs.
  */
 export const GET = supportRoute(async (request) => {
-  const query = (request.nextUrl.searchParams.get("q") ?? "").trim().slice(0, 200);
+  const query = (request.nextUrl.searchParams.get("q") ?? "")
+    .trim()
+    .slice(0, 200);
   if (query.length < 4) return NextResponse.json([]);
 
   const [forum, docs] = await Promise.all([

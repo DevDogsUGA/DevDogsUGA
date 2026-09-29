@@ -11,6 +11,13 @@ import { env } from "~/env";
 // because proxy.ts runs only on the Node.js runtime, which the OpenNext
 // Cloudflare adapter does not support. middleware.ts runs on the Edge runtime,
 // and the session refresh only uses edge-safe APIs (@supabase/ssr).
+const DISCORD_MEDIA_ORIGINS = [
+  "https://cdn.discordapp.com",
+  "https://media.discordapp.net",
+  "https://images-ext-1.discordapp.net",
+  "https://images-ext-2.discordapp.net",
+];
+
 export async function middleware(request: NextRequest) {
   // Minted once per request and written onto the *request* headers below --
   // see `@devdogsuga/security-headers`'s `csp.ts` file-level doc comment.
@@ -23,6 +30,14 @@ export async function middleware(request: NextRequest) {
     supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
     sentryDsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
     nonce,
+    // The docs support widget: Discord's CDN and media proxy for avatars,
+    // emoji, stickers, attachments and embed images, and Turnstile's frame
+    // for the guest check.
+    extraSources: {
+      img: DISCORD_MEDIA_ORIGINS,
+      media: DISCORD_MEDIA_ORIGINS,
+      frame: ["https://challenges.cloudflare.com"],
+    },
   };
   // Mutates the live Headers instance on `request` -- `updateSession` below
   // eventually calls `NextResponse.next({ request })`, which reads this same

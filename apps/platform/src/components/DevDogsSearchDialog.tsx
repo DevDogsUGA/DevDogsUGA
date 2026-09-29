@@ -21,7 +21,8 @@ import {
   DialogTitle,
 } from "~/ui/dialog";
 import { highlightMatches } from "~/server/search/match";
-import type { SearchEntry } from "~/server/search/types";
+import { SUPPORT_ACTION_URL, type SearchEntry } from "~/server/search/types";
+import { openSupport } from "./SupportWidget/events";
 import * as icons from "~/config/icons";
 import { useSiteSearch } from "../hooks/useSiteSearch";
 
@@ -93,7 +94,8 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
 
   function handleSelect(url: string) {
     onOpenChange(false);
-    router.push(url);
+    if (url === SUPPORT_ACTION_URL) openSupport();
+    else router.push(url);
   }
 
   return (
