@@ -84,9 +84,12 @@ jobs:
       # The Sentry release action runs in its own container and never sees the
       # file above, so the org slug (a committed value in devtools' manifest,
       # not a GitHub variable) is lifted into the job environment for it and
-      # the smoke test.
+      # the smoke test. `write-env` single-quotes every value, and GITHUB_ENV
+      # keeps quotes literally, so both quote styles are stripped here; with
+      # them left in, the smoke test asked Sentry for org `'devdogsuga'` and
+      # got a 404.
       - name: Export SENTRY_ORG from .env.${{ inputs.tier }}
-        run: grep -m1 '^SENTRY_ORG=' ".env.$DEPLOY_ENV" | tr -d '"' >> "$GITHUB_ENV"
+        run: grep -m1 '^SENTRY_ORG=' ".env.$DEPLOY_ENV" | tr -d "\"'" >> "$GITHUB_ENV"
       - name: Build the workspace packages this app depends on
         run: pnpm -r --filter '${{ matrix.app }}^...' run build
       # `vinext build`, with the env schema ENFORCED.
