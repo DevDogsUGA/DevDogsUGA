@@ -116,11 +116,12 @@ alter table public.messages drop column author_name;
 
 ## One Name per Account
 
-`lib/guestbook.dart`:
-
 No more name field: its controller, its `dispose` call, and the `TextField` go.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -19,7 +19,6 @@
  }
 
  class _GuestbookState extends State<Guestbook> {
@@ -128,7 +129,7 @@ No more name field: its controller, its `dispose` call, and the `TextField` go.
    final _bodyController = TextEditingController();
 
    Session? _session;
-@@
+@@ -40,7 +39,6 @@
 
    @override
    void dispose() {
@@ -136,31 +137,30 @@ No more name field: its controller, its `dispose` call, and the `TextField` go.
      _bodyController.dispose();
      super.dispose();
    }
-@@
+@@ -72,6 +70,5 @@
    Future<void> _signOut() => _supabase.auth.signOut();
 
    Future<void> _submit() async {
 -    final name = _nameController.text.trim();
      final body = _bodyController.text.trim();
      final session = _session;
-
-@@
-     // (The next commit looks this up server-side instead.)
-     await _supabase.from('messages').insert({'author_name': name, 'body': body});
+@@ -87,5 +83,4 @@
 
 -    _nameController.clear();
      _bodyController.clear();
      await _loadMessages();
    }
-@@
+@@ -113,15 +108,10 @@
+                     ),
+             ),
              if (session != null) ...[
-               const SizedBox(height: 8),
-               TextField(
+-              const SizedBox(height: 8),
+-              TextField(
 -                controller: _nameController,
 -                decoration: const InputDecoration(labelText: 'Name'),
 -              ),
--              const SizedBox(height: 8),
--              TextField(
+               const SizedBox(height: 8),
+               TextField(
                  controller: _bodyController,
 -                decoration: const InputDecoration(labelText: 'Message'),
 +                decoration: const InputDecoration(labelText: 'Leave a message'),
@@ -171,8 +171,10 @@ No more name field: its controller, its `dispose` call, and the `TextField` go.
 
 Only the message is required now.
 
-```diff
-   Future<void> _submit() async {
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -76,8 +73,6 @@
      final body = _bodyController.text.trim();
      final session = _session;
 -
@@ -186,7 +188,10 @@ Only the message is required now.
 
 The insert sends just the message; the server knows who's signed in.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -81,7 +76,8 @@
        return;
      }
 
@@ -198,19 +203,18 @@ The insert sends just the message; the server knows who's signed in.
 +    // under a name that isn't theirs.
 +    await _supabase.from('messages').insert({'body': body});
 
-     _bodyController.clear();
-     await _loadMessages();
 ```
 
 ## Showing the Author's Name
 
 Names live in `profiles` now, so the app fetches them along with each message.
 
-`lib/guestbook.dart`:
-
 `profiles(name)` embeds the author's profile through the foreign key, in the same query.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -50,7 +48,7 @@
      try {
        final rows = await _supabase
            .from('messages')
@@ -223,7 +227,10 @@ Names live in `profiles` now, so the app fetches them along with each message.
 
 The profile arrives as a `Map` (or `null`); `?.` and `??` fall back to "Unknown".
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -139,4 +129,11 @@
                  itemCount: _messages.length,
                  itemBuilder: (context, index) {
                    final message = _messages[index];
@@ -235,15 +242,14 @@ The profile arrives as a `Map` (or `null`); `?.` and `??` fall back to "Unknown"
 +                  final authorName = profile?['name'] as String? ?? 'Unknown';
 +
                    return ListTile(
-                     title: Text(message['author_name'] as String),
-                     subtitle: Text(message['body'] as String),
 ```
 
 The tile's title shows that name.
 
-```diff
-                   final authorName = profile?['name'] as String? ?? 'Unknown';
-
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -142,5 +139,5 @@
                    return ListTile(
 -                    title: Text(message['author_name'] as String),
 +                    title: Text(authorName),

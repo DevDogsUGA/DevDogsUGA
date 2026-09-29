@@ -18,7 +18,10 @@ The table and read policy from step 1. The new policy goes at the end.
 
 Only signed-in users can insert, and `with check (auth.uid() = user_id)` means only as themselves.
 
-```diff
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql
+--- a/supabase/migrations/20260928000000_guestbook.sql
++++ b/supabase/migrations/20260928000000_guestbook.sql
+@@ -20,3 +20,10 @@
    for select
    to anon, authenticated
    using (true);
@@ -37,11 +40,12 @@ Only signed-in users can insert, and `with check (auth.uid() = user_id)` means o
 
 The form from Setup Night comes back, now saving to the database.
 
-`components/Guestbook.tsx`:
-
 Controlled inputs: each field's text lives in state (`useState`) and updates on every keystroke.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -15,6 +15,8 @@
  export default function Guestbook() {
    const [session, setSession] = useState<Session | null>(null);
    const [messages, setMessages] = useState<Message[]>([]);
@@ -54,7 +58,10 @@ Controlled inputs: each field's text lives in state (`useState`) and updates on 
 
 `handleSubmit` is `async`, so it can `await` the database. `preventDefault` stops the browser's own page-reloading submit.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -49,3 +51,11 @@
      supabase.auth.signOut();
    }
 
@@ -66,17 +73,14 @@ Controlled inputs: each field's text lives in state (`useState`) and updates on 
 +      return;
 +    }
 +
-   return (
-     <div>
-       {session ? (
 ```
 
 The insert sends the typed name and the message; `.select().single()` hands back the saved row.
 
-```diff
-       return;
-     }
-
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -51,0 +62,8 @@
 +    // The name is whatever the signed-in user typed into the field below.
 +    // (Step 4 of the workshop looks this up server-side instead.)
 +    const { data, error } = await supabase
@@ -85,17 +89,14 @@ The insert sends the typed name and the message; `.select().single()` hands back
 +      .select("id, user_id, author_name, body, created_at")
 +      .single();
 +
-   return (
-     <div>
-       {session ? (
 ```
 
 Put the new row at the top of the list and clear the form.
 
-```diff
-       .select("id, user_id, author_name, body, created_at")
-       .single();
-
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -52,3 +70,10 @@
 +    if (!error && data) {
 +      setMessages([data, ...messages]);
 +      setName("");
@@ -110,7 +111,10 @@ Put the new row at the top of the list and clear the form.
 
 `{session && (…)}` shows the form only to signed-in users; `onChange` copies each keystroke into state.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -67,6 +92,13 @@
          </button>
        )}
 
@@ -127,17 +131,14 @@ Put the new row at the top of the list and clear the form.
 +            className="rounded-lg border border-gray-300 px-3 py-2"
 +          />
 +          <textarea
-
-       <ul className="mt-6 space-y-4">
-         {messages.map((message) => (
 ```
 
 The message box works the same way, and signed-out visitors get a hint instead of the form.
 
-```diff
-             className="rounded-lg border border-gray-300 px-3 py-2"
-           />
-           <textarea
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -73,3 +105,22 @@
 +            value={body}
 +            onChange={(event) => setBody(event.target.value)}
 +            placeholder="Leave a message"
@@ -151,16 +152,15 @@ The message box works the same way, and signed-out visitors get a hint instead o
 +          </button>
 +        </form>
 +      )}
-
++
 +      {!session && (
 +        <p className="mt-2 text-sm text-gray-500">
 +          Sign in to leave a message. Anyone can read the guestbook below.
 +        </p>
 +      )}
-+
+
        <ul className="mt-6 space-y-4">
          {messages.map((message) => (
-           <li key={message.id} className="rounded-lg border border-gray-200 p-4">
 ```
 
 [The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe/components/Guestbook.tsx)

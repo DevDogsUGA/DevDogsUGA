@@ -18,7 +18,10 @@ One more policy, at the end.
 
 Signed-in users can delete a message only when it's theirs. There's no update policy, on purpose.
 
-```diff
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql
+--- a/supabase/migrations/20260928000000_guestbook.sql
++++ b/supabase/migrations/20260928000000_guestbook.sql
+@@ -27,3 +27,11 @@
    for insert
    to authenticated
    with check (auth.uid() = user_id);
@@ -38,11 +41,12 @@ Signed-in users can delete a message only when it's theirs. There's no update po
 
 Deleting takes a handler and a button, shown only on your own messages.
 
-`lib/guestbook.dart`:
-
 `_delete` removes the row, then reloads the list.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -10,7 +10,9 @@
  String get _redirectTo =>
      kIsWeb ? Uri.base.origin : 'org.devdogsuga.mobileworkshops://login-callback';
 
@@ -53,7 +57,7 @@ Deleting takes a handler and a button, shown only on your own messages.
  class Guestbook extends StatefulWidget {
    const Guestbook({super.key});
 
-@@
+@@ -85,6 +87,11 @@
      await _loadMessages();
    }
 
@@ -69,7 +73,10 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 `isOwnMessage` compares the signed-in user to the message's author; only then does the tile get a delete button.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -129,6 +136,7 @@
                  itemCount: _messages.length,
                  itemBuilder: (context, index) {
                    final message = _messages[index];
@@ -77,7 +84,7 @@ Deleting takes a handler and a button, shown only on your own messages.
                    // Embedded from public.profiles via the messages ->
                    // profiles foreign key. messages.user_id -> profiles.id is
                    // many-to-one, so PostgREST returns a single object here
-@@
+@@ -139,7 +147,12 @@
                    return ListTile(
                      title: Text(authorName),
                      subtitle: Text(message['body'] as String),

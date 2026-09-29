@@ -36,11 +36,12 @@ order: 2
 
 Signing in only needs the client we already have: it's all under `supabase.auth`.
 
-`components/Guestbook.tsx`:
-
 `Session` is supabase-js's type for a signed-in user; `null` means nobody's signed in.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -1,6 +1,7 @@
  "use client";
 
  import { useEffect, useState } from "react";
@@ -48,20 +49,21 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
  import { supabase } from "../lib/supabase";
 
  type Message = {
-@@
+@@ -12,5 +13,6 @@
  };
 
  export default function Guestbook() {
 +  const [session, setSession] = useState<Session | null>(null);
    const [messages, setMessages] = useState<Message[]>([]);
 
-   // Load the guestbook, newest first, once on mount.
 ```
 
 `onAuthStateChange` calls back on every sign-in and sign-out. The function `useEffect` returns unsubscribes when the component goes away.
 
-```diff
-   const [session, setSession] = useState<Session | null>(null);
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -15,5 +17,16 @@
    const [messages, setMessages] = useState<Message[]>([]);
 
 +  // Keep track of whether anyone is signed in, and react to sign-in/out.
@@ -82,7 +84,10 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 
 `signInWithOAuth` sends the browser to DevDogs, then back to `redirectTo`. The cast is there because TypeScript only knows Supabase's built-in providers.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -23,3 +36,12 @@
        .then(({ data }) => setMessages(data ?? []));
    }, []);
 
@@ -95,30 +100,28 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 +    });
 +  }
 +
-   return (
-     <div>
-       <p className="mt-2 text-sm text-gray-500">
 ```
 
 `signOut` ends the session, and `onAuthStateChange` updates the page.
 
-```diff
-     });
-   }
-
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -26,2 +48,6 @@
 +  function signOut() {
 +    supabase.auth.signOut();
 +  }
 +
    return (
      <div>
-       <p className="mt-2 text-sm text-gray-500">
 ```
 
 `{session ? … : …}` in JSX picks which button to show.
 
-```diff
-
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -26,2 +52,12 @@
    return (
      <div>
 +      {session ? (
@@ -131,17 +134,14 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 +      ) : (
 +        <button
 +          onClick={signIn}
-       <p className="mt-2 text-sm text-gray-500">
-         Anyone can read the guestbook below. Sign-in is coming next.
-       </p>
 ```
 
 The note under the buttons now says what's coming next.
 
-```diff
-       ) : (
-         <button
-           onClick={signIn}
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -28,5 +64,11 @@
 +          className="rounded-lg bg-black px-4 py-2 text-white"
 +        >
 +          Sign in with DevDogs

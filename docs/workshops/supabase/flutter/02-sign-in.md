@@ -36,11 +36,12 @@ order: 2
 
 Signing in only needs the client we already have: it's all under `_supabase.auth`.
 
-`lib/guestbook.dart`:
-
 `kIsWeb` says whether we're in a browser: come back to this page on the web, or to the app's deep link on a phone.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -1,8 +1,15 @@
 +import 'package:flutter/foundation.dart' show kIsWeb;
  import 'package:flutter/material.dart';
  import 'package:supabase_flutter/supabase_flutter.dart';
@@ -60,7 +61,10 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `Session?`: the `?` means it can be `null`, i.e. signed out.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -12,6 +19,7 @@
  }
 
  class _GuestbookState extends State<Guestbook> {
@@ -72,7 +76,10 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `onAuthStateChange` is a `Stream`. `listen` runs on every sign-in and sign-out, and `setState` redraws.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -17,6 +25,13 @@
    @override
    void initState() {
      super.initState();
@@ -90,7 +97,10 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `OAuthProvider('custom:devdogsuga')` is our custom provider, and `=>` is shorthand for a one-line function.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -37,5 +52,14 @@
      }
    }
 
@@ -105,13 +115,14 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 +
    @override
    Widget build(BuildContext context) {
-     return Scaffold(
 ```
 
 `build` copies `_session` into a local, so Dart knows it can't change halfway through.
 
-```diff
-
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -40,5 +64,7 @@
    @override
    Widget build(BuildContext context) {
 +    final session = _session;
@@ -123,7 +134,10 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 
 `session == null ? … : …` picks which button to show.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -45,7 +71,20 @@
          padding: const EdgeInsets.all(16),
          child: Column(
            children: [

@@ -1559,3 +1559,20 @@
   );
   background-size: 1rem 1rem;
 }
+
+/* File diffs in the docs (components/DocsDiff), on the code blocks' own
+   surface and borders rather than @git-diff-view's GitHub palette. The
+   add/delete tints stay green and red: those carry meaning. */
+.docs-diff .diff-tailwindcss-wrapper[data-theme="dark"] .diff-style-root {
+  --diff-border--: var(--border);
+  --diff-plain-content--: var(--card);
+  --diff-plain-lineNumber--: var(--card);
+  --diff-expand-content--: var(--color-mauve-900);
+  --diff-expand-lineNumber--: var(--color-mauve-900);
+  --diff-empty-content--: var(--color-mauve-900);
+  --diff-hunk-content--: var(--color-mauve-900);
+  --diff-hunk-lineNumber--: var(--color-mauve-900);
+  --diff-plain-lineNumber-color--: var(--color-mauve-500);
+  --diff-hunk-content-color--: var(--color-mauve-400);
+  font-family: var(--font-mono);
+}

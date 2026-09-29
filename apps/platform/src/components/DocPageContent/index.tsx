@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
+import DocsDiff from "~/components/DocsDiff";
 import TableOfContents, {
   InlineTableOfContents,
 } from "~/components/TableOfContents";
+import { splitDocsDiffs } from "~/lib/docsDiffs";
 import type { DocHeading, TOCItem } from "~/lib/toc";
 
 interface Props {
@@ -55,12 +57,27 @@ export default function DocPageContent({
             </div>
           ) : null}
 
-          <article
-            className="prose prose-invert mx-auto max-w-3xl"
-            // Our own repo's markdown, compiled at build time; nothing a
-            // visitor wrote reaches this string.
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <article className="prose prose-invert mx-auto max-w-3xl">
+            {splitDocsDiffs(html).map((part, i) =>
+              part.kind === "diff" ? (
+                <DocsDiff
+                  key={i}
+                  file={part.file}
+                  lang={part.lang}
+                  patch={part.patch}
+                />
+              ) : (
+                // Our own repo's markdown, compiled at build time; nothing a
+                // visitor wrote reaches this string. `contents`, so the
+                // prose styles see its elements as the article's own.
+                <div
+                  key={i}
+                  className="contents"
+                  dangerouslySetInnerHTML={{ __html: part.html }}
+                />
+              ),
+            )}
+          </article>
           {footer}
         </div>
 

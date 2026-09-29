@@ -18,7 +18,10 @@ The table and read policy from step 1. The new policy goes at the end.
 
 Only signed-in users can insert, and `with check (auth.uid() = user_id)` means only as themselves.
 
-```diff
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql
+--- a/supabase/migrations/20260928000000_guestbook.sql
++++ b/supabase/migrations/20260928000000_guestbook.sql
+@@ -20,3 +20,10 @@
    for select
    to anon, authenticated
    using (true);
@@ -37,11 +40,12 @@ Only signed-in users can insert, and `with check (auth.uid() = user_id)` means o
 
 The form from Setup Night comes back, now saving to the database.
 
-`lib/guestbook.dart`:
-
 A `TextEditingController` holds what's typed in a text field.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -19,6 +19,9 @@
  }
 
  class _GuestbookState extends State<Guestbook> {
@@ -55,7 +59,10 @@ A `TextEditingController` holds what's typed in a text field.
 
 `dispose` frees the controllers when the widget goes away.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -35,6 +38,13 @@
      _loadMessages();
    }
 
@@ -73,7 +80,10 @@ A `TextEditingController` holds what's typed in a text field.
 
 `_submit` is `async`. It reads both fields and stops if either is empty.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -61,3 +71,13 @@
 
    Future<void> _signOut() => _supabase.auth.signOut();
 
@@ -87,17 +97,14 @@ A `TextEditingController` holds what's typed in a text field.
 +      return;
 +    }
 +
-   @override
-   Widget build(BuildContext context) {
-     final session = _session;
 ```
 
 `await` the insert, then clear the fields and reload the list.
 
-```diff
-       return;
-     }
-
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -64,3 +84,12 @@
 +    // The name is whatever the signed-in user typed into the field below.
 +    // (The next commit looks this up server-side instead.)
 +    await _supabase.from('messages').insert({'author_name': name, 'body': body});
@@ -114,7 +121,10 @@ A `TextEditingController` holds what's typed in a text field.
 
 `if (session != null) ...[ ]` adds the fields to the column only for signed-in users.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -83,5 +112,13 @@
                        child: const Text('Sign out'),
                      ),
              ),
@@ -130,17 +140,14 @@ A `TextEditingController` holds what's typed in a text field.
 +              TextField(
 +                controller: _bodyController,
 +                decoration: const InputDecoration(labelText: 'Message'),
-             const Divider(height: 32),
-             Expanded(
-               child: ListView.builder(
 ```
 
 Signed-out visitors get a hint instead of the form.
 
-```diff
-               TextField(
-                 controller: _bodyController,
-                 decoration: const InputDecoration(labelText: 'Message'),
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -88,3 +125,14 @@
 +              ),
 +              const SizedBox(height: 8),
 +              ElevatedButton(

@@ -116,11 +116,12 @@ alter table public.messages drop column author_name;
 
 ## One Name per Account
 
-`components/Guestbook.tsx`:
-
 No more name field: its state, its reset, and the input all go.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -15,7 +18,6 @@
  export default function Guestbook() {
    const [session, setSession] = useState<Session | null>(null);
    const [messages, setMessages] = useState<Message[]>([]);
@@ -128,7 +129,7 @@ No more name field: its state, its reset, and the input all go.
    const [body, setBody] = useState("");
 
    // Keep track of whether anyone is signed in, and react to sign-in/out.
-@@
+@@ -69,7 +77,6 @@
 
      if (!error && data) {
        setMessages([data, ...messages]);
@@ -136,7 +137,7 @@ No more name field: its state, its reset, and the input all go.
        setBody("");
      }
    }
-@@
+@@ -94,13 +101,6 @@
 
        {session && (
          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
@@ -154,7 +155,10 @@ No more name field: its state, its reset, and the input all go.
 
 Only the message is required now.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -53,9 +59,7 @@
 
    async function handleSubmit(event: React.FormEvent) {
      event.preventDefault();
@@ -169,7 +173,10 @@ Only the message is required now.
 
 The insert sends just the message. `profiles(name)` embeds the author's profile in the row that comes back.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -59,13 +63,17 @@
        return;
      }
 
@@ -198,11 +205,12 @@ The insert sends just the message. `profiles(name)` embeds the author's profile 
 
 Names live in `profiles` now, so the page fetches them along with each message.
 
-`components/Guestbook.tsx`:
-
 `profiles` replaces `author_name` in the `Message` type: one object, or `null`.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -7,9 +7,12 @@
  type Message = {
    id: string;
    user_id: string;
@@ -220,7 +228,10 @@ Names live in `profiles` now, so the page fetches them along with each message.
 
 `profiles(name)` embeds the author's profile through the foreign key. `overrideTypes` tells TypeScript it's one object, not a list.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -33,8 +35,12 @@
    useEffect(() => {
      supabase
        .from("messages")
@@ -238,7 +249,10 @@ Names live in `profiles` now, so the page fetches them along with each message.
 
 `?.` and `??`: show the profile's name if there is one, otherwise "Unknown".
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -126,7 +126,7 @@
          {messages.map((message) => (
            <li key={message.id} className="rounded-lg border border-gray-200 p-4">
              <div className="flex items-baseline justify-between">

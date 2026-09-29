@@ -98,21 +98,23 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 Setup Night's guestbook kept entries in memory, so they vanished on refresh.
 
-`components/Guestbook.tsx`:
-
 `type Message` describes one row of the `messages` table, so TypeScript can check how we use it.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -1,11 +1,14 @@
  "use client";
 
 -import { useState } from "react";
-+import { useEffect, useState } from "react";
-+import { supabase } from "../lib/supabase";
-
+-
 -type Entry = {
 -  name: string;
 -  message: string;
 -  postedAt: Date;
++import { useEffect, useState } from "react";
++import { supabase } from "../lib/supabase";
++
 +type Message = {
 +  id: string;
 +  user_id: string;
@@ -126,7 +128,10 @@ Setup Night's guestbook kept entries in memory, so they vanished on refresh.
 
 `useState` holds the messages this component shows; setting it re-renders the list.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -9,15 +12,5 @@
  };
 
  export default function Guestbook() {
@@ -143,15 +148,14 @@ Setup Night's guestbook kept entries in memory, so they vanished on refresh.
 -    }
 +  const [messages, setMessages] = useState<Message[]>([]);
 
-     const newEntry: Entry = {
-       name: name.trim(),
 ```
 
 `useEffect` runs after the first render, and the empty `[]` means just once. It asks Supabase for the rows, newest first.
 
-```diff
- export default function Guestbook() {
-   const [messages, setMessages] = useState<Message[]>([]);
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -23,15 +16,12 @@
 
 -    const newEntry: Entry = {
 -      name: name.trim(),
@@ -179,7 +183,10 @@ Setup Night's guestbook kept entries in memory, so they vanished on refresh.
 
 The form goes away for now. Posting comes back in step 3, once people can sign in.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -35,30 +25,8 @@
 
    return (
      <div>
@@ -215,7 +222,10 @@ The form goes away for now. Posting comes back in step 3, once people can sign i
 
 `key={message.id}` gives React a stable id for each row, so it can update the list efficiently.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -62,8 +30,8 @@
        </p>
 
        <ul className="mt-6 space-y-4">
@@ -227,15 +237,14 @@ The form goes away for now. Posting comes back in step 3, once people can sign i
 -              <h2 className="font-semibold">{entry.name}</h2>
 +              <h2 className="font-semibold">{message.author_name}</h2>
                <span className="text-sm text-gray-500">
-                 {entry.postedAt.toLocaleTimeString()}
-               </span>
 ```
 
 Each field now comes from the database row: `author_name`, `created_at`, and `body`.
 
-```diff
-             <div className="flex items-baseline justify-between">
-               <h2 className="font-semibold">{message.author_name}</h2>
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -69,8 +37,8 @@
                <span className="text-sm text-gray-500">
 -                {entry.postedAt.toLocaleTimeString()}
 +                {new Date(message.created_at).toLocaleTimeString()}

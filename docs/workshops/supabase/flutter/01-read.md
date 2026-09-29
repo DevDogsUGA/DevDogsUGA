@@ -58,15 +58,16 @@ flutter pub add supabase_flutter gotrue
 
 `main.dart` starts the app. Supabase has to be ready before the first screen draws.
 
-`lib/main.dart`:
-
 `main` is now `async`, so it can `await` setup before `runApp`. `ensureInitialized` readies Flutter's plugins first.
 
-```diff
+```diff file=lib/main.dart lang=dart
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -1,2 +1,10 @@
 -import 'package:flutter_workshop/shell.dart';
  import 'package:flutter/material.dart';
 +import 'package:supabase_flutter/supabase_flutter.dart';
-
++
 +import 'package:flutter_workshop/shell.dart';
 +
 +Future<void> main() async {
@@ -74,18 +75,14 @@ flutter pub add supabase_flutter gotrue
 +  // can initialize.
 +  WidgetsFlutterBinding.ensureInitialized();
 +
-+
- void main() {
-   runApp(const MyApp());
- }
 ```
 
 `String.fromEnvironment` reads the values that `--dart-define-from-file=.env.local` baked in when you ran the app.
 
-```diff
-   // can initialize.
-   WidgetsFlutterBinding.ensureInitialized();
-
+```diff file=lib/main.dart lang=dart
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -3,5 +11,11 @@
 +  // Both values are supplied at build/run time with
 +  // `--dart-define-from-file=.env.local` -- see the README. Neither is a
 +  // secret: the publishable key is safe to ship in a client app.
@@ -106,24 +103,25 @@ flutter pub add supabase_flutter gotrue
 
 Setup Night's guestbook kept entries in a list in memory, so they vanished on restart.
 
-`lib/guestbook.dart`:
-
 `Supabase.instance.client` is the client `main.dart` set up, shared by the whole app.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -1,17 +1,9 @@
  import 'package:flutter/material.dart';
--
++import 'package:supabase_flutter/supabase_flutter.dart';
+
 -/// One guestbook entry: who left it, what it says, and when.
 -class GuestbookEntry {
 -  GuestbookEntry({required this.name, required this.message, required this.time});
-+import 'package:supabase_flutter/supabase_flutter.dart';
++final _supabase = Supabase.instance.client;
 
 -  final String name;
 -  final String message;
 -  final DateTime time;
 -}
-+final _supabase = Supabase.instance.client;
-
+-
 -/// The guestbook we didn't get to during Setup Night: visitors leave their
 -/// name and a message. Everything lives in memory, so it resets whenever the
 -/// app restarts, and there's no way to delete an entry once it's posted.
@@ -135,7 +133,10 @@ Setup Night's guestbook kept entries in a list in memory, so they vanished on re
 
 A `StatefulWidget` keeps data that changes in its `State`. `initState` runs once, when it's created: the place to start loading.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -20,17 +12,11 @@
  }
 
  class _GuestbookState extends State<Guestbook> {
@@ -157,13 +158,14 @@ A `StatefulWidget` keeps data that changes in its `State`. `initState` runs once
 +    _loadMessages();
    }
 
-   void _submit() {
 ```
 
 A `Future` with `async`/`await` waits for the database without freezing the screen. `setState` redraws with the new rows.
 
-```diff
-     _loadMessages();
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -35,9 +21,12 @@
    }
 
 -  void _submit() {
@@ -183,17 +185,14 @@ A `Future` with `async`/`await` waits for the database without freezing the scre
 +      if (mounted) {
 +        setState(() => _messages = List<Map<String, dynamic>>.from(rows));
 +      }
-     }
-
-     setState(() {
 ```
 
 `try`/`catch` keeps one failed request from crashing the whole screen.
 
-```diff
-       if (mounted) {
-         setState(() => _messages = List<Map<String, dynamic>>.from(rows));
-       }
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -44,13 +33,8 @@
 +    } catch (error) {
 +      // The workshop's dev server might not be running yet -- don't crash
 +      // the whole screen over it.
@@ -215,7 +214,10 @@ A `Future` with `async`/`await` waits for the database without freezing the scre
 
 The form goes away for now, and each row arrives as a `Map`: `message['body']`.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -61,27 +45,17 @@
          padding: const EdgeInsets.all(16),
          child: Column(
            children: [
@@ -253,7 +255,10 @@ The form goes away for now, and each row arrives as a `Map`: `message['body']`.
 
 `created_at` arrives as text, so `_formatTime` parses it before formatting.
 
-```diff
+```diff file=lib/guestbook.dart lang=dart
+--- a/lib/guestbook.dart
++++ b/lib/guestbook.dart
+@@ -93,8 +67,10 @@
    }
  }
 

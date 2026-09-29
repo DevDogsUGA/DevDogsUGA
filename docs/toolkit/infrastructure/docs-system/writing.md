@@ -143,23 +143,17 @@ So `order` decides nothing up there right now. It would if a project lost its ro
 
 ## Folder settings and courses
 
-A folder is named after its directory unless it has settings: a nested `index.md` with front matter and **no body**. That file names and places its folder and is never a page:
+A folder takes its directory's name unless it has settings: a nested `index.md` with front matter (`name`, `order`, `steps`) and **no body**. It names and orders the folder, and is never a page.
 
-```md
----
-name: Integrate with Next.js
-order: 2
-steps: true
----
-```
-
-`steps: true` makes the folder a course. Its pages become steps in sidebar order, each ending with a pager and a "Mark as done" button, and the sidebar ticks off finished steps. Progress lives in the reader's browser. `steps` anywhere else is a build error.
+`steps: true` makes the folder a course: its pages are steps, each ending in a pager with a "Mark as done" button, and the sidebar ticks off finished ones. `steps` anywhere else is a build error.
 
 ## Supported syntax
 
 Standard GitHub Flavored Markdown renders — headings, tables, task lists, blockquotes, code fences, autolinks. Beyond that:
 
 **Code blocks** take a language tag — `typescript`, `bash`, `sql` — and are highlighted by [Shiki](https://shiki.style). An unregistered language falls back to plain text silently rather than failing the build, so check the block rendered. A fence tagged with the extra word `nocheck` (for example ` ```bash nocheck `) is skipped by the command check described in [the docs system](/docs/toolkit/infrastructure/docs-system#checks) — use it for example output or a command from a tool this repo doesn't have, never to silence a check on a command that really should exist.
+
+**File diffs**: a top-level ` ```diff file=<path> ` fence around a unified diff renders as a diff viewer.
 
 **Callouts** are GitHub-style blockquotes — `> [!NOTE]`, `> [!WARNING]`, `> [!TIP]` on the first line, the body on the lines below.
 

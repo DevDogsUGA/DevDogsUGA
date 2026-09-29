@@ -18,7 +18,10 @@ One more policy, at the end.
 
 Signed-in users can delete a message only when it's theirs. There's no update policy, on purpose.
 
-```diff
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql
+--- a/supabase/migrations/20260928000000_guestbook.sql
++++ b/supabase/migrations/20260928000000_guestbook.sql
+@@ -27,3 +27,11 @@
    for insert
    to authenticated
    with check (auth.uid() = user_id);
@@ -38,11 +41,12 @@ Signed-in users can delete a message only when it's theirs. There's no update po
 
 Deleting takes a handler and a button, shown only on your own messages.
 
-`components/Guestbook.tsx`:
-
 `.delete().eq("id", id)` deletes the matching row (RLS refuses anyone else's), then drops it from the list.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -81,6 +81,13 @@
      }
    }
 
@@ -60,7 +64,10 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 `session?.user.id === message.user_id` shows the button only on your own messages.
 
-```diff
+```diff file=components/Guestbook.tsx lang=tsx
+--- a/components/Guestbook.tsx
++++ b/components/Guestbook.tsx
+@@ -132,6 +139,14 @@
                </span>
              </div>
              <p className="mt-1 text-gray-600">{message.body}</p>
