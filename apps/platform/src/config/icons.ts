@@ -32,6 +32,7 @@ export {
   SirenIcon,
   StarIcon,
   TerminalWindowIcon,
+  ToolboxIcon,
   TrophyIcon,
   UserIcon,
   UsersIcon,

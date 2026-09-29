@@ -1,16 +1,15 @@
 "use client";
 
+import Image, { type StaticImageData } from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ComponentType } from "react";
-import {
-  AppleLogoIcon,
-  LinuxLogoIcon,
-  SidebarIcon,
-  WindowsLogoIcon,
-} from "@phosphor-icons/react/ssr";
+import { useEffect, useMemo, useState } from "react";
+import { SidebarIcon } from "@phosphor-icons/react/ssr";
+import apple from "~/assets/os/apple.svg";
+import linux from "~/assets/os/linux.svg";
+import windows from "~/assets/os/windows.svg";
 import { DOCS_PROJECT_LABELS } from "~/config/docs";
 import type { DocsSidebarTree } from "~/lib/docsTree";
-import DocsProjectMark, { Mark } from "~/components/DocsProjectMark";
+import DocsProjectMark from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
 import {
   Sheet,
@@ -26,26 +25,55 @@ import {
 import Tree from "./Tree";
 
 /**
- * The mark and one-line blurb for each platform value the setup pages offer.
+ * The logo and one-line blurb for each platform value the setup pages offer.
  * Keyed by the same `platform.value` the tabs and this select share; a value
  * absent here (there shouldn't be one, `platforms` comes from the same fixed
  * set) falls back to the plain label-only row.
+ *
+ * The OSes' own logos, in their own colors (the svg-logos set, CC0), not
+ * glyphs on a tile: an OS is not one of our apps. WSL is Linux inside
+ * Windows, so it is Tux on the Windows logo.
  */
 const PLATFORM_MARKS: Record<
   string,
-  {
-    icon: ComponentType<{ className?: string; weight?: "bold" }>;
-    description: string;
-  }
+  { logo: StaticImageData; badge?: StaticImageData; description: string }
 > = {
-  macos: { icon: AppleLogoIcon, description: "Apple silicon or Intel" },
-  linux: {
-    icon: LinuxLogoIcon,
-    description: "Ubuntu, Fedora, Arch and others",
+  macos: { logo: apple, description: "Apple silicon or Intel" },
+  linux: { logo: linux, description: "Ubuntu, Fedora, Arch and others" },
+  wsl: {
+    logo: windows,
+    badge: linux,
+    description: "Linux tools inside Windows",
   },
-  wsl: { icon: WindowsLogoIcon, description: "Linux tools inside Windows" },
-  windows: { icon: WindowsLogoIcon, description: "PowerShell, without WSL" },
+  windows: { logo: windows, description: "PowerShell, without WSL" },
 };
+
+function PlatformLogo({
+  logo,
+  badge,
+}: {
+  logo: StaticImageData;
+  badge?: StaticImageData;
+}) {
+  return (
+    <span aria-hidden className="relative flex size-6 shrink-0">
+      <Image
+        alt=""
+        src={logo}
+        sizes="24px"
+        className={`object-contain ${badge ? "size-5" : "size-6"}`}
+      />
+      {badge && (
+        <Image
+          alt=""
+          src={badge}
+          sizes="16px"
+          className="absolute -right-0.5 -bottom-0.5 size-3.5 object-contain"
+        />
+      )}
+    </span>
+  );
+}
 
 export interface DocsSidebarProps {
   projects: { slug: string; name: string; description: string | null }[];
@@ -135,9 +163,7 @@ function SidebarContent({
               key={platform.value}
               value={platform.value}
               icon={
-                mark && (
-                  <Mark icon={mark.icon} iconBg="bg-mauve-300" size="sm" />
-                )
+                mark && <PlatformLogo logo={mark.logo} badge={mark.badge} />
               }
               description={mark?.description}
             >

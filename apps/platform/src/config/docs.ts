@@ -15,31 +15,57 @@ export const DOCS_BRANCH = "main";
  * switcher, the navbar's Docs menu, and on the docs landing page.
  *
  * Keyed by docs slug, which is the name of the project's workspace directory
- * (`docs/schedule-builder/` documents `apps/schedule-builder`). The icon and
- * fill are the ones that project already wears in the fullscreen app switcher.
- * ~/config/projects.ts holds those originals, and a project whose mark changes
- * there wants the matching change here.
+ * (`docs/schedule-builder/` documents `apps/schedule-builder`). Each project
+ * wears the icon it has elsewhere:
  *
- * A project absent from this map is not an error: it falls back to the generic
+ * - `logo`: the platform is DevDogs itself, so it gets the mascot, bare, as
+ *   in the navbar and the browser tab.
+ * - `app`: an app gets its app icon, the mark on its colored tile, as in the
+ *   fullscreen app switcher and on a phone's home screen. ~/config/projects.ts
+ *   holds those originals, and a project whose icon changes there wants the
+ *   matching change here.
+ * - `glyph`: a project that is not an app (the toolkit, the workshops) has no
+ *   icon of its own, so it gets a bold Phosphor glyph with no tile, rather
+ *   than an app icon it doesn't have.
+ *
+ * `iconBg` is also the fill for the tiles on a project's folder pages. A
+ * project absent from this map is not an error: it falls back to the generic
  * book below, which is what a newly documented project gets before anyone
  * picks a mark for it.
  */
-export const DOCS_PROJECT_MARKS: Record<
-  string,
-  { icon: NavIcon; iconBg: string }
-> = {
-  platform: { icon: "HouseIcon", iconBg: "bg-cyan-400" },
-  "schedule-builder": { icon: "DogDaysIcon", iconBg: "bg-red-400" },
-  "study-group-finder": { icon: "DogPackIcon", iconBg: "bg-purple-400" },
-  workshops: { icon: "ChalkboardTeacherIcon", iconBg: "bg-amber-400" },
+export interface DocsProjectMarkSpec {
+  kind: "logo" | "app" | "glyph";
+  icon: NavIcon;
+  iconBg: string;
+}
+
+export const DOCS_PROJECT_MARKS: Record<string, DocsProjectMarkSpec> = {
+  platform: { kind: "logo", icon: "HouseIcon", iconBg: "bg-cyan-400" },
+  "schedule-builder": {
+    kind: "app",
+    icon: "DogDaysIcon",
+    iconBg: "bg-red-400",
+  },
+  "study-group-finder": {
+    kind: "app",
+    icon: "DogPackIcon",
+    iconBg: "bg-purple-400",
+  },
+  toolkit: { kind: "glyph", icon: "ToolboxIcon", iconBg: "bg-mauve-300" },
+  workshops: {
+    kind: "glyph",
+    icon: "ChalkboardTeacherIcon",
+    iconBg: "bg-amber-400",
+  },
 };
 
-export const DOCS_FALLBACK_MARK = {
+export const DOCS_FALLBACK_MARK: DocsProjectMarkSpec = {
+  kind: "glyph",
   icon: "BookOpenIcon",
   iconBg: "bg-mauve-300",
-} as const satisfies { icon: NavIcon; iconBg: string };
+};
 
-export function docsProjectMark(slug: string) {
+export function docsProjectMark(slug: string): DocsProjectMarkSpec {
   return DOCS_PROJECT_MARKS[slug] ?? DOCS_FALLBACK_MARK;
 }
 

@@ -55,9 +55,8 @@ function Select({
           className="z-50 overflow-hidden rounded-sm border border-white/20 bg-mauve-900"
           position="item-aligned"
         >
-          <SelectPrimitive.Viewport className="py-1">
-            {children}
-          </SelectPrimitive.Viewport>
+          {/* No padding: the chosen row's fill runs edge to edge. */}
+          <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>
     </SelectPrimitive.Root>
@@ -91,7 +90,7 @@ function SelectItem({ children, icon, description, ...props }: ItemProps) {
 
   return (
     <SelectPrimitive.Item
-      className="relative flex cursor-default items-center gap-2 py-1.5 pr-3 pl-8 text-sm text-white select-none focus:bg-mauve-700 focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40"
+      className="relative flex cursor-default items-center gap-2 py-1.5 pr-3 pl-8 text-sm text-white select-none focus:outline-none focus:not-data-[state=checked]:bg-mauve-700 data-disabled:pointer-events-none data-disabled:opacity-40 data-[state=checked]:bg-mauve-950"
       {...props}
     >
       <span className="absolute left-2.5 flex items-center">
@@ -116,12 +115,13 @@ function SelectItem({ children, icon, description, ...props }: ItemProps) {
 /**
  * A two-line row: the mark in a slot of its own, centred on the name and the
  * description together, with no separate check gutter. The chosen row swaps
- * its mark for an arrow, so which option is chosen still shows while another
- * is hovered.
+ * its mark for an arrow and sits on a darker fill, so which option is chosen
+ * still shows while another is hovered.
  *
- * The mark also sits inside ItemText, hidden in the list and shown only once
- * Radix has cloned that node into the trigger, so the closed control keeps the
- * mark beside the chosen name.
+ * The description sits inside ItemText with the name, so the closed control
+ * shows both. The mark does too, hidden in the list and shown only once Radix
+ * has cloned that node into the trigger, so the closed control keeps the mark
+ * beside the chosen name.
  */
 function DescribedItem({
   children,
@@ -131,7 +131,7 @@ function DescribedItem({
 }: ItemProps & { icon: React.ReactNode; description: string }) {
   return (
     <SelectPrimitive.Item
-      className="group/item relative mx-1 flex cursor-default items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-white select-none focus:bg-mauve-800 focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40"
+      className="group/item relative flex cursor-default items-center gap-2.5 px-3.5 py-2 text-sm text-white select-none focus:outline-none focus:not-data-[state=checked]:bg-mauve-800 data-disabled:pointer-events-none data-disabled:opacity-40 data-[state=checked]:bg-mauve-950"
       {...props}
     >
       <span className="relative flex shrink-0">
@@ -142,19 +142,21 @@ function DescribedItem({
           <ArrowRightIcon weight="bold" className="size-5 text-white" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      {/* Bounded, so a long name cannot widen the popover past the sidebar
-          and the mobile sheet it opens inside. */}
-      <span className="flex max-w-52 min-w-0 flex-col gap-0.5">
-        <SelectPrimitive.ItemText>
-          <span className="flex items-center gap-2.5 font-medium">
-            <span className="hidden [[data-select-trigger]_&]:flex">
-              {icon}
-            </span>
-            {children}
+      <SelectPrimitive.ItemText>
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="hidden shrink-0 [[data-select-trigger]_&]:flex">
+            {icon}
           </span>
-        </SelectPrimitive.ItemText>
-        <span className="truncate text-xs text-mauve-400">{description}</span>
-      </span>
+          {/* Bounded, so a long name cannot widen the popover past the
+              sidebar and the mobile sheet it opens inside. */}
+          <span className="flex max-w-52 min-w-0 flex-col gap-0.5 text-left">
+            <span className="font-medium">{children}</span>
+            <span className="truncate text-xs text-mauve-400">
+              {description}
+            </span>
+          </span>
+        </span>
+      </SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   );
 }

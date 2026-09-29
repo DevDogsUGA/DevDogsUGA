@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
+import devdog from "~/assets/devdog.svg";
 import * as icons from "~/config/icons";
 import type { SwitcherProject } from "~/config/projects";
 import OpenOrShareDialog from "./OpenOrShareDialog";
@@ -23,7 +25,7 @@ interface Props {
  * stack, repo links, the year it ran. This is for opening one.
  */
 export default function ProjectTile({ project, onNavigate }: Props) {
-  const { icon, iconBg, blurb, url, badge } = project.switcher;
+  const { icon, iconBg, logo, blurb, url, badge } = project.switcher;
   const Icon = icons[icon];
   const [open, setOpen] = useState(false);
 
@@ -35,11 +37,17 @@ export default function ProjectTile({ project, onNavigate }: Props) {
           itself can stay flat and let the mark be the thing you look at. Rim
           and shadow stay black, as everywhere else on the site. The tile
           beneath is what lifts, to give them something to read against. */}
-      <div
-        className={`shadow-block-sm flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-black text-2xl text-black shadow-black transition-transform group-hover:-translate-y-0.5 ${iconBg}`}
-      >
-        <Icon weight="bold" />
-      </div>
+      {logo ? (
+        <div className="flex size-12 shrink-0 items-center justify-center transition-transform group-hover:-translate-y-0.5">
+          <Image alt="" src={devdog} sizes="48px" />
+        </div>
+      ) : (
+        <div
+          className={`shadow-block-sm flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-black text-2xl text-black shadow-black transition-transform group-hover:-translate-y-0.5 ${iconBg}`}
+        >
+          <Icon weight="bold" />
+        </div>
+      )}
 
       {/* The gap is the tight one, between the name and the line describing
           it. The badge buys its own room back with a margin, so it sits apart

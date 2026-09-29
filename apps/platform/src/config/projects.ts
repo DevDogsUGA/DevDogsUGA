@@ -28,6 +28,11 @@ export interface ProjectSwitcher {
   /** The app icon, drawn on {@link ProjectSwitcher.iconBg}. */
   icon: keyof typeof icons;
   /**
+   * Draw the DevDogs mascot, bare, in place of the icon tile. For the
+   * platform, whose icon is the club's logo (its favicon is the same).
+   */
+  logo?: true;
+  /**
    * Fill behind the icon: a solid, saturated background, since the tiles sit
    * on black and the mark is drawn in black on top.
    */
@@ -130,6 +135,7 @@ export const PROJECTS: Project[] = [
     switcher: {
       icon: "HouseIcon",
       iconBg: "bg-cyan-400",
+      logo: true,
       blurb:
         "The site you're on — member portal, OAuth server, and club tooling.",
       url: "/",
