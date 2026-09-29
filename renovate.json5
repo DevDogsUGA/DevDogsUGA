@@ -26,6 +26,13 @@
       // in-range release, so every publish reaches this repo as a PR.
       // `replace` would skip in-range releases entirely.
       rangeStrategy: "bump",
+      // Merged by GitHub auto-merge once CI is green. The Renovate app is a
+      // `pull_request` bypass actor on the `main` ruleset, which also skips
+      // that ruleset's squash-only rule, so the strategy is pinned here. The
+      // required checks live in the separate `main-ci` ruleset, which Renovate
+      // does not bypass, so auto-merge still waits for them.
+      automerge: true,
+      automergeStrategy: "squash",
     },
   ],
 }
