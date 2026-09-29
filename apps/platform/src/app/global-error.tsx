@@ -17,10 +17,10 @@ import * as Sentry from "@sentry/nextjs";
  */
 export default function GlobalError({
   error,
-  retry,
+  reset,
 }: {
   error: Error & { digest?: string };
-  retry: () => void;
+  reset: () => void;
 }) {
   useEffect(() => {
     // The root layout itself failed, which is the one boundary Sentry's own
@@ -77,7 +77,7 @@ export default function GlobalError({
             }}
           >
             <button
-              onClick={() => retry()}
+              onClick={() => reset()}
               style={{
                 border: "2px solid #ffffff",
                 borderRadius: "0.25rem",

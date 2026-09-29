@@ -15,10 +15,10 @@ import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
  */
 export default function EventsError({
   error,
-  retry,
+  reset,
 }: {
   error: Error & { digest?: string };
-  retry: () => void;
+  reset: () => void;
 }) {
   useEffect(() => {
     // A Server Component's error reaches the client already stripped of its
@@ -33,5 +33,5 @@ export default function EventsError({
     console.error(error);
   }, [error]);
 
-  return <EventsUnavailable digest={error.digest} retry={retry} />;
+  return <EventsUnavailable digest={error.digest} retry={reset} />;
 }

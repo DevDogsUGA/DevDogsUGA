@@ -319,14 +319,21 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
  * true here since every field `WorkflowSentryEnv` declares is optional.
  */
 function scrapeWorkflowSentryOptions(env: WorkflowSentryEnv) {
-  return (
-    buildSentryOptions({
-      service: "schedule-builder",
-      environment: env.DEPLOY_ENV ?? "development",
-      dsn: env.SCHEDULE_BUILDER_SENTRY_DSN,
-      release: env.SENTRY_RELEASE,
-    }) ?? {}
-  );
+  const options = buildSentryOptions({
+    service: "schedule-builder",
+    environment: env.DEPLOY_ENV ?? "development",
+    dsn: env.SCHEDULE_BUILDER_SENTRY_DSN,
+    release: env.SENTRY_RELEASE,
+  });
+  // Forwards console warn/error to Sentry Logs, as ./worker.ts does.
+  return options
+    ? {
+        ...options,
+        integrations: [
+          Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] }),
+        ],
+      }
+    : {};
 }
 
 /**

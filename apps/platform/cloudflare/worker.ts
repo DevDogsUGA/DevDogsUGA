@@ -67,13 +67,26 @@ type WorkerEnv = Pick<
   };
 
 export default Sentry.withSentry(
-  (env: WorkerEnv) =>
-    buildSentryOptions({
+  (env: WorkerEnv) => {
+    const options = buildSentryOptions({
       service: "platform",
       environment: env.DEPLOY_ENV,
       dsn: env.PLATFORM_SENTRY_DSN,
       release: env.SENTRY_RELEASE,
-    }),
+    });
+    // `enableLogs` alone only ships `Sentry.logger` calls, and this code logs
+    // through `console`. Forwarding warn/error makes the `console.error(e)`
+    // in a route's catch-all visible in Sentry Logs instead of only in the
+    // Worker's own log tail.
+    return (
+      options && {
+        ...options,
+        integrations: [
+          Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] }),
+        ],
+      }
+    );
+  },
   {
     fetch: (request, env, ctx) => handler.fetch(request, env, ctx),
     scheduled: (event, env) => scheduled(event, env),
