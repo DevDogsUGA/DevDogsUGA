@@ -66,10 +66,23 @@ async function executeWebhook(
   return (await response.json()) as APIMessage;
 }
 
+/**
+ * Discord rejects a webhook username containing "discord" or "clyde" (any
+ * case) with a 400, which would fail the whole post for a visitor whose name
+ * happens to include either. A zero-width joiner defeats the substring check
+ * without changing what anyone sees.
+ */
+function safeUsername(name: string): string {
+  return name
+    .replace(/(disc)(ord)/gi, "$1\u200d$2")
+    .replace(/(cl)(yde)/gi, "$1\u200d$2")
+    .slice(0, LIMITS.username);
+}
+
 function webhookBody(post: WebhookPost): RESTPostAPIWebhookWithTokenJSONBody {
   return {
     content: post.content.slice(0, LIMITS.content),
-    username: post.username.slice(0, LIMITS.username),
+    username: safeUsername(post.username),
     avatar_url: post.avatarUrl ?? undefined,
     // Nothing a visitor types can ping anyone: no @everyone, no roles, no
     // users, except the ids the server itself chose to allow.

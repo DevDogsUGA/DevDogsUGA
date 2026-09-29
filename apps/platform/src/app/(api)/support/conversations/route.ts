@@ -24,7 +24,12 @@ const body = z.object({
     .max(1800, "Keep it under 1800 characters; paste long logs in a reply."),
   page: z
     .object({
-      path: z.string().regex(/^\/(docs|help)(\/|$)/),
+      // Any same-origin path: Cmd-K opens the widget from every page, not
+      // just docs. Only a docs path earns a project tag.
+      path: z
+        .string()
+        .max(300)
+        .regex(/^\/(?!\/)/),
       title: z.string().max(200),
     })
     .nullable()
