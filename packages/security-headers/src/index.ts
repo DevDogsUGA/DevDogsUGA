@@ -1,5 +1,6 @@
 export {
   buildSecurityHeaders,
+  CSP_HEADER,
   applySecurityHeaders,
   type SecurityHeadersInput,
   type HeaderEntry,

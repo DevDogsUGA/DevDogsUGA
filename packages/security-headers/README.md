@@ -39,17 +39,17 @@ matchers deliberately exclude `_next/static`/`_next/image`/favicons.
 
 ## Report-Only, not enforcing
 
-`buildSecurityHeaders` always sets `Content-Security-Policy-Report-Only`,
-never `Content-Security-Policy`. See `src/csp.ts`'s file-level comment for
-the full reasoning; short version: the policy needs `'unsafe-inline'` for
-`script-src`/`style-src` because Next/vinext hydration relies on inline
-scripts and several components use inline `style={{ ... }}`, and neither
-app's `next.config.ts` `headers()` call (evaluated once, statically, not
-per-request) can mint the per-request nonce that would let `script-src`
-drop `'unsafe-inline'` safely. Promoting this to an enforcing policy is
-follow-up work, gated on either confirming vinext's middleware-nonce
-story or wiring a `report-to` endpoint and watching Report-Only violations
-in production first.
+`buildSecurityHeaders` always sets `Content-Security-Policy-Report-Only`
+(`CSP_HEADER`), never `Content-Security-Policy`. `script-src` is already
+nonce-based (`'nonce-…' 'strict-dynamic'`, see `src/csp.ts`), but
+`style-src` still needs `'unsafe-inline'`, and promoting the policy to
+enforcing is gated on wiring a `report-to` endpoint and watching Report-Only
+violations in production first.
+
+The two apps get their nonce differently. `apps/schedule-builder` mints one
+per request in middleware. `apps/platform` renders with none, so its HTML can
+be cached, and its Worker entry stamps one onto every HTML response at the
+edge (`apps/platform/cloudflare/nonce.ts`).
 
 ## What's in the CSP allowlist, and why
 

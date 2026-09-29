@@ -163,6 +163,14 @@ describe("buildContentSecurityPolicy", () => {
     });
   });
 
+  it("leaves the nonce and 'strict-dynamic' out when no nonce is given", () => {
+    const { nonce: _, ...withoutNonce } = base;
+    const csp = buildContentSecurityPolicy(withoutNonce);
+    expect(csp).toMatch(/script-src 'self'(;|$)/);
+    expect(csp).not.toContain("'nonce-");
+    expect(csp).not.toContain("'strict-dynamic'");
+  });
+
   it("keeps style-src 'unsafe-inline' (no nonce/hash wiring for style yet)", () => {
     const csp = buildContentSecurityPolicy(base);
     expect(csp).toMatch(/style-src[^;]*'unsafe-inline'/);

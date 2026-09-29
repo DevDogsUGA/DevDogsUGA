@@ -2,25 +2,24 @@
  * Builds the workspace's CSP value (still sent Report-Only for now -- see
  * `buildSecurityHeaders`).
  *
- * `script-src` carries a per-request nonce (`'nonce-…' 'strict-dynamic'`),
- * not `'unsafe-inline'`. vinext (`node_modules/vinext/dist/server/csp.js`,
- * `getScriptNonceFromHeaderSources`) replicates Next's documented
- * middleware-nonce wiring exactly
- * (https://nextjs.org/docs/app/guides/content-security-policy): it reads a
- * `'nonce-…'` value off either the `Content-Security-Policy` or the
- * `Content-Security-Policy-Report-Only` header on the *request* (not just
- * the response) and threads it through `app-ssr-entry.js`/`app-rsc-handler.js`
- * into every script/style tag it emits itself (bootstrap module,
- * `__NEXT_DATA__`, font preloads, `next/script`). That means the nonce can be
- * (and is) wired end-to-end while this header is still Report-Only -- vinext
- * reads a nonce out of the Report-Only header source just as readily as the
- * enforcing one. Middleware (`apps/*\/src/middleware.ts`) mints the nonce and
- * writes it onto the *request* headers (not just the response) precisely so
- * vinext's renderer can see it. Every hand-written inline `<script>` in
- * either app (the announcement-hide script and JSON-LD in `apps/platform`,
- * the dark-mode flash-prevention script in `apps/schedule-builder` and its
- * `global-error.tsx`) reads the same nonce via `headers()`/a prop and stamps
- * it on manually -- vinext only nonces scripts it emits itself.
+ * `script-src` carries a nonce (`'nonce-…' 'strict-dynamic'`), not
+ * `'unsafe-inline'`. Where the nonce comes from is up to each app.
+ *
+ * `apps/schedule-builder` mints one per request in middleware and writes the
+ * policy onto the *request* headers. vinext
+ * (`node_modules/vinext/dist/server/csp.js`,
+ * `getScriptNonceFromHeaderSources`) reads a `'nonce-…'` value off the
+ * request's `Content-Security-Policy` or `-Report-Only` header, the wiring
+ * Next documents (https://nextjs.org/docs/app/guides/content-security-policy),
+ * and stamps it on every script and style tag it emits. Its hand-written
+ * inline scripts read the same value via `headers()` or a prop.
+ *
+ * `apps/platform` renders with no nonce at all, so its HTML can be cached
+ * (vinext refuses to cache HTML rendered under a request nonce). Its Worker
+ * entry (`apps/platform/cloudflare/nonce.ts`) mints one per response instead,
+ * stamps it onto every `<script>` with `HTMLRewriter`, and sends the matching
+ * policy. Its middleware builds the policy with no nonce, which is only ever
+ * sent on responses that aren't HTML.
  *
  * Every directive below is derived from what the two apps actually load,
  * not hand-guessed:
@@ -58,12 +57,11 @@ export interface CspInput {
    */
   sentryDsn?: string | null;
   /**
-   * Per-request nonce, minted in `middleware.ts` (`crypto.getRandomValues`,
-   * base64), that gates `script-src`. Required, not optional: there is no
-   * safe fallback value -- a caller building a real response must always
-   * have minted one.
+   * The response's nonce (`generateNonce`), which gates `script-src`. Omit it
+   * only for a response that carries no HTML: with no nonce, `script-src` is
+   * `'self'` alone, which would block every inline script a page has.
    */
-  nonce: string;
+  nonce?: string;
   /**
    * Gates `'unsafe-eval'` on `script-src`, scoped to `"development"` only --
    * Vite/React Fast Refresh needs `eval` in dev; staging and production
@@ -153,8 +151,7 @@ export function buildContentSecurityPolicy(input: CspInput): string {
     // `'unsafe-eval'` is dev-only, for Vite/React Fast Refresh.
     "script-src": [
       "'self'",
-      `'nonce-${input.nonce}'`,
-      "'strict-dynamic'",
+      ...(input.nonce ? [`'nonce-${input.nonce}'`, "'strict-dynamic'"] : []),
       ...(input.environment === "development" ? ["'unsafe-eval'"] : []),
       ...(input.extraScriptSources ?? []),
     ],
