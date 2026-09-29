@@ -33,7 +33,11 @@ import {
   NAV_SUB_ARROW,
   NAV_SURFACE,
 } from "./navPanel";
-import { useVerification, type NavUserClientData } from "./NavUserProvider";
+import {
+  useClearMe,
+  useVerification,
+  type NavUserClientData,
+} from "./NavUserProvider";
 import { POPOVER_DIVIDER, POPOVER_ROW } from "./popoverRow";
 import { useMenuBox } from "./useMenuBox";
 import VerificationAlert from "./VerificationAlert";
@@ -73,6 +77,7 @@ const CLOSE_DELAY = 150;
  */
 export default function ProfilePopover({ user, items, consoleItems }: Props) {
   const verification = useVerification();
+  const clearMe = useClearMe();
   const shell = useNavShell();
   const panelRef = useNavPanelRef();
   const subRef = useRef<HTMLDivElement>(null);
@@ -242,7 +247,17 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
 
                 <div className={POPOVER_DIVIDER} />
 
-                <form action={signOut}>
+                {/* Marks the viewer signed out as soon as the request is on
+                    its way. The action ends in a redirect, whose promise
+                    can't be relied on to settle, and the navbar no longer
+                    re-renders from the server to notice. */}
+                <form
+                  action={(formData) => {
+                    const signingOut = signOut(formData);
+                    clearMe();
+                    return signingOut;
+                  }}
+                >
                   <input name="callbackPath" value="/" type="hidden" />
                   <button
                     className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}

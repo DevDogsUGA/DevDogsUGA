@@ -28,6 +28,17 @@ vinext's own cache adapters replace what the OpenNext adapter used to do with an
 - **`cache.cdn`** — `cdnAdapter()`, putting CDN-cacheable responses through the deployed Worker's own Cache API. `wrangler.jsonc`'s top-level `cache.enabled` turns this on; it replaces the old `WORKER_SELF_REFERENCE` binding that used to re-invoke the Worker to revalidate.
 - **`images.optimizer`** — `imagesOptimizer()`, wired to the `IMAGES` binding.
 
+### When the platform's page HTML is cached
+
+A `(site)` page is served from the Workers Cache, shared by every visitor, only when all of these hold. Break one and the page quietly renders on every request instead.
+
+- **It declares a policy.** A page with no `revalidate` export is never written to the cache. Public pages export one: `false` for pages built from the repo (docs, changelog, legal), a number of seconds for ones that read the database (the homepage and competitions every minute, `/events` every five).
+- **Nothing in its render reads the request.** `cookies()`, `headers()`, `connection()` or `searchParams` anywhere in the tree, root layout included, makes it dynamic. That's why the navbar's user comes from `GET /me` on the client ([navigation](/docs/platform/guides/navigation)).
+- **Middleware leaves the request alone.** vinext skips the shared cache whenever middleware forwards request headers (`NextResponse.next({ request })`). The platform's middleware forwards them only on `/tools` and when a session's tokens rotate.
+- **No CSP nonce at render.** vinext won't cache HTML rendered under a request nonce. Pages render with none, and the Worker entry (`apps/platform/cloudflare/nonce.ts`) stamps a fresh one onto every `<script>` of every HTML response with `HTMLRewriter`, cache hits included, and sends the matching policy. That trusts every script in the HTML, so the docs compiler fails the build on a `<script>`, an `on*` attribute or a `javascript:` URL in a page.
+
+`wrangler dev` doesn't emulate the Workers Cache, so a local preview renders every request and never shows `X-Vinext-Cache`; check that header on staging. Entries are keyed by the deployment's version, so a deploy starts from an empty cache. `@vinext/cloudflare` is patched (see `pnpm-workspace.yaml`) because its cached stage followed redirects inside the Worker, which turned every redirecting page into a 500 once pages started using it.
+
 `schedule-builder` also binds `SCRAPE_WORKFLOW`, a Cloudflare Workflow (`ScrapeWorkflow`), and `HYPERDRIVE`, pooling connections to Supabase's direct database endpoint so request-scoped Drizzle clients don't exhaust Postgres — shared with the platform Worker's own Hyperdrive config per tier, since both point at the same Supabase project.
 
 ## The runtime forbids Wasm compilation at request time

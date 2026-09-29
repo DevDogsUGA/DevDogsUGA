@@ -4,6 +4,11 @@ import UnderConstruction from "~/components/UnderConstruction";
 import { INVOLVEMENT_NETWORK_ROSTER_URL } from "~/config/nav";
 
 /**
+ * Static copy (or a redirect); changes only with a deploy.
+ */
+export const revalidate = false;
+
+/**
  * The description is the one `config/nav.ts` already gives this link in the
  * navbar and the command palette, not a second sentence written here. A menu
  * row and a search result are the same promise about the same page, and two

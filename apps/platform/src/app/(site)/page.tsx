@@ -22,6 +22,13 @@ import JsonLd, { siteGraph } from "~/lib/structuredData";
 const MARQUEE_TEXT_CLS =
   "py-4 font-display text-base font-bold tracking-widest uppercase";
 
+/**
+ * Cached for a minute, then re-rendered in the background. Everything
+ * here is static copy except the next-meetings stack, and a minute is as
+ * stale as "next meeting" should get when one ends.
+ */
+export const revalidate = 60;
+
 export default function HomePage() {
   return (
     <>

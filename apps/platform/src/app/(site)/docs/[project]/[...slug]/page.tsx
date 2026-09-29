@@ -28,6 +28,13 @@ import {
 // filesystem.
 // (`dynamicParams` can't express that here: Cache Components rejects the route
 // segment config.)
+/**
+ * Built from `docs/` at build time, so it can't change until the next
+ * deploy. Spelled out rather than left to `generateStaticParams`, which
+ * implies the same thing, so the policy is visible where it applies.
+ */
+export const revalidate = false;
+
 export function generateStaticParams() {
   const params: { project: string; slug: string[] }[] = [];
 

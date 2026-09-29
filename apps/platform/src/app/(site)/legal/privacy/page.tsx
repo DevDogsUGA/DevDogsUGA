@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 
 /**
+ * Static copy; changes only with a deploy.
+ */
+export const revalidate = false;
+
+/**
  * The description is the one `config/nav.ts` gives this page under
  * `SEARCH_ONLY_PAGES`: the list of routes that are public and indexed but not
  * in the navbar, which is exactly what this is.

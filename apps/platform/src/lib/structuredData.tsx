@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { SOCIAL_LINKS, SWITCHER_LINKS } from "~/config/nav";
 import { env } from "~/env";
 
@@ -191,17 +190,14 @@ function serialize(data: unknown): string {
  *
  * `type="application/ld+json"` doesn't exempt it from `script-src`: a
  * strict-CSP browser gates every `<script>` element on the nonce/hash
- * allowlist regardless of its `type`, JSON-LD included, so this reads and
- * stamps the same per-request nonce as every other inline script in this app
- * (`~/app/layout.tsx`'s `headers().get("x-nonce")`) or the payload is simply
- * never parsed once the policy goes enforcing.
+ * allowlist regardless of its `type`, JSON-LD included. It renders without
+ * one, like every other inline script in this app, and the Worker entry
+ * stamps the response's nonce on at the edge (`cloudflare/nonce.ts`).
  */
-export default async function JsonLd({ data }: { data: unknown }) {
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+export default function JsonLd({ data }: { data: unknown }) {
   return (
     <script
       type="application/ld+json"
-      nonce={nonce}
       dangerouslySetInnerHTML={{ __html: serialize(data) }}
     />
   );

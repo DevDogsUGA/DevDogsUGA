@@ -9,6 +9,12 @@ import {
 } from "~/config/docs";
 import { getDocsProjects, type DocsProject } from "~/server/docs/queries";
 
+/**
+ * Built from `docs/` at build time, so it can't change until the next
+ * deploy.
+ */
+export const revalidate = false;
+
 export const metadata: Metadata = {
   title: "Docs | DevDogs",
   description: "Documentation for DevDogs projects.",

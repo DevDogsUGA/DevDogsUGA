@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { visibleConsoleItems } from "~/config/nav";
 import { canSeeCredentialsPage } from "~/server/actions/credentials";
 import {
   getCallerContext,
@@ -12,7 +13,7 @@ import {
   getInvolvementFullName,
   getVerificationStatus,
 } from "~/server/loaders/verification";
-import type { VerificationData } from "./NavUserProvider";
+import type { MeResponse, VerificationData } from "./NavUserProvider";
 
 export interface NavUser {
   profile: typeof profiles.$inferSelect;
@@ -23,9 +24,11 @@ export interface NavUser {
 }
 
 /**
- * The single per-request read backing every navbar surface. Wrapped in React's
- * `cache()` (not `"use cache"`: it reads auth cookies) so the streamed
- * console, profile, and mobile clusters share one lookup.
+ * The single per-request read backing every navbar surface. It reads auth
+ * cookies, so it never runs during a page render (that would make the page
+ * uncacheable, or cache one visitor's nav for everyone). `GET /me` serves it
+ * to the browser; see `toMeResponse`. Wrapped in React's `cache()` so a
+ * server component that does need it shares one lookup per render.
  */
 export const getNavUser = cache(async (): Promise<NavUser | null> => {
   const user = await expectUserWith({ profile: true }).catch(() => null);
@@ -54,3 +57,23 @@ export const getNavUser = cache(async (): Promise<NavUser | null> => {
       : null,
   };
 });
+
+/**
+ * What `GET /me` sends: only what the navbar and the verification checklist
+ * render. Console items are filtered here, so a browser only ever receives the
+ * pages its viewer may see.
+ */
+export function toMeResponse(user: NavUser | null): MeResponse {
+  if (!user) return null;
+  return {
+    user: {
+      profile: {
+        userId: user.profile.userId,
+        preferredName: user.profile.preferredName,
+      },
+      highestRole: user.highestRole,
+    },
+    verification: user.verification,
+    consoleItems: visibleConsoleItems(user.permissions, user.credentialsAccess),
+  };
+}

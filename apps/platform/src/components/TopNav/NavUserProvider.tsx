@@ -1,17 +1,20 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
+  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
 import VerificationDialog from "~/components/VerificationDialog";
+import type { ConsoleItem } from "~/config/nav";
 import type { HighestRankingRole } from "~/server/actions/permissions";
 import type { profiles } from "~/server/db/schema";
+import { isSessionCookieName } from "~/supabase/sessionCookie";
 
 export interface VerificationStatus {
   hasPronouns: boolean;
@@ -29,9 +32,24 @@ export interface VerificationData {
 }
 
 export interface NavUserClientData {
-  profile: typeof profiles.$inferSelect;
+  profile: Pick<typeof profiles.$inferSelect, "userId" | "preferredName">;
   highestRole: HighestRankingRole;
 }
+
+/** `GET /me`'s body: the signed-in viewer, or `null` when signed out. */
+export type MeResponse = {
+  user: NavUserClientData;
+  verification: VerificationData | null;
+  /** Console pages this viewer may see. Already filtered server-side. */
+  consoleItems: ConsoleItem[];
+} | null;
+
+/**
+ * The navbar's view of the viewer: `undefined` until `/me` answers, then the
+ * answer. Pages render before it arrives, so the server HTML and the first
+ * client render both show the loading state.
+ */
+export type MeState = MeResponse | undefined;
 
 interface VerificationContextValue {
   userId: string;
@@ -45,35 +63,50 @@ interface VerificationContextValue {
   setDialogOpen: (open: boolean) => void;
 }
 
+const MeContext = createContext<MeState>(undefined);
 const NavUserContext = createContext<NavUserClientData | null>(null);
 const VerificationContext = createContext<VerificationContextValue | null>(
   null,
 );
 
-type Setter = (
-  navUser: NavUserClientData | null,
-  verification: VerificationData | null,
-) => void;
-
-const SetterContext = createContext<Setter>(() => undefined);
+export const ME_QUERY_KEY = ["me"] as const;
 
 /**
- * Whether the hydrator is pushing data the provider already holds.
- *
- * `NavUserHydrator` sits at the root of the tree, so every `setNavUser` call
- * re-renders the whole app. Its props arrive from a streamed server component
- * and are fresh object identities on every RSC payload, including the ones the
- * router refetches on its own without anything having changed. Comparing by
- * value lets React bail out of those renders instead of replaying the page.
- *
- * `JSON.stringify` is enough here: both sides are plain data produced by the
- * same server code, so key order is stable and `Date` columns serialise
- * deterministically.
+ * Without a session cookie there is nobody to look up, so a signed-out visitor
+ * costs no request. The cookie isn't `httpOnly`; see `isSessionCookieName`.
  */
-function sameData(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a === null || b === null) return false;
-  return JSON.stringify(a) === JSON.stringify(b);
+function hasSessionCookie(): boolean {
+  return document.cookie
+    .split(";")
+    .some((pair) => isSessionCookieName(pair.split("=")[0]?.trim() ?? ""));
+}
+
+async function fetchMe(): Promise<MeResponse> {
+  if (!hasSessionCookie()) return null;
+  const response = await fetch("/me", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`GET /me failed: ${response.status}`);
+  return (await response.json()) as MeResponse;
+}
+
+/** The whole `/me` answer, for the navbar's own clusters. */
+export function useMe(): MeState {
+  return useContext(MeContext);
+}
+
+/**
+ * Marks the viewer signed out right away, for the sign-out form: the server
+ * action redirects, and the navbar shouldn't keep showing the avatar until the
+ * next `/me` round trip.
+ */
+export function useClearMe(): () => void {
+  const queryClient = useQueryClient();
+  return useCallback(
+    () => queryClient.setQueryData<MeResponse>(ME_QUERY_KEY, null),
+    [queryClient],
+  );
 }
 
 export function useNavUser(): NavUserClientData | null {
@@ -139,42 +172,44 @@ function VerificationRoot({
 }
 
 export default function NavUserProvider({ children }: { children: ReactNode }) {
-  const [navUser, setNavUser] = useState<NavUserClientData | null>(null);
-  const [verification, setVerification] = useState<VerificationData | null>(
-    null,
-  );
-
-  const setter: Setter = useCallback((nav, ver) => {
-    setNavUser((prev) => (sameData(prev, nav) ? prev : nav));
-    setVerification((prev) => (sameData(prev, ver) ? prev : ver));
-  }, []);
+  // Stale after a minute, so returning to the tab after signing in or out
+  // elsewhere refetches on focus. `NavUserRefresh` covers changes made here.
+  const { data } = useQuery({
+    queryKey: ME_QUERY_KEY,
+    queryFn: fetchMe,
+    staleTime: 60_000,
+  });
 
   return (
-    <SetterContext.Provider value={setter}>
-      <NavUserContext.Provider value={navUser}>
-        <VerificationRoot data={verification}>{children}</VerificationRoot>
+    <MeContext.Provider value={data}>
+      <NavUserContext.Provider value={data?.user ?? null}>
+        <VerificationRoot data={data?.verification ?? null}>
+          {children}
+        </VerificationRoot>
       </NavUserContext.Provider>
-    </SetterContext.Provider>
+    </MeContext.Provider>
   );
 }
 
 /**
- * Rendered by the streamed user cluster to push per-request user data into
- * the client context, making it available to the whole page (e.g. the account
- * page's verification widgets) without a second fetch.
+ * Refetches `/me` whenever the server re-renders the layout that renders this.
+ *
+ * `revision` is a fresh `{}` from a server component, so every RSC payload
+ * that carries the layout arrives with a new identity: a `router.refresh()`,
+ * a server action that revalidated, the router's own refetches. Those are the
+ * moments the old server-rendered navbar picked up a changed name, avatar,
+ * role or verification checklist, so this keeps that behaviour without the
+ * page reading the session. The first render is skipped; the query is already
+ * fetching then.
  */
-export function NavUserHydrator({
-  navUser,
-  verification,
-}: {
-  navUser: NavUserClientData | null;
-  verification: VerificationData | null;
-}) {
-  const setter = useContext(SetterContext);
+export function NavUserRefresh({ revision }: { revision: object }) {
+  const queryClient = useQueryClient();
+  const first = useRef(revision);
 
-  useLayoutEffect(() => {
-    setter(navUser, verification);
-  }, [navUser, verification, setter]);
+  useEffect(() => {
+    if (revision === first.current) return;
+    void queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
+  }, [revision, queryClient]);
 
   return null;
 }

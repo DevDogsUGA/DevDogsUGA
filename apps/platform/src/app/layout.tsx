@@ -7,7 +7,6 @@ import { TooltipProvider } from "@radix-ui/react-tooltip";
 import NavigationProgress from "~/ui/navigation-progress";
 import QueryProvider from "~/ui/query-provider";
 import Toaster from "~/components/Toaster";
-import { headers } from "next/headers";
 import { cn } from "~/lib/cn";
 import { env } from "~/env";
 import { ANNOUNCEMENT_HIDE_SCRIPT } from "~/config/announcement";
@@ -117,12 +116,15 @@ const mono = Cascadia_Code({
   adjustFontFallback: false,
 });
 
-export default async function RootLayout({
+/**
+ * Reads nothing from the request, and must stay that way: every page sits
+ * under this layout, so one `headers()` or `cookies()` here makes the whole
+ * site uncacheable. The inline scripts below carry no nonce for the same
+ * reason; the Worker entry stamps one on at the edge (`cloudflare/nonce.ts`).
+ */
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Minted per-request in `middleware.ts`, carried on the plain `x-nonce`
-  // request header for exactly this purpose -- see that file's doc comment.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="en"
@@ -161,7 +163,6 @@ export default async function RootLayout({
             ~/config/announcement. */}
         {ANNOUNCEMENT_HIDE_SCRIPT && (
           <script
-            nonce={nonce}
             dangerouslySetInnerHTML={{ __html: ANNOUNCEMENT_HIDE_SCRIPT }}
           />
         )}

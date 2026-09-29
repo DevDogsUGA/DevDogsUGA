@@ -17,6 +17,12 @@ async function load(threadId: string) {
   return getFaqPost(threadId);
 }
 
+/**
+ * An FAQ post from the support forum index, which the support cron
+ * refreshes; five minutes behind it is fine.
+ */
+export const revalidate = 300;
+
 export async function generateMetadata({
   params,
 }: PageProps<"/help/[threadId]">): Promise<Metadata> {

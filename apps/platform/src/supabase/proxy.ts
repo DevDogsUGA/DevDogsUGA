@@ -3,30 +3,15 @@ import type { Database } from "@devdogsuga/supabase";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";
+import { isSessionCookieName } from "./sessionCookie";
 
 /**
- * Whether the request carries a Supabase session at all.
- *
- * `@supabase/ssr` names its session cookie `sb-<project-ref>-auth-token`, and
- * splits it into `.0`/`.1` parts when the value outgrows a single cookie, so
- * match on the shape rather than an exact name.
- *
- * The PKCE verifier written when an OAuth flow *starts* is named
- * `sb-<project-ref>-auth-token-code-verifier`, which fits that shape without
- * being a session. Excluding it matters: a signed-out visitor who merely
- * reached the sign-in redirect would otherwise carry it for the rest of the
- * browsing session and pay a `getClaims()` round trip on every request, the
- * cost the early return below exists to avoid.
+ * Whether the request carries a Supabase session at all. A signed-out visitor
+ * who merely reached the sign-in redirect carries a PKCE verifier cookie,
+ * which doesn't count; see `isSessionCookieName`.
  */
 function hasSessionCookie(request: NextRequest): boolean {
-  return request.cookies
-    .getAll()
-    .some(
-      ({ name }) =>
-        name.startsWith("sb-") &&
-        name.includes("auth-token") &&
-        !name.endsWith("-code-verifier"),
-    );
+  return request.cookies.getAll().some(({ name }) => isSessionCookieName(name));
 }
 
 /**
@@ -38,16 +23,28 @@ function hasSessionCookie(request: NextRequest): boolean {
  * write the rotated refresh token back from a Server Component, leaving the
  * cookie holding an already-invalidated refresh token and breaking the session
  * for every subsequent request.
+ *
+ * The request is forwarded (`NextResponse.next({ request })`) only when its
+ * headers changed: when tokens rotated, or when the caller set one it needs
+ * downstream (`forwardRequest`). vinext serves a page from the shared cache
+ * only when middleware left the request alone, so forwarding it on every
+ * request would make every page render fresh.
  */
-export async function updateSession(request: NextRequest) {
+export async function updateSession(
+  request: NextRequest,
+  { forwardRequest = false }: { forwardRequest?: boolean } = {},
+) {
+  const next = () =>
+    forwardRequest ? NextResponse.next({ request }) : NextResponse.next();
+
   // A signed-out visitor has no session to refresh, so skip the auth call
   // entirely. This matters because the matcher covers every HTML, RSC and
   // prefetch request: without it, each hit on a fully static marketing page,
   // which needs no server render at all, still paid for a getClaims() round
   // trip before the CDN could answer.
-  if (!hasSessionCookie(request)) return NextResponse.next({ request });
+  if (!hasSessionCookie(request)) return next();
 
-  let response = NextResponse.next({ request });
+  let response = next();
 
   const supabase = createServerClient<Database, typeof APP_SCHEMA>({
     url: env.API_URL,

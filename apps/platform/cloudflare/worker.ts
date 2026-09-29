@@ -6,10 +6,12 @@
  * vinext's Cloudflare integration normally deploys straight from
  * `vinext/server/app-router-entry` as `main` with no custom entry at all --
  * see the migrate-to-vinext skill's config-examples.md. This app keeps a
- * custom entry anyway, for the one thing that integration doesn't cover:
- * composing Sentry's `withSentry` around `fetch`/`scheduled` (see below).
- * Unlike apps/schedule-builder/cloudflare/worker.ts there is no Workflow
- * class to re-export here.
+ * custom entry anyway, for the two things that integration doesn't cover:
+ * composing Sentry's `withSentry` around `fetch`/`scheduled` (see below), and
+ * stamping the CSP nonce onto every HTML response (./nonce), which is what
+ * lets pages render, and cache, without one. Unlike
+ * apps/schedule-builder/cloudflare/worker.ts there is no Workflow class to
+ * re-export here.
  *
  * Server-side Sentry capture is wired HERE, via `@sentry/cloudflare`'s
  * `withSentry`, and deliberately NOT via `@sentry/nextjs`'s usual
@@ -31,6 +33,7 @@
 import * as Sentry from "@sentry/cloudflare";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
 import handler from "vinext/server/app-router-entry";
+import { withEdgeNonce } from "./nonce";
 import { scheduled, type CronEnv } from "./scheduled";
 import type { env as platformEnv } from "~/env";
 
@@ -88,7 +91,10 @@ export default Sentry.withSentry(
     );
   },
   {
-    fetch: (request, env, ctx) => handler.fetch(request, env, ctx),
+    // Every HTML response gets its CSP nonce here, cache hits included; see
+    // ./nonce.
+    fetch: async (request, env, ctx) =>
+      withEdgeNonce(await handler.fetch(request, env, ctx)),
     scheduled: (event, env) => scheduled(event, env),
   },
 );
