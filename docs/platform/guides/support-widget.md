@@ -37,12 +37,12 @@ evicts the snapshot so they see their message at once.
 
 Postgres holds only what Discord can't:
 
-| Table | Holds |
-| --- | --- |
+| Table                  | Holds                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------- |
 | `supportConversations` | Which visitor is in which thread (asker or follower), and how far they have read |
-| `supportMessages` | Which relayed message came from which visitor |
-| `supportGuests` | Guest tokens, hashed, with a block flag and a last-seen time |
-| `supportForumPosts` | An anonymized search index over the whole forum |
+| `supportMessages`      | Which relayed message came from which visitor                                    |
+| `supportGuests`        | Guest tokens, hashed, with a block flag and a last-seen time                     |
+| `supportForumPosts`    | An anonymized search index over the whole forum                                  |
 
 All four are server-only: RLS is on with no permissive policy, so only the
 route handlers, connecting as the owner, can touch them.
