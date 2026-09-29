@@ -161,8 +161,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
       '@devdogsuga/devtools':
-        specifier: 0.1.13
-        version: 0.1.13(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
+        specifier: 0.1.18
+        version: 0.1.18(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
       '@devdogsuga/env':
         specifier: ^0.1.2
         version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
@@ -212,8 +212,8 @@ importers:
         specifier: ^0.1.3
         version: 0.1.3
       '@devdogsuga/newsletter':
-        specifier: ^0.1.2
-        version: 0.1.2
+        specifier: ^0.1.3
+        version: 0.1.4
       '@devdogsuga/open-graph':
         specifier: workspace:*
         version: link:../../packages/open-graph
@@ -795,8 +795,8 @@ importers:
   docs:
     dependencies:
       '@devdogsuga/docs-compiler':
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.1.8
+        version: 0.1.8
 
   packages/deploy-checks:
     devDependencies:
@@ -901,8 +901,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
       '@devdogsuga/devtools':
-        specifier: 0.1.13
-        version: 0.1.13(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
+        specifier: 0.1.18
+        version: 0.1.18(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
       '@devdogsuga/env':
         specifier: ^0.1.2
         version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
@@ -1328,8 +1328,8 @@ packages:
       drizzle-orm: 1.0.0-rc.4
       postgres: ^3.4.9
 
-  '@devdogsuga/devtools@0.1.13':
-    resolution: {integrity: sha512-j5wMnD4qDIsd2DUhlBe58+QwAsJQwrsIdV8x5lj5jGjMXfzVKQmVkrvIggpS5DUcHWnocTliahBPcqOGDu9gKw==}
+  '@devdogsuga/devtools@0.1.18':
+    resolution: {integrity: sha512-9teK7hQBNGc+00abFkZ8TBXmjYv194YVbb7yuch5S/eo5O905CVY1gAtpbzzgumLLGZoNptMuE6bG7kInJGY3A==}
     hasBin: true
     peerDependencies:
       '@devdogsuga/brand': '*'
@@ -1346,8 +1346,8 @@ packages:
       '@devdogsuga/events':
         optional: true
 
-  '@devdogsuga/docs-compiler@0.1.4':
-    resolution: {integrity: sha512-q2u7I1kUCWPt7Ar5MZZ3tXRj+rWhN0rPY3ksWjSqQ1cI9KDUB7DjePmtImpd2y7CSBUwUUMkl/sGqFiWiWFWEA==}
+  '@devdogsuga/docs-compiler@0.1.8':
+    resolution: {integrity: sha512-YOd9/ghQm9p4G0MiwHAqjIgQfMmiPMKtKVWXi9DI/gxXkBSC2qqaWUhNN3wl06Op1fuHLB+trwvr/vv0dE/mFg==}
     hasBin: true
 
   '@devdogsuga/env@0.1.2':
@@ -1357,8 +1357,8 @@ packages:
   '@devdogsuga/events@0.1.3':
     resolution: {integrity: sha512-/pAVqj1NkjUfeC6kHORP4T2xhscR1krW0BcKox6MOWIMhkgvFyvw7s7gSRpozmH0Db/EmSvWK5+UC6WyQmQhaA==}
 
-  '@devdogsuga/newsletter@0.1.2':
-    resolution: {integrity: sha512-D8getVWoJMmJMrYNbQZAAQPyVsgRY9XdprvvxaeF8gq/4f0akfHrmSKwi0GSm1m9CZ9rzhHzl70FIwieC00kiw==}
+  '@devdogsuga/newsletter@0.1.4':
+    resolution: {integrity: sha512-0gImp/5jooySm4nHdO7mp9L7HJOhBj/TE6W9j+QzYQq6jn6EBCvs0DPyFonPbpMNRdprxt9k9yu/2LyJCko78g==}
 
   '@devdogsuga/telemetry@0.1.1':
     resolution: {integrity: sha512-CJ6n1iWmRTmorgddXeyLp6EE3FYzyBkqHCsjbbAy3yINJDeiVFn9E1HIu3p3xG5+XlO5Y36sWcKWVEB7cDIdew==}
@@ -9732,7 +9732,7 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@devdogsuga/devtools@0.1.13(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)':
+  '@devdogsuga/devtools@0.1.18(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)':
     dependencies:
       '@bitwarden/cli': 2026.7.0
       '@bitwarden/sdk-napi': 1.0.0
@@ -9765,7 +9765,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@devdogsuga/docs-compiler@0.1.4':
+  '@devdogsuga/docs-compiler@0.1.8':
     dependencies:
       '@shikijs/rehype': 4.4.3
       github-slugger: 2.0.0
@@ -9815,7 +9815,7 @@ snapshots:
     dependencies:
       zod: 4.4.3
 
-  '@devdogsuga/newsletter@0.1.2':
+  '@devdogsuga/newsletter@0.1.4':
     dependencies:
       '@devdogsuga/brand': 0.1.2
       '@devdogsuga/events': 0.1.3
