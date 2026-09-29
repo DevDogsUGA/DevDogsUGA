@@ -7,11 +7,18 @@ import {
   DOCS_LANDING_SMALL,
   DOCS_LANDING_WORKSHOPS,
 } from "~/config/docs";
-import { getDocsProjects, type DocsProject } from "~/server/docs/queries";
+import { formatEventShortDate } from "~/lib/eventTime";
+import {
+  getDocsUpcoming,
+  getVisibleDocsProjects,
+  type DocsProject,
+} from "~/server/docs/queries";
 
 /**
  * Built from `docs/` at build time, so it can't change until the next
- * deploy.
+ * deploy, apart from what is scheduled: `getDocsUpcoming` and
+ * `getVisibleDocsProjects` carry the next reveal into this page's cache
+ * lifetime, so it refreshes when something goes live.
  */
 export const revalidate = false;
 
@@ -41,8 +48,11 @@ function projectsFor(
     .filter((project): project is DocsProject => project != null);
 }
 
-export default function DocsLandingPage() {
-  const projects = getDocsProjects();
+export default async function DocsLandingPage() {
+  const projects = await getVisibleDocsProjects();
+  const upcoming = [...(await getDocsUpcoming()).values()]
+    .flat()
+    .sort((a, b) => a.publishAt.localeCompare(b.publishAt));
   const large = projectsFor(projects, DOCS_LANDING_LARGE);
   const small = projectsFor(projects, DOCS_LANDING_SMALL);
   const workshops = projectsFor(projects, DOCS_LANDING_WORKSHOPS);
@@ -97,6 +107,22 @@ export default function DocsLandingPage() {
           </section>
         )}
       </div>
+
+      {/* Named, dated, and not linked: there is nothing to open yet. */}
+      {upcoming.length > 0 && (
+        <section className="mt-8 flex flex-col gap-3">
+          <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
+            Coming soon
+          </h2>
+          <ul className="flex flex-col gap-1 text-sm text-mauve-300">
+            {upcoming.map((item) => (
+              <li key={`${item.name}:${item.publishAt}`}>
+                {item.name}: {formatEventShortDate(item.publishAt)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {projects.length === 0 && (
         <p className="text-sm text-mauve-400">

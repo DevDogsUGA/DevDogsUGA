@@ -5,6 +5,8 @@ export interface DocsTile {
   href: string;
   title: string;
   description?: string | null;
+  /** A line under the description, e.g. the preview's "Scheduled" mark. */
+  note?: ReactNode;
   /** The app-icon-shaped mark drawn beside the title. */
   mark: ReactNode;
 }
@@ -43,6 +45,7 @@ export default function DocsTileGrid({ tiles }: { tiles: DocsTile[] }) {
                 {tile.description}
               </p>
             )}
+            {tile.note}
           </div>
         </li>
       ))}

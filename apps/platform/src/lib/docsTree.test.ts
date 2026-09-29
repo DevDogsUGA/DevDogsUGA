@@ -541,3 +541,33 @@ describe("folder settings", () => {
     expect(stepPositionOf(tree, "supabase/concepts")).toBeNull();
   });
 });
+
+describe("preview marks", () => {
+  it("carries a page's and a folder's publishAt onto its node, and only when set", () => {
+    const tree = buildDocsTree(
+      [
+        {
+          path: "a/one",
+          title: "One",
+          order: null,
+          publishAt: "2026-10-05T22:00:00.000Z",
+        },
+        { path: "a/two", title: "Two", order: null },
+      ],
+      [
+        {
+          path: "a",
+          name: "A",
+          order: null,
+          steps: false,
+          publishAt: "2026-10-05T22:00:00.000Z",
+        },
+      ],
+    );
+    const folder = findFolder(tree, "a")!;
+    expect(folder.publishAt).toBe("2026-10-05T22:00:00.000Z");
+    const [one, two] = folder.children as { publishAt?: string }[];
+    expect(one!.publishAt).toBe("2026-10-05T22:00:00.000Z");
+    expect("publishAt" in two!).toBe(false);
+  });
+});

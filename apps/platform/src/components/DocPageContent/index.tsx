@@ -19,6 +19,8 @@ interface Props {
   githubUrl?: string;
   /** Under the article: a course page's step pager. */
   footer?: ReactNode;
+  /** Above the article: the preview's "Scheduled" mark. */
+  notice?: ReactNode;
 }
 
 export default function DocPageContent({
@@ -27,6 +29,7 @@ export default function DocPageContent({
   breadcrumbs,
   githubUrl,
   footer,
+  notice,
 }: Props) {
   const toc: TOCItem[] = headings.map((h) => ({
     title: h.title,
@@ -39,6 +42,11 @@ export default function DocPageContent({
       <div className="flex min-w-0 flex-1">
         <div className="min-w-0 flex-1 overflow-auto px-6 py-10 lg:px-10">
           <InlineTableOfContents items={toc} />
+          {notice && (
+            <div className="mx-auto mb-4 max-w-3xl rounded-md border border-amber-300/30 bg-amber-300/10 px-3 py-2">
+              {notice}
+            </div>
+          )}
 
           {(breadcrumbs && breadcrumbs.length > 0) || githubUrl ? (
             <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between gap-4">

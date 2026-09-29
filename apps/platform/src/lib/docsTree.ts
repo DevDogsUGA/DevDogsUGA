@@ -31,6 +31,12 @@ export interface DocsTreePage {
   title: string;
   /** The page's `order:` frontmatter, or null when it declares none. */
   order: number | null;
+  /**
+   * When the page goes live (UTC ISO), set only in the preview, where pages
+   * still ahead of their time are listed and marked. Public trees never hold
+   * one, because a page that is not live yet is not in them at all.
+   */
+  publishAt?: string;
 }
 
 export interface DocsTreeFolder {
@@ -51,6 +57,8 @@ export interface DocsTreeFolder {
   order: number | null;
   /** Its settings say `steps: true`: its pages are read in order. */
   steps: boolean;
+  /** As on `DocsTreePage`: the folder's reveal time, preview only. */
+  publishAt?: string;
   children: DocsTreeNode[];
 }
 
@@ -63,6 +71,8 @@ export interface DocsFolderSettings {
   name: string;
   order: number | null;
   steps: boolean;
+  /** Preview only, as on `DocsTreeFolder`. */
+  publishAt?: string;
 }
 
 export type DocsTreeNode = DocsTreePage | DocsTreeFolder;
@@ -232,7 +242,12 @@ function sortTree(
  * folder with none is named after its directory and placed by what it holds.
  */
 export function buildDocsTree(
-  pages: { path: string; title: string; order: number | null }[],
+  pages: {
+    path: string;
+    title: string;
+    order: number | null;
+    publishAt?: string;
+  }[],
   folderSettings: readonly DocsFolderSettings[] = [],
 ): DocsTreeNode[] {
   const settings = new Map(
@@ -253,6 +268,9 @@ export function buildDocsTree(
         path: key,
         order: null,
         steps: settings.get(key)?.steps ?? false,
+        ...(settings.get(key)?.publishAt
+          ? { publishAt: settings.get(key)!.publishAt }
+          : {}),
         children: [],
       };
       folders.set(key, folder);
@@ -268,6 +286,7 @@ export function buildDocsTree(
       path: page.path,
       title: page.title,
       order: page.order,
+      ...(page.publishAt ? { publishAt: page.publishAt } : {}),
     });
   }
 
@@ -352,6 +371,7 @@ export interface DocsSidebarPageInput {
   title: string;
   order: number | null;
   section: DocsSectionId | null;
+  publishAt?: string;
 }
 
 export interface DocsSidebarSection {
@@ -413,6 +433,9 @@ export function buildDocsSidebarSections(
         path: overviewInput.path,
         title: overviewInput.title,
         order: overviewInput.order,
+        ...(overviewInput.publishAt
+          ? { publishAt: overviewInput.publishAt }
+          : {}),
       }
     : null;
 

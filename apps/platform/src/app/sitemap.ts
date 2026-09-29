@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
 import { env } from "~/env";
 import { docsHref } from "~/lib/docsSlug";
-import type { DocsTreeNode } from "~/lib/docsTree";
-import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
+import { getDocsPagePaths, getDocsProjects } from "~/server/docs/queries";
 import { getCompetitionSlugs } from "~/server/loaders/competitions";
 import { getMeetingSlugs } from "~/server/loaders/meetings";
 
@@ -12,7 +11,7 @@ import { getMeetingSlugs } from "~/server/loaders/meetings";
  * Two halves, and the split is the whole design of this file:
  *
  *   - Everything derivable WITHOUT a database: the six authored routes, plus
- *     every docs page, which `@devdogsuga/docs` compiles into the bundle at
+ *     every LIVE docs page (scheduled ones are left out until their time), which `@devdogsuga/docs` compiles into the bundle at
  *     build time (see `server/docs/queries.ts`). An in-memory walk over a
  *     constant that cannot throw and cannot be slow.
  *   - Everything that needs a query: meetings and competitions.
@@ -78,25 +77,21 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
  * index page does render something of its own, but it is a contents grid over
  * pages this loop has already enumerated.
  */
-function docsRoutes(): MetadataRoute.Sitemap {
+async function docsRoutes(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = [];
 
-  function collect(project: string, nodes: DocsTreeNode[]) {
-    for (const node of nodes) {
-      if (node.type === "page") {
-        routes.push({
-          url: url(docsHref(project, node.path.split("/"))),
-          changeFrequency: "weekly",
-          priority: 0.6,
-        });
-      } else {
-        collect(project, node.children);
-      }
-    }
-  }
-
   for (const project of getDocsProjects()) {
-    collect(project.slug, getDocsTree(project.slug));
+    // Only pages that are live when this renders: a page still ahead of its
+    // scheduled time is not to be named anywhere, and 404s if a crawler
+    // guesses it. The sitemap revalidates hourly (below), so a page appears
+    // within the hour after it goes live.
+    for (const path of await getDocsPagePaths(project.slug)) {
+      routes.push({
+        url: url(docsHref(project.slug, path.split("/"))),
+        changeFrequency: "weekly",
+        priority: 0.6,
+      });
+    }
   }
 
   return routes;
@@ -183,5 +178,9 @@ async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  return [...STATIC_ROUTES, ...docsRoutes(), ...(await databaseRoutes())];
+  return [
+    ...STATIC_ROUTES,
+    ...(await docsRoutes()),
+    ...(await databaseRoutes()),
+  ];
 }

@@ -6,7 +6,8 @@ import { useState } from "react";
 import { CaretRightIcon, CheckCircleIcon } from "@phosphor-icons/react/ssr";
 import { stepKey, useDoneSteps } from "~/components/DocsProgress/store";
 import { DOCS_INDEX_LABEL } from "~/config/docs";
-import { docsHref } from "~/lib/docsSlug";
+import DocsScheduled from "~/components/DocsScheduled";
+import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import {
   firstPagePath,
   isIndexPage,
@@ -24,6 +25,8 @@ import {
 
 interface TreeContext {
   project: string;
+  /** `/docs`, or the preview's prefix; links built here stay under it. */
+  base?: string;
   activePath: string;
   /** Finished course steps, see ~/components/DocsProgress. */
   done: ReadonlySet<string>;
@@ -144,13 +147,21 @@ function Folder({
     setOpen(next);
     if (!next) return;
     const path = firstPagePath(folder.children);
-    if (path) router.push(docsHref(ctx.project, path.split("/")));
+    if (path)
+      router.push(
+        docsHref(ctx.project, path.split("/"), ctx.base ?? DOCS_BASE),
+      );
   }
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
       <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-sm px-1.5 py-1.5 text-left text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white">
-        <span className="min-w-0 flex-1">{folder.name}</span>
+        <span className="min-w-0 flex-1">
+          {folder.name}
+          {folder.publishAt && (
+            <DocsScheduled at={folder.publishAt} className="mt-0.5 flex" />
+          )}
+        </span>
         {folder.steps && (
           <span
             aria-label={`${finished} of ${steps.length} done`}
@@ -194,14 +205,19 @@ function Page({
 
   return (
     <Link
-      href={docsHref(ctx.project, page.path.split("/"))}
+      href={docsHref(ctx.project, page.path.split("/"), ctx.base ?? DOCS_BASE)}
       data-active={page.path === ctx.activePath || undefined}
       // The relabelled row is the one place the sidebar shows a name the page
       // does not answer to, so the real one stays reachable on hover.
       title={label === page.title ? undefined : page.title}
       className={cn(PAGE_LINK, ACTIVE_LINK)}
     >
-      <span className="min-w-0 flex-1">{label}</span>
+      <span className="min-w-0 flex-1">
+        {label}
+        {page.publishAt && (
+          <DocsScheduled at={page.publishAt} className="mt-0.5 flex" />
+        )}
+      </span>
       {done && (
         <CheckCircleIcon
           weight="fill"

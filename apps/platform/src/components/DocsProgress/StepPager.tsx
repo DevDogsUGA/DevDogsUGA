@@ -7,8 +7,9 @@ import {
   CircleIcon,
 } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
-import { docsHref } from "~/lib/docsSlug";
+import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import { cn } from "~/lib/cn";
+import DocsScheduled from "~/components/DocsScheduled";
 import { setStepDone, stepKey, useDoneSteps } from "./store";
 
 interface Props {
@@ -16,9 +17,11 @@ interface Props {
   /** The course's name: its folder's. */
   course: string;
   /** Every step, project-relative, in reading order. */
-  steps: { path: string; title: string }[];
+  steps: { path: string; title: string; publishAt?: string }[];
   /** This page's position in `steps`, from 0. */
   index: number;
+  /** `/docs`, or the preview's prefix, so the links stay where the reader is. */
+  base?: string;
 }
 
 const NAV_LINK =
@@ -30,7 +33,13 @@ const NAV_LINK =
  * marks this step done, so the button is only needed to undo a mark or to
  * finish the last step.
  */
-export default function StepPager({ project, course, steps, index }: Props) {
+export default function StepPager({
+  project,
+  course,
+  steps,
+  index,
+  base = DOCS_BASE,
+}: Props) {
   const doneSteps = useDoneSteps();
   const current = steps[index]!;
   const previous = steps[index - 1];
@@ -49,7 +58,7 @@ export default function StepPager({ project, course, steps, index }: Props) {
       <div className="grid gap-3 sm:grid-cols-2">
         {previous ? (
           <Link
-            href={docsHref(project, previous.path.split("/"))}
+            href={docsHref(project, previous.path.split("/"), base)}
             className={NAV_LINK}
           >
             <span className="flex items-center gap-1.5 text-xs text-mauve-400">
@@ -58,13 +67,14 @@ export default function StepPager({ project, course, steps, index }: Props) {
             <span className="truncate text-sm font-medium text-white">
               {previous.title}
             </span>
+            {previous.publishAt && <DocsScheduled at={previous.publishAt} />}
           </Link>
         ) : (
           <span />
         )}
         {next && (
           <Link
-            href={docsHref(project, next.path.split("/"))}
+            href={docsHref(project, next.path.split("/"), base)}
             onClick={() => setStepDone(key, true)}
             className={cn(NAV_LINK, "sm:items-end sm:text-right")}
           >
@@ -74,6 +84,7 @@ export default function StepPager({ project, course, steps, index }: Props) {
             <span className="truncate text-sm font-medium text-white">
               {next.title}
             </span>
+            {next.publishAt && <DocsScheduled at={next.publishAt} />}
           </Link>
         )}
       </div>
