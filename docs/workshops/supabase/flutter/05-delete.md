@@ -10,11 +10,25 @@ order: 5
 
 <!-- prettier-ignore-start -->
 
+<details>
+<summary>Behind? Start from where the last step ended</summary>
+
+These put your copy of the workshop code exactly where the previous step left it.
+
+```bash cwd=~/Mobile-Workshops
+# Get the checkpoint tags
+git fetch origin --tags
+# Throws away your changes to the workshop code
+git switch --detach --discard-changes demo/04-profiles
+```
+
+</details>
+
 ## Let Users Delete Their Own Messages
 
-One more policy, at the end.
+**Dashboard → SQL Editor**:
 
-**Dashboard → SQL Editor** — `supabase/migrations/20260928000000_guestbook.sql`:
+One more policy, at the end.
 
 Signed-in users can delete a message only when it's theirs. There's no update policy, on purpose.
 

@@ -10,15 +10,27 @@ order: 1
 
 <!-- prettier-ignore-start -->
 
+<details>
+<summary>Behind? Start from where the last step ended</summary>
+
+These put your copy of the workshop code exactly where the previous step left it.
+
+```bash cwd=~/Web-Workshops
+# Throws away your changes to the workshop code
+git switch --discard-changes 01-nextjs-intro
+```
+
+</details>
+
 The guestbook is the part we didn't get to at Setup Night. It's already in your starter code, keeping messages in memory. Now we'll give it a real database.
 
 ## Create the Messages Table
 
-**Dashboard → SQL Editor** — `supabase/migrations/20260928000000_guestbook.sql`:
+**Dashboard → SQL Editor**:
 
 `create table` makes the `messages` table. `default auth.uid()` fills in `user_id` with whoever is signed in.
 
-```sql
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13
 create table public.messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
@@ -30,13 +42,13 @@ create table public.messages (
 
 Row-level security goes on: from now on, nobody can read or write a row unless a policy says so.
 
-```sql
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=15
 alter table public.messages enable row level security;
 ```
 
 The first policy: anyone, signed in (`authenticated`) or not (`anon`), can read every message.
 
-```sql
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=17-22
 -- Anyone (signed in or not) can read the guestbook.
 create policy "messages are readable by everyone"
   on public.messages
@@ -49,18 +61,16 @@ create policy "messages are readable by everyone"
 
 ## Install the Supabase Client
 
-```bash
+```bash cwd=~/Web-Workshops
 # Add the Supabase client
 pnpm add @supabase/supabase-js
 ```
 
 ## Connect to Supabase
 
-`lib/supabase.ts`:
-
 `"use client"` marks this module for the browser: the Supabase client runs in the page.
 
-```ts
+```ts file=lib/supabase.ts lines=1-5
 "use client";
 
 // A single Supabase client for the browser. Every client component
@@ -70,18 +80,18 @@ import { createClient } from "@supabase/supabase-js";
 
 `process.env.NEXT_PUBLIC_…` reads the values from `.env.local`. Next.js only hands the browser variables that start with `NEXT_PUBLIC_`.
 
-```ts
+```ts file=lib/supabase.ts lines=7-8
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 ```
 
 `createClient` builds one Supabase client, and every component imports this same one.
 
-```ts
+```ts file=lib/supabase.ts lines=10
 export const supabase = createClient(supabaseUrl, supabasePublishableKey);
 ```
 
-```ts
+```ts file=lib/supabase.ts lines=1-10
 "use client";
 
 // A single Supabase client for the browser. Every client component

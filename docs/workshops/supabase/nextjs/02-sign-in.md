@@ -10,6 +10,20 @@ order: 2
 
 <!-- prettier-ignore-start -->
 
+<details>
+<summary>Behind? Start from where the last step ended</summary>
+
+These put your copy of the workshop code exactly where the previous step left it.
+
+```bash cwd=~/Web-Workshops
+# Get the checkpoint tags
+git fetch origin --tags
+# Throws away your changes to the workshop code
+git switch --detach --discard-changes demo/01-read
+```
+
+</details>
+
 **OIDC** (OpenID Connect) is a standard built on OAuth 2.0. It lets your app send people to another service to sign in (here, DevDogs), then tells your app who they are.
 
 ## Register Your App with DevDogs

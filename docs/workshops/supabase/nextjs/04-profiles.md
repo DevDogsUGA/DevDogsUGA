@@ -10,15 +10,29 @@ order: 4
 
 <!-- prettier-ignore-start -->
 
+<details>
+<summary>Behind? Start from where the last step ended</summary>
+
+These put your copy of the workshop code exactly where the previous step left it.
+
+```bash cwd=~/Web-Workshops
+# Get the checkpoint tags
+git fetch origin --tags
+# Throws away your changes to the workshop code
+git switch --detach --discard-changes demo/03-insert-naive
+```
+
+</details>
+
 Store each person's name once, on the server, when they sign up. Every message then shows the name from their account, and the app stops sending a name at all.
 
 ## Move Names into Profiles
 
-**Dashboard → SQL Editor** — `supabase/migrations/20260928000100_profiles.sql`:
+**Dashboard → SQL Editor**:
 
 A `profiles` table: one row per person, keyed by their `auth.users` id.
 
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=6-11
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   name text not null
@@ -29,7 +43,7 @@ alter table public.profiles enable row level security;
 
 Names are public, so everyone can read profiles. There's no write policy: only the trigger below writes here.
 
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=13-19
 -- Names are public (they show up next to every message), but nobody can
 -- write to this table directly -- only the trigger below does that.
 create policy "profiles are readable by everyone"
@@ -41,7 +55,7 @@ create policy "profiles are readable by everyone"
 
 A function that runs as its owner (`security definer`), so it can write a profile the signed-in user can't.
 
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=25-30
 create function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -52,7 +66,7 @@ as $$
 
 It inserts one profile for each new user…
 
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=31-37
 begin
   insert into public.profiles (id, name)
   values (
@@ -64,7 +78,7 @@ begin
 
 …named by `coalesce`: the first of `name`, `full_name`, `preferred_username`, or the start of the email.
 
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=38-44
       new.raw_user_meta_data ->> 'preferred_username',
       split_part(new.email, '@', 1)
     )
@@ -76,7 +90,7 @@ $$;
 
 The trigger runs that function every time someone signs up.
 
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=46-48
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -84,7 +98,7 @@ create trigger on_auth_user_created
 
 The backfill gives everyone who signed up before tonight a profile too.
 
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=50-61
 -- Backfill: give everyone who signed up before this migration a profile too.
 insert into public.profiles (id, name)
 select
@@ -101,7 +115,7 @@ on conflict (id) do nothing;
 
 Messages now point at profiles, and the `author_name` column goes away.
 
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=63-70
 -- Messages now point at profiles (not auth.users directly), so PostgREST
 -- can embed `profiles(name)` in a single select. The client can no longer
 -- send its own author_name -- the name always comes from the server.

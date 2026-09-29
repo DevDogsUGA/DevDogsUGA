@@ -10,15 +10,27 @@ order: 1
 
 <!-- prettier-ignore-start -->
 
+<details>
+<summary>Behind? Start from where the last step ended</summary>
+
+These put your copy of the workshop code exactly where the previous step left it.
+
+```bash cwd=~/Mobile-Workshops
+# Throws away your changes to the workshop code
+git switch --discard-changes 01-flutter-intro
+```
+
+</details>
+
 The guestbook is the part we didn't get to at Setup Night. It's already in your starter code, keeping messages in memory. Now we'll give it a real database.
 
 ## Create the Messages Table
 
-**Dashboard → SQL Editor** — `supabase/migrations/20260928000000_guestbook.sql`:
+**Dashboard → SQL Editor**:
 
 `create table` makes the `messages` table. `default auth.uid()` fills in `user_id` with whoever is signed in.
 
-```sql
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13
 create table public.messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
@@ -30,13 +42,13 @@ create table public.messages (
 
 Row-level security goes on: from now on, nobody can read or write a row unless a policy says so.
 
-```sql
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=15
 alter table public.messages enable row level security;
 ```
 
 The first policy: anyone, signed in (`authenticated`) or not (`anon`), can read every message.
 
-```sql
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=17-22
 -- Anyone (signed in or not) can read the guestbook.
 create policy "messages are readable by everyone"
   on public.messages
@@ -49,7 +61,7 @@ create policy "messages are readable by everyone"
 
 ## Install the Supabase Client
 
-```bash
+```bash cwd=~/Mobile-Workshops
 # Add the Supabase client
 flutter pub add supabase_flutter gotrue
 ```

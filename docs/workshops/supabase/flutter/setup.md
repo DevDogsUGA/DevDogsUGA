@@ -12,7 +12,7 @@ order: 0
 
 ## Get the Workshop Code
 
-```bash
+```bash cwd=~
 # Download the workshop repo
 gh repo clone DevDogsUGA/Mobile-Workshops
 cd Mobile-Workshops
@@ -28,9 +28,7 @@ flutter pub get
 - Copy the **Project URL** and the **publishable key** from Project Settings → API
 - Copy `.env.example` to `.env.local` and paste them in
 
-`.env.example`:
-
-```dotenv
+```dotenv file=.env.example lines=1-7
 # Copy this file to .env.local and fill in your own Supabase project's values.
 # Find both on your project's dashboard under Project Settings > API.
 #

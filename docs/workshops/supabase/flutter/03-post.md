@@ -10,11 +10,25 @@ order: 3
 
 <!-- prettier-ignore-start -->
 
+<details>
+<summary>Behind? Start from where the last step ended</summary>
+
+These put your copy of the workshop code exactly where the previous step left it.
+
+```bash cwd=~/Mobile-Workshops
+# Get the checkpoint tags
+git fetch origin --tags
+# Throws away your changes to the workshop code
+git switch --detach --discard-changes demo/02-sign-in
+```
+
+</details>
+
 ## Allow Signed-In Posts
 
-The table and read policy from step 1. The new policy goes at the end.
+**Dashboard → SQL Editor**:
 
-**Dashboard → SQL Editor** — `supabase/migrations/20260928000000_guestbook.sql`:
+The table and read policy from step 1. The new policy goes at the end.
 
 Only signed-in users can insert, and `with check (auth.uid() = user_id)` means only as themselves.
 

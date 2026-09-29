@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
+import DocsCodeCopy from "~/components/DocsCodeCopy";
 import DocsDiff from "~/components/DocsDiff";
 import TableOfContents, {
   InlineTableOfContents,
@@ -79,6 +80,7 @@ export default function DocPageContent({
             )}
           </article>
           {footer}
+          <DocsCodeCopy />
         </div>
 
         {toc.length > 0 && (

@@ -10,6 +10,20 @@ order: 4
 
 <!-- prettier-ignore-start -->
 
+<details>
+<summary>Behind? Start from where the last step ended</summary>
+
+These put your copy of the workshop code exactly where the previous step left it.
+
+```bash
+# Get the checkpoint tags
+git fetch origin --tags
+# Throws away your changes to the workshop code
+git switch --detach --discard-changes demo/05-delete
+```
+
+</details>
+
 ## Start Supabase Locally
 
 ```bash
@@ -30,9 +44,7 @@ pnpm dlx supabase migration new profiles
 pnpm dlx supabase db reset
 ```
 
-`supabase/migrations/20260928000000_guestbook.sql`:
-
-```sql
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13,15,17-22,24-29,31-37
 create table public.messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
@@ -40,23 +52,19 @@ create table public.messages (
   body text not null check (char_length(body) between 1 and 500),
   created_at timestamptz not null default now()
 );
--- …
 alter table public.messages enable row level security;
--- …
 -- Anyone (signed in or not) can read the guestbook.
 create policy "messages are readable by everyone"
   on public.messages
   for select
   to anon, authenticated
   using (true);
--- …
 -- Only signed-in users can post, and only under their own user id.
 create policy "authenticated users can insert their own messages"
   on public.messages
   for insert
   to authenticated
   with check (auth.uid() = user_id);
--- …
 -- Signed-in users can remove their own messages. There is no update
 -- policy: we only support post-and-delete for this workshop.
 create policy "authenticated users can delete their own messages"
@@ -66,16 +74,13 @@ create policy "authenticated users can delete their own messages"
   using (auth.uid() = user_id);
 ```
 
-`supabase/migrations/20260928000100_profiles.sql`:
-
-```sql
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=6-11,13-19,21-44,46-48,50-61,63-70
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   name text not null
 );
 
 alter table public.profiles enable row level security;
--- …
 -- Names are public (they show up next to every message), but nobody can
 -- write to this table directly -- only the trigger below does that.
 create policy "profiles are readable by everyone"
@@ -83,7 +88,6 @@ create policy "profiles are readable by everyone"
   for select
   to anon, authenticated
   using (true);
--- …
 -- Runs as the table owner (security definer) so it can insert into
 -- public.profiles even though the signed-in user has no write policy
 -- there. `search_path = ''` stops it from being tricked by a
@@ -108,11 +112,9 @@ begin
   return new;
 end;
 $$;
--- …
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
--- …
 -- Backfill: give everyone who signed up before this migration a profile too.
 insert into public.profiles (id, name)
 select
@@ -125,7 +127,6 @@ select
   )
 from auth.users
 on conflict (id) do nothing;
--- …
 -- Messages now point at profiles (not auth.users directly), so PostgREST
 -- can embed `profiles(name)` in a single select. The client can no longer
 -- send its own author_name -- the name always comes from the server.
@@ -138,9 +139,7 @@ alter table public.messages drop column author_name;
 
 ## Configure OAuth Sign-In
 
-`supabase/config.toml`:
-
-```toml
+```toml file=supabase/config.toml lines=321-334
 [auth.external.apple]
 enabled = false
 client_id = ""
