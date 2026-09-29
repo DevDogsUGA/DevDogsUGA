@@ -27,6 +27,7 @@ import {
   allPassed,
   checkProtectedRedirect,
   checkPublicRoute,
+  retryWhilePropagating,
   formatResults,
   type CheckResult,
 } from "./checks.js";
@@ -57,15 +58,19 @@ async function main(): Promise<number> {
   const origin = `https://${hostFor(app, tier)}`;
 
   const results: CheckResult[] = [];
+  // A 503 while the new version propagates isn't a broken route; see
+  // `retryWhilePropagating`.
+  const fetchApp = retryWhilePropagating();
 
   for (const path of config.publicPaths) {
-    results.push(await checkPublicRoute(`${origin}${path}`));
+    results.push(await checkPublicRoute(`${origin}${path}`, fetchApp));
   }
 
   results.push(
     await checkProtectedRedirect(
       `${origin}${config.protectedPath}`,
       config.protectedRedirectPrefix,
+      fetchApp,
     ),
   );
 
