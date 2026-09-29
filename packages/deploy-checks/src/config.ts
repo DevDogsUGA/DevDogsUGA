@@ -33,8 +33,6 @@ export interface AppSmokeConfig {
   readonly protectedPath: string;
   /** The redirect Location an anonymous request to `protectedPath` must start with. */
   readonly protectedRedirectPrefix: string;
-  /** Sentry Crons monitor slugs this app upserts check-ins against, if any. */
-  readonly cronMonitorSlugs: readonly string[];
 }
 
 export const SMOKE_APPS: readonly AppSmokeConfig[] = [
@@ -62,11 +60,6 @@ export const SMOKE_APPS: readonly AppSmokeConfig[] = [
     ],
     protectedPath: "/console/permissions",
     protectedRedirectPrefix: "/auth",
-    cronMonitorSlugs: [
-      "platform-cron-nightly-repair",
-      "platform-cron-config-reconcile",
-      "platform-cron-discord-role-sync",
-    ],
   },
   {
     app: "schedule-builder",
@@ -99,9 +92,6 @@ export const SMOKE_APPS: readonly AppSmokeConfig[] = [
     // either way.
     protectedPath: "/dashboard",
     protectedRedirectPrefix: "/",
-    // No Sentry Crons monitors defined for this app yet -- it has no
-    // CRON_ROUTES table the way apps/platform/cloudflare/scheduled.ts does.
-    cronMonitorSlugs: [],
   },
 ];
 

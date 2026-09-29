@@ -53,7 +53,7 @@ The release step needs two values. devtools' own manifest declares both, beside 
 
 `SENTRY_ORG` needs no setting: the deploy reads it from `.env.example`. For the token, fill in `SENTRY_AUTH_TOKEN` in `.env.staging` and `.env.production` (one token serves both), then run `pnpm devtools env push --target <target>` for each. Create it under Sentry's **Settings → Developer Settings → Organization Tokens**.
 
-Without `SENTRY_AUTH_TOKEN` the step logs a warning and the deploy continues. With it, a failed release or upload fails the deploy. The deploy smoke test also uses both to confirm the release exists and each cron monitor has checked in.
+Without `SENTRY_AUTH_TOKEN` the step logs a warning and the deploy continues. With it, a failed release or upload fails the deploy. The deploy smoke test also uses both to confirm the release exists. It doesn't check cron monitors: the organization token can't read them, and Sentry already opens an issue when a monitored job misses a check-in.
 
 ## devtools
 

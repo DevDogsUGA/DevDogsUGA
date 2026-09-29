@@ -105,17 +105,3 @@ describe("SMOKE_APPS publicPaths", () => {
     }
   });
 });
-
-describe("SMOKE_APPS cronMonitorSlugs", () => {
-  it("platform matches apps/platform/cloudflare/scheduled.ts's CRON_ROUTES monitor slugs", () => {
-    const platform = SMOKE_APPS.find((c) => c.app === "platform")!;
-    const scheduledText = readFileSync(
-      join(PROJECT_ROOT, "apps/platform/cloudflare/scheduled.ts"),
-      "utf8",
-    );
-    const slugs = [...scheduledText.matchAll(/monitorSlug:\s*"([^"]+)"/g)].map(
-      (m) => m[1]!,
-    );
-    expect(new Set(platform.cronMonitorSlugs)).toEqual(new Set(slugs));
-  });
-});

@@ -199,8 +199,7 @@ jobs:
       # Read-only smoke test against the Worker version just deployed: every
       # listed public route answers 200, the one known protected route
       # redirects an anonymous request, and — only when SENTRY_AUTH_TOKEN is
-      # configured — this deploy's Sentry release is visible and each app's
-      # Crons monitors have a check-in on record. Does NOT re-check
+      # configured — this deploy's Sentry release is visible. Does NOT re-check
       # config-reconcile: the step immediately above is now the one and
       # only place that runs, so this would otherwise trigger it twice.
       # Fails the job (and so this deploy) on any non-skipped failure. No
