@@ -5,9 +5,13 @@ import { env } from "~/env";
  * name (case-insensitively) against the forum's `available_tags`, so the ids
  * never live in code and an officer renaming a tag's emoji breaks nothing.
  * Renaming the tag itself does, which is why the names are here once.
+ *
+ * There is no Open tag: a post is open unless it carries Resolved or
+ * Duplicate. Discord would never apply an Open tag to posts members start
+ * there, and the forum's own active list already hides resolved posts,
+ * which are archived.
  */
 export const SUPPORT_TAGS = {
-  open: "Open",
   resolved: "Resolved",
   duplicate: "Duplicate",
   faq: "FAQ",

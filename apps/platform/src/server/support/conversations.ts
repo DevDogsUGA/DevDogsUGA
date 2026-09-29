@@ -12,7 +12,6 @@ import { getDocsProjects } from "~/server/docs/queries";
 import type {
   SupportConversationSummary,
   SupportInbox,
-  SupportStatus,
   SupportThread,
 } from "~/lib/support/types";
 import { CONTEXT_LINE_PREFIX } from "./anonymize";
@@ -30,6 +29,7 @@ import {
   tagNames,
   threadUrl,
   updateThread,
+  statusOf,
   withStatusTag,
   type ForumTags,
 } from "./forum";
@@ -52,14 +52,6 @@ function newer(a: string | null | undefined, b: string | null | undefined) {
   if (!a) return false;
   if (!b) return true;
   return BigInt(a) > BigInt(b);
-}
-
-function statusOf(
-  tags: ForumTags,
-  appliedTagIds: readonly string[],
-): SupportStatus {
-  const resolved = tagId(tags, SUPPORT_TAGS.resolved);
-  return resolved && appliedTagIds.includes(resolved) ? "resolved" : "open";
 }
 
 function ownedBy(visitor: Visitor) {
@@ -217,8 +209,8 @@ export interface NewConversation {
 }
 
 /**
- * Starts a forum post from the widget. The post carries Open plus the
- * project's tag (when the forum has one by that name), and one subtext line
+ * Starts a forum post from the widget. The post carries the project's tag
+ * (when the forum has one by that name), and one subtext line
  * of context for officers: the page it was asked from and, for a linked
  * member, a ping, which also joins them to the thread so Discord notifies
  * them of replies.
@@ -230,10 +222,8 @@ export async function startConversation(
 ): Promise<{ threadId: string }> {
   const tags = await getForumTags(config);
   const project = input.page ? projectOf(input.page.path) : null;
-  const tagIds = [
-    tagId(tags, SUPPORT_TAGS.open),
-    project ? tagId(tags, project.name) : undefined,
-  ].filter((id): id is string => id !== undefined);
+  const projectTag = project ? tagId(tags, project.name) : undefined;
+  const tagIds = projectTag ? [projectTag] : [];
 
   const context: string[] = [];
   if (input.page) {

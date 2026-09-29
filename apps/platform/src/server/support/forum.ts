@@ -11,6 +11,7 @@ import {
 } from "discord-api-types/v10";
 import { DiscordAPIError } from "@discordjs/rest";
 import { env } from "~/env";
+import type { SupportStatus } from "~/lib/support/types";
 import { asBot } from "~/server/discord/api";
 import { SUPPORT_TAGS, type SupportConfig } from "./config";
 import { sharedCache } from "./sharedCache";
@@ -307,22 +308,37 @@ export function tagNames(tags: ForumTags, ids: readonly string[]): string[] {
 }
 
 /**
- * Swaps a thread between Open and Resolved, keeping every other tag (project
- * tags, FAQ, Duplicate) as it was. A missing Open/Resolved tag in the forum
- * is skipped rather than fatal, so the widget still works before an officer
- * has created the tags.
+ * The tags a thread should carry for `status`, keeping every unrelated tag
+ * (project tags, FAQ) as it was. Resolving adds Resolved; reopening drops
+ * both closing tags, Resolved and Duplicate, since a visitor replying says
+ * the post is not done. A Resolved tag missing from the forum is skipped
+ * rather than fatal, so the widget still works before an officer has
+ * created it.
  */
 export function withStatusTag(
   tags: ForumTags,
   current: readonly string[],
-  status: "open" | "resolved",
+  status: SupportStatus,
 ): string[] {
-  const open = tagId(tags, SUPPORT_TAGS.open);
   const resolved = tagId(tags, SUPPORT_TAGS.resolved);
-  const kept = current.filter((id) => id !== open && id !== resolved);
-  const next = status === "open" ? open : resolved;
+  const duplicate = tagId(tags, SUPPORT_TAGS.duplicate);
+  if (status === "open") {
+    return current.filter((id) => id !== resolved && id !== duplicate);
+  }
+  if (!resolved || current.includes(resolved)) return [...current];
   // Discord caps a post at five tags.
-  return (next ? [next, ...kept] : kept).slice(0, 5);
+  return [resolved, ...current].slice(0, 5);
+}
+
+/** Resolved or Duplicate closes a post; anything else is open. */
+export function statusOf(
+  tags: ForumTags,
+  appliedTagIds: readonly string[],
+): SupportStatus {
+  const closing = [SUPPORT_TAGS.resolved, SUPPORT_TAGS.duplicate]
+    .map((name) => tagId(tags, name))
+    .filter((id): id is string => id !== undefined);
+  return appliedTagIds.some((id) => closing.includes(id)) ? "resolved" : "open";
 }
 
 /** The forum post's URL in the Discord client. Needs membership to open. */

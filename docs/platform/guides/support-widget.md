@@ -105,13 +105,16 @@ Work happens in `#tech-support` as usual. Widget posts are the ones by
   Mentions are stripped and there is no author, but read the question and
   answer before tagging.
 - **Tag `Duplicate` and link the original** (`#post` mention or a
-  `discord.com/channels/…` link). The widget sends the visitor there.
+  `discord.com/channels/…` link). The widget sends the visitor there and
+  shows the post as closed.
 - **Right-click a guest's message → Apps → Block guest.** This revokes their
   token and deletes the posts they started. It refuses members' messages;
   members are moderated through the platform.
 
-Resolving from either side works. If a visitor replies to a resolved post, it
-reopens.
+There is no Open tag. A post is open unless it has `Resolved` or `Duplicate`,
+so posts members start in Discord need nothing added. Resolving from either
+side works. If a visitor replies to a closed post, it reopens: both closing
+tags come off and the thread is unarchived.
 
 ## Turning it on in an environment
 
@@ -123,7 +126,7 @@ default to Cloudflare's always-pass test keys.
 
 Everything that needs setting up once:
 
-1. Forum tags named `Open`, `Resolved`, `Duplicate` and `FAQ` on the forum,
+1. Forum tags named `Resolved`, `Duplicate` and `FAQ` on the forum,
    plus optional tags named after docs projects (`Platform`, `Workshops`, …),
    which new posts get automatically. Tags are matched by name.
 2. The bot needs View Channel, Read Message History, Send Messages in Threads,
