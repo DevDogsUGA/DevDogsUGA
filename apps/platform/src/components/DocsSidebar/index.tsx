@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SidebarIcon } from "@phosphor-icons/react/ssr";
-import { groupDocsProjects } from "~/config/docs";
+import { DOCS_PROJECT_LABELS } from "~/config/docs";
 import type { DocsSidebarTree } from "~/lib/docsTree";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
@@ -48,7 +48,6 @@ function SidebarContent({
     [pathname],
   );
 
-  const groups = useMemo(() => groupDocsProjects(projects), [projects]);
   const offeredOs = useMemo(
     () => platforms.map((platform) => platform.value),
     [platforms],
@@ -72,25 +71,22 @@ function SidebarContent({
           aria-label="Project"
           className="w-full"
         >
-          {/* Descriptions are one short line each; see the `description`
-              frontmatter on every `docs/<project>/index.md`. They were longer
-              once, and at this width a sentence with an em-dash elaboration
-              wrapped to three lines and turned six choices into a wall. The
-              elaboration now lives in the page's opening paragraph. */}
-          {groups.map((group) => (
-            <Select.Group key={group.id} label={group.label}>
-              {group.projects.map((p) => (
-                <Select.Item
-                  key={p.slug}
-                  value={p.slug}
-                  icon={<DocsProjectMark slug={p.slug} />}
-                  description={p.description ?? undefined}
-                >
-                  {p.name}
-                </Select.Item>
-              ))}
-            </Select.Group>
-          ))}
+          {/* One line under each name, never wrapped: at this width a
+              sentence turned six choices into a wall. Brands and taglines
+              come from DOCS_PROJECT_LABELS. */}
+          {projects.map((p) => {
+            const label = DOCS_PROJECT_LABELS[p.slug];
+            return (
+              <Select.Item
+                key={p.slug}
+                value={p.slug}
+                icon={<DocsProjectMark slug={p.slug} />}
+                description={label?.tagline ?? p.description ?? p.name}
+              >
+                {label?.name ?? p.name}
+              </Select.Item>
+            );
+          })}
         </Select>
       )}
 

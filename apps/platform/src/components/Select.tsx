@@ -1,7 +1,11 @@
 "use client";
 
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { CheckIcon, CaretUpDownIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowRightIcon,
+  CaretUpDownIcon,
+  CheckIcon,
+} from "@phosphor-icons/react/ssr";
 import type { ComponentPropsWithoutRef } from "react";
 import { cn } from "~/lib/cn";
 
@@ -35,6 +39,7 @@ function Select({
     <SelectPrimitive.Root {...props}>
       <SelectPrimitive.Trigger
         aria-label={ariaLabel}
+        data-select-trigger
         className={cn(
           "group flex items-center justify-between gap-2 rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white hover:border-mauve-500 hover:inset-shadow-sm focus:outline-none data-placeholder:text-mauve-500",
           className,
@@ -68,119 +73,90 @@ interface ItemProps extends ComponentPropsWithoutRef<
    */
   icon?: React.ReactNode;
   /**
-   * One line under the label. Deliberately outside ItemText: Radix clones that
-   * node into the trigger, and a description belongs in the open list, not in
-   * the closed control.
+   * One line under the label, cut short rather than wrapped. Deliberately
+   * outside ItemText: Radix clones that node into the trigger, and a
+   * description belongs in the open list, not in the closed control.
    */
   description?: string;
 }
 
 function SelectItem({ children, icon, description, ...props }: ItemProps) {
+  if (icon && description) {
+    return (
+      <DescribedItem icon={icon} description={description} {...props}>
+        {children}
+      </DescribedItem>
+    );
+  }
+
   return (
     <SelectPrimitive.Item
-      className={cn(
-        "relative flex cursor-default gap-2 pr-3 pl-8 text-sm text-white select-none focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40",
-        // A described row is two lines tall, so its check and mark align to
-        // the label rather than to the middle of the pair.
-        description
-          ? // Matched to the navbar's Docs menu row, so the two project lists
-            // read as one control in two places: same vertical rhythm, same
-            // rounded highlight inset from the panel edge, same hover fill.
-            // The check gutter is the exception. A menu of links marks the
-            // current page with a background; a select has to say which option
-            // is chosen even while another is hovered.
-            "mx-1 items-start rounded-md py-2 focus:bg-mauve-800"
-          : "items-center py-1.5 focus:bg-mauve-700",
-      )}
+      className="relative flex cursor-default items-center gap-2 py-1.5 pr-3 pl-8 text-sm text-white select-none focus:bg-mauve-700 focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40"
       {...props}
     >
-      <span
-        className={cn(
-          "absolute left-2.5 flex items-center",
-          // Boxed to the first row's height and aligned to its top, rather
-          // than nudged down by a magic offset: the row is as tall as the mark
-          // when there is one and as tall as the label when there is not, and
-          // centring inside that box lands the check on the label either way.
-          description && "top-2 h-6",
-        )}
-      >
+      <span className="absolute left-2.5 flex items-center">
         <SelectPrimitive.ItemIndicator>
           <CheckIcon className="size-3.5 text-mauve-400" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      {/* Bounded, or the popover grows to fit the longest description on one
-          line, well past the sidebar and the mobile sheet it opens inside. */}
-      <span
-        className={cn(
-          "flex min-w-0 flex-col gap-0.5",
-          description && "max-w-56",
-        )}
-      >
-        <SelectPrimitive.ItemText>
-          {icon ? (
-            // gap-2.5 and `font-medium` are the navbar row's, not this
-            // component's own taste. The two lists sit one above the other on
-            // a docs page and any difference reads as a mistake.
-            <span
-              className={cn(
-                "flex items-center gap-2.5",
-                description && "font-medium",
-              )}
-            >
-              {icon}
-              {children}
-            </span>
-          ) : (
-            children
-          )}
-        </SelectPrimitive.ItemText>
-        {description && (
-          <span
-            className={cn(
-              "text-xs/relaxed text-mauve-400",
-              // Under the NAME, not under the mark. The navbar puts its mark
-              // beside a name+description column, so both lines share a left
-              // edge; here the mark lives inside ItemText to reach the trigger,
-              // which would otherwise leave the description starting a
-              // mark-width left of the name it belongs to. 2.125rem is the mark
-              // (size-6) plus the gap-2.5 above.
-              icon && "pl-[2.125rem]",
-            )}
-          >
-            {description}
+      <SelectPrimitive.ItemText>
+        {icon ? (
+          <span className="flex items-center gap-2.5">
+            {icon}
+            {children}
           </span>
+        ) : (
+          children
         )}
-      </span>
+      </SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   );
 }
 
 /**
- * A labelled run of items.
+ * A two-line row: the mark in a slot of its own, centred on the name and the
+ * description together, with no separate check gutter. The chosen row swaps
+ * its mark for an arrow, so which option is chosen still shows while another
+ * is hovered.
  *
- * Radix's Group ties the heading to its rows for assistive tech: the Label is
- * announced as the group's name rather than read as another option. So this is
- * a real grouping, not a styled separator row.
+ * The mark also sits inside ItemText, hidden in the list and shown only once
+ * Radix has cloned that node into the trigger, so the closed control keeps the
+ * mark beside the chosen name.
  */
-function SelectGroup({
-  label,
+function DescribedItem({
   children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+  icon,
+  description,
+  ...props
+}: ItemProps & { icon: React.ReactNode; description: string }) {
   return (
-    <SelectPrimitive.Group>
-      {/* `pl-9` lands the heading over the marks below it, the way the navbar
-          menu's heading sits over its own: 4px of item margin plus the 32px
-          check gutter. Aligning it to the panel edge would leave every heading
-          a gutter-width left of everything it labels. */}
-      <SelectPrimitive.Label className="pt-2 pr-3 pb-1 pl-9 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-        {label}
-      </SelectPrimitive.Label>
-      {children}
-    </SelectPrimitive.Group>
+    <SelectPrimitive.Item
+      className="group/item relative mx-1 flex cursor-default items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-white select-none focus:bg-mauve-800 focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40"
+      {...props}
+    >
+      <span className="relative flex shrink-0">
+        <span className="flex group-data-[state=checked]/item:invisible">
+          {icon}
+        </span>
+        <SelectPrimitive.ItemIndicator className="absolute inset-0 flex items-center justify-center rounded-md border border-black bg-white text-black">
+          <ArrowRightIcon weight="bold" className="size-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      {/* Bounded, so a long name cannot widen the popover past the sidebar
+          and the mobile sheet it opens inside. */}
+      <span className="flex max-w-52 min-w-0 flex-col gap-0.5">
+        <SelectPrimitive.ItemText>
+          <span className="flex items-center gap-2.5 font-medium">
+            <span className="hidden [[data-select-trigger]_&]:flex">
+              {icon}
+            </span>
+            {children}
+          </span>
+        </SelectPrimitive.ItemText>
+        <span className="truncate text-xs text-mauve-400">{description}</span>
+      </span>
+    </SelectPrimitive.Item>
   );
 }
 
-export default Object.assign(Select, { Item: SelectItem, Group: SelectGroup });
+export default Object.assign(Select, { Item: SelectItem });

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
 import TableOfContents, {
@@ -12,6 +13,8 @@ interface Props {
   headings: DocHeading[];
   breadcrumbs?: string[];
   githubUrl?: string;
+  /** Under the article: a course page's step pager. */
+  footer?: ReactNode;
 }
 
 export default function DocPageContent({
@@ -19,6 +22,7 @@ export default function DocPageContent({
   headings,
   breadcrumbs,
   githubUrl,
+  footer,
 }: Props) {
   const toc: TOCItem[] = headings.map((h) => ({
     title: h.title,
@@ -57,6 +61,7 @@ export default function DocPageContent({
             // visitor wrote reaches this string.
             dangerouslySetInnerHTML={{ __html: html }}
           />
+          {footer}
         </div>
 
         {toc.length > 0 && (

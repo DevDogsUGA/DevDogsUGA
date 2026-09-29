@@ -29,6 +29,7 @@ import {
   buildDocsTree,
   findFolder,
   firstPagePath,
+  stepPositionOf,
   type DocsSectionId,
   type DocsTreeNode,
 } from "./docsTree";
@@ -480,5 +481,63 @@ describe("buildDocsSidebarSections", () => {
     // any page outside reference/.
     expect(tree.overview).toBeNull();
     expect(tree.sections.map((s) => s.id)).toEqual(["guides"]);
+  });
+});
+
+describe("folder settings", () => {
+  const settings = [
+    { path: "supabase", name: "Workshop: Supabase", order: 2, steps: false },
+    {
+      path: "supabase/nextjs",
+      name: "Integrate with Next.js",
+      order: 2,
+      steps: true,
+    },
+    { path: "cold-start", name: "Cold Start", order: 1, steps: false },
+  ];
+
+  const tree = buildDocsTree(
+    [
+      page("supabase/concepts", "Concepts", 1),
+      page("supabase/nextjs/01-read", "Read the Guestbook", 1),
+      page("supabase/nextjs/02-sign-in", "Sign In", 2),
+      page("cold-start/collaborative-coding", "Collaborative Coding"),
+    ],
+    settings,
+  );
+
+  it("names a folder, rather than title-casing its directory", () => {
+    expect(labels(asSidebar(tree))).toEqual([
+      "Cold Start/",
+      "Workshop: Supabase/",
+    ]);
+    expect(findFolder(tree, "supabase/nextjs")?.name).toBe(
+      "Integrate with Next.js",
+    );
+  });
+
+  it("places a top-level folder by its settings' order, not its title", () => {
+    const reversed = buildDocsTree(
+      [page("a/x", "X"), page("b/y", "Y")],
+      [
+        { path: "a", name: "A", order: 2, steps: false },
+        { path: "b", name: "B", order: 1, steps: false },
+      ],
+    );
+    expect(labels(asSidebar(reversed))).toEqual(["B/", "A/"]);
+  });
+
+  it("carries steps, and finds a step page's place in its course", () => {
+    expect(findFolder(tree, "supabase/nextjs")?.steps).toBe(true);
+    const position = stepPositionOf(tree, "supabase/nextjs/02-sign-in");
+    expect(position?.index).toBe(1);
+    expect(position?.steps.map((step) => step.title)).toEqual([
+      "Read the Guestbook",
+      "Sign In",
+    ]);
+  });
+
+  it("puts a page outside any course in none", () => {
+    expect(stepPositionOf(tree, "supabase/concepts")).toBeNull();
   });
 });

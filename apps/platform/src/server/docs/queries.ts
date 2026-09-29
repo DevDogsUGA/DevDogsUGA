@@ -1,4 +1,5 @@
 import {
+  folders,
   pages,
   projects,
   variantGroups,
@@ -10,6 +11,8 @@ import {
   buildDocsSidebarSections,
   buildDocsTree,
   findFolder,
+  stepPositionOf,
+  type DocsFolderSettings,
   type DocsSidebarTree,
   type DocsTreeFolder,
   type DocsTreeNode,
@@ -27,6 +30,18 @@ export type { DocsProject };
 const pagesByPath = new Map<string, DocsPage>(
   pages.map((page) => [page.path, page]),
 );
+
+/** One project's folder settings, with project-relative paths. */
+function folderSettings(project: string): DocsFolderSettings[] {
+  return folders
+    .filter((folder) => folder.project === project)
+    .map(({ path, name, order, steps }) => ({
+      path: splitProjectPath(path).path,
+      name,
+      order,
+      steps,
+    }));
+}
 
 /** The setup axes pages vary by (platform, Supabase), with their labels. */
 export function getDocsVariantGroups(): typeof variantGroups {
@@ -51,6 +66,7 @@ export function getDocsTree(project: string): DocsTreeNode[] {
         title: page.title,
         order: page.order,
       })),
+    folderSettings(project),
   );
 }
 
@@ -71,6 +87,7 @@ export function getDocsSidebarTree(project: string): DocsSidebarTree {
         order: page.order,
         section: page.section,
       })),
+    folderSettings(project),
   );
 }
 
@@ -150,5 +167,29 @@ export function getDocsPage(
     // relative to `docs/`, like every other path the edit link is built from.
     mountedFrom:
       page.mountedFrom === null ? null : `_shared/${page.mountedFrom}`,
+  };
+}
+
+/** A step page's place in its course, for the pager under it. */
+export interface DocsStepNav {
+  /** The course's name: its folder's. */
+  course: string;
+  /** Every step, project-relative, in reading order. */
+  steps: { path: string; title: string }[];
+  /** This page's position in `steps`, from 0. */
+  index: number;
+}
+
+/** Null unless the page sits directly in a `steps: true` folder. */
+export function getDocsStepNav(
+  project: string,
+  path: string,
+): DocsStepNav | null {
+  const position = stepPositionOf(getDocsTree(project), path);
+  if (!position) return null;
+  return {
+    course: position.folder.name,
+    steps: position.steps.map(({ path, title }) => ({ path, title })),
+    index: position.index,
   };
 }

@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import PageShell from "~/components/PageShell";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import DocsTileGrid, { type DocsTile } from "~/components/DocsTileGrid";
-import { DOCS_LANDING_LARGE, DOCS_LANDING_SMALL } from "~/config/docs";
+import {
+  DOCS_LANDING_LARGE,
+  DOCS_LANDING_SMALL,
+  DOCS_LANDING_WORKSHOPS,
+} from "~/config/docs";
 import { getDocsProjects, type DocsProject } from "~/server/docs/queries";
 
 export const metadata: Metadata = {
@@ -21,8 +25,7 @@ function tile(project: DocsProject, size: "sm" | "lg"): DocsTile {
 
 /** `slugs` in listing order, keeping only the projects that actually exist —
  * a slug named here with no matching `docs/<slug>/index.md` drops silently
- * rather than throwing, the same "missing is not an error" stance
- * `groupDocsProjects` takes for the navbar and sidebar groupings. */
+ * rather than throwing: documenting a project must never break this page. */
 function projectsFor(
   projects: DocsProject[],
   slugs: readonly string[],
@@ -36,6 +39,7 @@ export default function DocsLandingPage() {
   const projects = getDocsProjects();
   const large = projectsFor(projects, DOCS_LANDING_LARGE);
   const small = projectsFor(projects, DOCS_LANDING_SMALL);
+  const workshops = projectsFor(projects, DOCS_LANDING_WORKSHOPS);
 
   return (
     <PageShell
@@ -64,6 +68,17 @@ export default function DocsLandingPage() {
             .
           </p>
         </section>
+
+        {workshops.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
+              Missed a workshop?
+            </h2>
+            <DocsTileGrid
+              tiles={workshops.map((project) => tile(project, "sm"))}
+            />
+          </section>
+        )}
 
         {/* Everyone touches these two regardless of team, so they stay one
             tap away without competing with the choice above. */}

@@ -3,9 +3,7 @@
 import { CaretDownIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { NavigationMenu } from "radix-ui";
-import { useMemo } from "react";
 import DocsProjectMark from "~/components/DocsProjectMark";
-import { groupDocsProjects } from "~/config/docs";
 import NavMenuTrigger from "./NavMenuTrigger";
 import { DOCS_MENU, useNavPanelRef } from "./NavShell";
 import { NAV_CONTENT } from "./navPanel";
@@ -45,52 +43,6 @@ export default function DocsMenu({
   className,
 }: Props) {
   const panelRef = useNavPanelRef();
-  const groups = useMemo(() => groupDocsProjects(projects), [projects]);
-
-  // Two containers rather than one grid with per-item column placement: a
-  // single grid sizes each ROW to its tallest cell, so the short left-hand
-  // groups would each be followed by a band of whitespace as tall as Apps.
-  // Separate columns let each side stack at its own height.
-  const leftGroups = groups.filter((group) => group.column === "left");
-  const rightGroups = groups.filter((group) => group.column === "right");
-
-  // A render function, not a component: called inline it produces the same
-  // element tree React would diff anyway, where a component declared here
-  // would be a new type on every render and remount the whole column.
-  //
-  // A plain group + label rather than a role="menu" tree. These are links the
-  // tab order already walks in order, and calling them menuitems would promise
-  // arrow-key navigation the trigger deliberately does not implement.
-  function renderGroup(group: (typeof groups)[number]) {
-    return (
-      <div key={group.id} role="group" aria-label={group.label}>
-        <p className="px-2.5 pt-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-          {group.label}
-        </p>
-        {group.projects.map((project) => (
-          <NavigationMenu.Link key={project.slug} asChild>
-            <Link
-              href={`/docs/${encodeURIComponent(project.slug)}`}
-              aria-current={project.slug === activeSlug ? "page" : undefined}
-              className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
-            >
-              <DocsProjectMark slug={project.slug} />
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-sm font-medium text-white">
-                  {project.name}
-                </span>
-                {project.description && (
-                  <span className="text-xs/relaxed text-mauve-400">
-                    {project.description}
-                  </span>
-                )}
-              </span>
-            </Link>
-          </NavigationMenu.Link>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <NavigationMenu.Item value={DOCS_MENU} className="hidden md:block">
@@ -108,20 +60,47 @@ export default function DocsMenu({
             measures this rather than the panel around it. The panel is
             stretched to whatever the viewport currently is.
 
-            Two columns from `lg`, not from `md`. The panel is anchored to its
-            trigger, and at 768px a 36rem panel opening from a trigger that
-            sits well into the bar would be pushed back off it by the
-            viewport's clamp. Below `lg` it stays one 20rem column. */}
-        <div
+            One grid of every project, in the order their `order:`
+            frontmatter gives them. Two columns from `lg`, not from `md`: the
+            panel is anchored to its trigger, and at 768px a 36rem panel
+            opening from a trigger that sits well into the bar would be pushed
+            back off it by the viewport's clamp. Below `lg` it stays one 20rem
+            column.
+
+            A plain list of links rather than a role="menu" tree. The tab order
+            already walks them in order, and calling them menuitems would
+            promise arrow-key navigation the trigger deliberately does not
+            implement. */}
+        <ul
           data-nav-sizer
-          className="w-80 p-1 lg:grid lg:w-[36rem] lg:grid-cols-2 lg:items-start lg:gap-x-1"
+          className="grid w-80 gap-1 p-1 lg:w-[36rem] lg:grid-cols-2"
         >
-          {/* Below `lg` this is one column and the two halves stack, so the
-              left-hand groups come first and Apps follows. Reading order
-              stays sensible; only the side-by-side arrangement is lost. */}
-          <div>{leftGroups.map(renderGroup)}</div>
-          <div>{rightGroups.map(renderGroup)}</div>
-        </div>
+          {projects.map((project) => (
+            <li key={project.slug}>
+              <NavigationMenu.Link asChild>
+                <Link
+                  href={`/docs/${encodeURIComponent(project.slug)}`}
+                  aria-current={
+                    project.slug === activeSlug ? "page" : undefined
+                  }
+                  className="flex h-full items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
+                >
+                  <DocsProjectMark slug={project.slug} />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-sm font-medium text-white">
+                      {project.name}
+                    </span>
+                    {project.description && (
+                      <span className="text-xs/relaxed text-mauve-400">
+                        {project.description}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              </NavigationMenu.Link>
+            </li>
+          ))}
+        </ul>
       </NavigationMenu.Content>
     </NavigationMenu.Item>
   );

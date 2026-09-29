@@ -2,16 +2,23 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import DocPageContent from "~/components/DocPageContent";
 import DocsFolderContents from "~/components/DocsFolderContents";
+import StepPager from "~/components/DocsProgress/StepPager";
 import { DOCS_BRANCH, DOCS_REPO } from "~/config/docs";
 import { env } from "~/env";
 import { docsHref, projectPath } from "~/lib/docsSlug";
 import { toTitleCase } from "~/lib/toTitleCase";
-import { allFolders, indexPageOf, type DocsTreeNode } from "~/lib/docsTree";
+import {
+  allFolders,
+  findFolder,
+  indexPageOf,
+  type DocsTreeNode,
+} from "~/lib/docsTree";
 import {
   getDocsFolder,
   getDocsFolderEntries,
   getDocsPage,
   getDocsProjects,
+  getDocsStepNav,
   getDocsTree,
 } from "~/server/docs/queries";
 
@@ -94,9 +101,18 @@ export default async function DocsPage({
   const path = slug.map(decodeURIComponent);
 
   const page = getDocsPage(projectSlug, path.join("/"));
+  // Each folder by its own name, which its settings may give it, rather than
+  // its directory's.
+  const tree = getDocsTree(projectSlug);
   const breadcrumbs = [
     toTitleCase(projectSlug),
-    ...path.slice(0, -1).map(toTitleCase),
+    ...path
+      .slice(0, -1)
+      .map(
+        (segment, i) =>
+          findFolder(tree, path.slice(0, i + 1).join("/"))?.name ??
+          toTitleCase(segment),
+      ),
   ];
 
   if (!page) {
@@ -125,6 +141,7 @@ export default async function DocsPage({
   const sourcePath =
     page.mountedFrom ?? projectPath(projectSlug, path.join("/"));
   const githubUrl = `https://github.com/${env.GITHUB_ORG}/${DOCS_REPO}/blob/${DOCS_BRANCH}/docs/${sourcePath}.md`;
+  const stepNav = getDocsStepNav(projectSlug, path.join("/"));
 
   return (
     <DocPageContent
@@ -132,6 +149,7 @@ export default async function DocsPage({
       headings={page.headings}
       breadcrumbs={breadcrumbs}
       githubUrl={githubUrl}
+      footer={stepNav && <StepPager project={projectSlug} {...stepNav} />}
     />
   );
 }

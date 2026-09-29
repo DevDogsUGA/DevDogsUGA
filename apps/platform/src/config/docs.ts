@@ -31,6 +31,7 @@ export const DOCS_PROJECT_MARKS: Record<
   platform: { icon: "HouseIcon", iconBg: "bg-cyan-400" },
   "schedule-builder": { icon: "DogDaysIcon", iconBg: "bg-red-400" },
   "study-group-finder": { icon: "DogPackIcon", iconBg: "bg-purple-400" },
+  workshops: { icon: "ChalkboardTeacherIcon", iconBg: "bg-amber-400" },
 };
 
 export const DOCS_FALLBACK_MARK = {
@@ -60,47 +61,27 @@ export function docsProjectMark(slug: string) {
 export const DOCS_INDEX_LABEL = "Overview";
 
 /**
- * How the documented projects are grouped in the navbar menu and the sidebar
- * switcher. The landing page (`(site)/docs/page.tsx`) does NOT read this: it
- * has its own layout per the docs contract's "Which team are you on?" rule —
- * schedule-builder and study-group-finder as the large front-door cards,
- * platform and toolkit as a smaller row, sandbox reachable by URL but off the
- * page entirely. See `DOCS_LANDING_LARGE`/`DOCS_LANDING_SMALL` below.
+ * How the sidebar's project switcher names each project: its brand, when it
+ * has one, over a tagline that fits on one line. The brands and taglines are
+ * the ones ~/config/projects.ts gives the apps (DogDays is the schedule
+ * builder), so a project renamed there wants the matching change here.
  *
- * Five projects listed flat is an accurate list and a poor menu: it puts four
- * deployables and a set of shared packages on one level, so a newcomer reads
- * five equal choices with no way to tell which to open first. The groups say
- * what kind of thing each project is.
- *
- * Membership only. Projects keep the order their `order:` frontmatter gives
- * them WITHIN a group. The group decides which heading a project sits under and
- * the sequence of the headings, and nothing else, so there is still one source
- * of truth for where a project sits among its peers.
- *
- * A project missing from every group is not an error and must never vanish: it
- * collects under `UNGROUPED_LABEL` at the end, so documenting a new project is
- * one folder in `docs/` and nothing here, and forgetting this file costs a
- * heading rather than the entry.
+ * A project absent from this map shows its docs name and its `description`,
+ * cut to one line.
  */
-export const DOCS_GROUPS: readonly {
-  id: string;
-  label: string;
-  /**
-   * Which side of the navbar menu's two-column layout this group takes.
-   * Omitted means left. Only the wide menu reads it. The sidebar switcher and
-   * the landing page stack their groups in one column and ignore it.
-   */
-  column?: "left" | "right";
-  slugs: readonly string[];
-}[] = [
-  {
-    id: "apps",
-    label: "Apps",
-    column: "right",
-    slugs: ["platform", "sandbox", "schedule-builder", "study-group-finder"],
+export const DOCS_PROJECT_LABELS: Record<
+  string,
+  { name: string; tagline: string }
+> = {
+  platform: {
+    name: "DevDogs Platform",
+    tagline: "Member Portal and Dev Tools",
   },
-  { id: "shared", label: "Shared packages", slugs: ["toolkit"] },
-];
+  "schedule-builder": { name: "DogDays", tagline: "Schedule Builder" },
+  "study-group-finder": { name: "DogPack", tagline: "Study Group Finder" },
+  toolkit: { name: "Toolkit", tagline: "Shared Packages and Tooling" },
+  workshops: { name: "Workshops", tagline: "Meeting Slides and Code" },
+};
 
 /**
  * The docs landing page's own layout (contract item 4: "Which team are you
@@ -115,51 +96,5 @@ export const DOCS_LANDING_LARGE: readonly string[] = [
   "study-group-finder",
 ];
 export const DOCS_LANDING_SMALL: readonly string[] = ["platform", "toolkit"];
-
-/** Where a project no group claims ends up. */
-export const UNGROUPED_LABEL = "Everything else";
-
-export interface DocsProjectGroup<T> {
-  id: string;
-  label: string;
-  column: "left" | "right";
-  projects: T[];
-}
-
-/**
- * Partitions projects into `DOCS_GROUPS`, dropping groups that came out empty.
- *
- * Generic over the project shape because its two callers pass two different
- * ones: the navbar's link and the sidebar's switcher row. All this needs from
- * either is `slug`.
- */
-export function groupDocsProjects<T extends { slug: string }>(
-  projects: T[],
-): DocsProjectGroup<T>[] {
-  const claimed = new Set<string>();
-
-  const groups = DOCS_GROUPS.map((group) => ({
-    id: group.id,
-    label: group.label,
-    // Resolved here rather than left optional, so every consumer reads one
-    // shape and "no side declared" is answered in one place.
-    column: group.column ?? ("left" as const),
-    projects: projects.filter((project) => {
-      if (!group.slugs.includes(project.slug)) return false;
-      claimed.add(project.slug);
-      return true;
-    }),
-  }));
-
-  const rest = projects.filter((project) => !claimed.has(project.slug));
-  if (rest.length > 0) {
-    groups.push({
-      id: "ungrouped",
-      label: UNGROUPED_LABEL,
-      column: "left" as const,
-      projects: rest,
-    });
-  }
-
-  return groups.filter((group) => group.projects.length > 0);
-}
+/** The workshop write-ups, for anyone catching up on a meeting. */
+export const DOCS_LANDING_WORKSHOPS: readonly string[] = ["workshops"];

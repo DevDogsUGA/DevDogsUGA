@@ -3,6 +3,7 @@ export {
   BookOpenIcon,
   BusIcon,
   CalendarDotsIcon,
+  ChalkboardTeacherIcon,
   ChatCircleIcon,
   DiscordLogoIcon,
   DownloadSimpleIcon,
