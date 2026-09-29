@@ -141,6 +141,20 @@ So `order` decides nothing up there right now. It would if a project lost its ro
 
 </details>
 
+## Folder settings and courses
+
+A folder is named after its directory unless it has settings: a nested `index.md` with front matter and **no body**. That file names and places its folder and is never a page:
+
+```md
+---
+name: Integrate with Next.js
+order: 2
+steps: true
+---
+```
+
+`steps: true` makes the folder a course. Its pages become steps in sidebar order, each ending with a pager and a "Mark as done" button, and the sidebar ticks off finished steps. Progress lives in the reader's browser. `steps` anywhere else is a build error.
+
 ## Supported syntax
 
 Standard GitHub Flavored Markdown renders — headings, tables, task lists, blockquotes, code fences, autolinks. Beyond that:
