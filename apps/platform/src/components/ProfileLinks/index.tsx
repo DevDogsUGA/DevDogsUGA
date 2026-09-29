@@ -30,6 +30,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { PencilSimpleIcon, PlusIcon } from "@phosphor-icons/react/ssr";
 import { useProfileLinks, type DraftLink } from "~/hooks/useProfileLinks";
@@ -201,8 +202,21 @@ function SortablePreviewItem({
  * component hands to `save`, which is why a member can type a URL and press
  * Save without pressing Add first.
  */
+/** A store that never changes; see `mounted` below. */
+const subscribeToNothing = () => () => undefined;
+
 export default function ProfileLinks({ initialLinks }: Props) {
   const urlInputId = useId();
+  // The overlay portals into `document.body`, which doesn't exist during the
+  // server render. Creating the portal there threw, and the whole account form
+  // fell back to client rendering (React #419). `false` on the server, `true`
+  // on the client, the same trick `SettingsSaveBar` uses. The overlay only
+  // opens from a tap, so there was never server markup to keep.
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
   const {
     links,
     isDirtyFor,
@@ -701,40 +715,41 @@ export default function ProfileLinks({ initialLinks }: Props) {
       </div>
 
       {/* Full-screen overlay and title, portalled to body to escape any parent stacking context */}
-      {createPortal(
-        <AnimatePresence onExitComplete={() => setTitlePos(null)}>
-          {mobileEditSelectOpen && (
-            <motion.div
-              key="mobile-edit-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <RemoveScroll>
-                <div
-                  className="fixed inset-0 z-80 bg-black/60 backdrop-blur-xs md:hidden"
-                  onClick={() => setMobileEditSelectOpen(false)}
-                  aria-hidden="true"
-                />
-                {titlePos && (
-                  <p
-                    style={{
-                      bottom: titlePos.bottom,
-                      left: titlePos.left,
-                      right: titlePos.right,
-                    }}
-                    className="text-shadow-block-sm pointer-events-none fixed z-90 pb-2 text-lg font-bold text-white text-shadow-black md:hidden"
-                  >
-                    Select a link to edit
-                  </p>
-                )}
-              </RemoveScroll>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body,
-      )}
+      {mounted &&
+        createPortal(
+          <AnimatePresence onExitComplete={() => setTitlePos(null)}>
+            {mobileEditSelectOpen && (
+              <motion.div
+                key="mobile-edit-overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <RemoveScroll>
+                  <div
+                    className="fixed inset-0 z-80 bg-black/60 backdrop-blur-xs md:hidden"
+                    onClick={() => setMobileEditSelectOpen(false)}
+                    aria-hidden="true"
+                  />
+                  {titlePos && (
+                    <p
+                      style={{
+                        bottom: titlePos.bottom,
+                        left: titlePos.left,
+                        right: titlePos.right,
+                      }}
+                      className="text-shadow-block-sm pointer-events-none fixed z-90 pb-2 text-lg font-bold text-white text-shadow-black md:hidden"
+                    >
+                      Select a link to edit
+                    </p>
+                  )}
+                </RemoveScroll>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
     </div>
   );
 }
