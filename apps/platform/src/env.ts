@@ -171,7 +171,6 @@ const server = {
       "(#tech-support in production). Empty turns the widget off.",
     scope: "environment",
     secrecy: "public",
-    example: "1502481511453167687",
   }),
   DISCORD_SUPPORT_WEBHOOK_URL: define(z.string().url().optional(), {
     doc:
