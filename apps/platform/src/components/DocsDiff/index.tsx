@@ -1,6 +1,6 @@
 "use client";
 
-import { CopyIcon } from "@phosphor-icons/react/ssr";
+import { CopyIcon, GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import { DiffFile, DiffModeEnum, DiffView } from "@git-diff-view/react";
 import "@git-diff-view/react/styles/diff-view-pure.css";
 import { useEffect, useMemo, useState } from "react";
@@ -34,10 +34,19 @@ export function newSide(patch: string): string {
  * The `DiffFile` is built during render rather than in an effect, so the
  * server renders the finished diff into the page and hydration finds the same
  * markup: the diff is there without JavaScript, and for search.
- * Only the hunks travel with the page, not the whole files, so there is no
- * surrounding context to expand into.
+ * A block that held the whole file (the workshop pages' diffs) arrives with
+ * both versions of it, which is what lets the viewer expand the context
+ * between and around the hunks; one that held only hunks has nothing to
+ * expand into. Long lines wrap, as they do in the plain code blocks.
  */
-export default function DocsDiff({ file, lang, patch }: DocsDiffData) {
+export default function DocsDiff({
+  file,
+  lang,
+  patch,
+  oldContent = "",
+  newContent = "",
+  href,
+}: DocsDiffData) {
   const [mode, setMode] = useState<DiffModeEnum>(DiffModeEnum.Unified);
   const [copied, setCopied] = useState(false);
 
@@ -57,13 +66,21 @@ export default function DocsDiff({ file, lang, patch }: DocsDiffData) {
   }
 
   const diffFile = useMemo(() => {
-    const diff = new DiffFile(file, "", file, "", [patch], lang, lang);
+    const diff = new DiffFile(
+      file,
+      oldContent,
+      file,
+      newContent,
+      [patch],
+      lang,
+      lang,
+    );
     diff.initTheme("dark");
     diff.init();
     diff.buildUnifiedDiffLines();
     diff.buildSplitDiffLines();
     return diff;
-  }, [file, lang, patch]);
+  }, [file, lang, patch, oldContent, newContent]);
 
   return (
     <figure className="docs-diff not-prose border-border my-6 overflow-hidden rounded-md border">
@@ -92,6 +109,18 @@ export default function DocsDiff({ file, lang, patch }: DocsDiffData) {
               </button>
             ))}
           </div>
+          {href && (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Compare on GitHub"
+              className="docs-code-link"
+            >
+              <GithubLogoIcon className="size-3.5" />
+              <span className="docs-code-link-label">GitHub</span>
+            </a>
+          )}
           <button
             type="button"
             onClick={copy}
@@ -109,6 +138,7 @@ export default function DocsDiff({ file, lang, patch }: DocsDiffData) {
         diffViewMode={mode}
         diffViewTheme="dark"
         diffViewHighlight
+        diffViewWrap
         diffViewFontSize={13}
       />
     </figure>

@@ -38,7 +38,7 @@ section: infrastructure
 ```
 
 - **`name`** — the page's title: its row in the sidebar, the browser tab, and its search result. Without it the title falls back to the first `# ` heading, then to the title-cased filename. Not breadcrumbs: that trail is the URL's own segments, title-cased.
-- **`description`** — one sentence. It is the `<meta name="description">`, the blurb beside the page in folder listings and search results, and on a project's `index.md` the card subtitle on `/docs`. The lint warns about any page with none once the file passes 300 words — the whole file, `<details>` bodies included, not the visible count below.
+- **`description`** — one sentence. It is the `<meta name="description">`, the blurb beside the page in folder listings and search results, and on a project's `index.md` the card subtitle on `/docs`. The lint warns about any page with none once the file passes 300 words of prose — `<details>` bodies included, not the visible count below.
 - **`order`** — where the page sits among its siblings. See [Sidebar ordering](#sidebar-ordering).
 - **`section`** — one of `getting-started`, `guides`, `infrastructure`, `reference`. A project's `index.md` takes no section: it is always "Overview". Every other page needs one, explicit or defaulted: a page under a `reference/` folder defaults to `reference`, anything else defaults to `guides`. `infrastructure` is maintainer/officer-only material — deploys, secrets, runbooks, OAuth/GitHub App setup, CI, the docs system itself.
 
@@ -71,7 +71,7 @@ That only works for another page also reachable from every one of this page's mo
 
 ## How long a page gets to be
 
-Counted in **visible words** — words outside every `<details>`:
+Counted in **visible words** — prose outside every `<details>`, code not counted:
 
 | Page           | Budget |
 | -------------- | ------ |

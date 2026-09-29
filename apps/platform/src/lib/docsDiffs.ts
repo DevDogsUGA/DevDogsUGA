@@ -2,7 +2,8 @@
  * File diffs in a compiled docs page. `@devdogsuga/docs-compiler` turns a
  * top-level ```` ```diff file=… ```` block into an empty
  * `<div data-docs-diff="…">` whose attribute is `{ file, lang, patch }` as
- * base64 JSON (see the compiler's `diffs.ts`). The page renders a diff viewer
+ * base64 JSON (see the compiler's `diffs.ts`), plus both versions of the file
+ * when the block held all of it (`context=`) and a GitHub link (`href=`). The page renders a diff viewer
  * in its place, so the HTML is split around each one; the compiler only emits
  * them between whole top-level elements, so every piece is balanced HTML.
  */
@@ -11,7 +12,12 @@ export interface DocsDiff {
   file: string;
   lang: string;
   patch: string;
+  oldContent?: string;
+  newContent?: string;
+  href?: string;
 }
+
+const OPTIONAL = ["oldContent", "newContent", "href"] as const;
 
 export type DocsHtmlPart =
   { kind: "html"; html: string } | ({ kind: "diff" } & DocsDiff);
@@ -27,7 +33,10 @@ function decode(base64: string): DocsDiff | null {
       typeof value === "object" &&
       typeof (value as DocsDiff).file === "string" &&
       typeof (value as DocsDiff).lang === "string" &&
-      typeof (value as DocsDiff).patch === "string"
+      typeof (value as DocsDiff).patch === "string" &&
+      OPTIONAL.every((key) =>
+        ["string", "undefined"].includes(typeof (value as DocsDiff)[key]),
+      )
     ) {
       return value as DocsDiff;
     }

@@ -66,6 +66,9 @@ export default function DocPageContent({
                   file={part.file}
                   lang={part.lang}
                   patch={part.patch}
+                  oldContent={part.oldContent}
+                  newContent={part.newContent}
+                  href={part.href}
                 />
               ) : (
                 // Our own repo's markdown, compiled at build time; nothing a
