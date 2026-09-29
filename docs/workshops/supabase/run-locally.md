@@ -11,15 +11,25 @@ order: 4
 <!-- prettier-ignore-start -->
 
 <details>
-<summary>Behind? Start from where the last step ended</summary>
+<summary>Behind? Catch up to where the last step ended</summary>
 
-These put your copy of the workshop code exactly where the previous step left it.
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
 
 ```bash
-# Get the checkpoint tags
 git fetch origin --tags
-# Throws away your changes to the workshop code
-git switch --detach --discard-changes 02-supabase/05-delete
+# Save your own changes first
+git add -A
+git commit -m "My work"
+# Bring in the code from the end of the last step
+git merge --no-edit 02-supabase/05-delete
+```
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+
+```bash
+git fetch origin --tags
+# Moves your branch to the end of the last step
+git switch --discard-changes -C <github-username>/02-supabase 02-supabase/05-delete
 ```
 
 </details>
