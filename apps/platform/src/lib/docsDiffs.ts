@@ -15,9 +15,11 @@ export interface DocsDiff {
   oldContent?: string;
   newContent?: string;
   href?: string;
+  /** The `vscode://devdogsuga.workshops/review?…` link for this change. */
+  vscode?: string;
 }
 
-const OPTIONAL = ["oldContent", "newContent", "href"] as const;
+const OPTIONAL = ["oldContent", "newContent", "href", "vscode"] as const;
 
 export type DocsHtmlPart =
   { kind: "html"; html: string } | ({ kind: "diff" } & DocsDiff);

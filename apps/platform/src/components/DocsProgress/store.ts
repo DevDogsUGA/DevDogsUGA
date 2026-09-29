@@ -60,6 +60,19 @@ export function setStepDone(key: string, done: boolean): void {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
+/** Marks several steps done at once: what a finished VS Code review reports. */
+export function markStepsDone(keys: readonly string[]): void {
+  if (keys.length === 0) return;
+  const done = parse(readRaw());
+  keys.forEach((key) => done.add(key));
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify([...done]));
+  } catch {
+    // Storage disabled: nothing to remember it in.
+  }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
 /**
  * Every finished step's key. Empty on the server and until hydration, which
  * the server cannot know better than: nothing shows as done until then.

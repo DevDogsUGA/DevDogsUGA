@@ -4,6 +4,7 @@ import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
 import DocsCodeCopy from "~/components/DocsCodeCopy";
 import DocsGithubLogin from "~/components/DocsGithubLogin";
 import DocsDiff from "~/components/DocsDiff";
+import DocsVscode from "~/components/DocsVscode";
 import TableOfContents, {
   InlineTableOfContents,
 } from "~/components/TableOfContents";
@@ -78,6 +79,7 @@ export default function DocPageContent({
                   oldContent={part.oldContent}
                   newContent={part.newContent}
                   href={part.href}
+                  vscode={part.vscode}
                 />
               ) : (
                 // Our own repo's markdown, compiled at build time; nothing a
@@ -93,6 +95,7 @@ export default function DocPageContent({
           </article>
           {footer}
           <DocsCodeCopy />
+          <DocsVscode />
           <DocsGithubLogin />
         </div>
 

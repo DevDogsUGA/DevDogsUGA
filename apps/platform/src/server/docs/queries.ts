@@ -451,7 +451,13 @@ export interface DocsStepNav {
   /** The course's name: its folder's. */
   course: string;
   /** Every step, project-relative, in reading order. */
-  steps: { path: string; title: string; publishAt?: string }[];
+  steps: {
+    path: string;
+    title: string;
+    publishAt?: string;
+    /** The workshop step tag its page's `checkpoint:` frontmatter names. */
+    checkpoint?: string;
+  }[];
   /** This page's position in `steps`, from 0. */
   index: number;
 }
@@ -466,11 +472,16 @@ export async function getDocsStepNav(
   if (!position) return null;
   return {
     course: position.folder.name,
-    steps: position.steps.map(({ path, title, publishAt }) => ({
-      path,
-      title,
-      ...(publishAt ? { publishAt } : {}),
-    })),
+    steps: position.steps.map(({ path, title, publishAt }) => {
+      const checkpoint = pagesByPath.get(projectPath(project, path))
+        ?.frontmatter?.checkpoint;
+      return {
+        path,
+        title,
+        ...(publishAt ? { publishAt } : {}),
+        ...(typeof checkpoint === "string" ? { checkpoint } : {}),
+      };
+    }),
     index: position.index,
   };
 }

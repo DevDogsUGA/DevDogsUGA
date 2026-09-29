@@ -5,6 +5,7 @@ import { DiffFile, DiffModeEnum, DiffView } from "@git-diff-view/react";
 import "@git-diff-view/react/styles/diff-view-pure.css";
 import { useEffect, useMemo, useState } from "react";
 import type { DocsDiff as DocsDiffData } from "~/lib/docsDiffs";
+import VsCodeIcon from "~/components/DocsVscode/VsCodeIcon";
 import { cn } from "~/lib/cn";
 
 const MODES = [
@@ -46,6 +47,7 @@ export default function DocsDiff({
   oldContent = "",
   newContent = "",
   href,
+  vscode,
 }: DocsDiffData) {
   const [mode, setMode] = useState<DiffModeEnum>(DiffModeEnum.Unified);
   const [copied, setCopied] = useState(false);
@@ -109,6 +111,17 @@ export default function DocsDiff({
               </button>
             ))}
           </div>
+          {vscode && (
+            // DocsVscode adds the tab's session to this on click.
+            <a
+              href={vscode}
+              aria-label="Review this change in VS Code"
+              title="Review this change in VS Code"
+              className="docs-code-vscode"
+            >
+              <VsCodeIcon className="size-3.5" />
+            </a>
+          )}
           {href && (
             <a
               href={href}
