@@ -681,3 +681,80 @@ describe("platform meetings, teams and attendance", () => {
     }
   });
 });
+
+describe("platform.docsPages", () => {
+  const paths = ["t372/live", "t372/past", "t372/future"];
+
+  afterAll(async () => {
+    await sql()`delete from platform."docsPages" where path like 't372/%'`;
+  });
+
+  it("shows a page from its scheduled time on, and hides it before", async () => {
+    await sql()`
+      insert into platform."docsPages" (path, title, "plainText", "publishAt")
+      values
+        (${paths[0]!}, 'live', 'x', null),
+        (${paths[1]!}, 'past', 'x', now() - interval '1 hour'),
+        (${paths[2]!}, 'future', 'x', now() + interval '1 hour')
+      on conflict (path) do nothing`;
+
+    // Anonymous readers are the ones the policy exists for: the table is
+    // reachable through PostgREST with the public key, so a scheduled page's
+    // text must not be readable there.
+    for (const client of [anon(), member.client]) {
+      const { data, error } = await client
+        .from("docsPages")
+        .select("path")
+        .like("path", "t372/%");
+      expect(error).toBeNull();
+      expect((data ?? []).map((row) => row.path).sort()).toEqual([
+        "t372/live",
+        "t372/past",
+      ]);
+    }
+
+    // The service role bypasses RLS, which is how the indexer sees them all.
+    const { data: all } = await admin()
+      .from("docsPages")
+      .select("path")
+      .like("path", "t372/%");
+    expect(all).toHaveLength(3);
+  });
+});
+
+describe("canPreviewDocs", () => {
+  it("resolves for the role that holds it and for nobody else", async () => {
+    const a = admin();
+    const before = await a.rpc("has_permission", {
+      uid: member.userId,
+      perm: "canPreviewDocs",
+    });
+    expect(before.data).toBe(false);
+
+    const roleId = await grantRole(member, "Docs previewer", {
+      canPreviewDocs: true,
+    });
+    try {
+      const granted = await a.rpc("has_permission", {
+        uid: member.userId,
+        perm: "canPreviewDocs",
+      });
+      expect(granted.data).toBe(true);
+
+      // Its own column: granting it grants nothing next to it.
+      const neighbour = await a.rpc("has_permission", {
+        uid: member.userId,
+        perm: "canExportStars",
+      });
+      expect(neighbour.data).toBe(false);
+    } finally {
+      await deleteRole(roleId);
+    }
+
+    const other = await a.rpc("has_permission", {
+      uid: moderator.userId,
+      perm: "canPreviewDocs",
+    });
+    expect(other.data).toBe(false);
+  });
+});

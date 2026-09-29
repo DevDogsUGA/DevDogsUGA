@@ -418,6 +418,7 @@ export type Database = {
           id: string;
           path: string;
           plainText: string;
+          publishAt: string | null;
           search: unknown;
           title: string;
           updatedAt: string;
@@ -427,6 +428,7 @@ export type Database = {
           id?: string;
           path: string;
           plainText: string;
+          publishAt?: string | null;
           search?: unknown;
           title: string;
           updatedAt?: string;
@@ -436,6 +438,7 @@ export type Database = {
           id?: string;
           path?: string;
           plainText?: string;
+          publishAt?: string | null;
           search?: unknown;
           title?: string;
           updatedAt?: string;
@@ -1198,6 +1201,7 @@ export type Database = {
           canManageSuspensions: boolean | null;
           canManageVerification: boolean | null;
           canModerate: boolean | null;
+          canPreviewDocs: boolean | null;
           canViewAuditLog: boolean | null;
           color: string | null;
           createdAt: string;
@@ -1220,6 +1224,7 @@ export type Database = {
           canManageSuspensions?: boolean | null;
           canManageVerification?: boolean | null;
           canModerate?: boolean | null;
+          canPreviewDocs?: boolean | null;
           canViewAuditLog?: boolean | null;
           color?: string | null;
           createdAt?: string;
@@ -1242,6 +1247,7 @@ export type Database = {
           canManageSuspensions?: boolean | null;
           canManageVerification?: boolean | null;
           canModerate?: boolean | null;
+          canPreviewDocs?: boolean | null;
           canViewAuditLog?: boolean | null;
           color?: string | null;
           createdAt?: string;
@@ -1684,6 +1690,7 @@ export type Database = {
           canManageSuspensions: boolean | null;
           canManageVerification: boolean | null;
           canModerate: boolean | null;
+          canPreviewDocs: boolean | null;
           canViewAuditLog: boolean | null;
           isLeader: boolean | null;
           minRank: number | null;
