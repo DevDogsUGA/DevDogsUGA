@@ -19,7 +19,7 @@ These put your copy of the workshop code exactly where the previous step left it
 # Get the checkpoint tags
 git fetch origin --tags
 # Throws away your changes to the workshop code
-git switch --detach --discard-changes demo/05-delete
+git switch --detach --discard-changes 02-supabase/05-delete
 ```
 
 </details>
