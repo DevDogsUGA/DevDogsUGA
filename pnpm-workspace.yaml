@@ -261,6 +261,12 @@ packages:
 shellEmulator: true
 
 patchedDependencies:
+  # The request @vinext/cloudflare's gateway builds for the cached response
+  # stage (`createCacheFacingRequest`) left `redirect` at its "follow" default,
+  # so every page or route that redirects was chased inside the Worker until
+  # "Too many redirects" turned it into a 500. The patch sets "manual". Still
+  # unfixed in 1.0.0; drop it once upstream sets it.
+  '@vinext/cloudflare@1.0.0-beta.9': patches/@vinext__cloudflare@1.0.0-beta.9.patch
   react-dom@19.2.8: patches/react-dom@19.2.8.patch
   react-server-dom-webpack@19.3.0: patches/react-server-dom-webpack@19.3.0.patch
   react@19.2.8: patches/react@19.2.8.patch

@@ -149,6 +149,7 @@ overrides:
   undici: ^7.28.0
 
 patchedDependencies:
+  '@vinext/cloudflare@1.0.0-beta.9': d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42
   react-dom@19.2.8: f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e
   react-server-dom-webpack@19.3.0: 38ac24cc74e7250221d3143971d7d0740bde7331727072f014d0bfc99ddb6cb5
   react@19.2.8: e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572
@@ -318,7 +319,7 @@ importers:
         version: 5.101.4(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
       '@vinext/cloudflare':
         specifier: 1.0.0-beta.9
-        version: 1.0.0-beta.9(vinext@1.0.0-beta.11(f99f1ce36568c24e8fe8e5679d381112))
+        version: 1.0.0-beta.9(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(vinext@1.0.0-beta.11(f99f1ce36568c24e8fe8e5679d381112))
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -668,7 +669,7 @@ importers:
         version: 5.101.4(@tanstack/react-query@5.101.4(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
       '@vinext/cloudflare':
         specifier: 1.0.0-beta.9
-        version: 1.0.0-beta.9(vinext@1.0.0-beta.11(f99f1ce36568c24e8fe8e5679d381112))
+        version: 1.0.0-beta.9(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(vinext@1.0.0-beta.11(f99f1ce36568c24e8fe8e5679d381112))
       cheerio:
         specifier: ^1.2.0
         version: 1.2.0
@@ -12762,7 +12763,7 @@ snapshots:
       '@resvg/resvg-wasm': 2.4.0
       satori: 0.16.0
 
-  '@vinext/cloudflare@1.0.0-beta.9(vinext@1.0.0-beta.11(f99f1ce36568c24e8fe8e5679d381112))':
+  '@vinext/cloudflare@1.0.0-beta.9(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(vinext@1.0.0-beta.11(f99f1ce36568c24e8fe8e5679d381112))':
     dependencies:
       '@cloudflare/workers-response-store': 0.1.0-beta.1
       vinext: 1.0.0-beta.11(f99f1ce36568c24e8fe8e5679d381112)
