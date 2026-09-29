@@ -138,8 +138,8 @@ function DescribedItem({
         <span className="flex group-data-[state=checked]/item:invisible">
           {icon}
         </span>
-        <SelectPrimitive.ItemIndicator className="absolute inset-0 flex items-center justify-center rounded-md border border-black bg-white text-black">
-          <ArrowRightIcon weight="bold" className="size-4" />
+        <SelectPrimitive.ItemIndicator className="absolute inset-0 flex items-center justify-center">
+          <ArrowRightIcon weight="bold" className="size-5 text-white" />
         </SelectPrimitive.ItemIndicator>
       </span>
       {/* Bounded, so a long name cannot widen the popover past the sidebar

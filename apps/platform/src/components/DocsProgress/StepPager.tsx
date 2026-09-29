@@ -46,6 +46,38 @@ export default function StepPager({ project, course, steps, index }: Props) {
       aria-label={`${course} steps`}
       className="mx-auto mt-16 flex max-w-3xl flex-col gap-4 border-t border-mauve-800 pt-6"
     >
+      <div className="grid gap-3 sm:grid-cols-2">
+        {previous ? (
+          <Link
+            href={docsHref(project, previous.path.split("/"))}
+            className={NAV_LINK}
+          >
+            <span className="flex items-center gap-1.5 text-xs text-mauve-400">
+              <ArrowLeftIcon className="size-3" /> Previous
+            </span>
+            <span className="truncate text-sm font-medium text-white">
+              {previous.title}
+            </span>
+          </Link>
+        ) : (
+          <span />
+        )}
+        {next && (
+          <Link
+            href={docsHref(project, next.path.split("/"))}
+            onClick={() => setStepDone(key, true)}
+            className={cn(NAV_LINK, "sm:items-end sm:text-right")}
+          >
+            <span className="flex items-center gap-1.5 text-xs text-mauve-400">
+              Next <ArrowRightIcon className="size-3" />
+            </span>
+            <span className="truncate text-sm font-medium text-white">
+              {next.title}
+            </span>
+          </Link>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1.5">
           <p className="text-sm text-mauve-400">
@@ -90,38 +122,6 @@ export default function StepPager({ project, course, steps, index }: Props) {
           You&apos;ve finished {course}.
         </p>
       )}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {previous ? (
-          <Link
-            href={docsHref(project, previous.path.split("/"))}
-            className={NAV_LINK}
-          >
-            <span className="flex items-center gap-1.5 text-xs text-mauve-400">
-              <ArrowLeftIcon className="size-3" /> Previous
-            </span>
-            <span className="truncate text-sm font-medium text-white">
-              {previous.title}
-            </span>
-          </Link>
-        ) : (
-          <span />
-        )}
-        {next && (
-          <Link
-            href={docsHref(project, next.path.split("/"))}
-            onClick={() => setStepDone(key, true)}
-            className={cn(NAV_LINK, "sm:items-end sm:text-right")}
-          >
-            <span className="flex items-center gap-1.5 text-xs text-mauve-400">
-              Next <ArrowRightIcon className="size-3" />
-            </span>
-            <span className="truncate text-sm font-medium text-white">
-              {next.title}
-            </span>
-          </Link>
-        )}
-      </div>
     </nav>
   );
 }

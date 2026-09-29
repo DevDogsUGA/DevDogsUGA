@@ -1,11 +1,16 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { SidebarIcon } from "@phosphor-icons/react/ssr";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
+import {
+  AppleLogoIcon,
+  LinuxLogoIcon,
+  SidebarIcon,
+  WindowsLogoIcon,
+} from "@phosphor-icons/react/ssr";
 import { DOCS_PROJECT_LABELS } from "~/config/docs";
 import type { DocsSidebarTree } from "~/lib/docsTree";
-import DocsProjectMark from "~/components/DocsProjectMark";
+import DocsProjectMark, { Mark } from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
 import {
   Sheet,
@@ -19,6 +24,28 @@ import {
   useDocsVariant,
 } from "~/components/DocsVariants/store";
 import Tree from "./Tree";
+
+/**
+ * The mark and one-line blurb for each platform value the setup pages offer.
+ * Keyed by the same `platform.value` the tabs and this select share; a value
+ * absent here (there shouldn't be one, `platforms` comes from the same fixed
+ * set) falls back to the plain label-only row.
+ */
+const PLATFORM_MARKS: Record<
+  string,
+  {
+    icon: ComponentType<{ className?: string; weight?: "bold" }>;
+    description: string;
+  }
+> = {
+  macos: { icon: AppleLogoIcon, description: "Apple silicon or Intel" },
+  linux: {
+    icon: LinuxLogoIcon,
+    description: "Ubuntu, Fedora, Arch and others",
+  },
+  wsl: { icon: WindowsLogoIcon, description: "Linux tools inside Windows" },
+  windows: { icon: WindowsLogoIcon, description: "PowerShell, without WSL" },
+};
 
 export interface DocsSidebarProps {
   projects: { slug: string; name: string; description: string | null }[];
@@ -101,11 +128,23 @@ function SidebarContent({
         placeholder="Your platform"
         className="w-full"
       >
-        {platforms.map((platform) => (
-          <Select.Item key={platform.value} value={platform.value}>
-            {platform.label}
-          </Select.Item>
-        ))}
+        {platforms.map((platform) => {
+          const mark = PLATFORM_MARKS[platform.value];
+          return (
+            <Select.Item
+              key={platform.value}
+              value={platform.value}
+              icon={
+                mark && (
+                  <Mark icon={mark.icon} iconBg="bg-mauve-300" size="sm" />
+                )
+              }
+              description={mark?.description}
+            >
+              {platform.label}
+            </Select.Item>
+          );
+        })}
       </Select>
 
       <Tree tree={tree} ctx={{ project, activePath }} />

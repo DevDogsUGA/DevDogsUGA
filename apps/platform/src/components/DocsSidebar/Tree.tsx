@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { CaretRightIcon, CheckCircleIcon } from "@phosphor-icons/react/ssr";
 import { stepKey, useDoneSteps } from "~/components/DocsProgress/store";
 import { DOCS_INDEX_LABEL } from "~/config/docs";
 import { docsHref } from "~/lib/docsSlug";
 import {
+  firstPagePath,
   isIndexPage,
   type DocsSidebarSection,
   type DocsSidebarTree,
@@ -113,10 +116,11 @@ function SectionHeading({
 }
 
 /**
- * A folder below the first level: one toggle row on its own rail. It opens and
- * closes; it does not navigate, since a folder's pages, its own index page
- * included, are the rows inside it. A course (`steps: true`) also counts the
- * steps the reader has finished.
+ * A folder below the first level: one toggle row on its own rail. Opening it
+ * also navigates to its first page in sidebar order, the same target a reader
+ * would land on next anyway; closing it only closes it, since the active page
+ * stays reachable in the tree either way. A course (`steps: true`) also counts
+ * the steps the reader has finished.
  */
 function Folder({
   folder,
@@ -127,6 +131,8 @@ function Folder({
   ctx: TreeContext;
   depth: number;
 }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(() => contains(folder, ctx.activePath));
   const steps = folder.steps
     ? folder.children.filter((node) => node.type === "page")
     : [];
@@ -134,8 +140,15 @@ function Folder({
     ctx.done.has(stepKey(ctx.project, step.path)),
   ).length;
 
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) return;
+    const path = firstPagePath(folder.children);
+    if (path) router.push(docsHref(ctx.project, path.split("/")));
+  }
+
   return (
-    <Collapsible defaultOpen={contains(folder, ctx.activePath)}>
+    <Collapsible open={open} onOpenChange={onOpenChange}>
       <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-sm px-1.5 py-1.5 text-left text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white">
         <span className="min-w-0 flex-1">{folder.name}</span>
         {folder.steps && (
