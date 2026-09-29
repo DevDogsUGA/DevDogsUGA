@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, boolean, text, varchar, integer, pgEnum, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, boolean, text, integer, pgEnum, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -695,6 +695,7 @@ export const supportConversationsInPlatform = platform.table.withRLS("supportCon
 	role: text().default("asker").notNull(),
 	lastReadMessageId: text(),
 	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	followedInDiscordAt: timestamp({ withTimezone: true }),
 }, (table) => [
 	index("supportConversations_guestId_idx").using("btree", table.guestId.asc().nullsLast()),
 	uniqueIndex("supportConversations_thread_guest_idx").using("btree", table.threadId.asc().nullsLast(), table.guestId.asc().nullsLast()).where(sql`("guestId" IS NOT NULL)`),

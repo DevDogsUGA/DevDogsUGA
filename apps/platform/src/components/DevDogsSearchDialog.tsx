@@ -87,8 +87,9 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
   const { search, setSearch, data, isLoading } = useSiteSearch();
   const results = data !== "empty" ? data : [];
   const hasResults = results.length > 0;
-  const pageResults = results.filter((entry) => entry.group !== "docs");
+  const pageResults = results.filter((entry) => entry.group === "pages");
   const docsResults = results.filter((entry) => entry.group === "docs");
+  const forumResults = results.filter((entry) => entry.group === "forum");
 
   function handleSelect(url: string) {
     onOpenChange(false);
@@ -156,6 +157,18 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
             {docsResults.length > 0 && (
               <CommandGroup heading="Docs">
                 {docsResults.map((entry) => (
+                  <SearchResultItem
+                    key={entry.id}
+                    entry={entry}
+                    query={search}
+                    onSelect={() => handleSelect(entry.url)}
+                  />
+                ))}
+              </CommandGroup>
+            )}
+            {forumResults.length > 0 && (
+              <CommandGroup heading="Answered questions">
+                {forumResults.map((entry) => (
                   <SearchResultItem
                     key={entry.id}
                     entry={entry}

@@ -7,7 +7,7 @@ export interface SearchEntry {
   url: string;
   icon: NavIcon;
   breadcrumbs: string[];
-  group: "pages" | "docs";
+  group: "pages" | "docs" | "forum";
   /**
    * Disqualifies the entry when every query token matched only a breadcrumb.
    * Set on section/field entries, whose breadcrumbs are their parent page's.

@@ -5,6 +5,8 @@ import { expectSession } from "~/server/auth";
 import { buildAppSearchEntries } from "~/server/search/appEntries";
 import { searchDocs } from "~/server/search/docsSearch";
 import { matchEntries } from "~/server/search/match";
+import { supportConfig } from "~/server/support/config";
+import { searchForumEntries } from "~/server/support/search";
 
 export async function GET(request: Request) {
   const query = (new URL(request.url).searchParams.get("query") ?? "").trim();
@@ -27,10 +29,19 @@ export async function GET(request: Request) {
   );
 
   const pages = matchEntries(appEntries, query, 8);
-  const docs = await searchDocs(query, 10).catch((error) => {
-    console.error("[search] docs full-text search failed", error);
-    return [];
-  });
+  const [docs, forum] = await Promise.all([
+    searchDocs(query, 10).catch((error) => {
+      console.error("[search] docs full-text search failed", error);
+      return [];
+    }),
+    // Anonymized FAQ posts from the support forum. Off with the widget.
+    supportConfig()
+      ? searchForumEntries(query, 5).catch((error) => {
+          console.error("[search] forum full-text search failed", error);
+          return [];
+        })
+      : [],
+  ]);
 
-  return NextResponse.json([...pages, ...docs]);
+  return NextResponse.json([...pages, ...docs, ...forum]);
 }

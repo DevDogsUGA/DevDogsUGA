@@ -160,6 +160,42 @@ const server = {
     scope: "environment",
     secrecy: "secret",
   }),
+  // The docs support widget (server/support). Both optional: an environment
+  // without them simply renders no widget, which is what development wants
+  // unless someone is working on the widget against a scratch forum. Pointing
+  // two environments at one forum would put staging's test posts in front of
+  // real members, so neither has a shared default the way the guild id does.
+  DISCORD_SUPPORT_FORUM_ID: define(z.string().optional(), {
+    doc:
+      "The Discord forum channel the docs support widget posts into " +
+      "(#tech-support in production). Empty turns the widget off.",
+    scope: "environment",
+    secrecy: "public",
+    example: "1502481511453167687",
+  }),
+  DISCORD_SUPPORT_WEBHOOK_URL: define(z.string().url().optional(), {
+    doc:
+      "A webhook on DISCORD_SUPPORT_FORUM_ID. Visitor messages go through it " +
+      "so they carry the visitor's name instead of the bot's. Required " +
+      "whenever DISCORD_SUPPORT_FORUM_ID is set.",
+    scope: "environment",
+    secrecy: "secret",
+  }),
+  // Cloudflare's published always-pass test secret locally, so the guest flow
+  // runs end to end without a real widget.
+  TURNSTILE_SECRET_KEY: define(
+    switchEnvironment({
+      local: z.string().default("1x0000000000000000000000000000000AA"),
+      deployed: z.string().optional(),
+    }),
+    {
+      doc:
+        "Turnstile secret for the support widget's guest check. Empty " +
+        "deployed means guests cannot post; signed-in members still can.",
+      scope: "environment",
+      secrecy: "secret",
+    },
+  ),
   // Same "default" reasoning as DISCORD_GUILD_ID, schema default included.
   GITHUB_ORG: define(z.string().default("DevDogsUGA"), {
     doc:
@@ -481,6 +517,21 @@ const client = {
     secrecy: "public",
     example: "avatars",
   }),
+  // Pairs with TURNSTILE_SECRET_KEY; the local default is Cloudflare's
+  // always-pass test sitekey.
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: define(
+    switchEnvironment({
+      local: z.string().default("1x00000000000000000000AA"),
+      deployed: z.string().optional(),
+    }),
+    {
+      doc:
+        "Turnstile sitekey for the support widget's guest check. Public by " +
+        "design; it only identifies the widget.",
+      scope: "environment",
+      secrecy: "public",
+    },
+  ),
 };
 
 /**
@@ -513,6 +564,7 @@ export const env = createEnv({
     NEXT_PUBLIC_PLATFORM_SENTRY_DSN:
       process.env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
     NEXT_PUBLIC_DEPLOY_ENV: process.env.NEXT_PUBLIC_DEPLOY_ENV,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

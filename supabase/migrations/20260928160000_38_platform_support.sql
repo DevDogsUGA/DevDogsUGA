@@ -55,6 +55,11 @@ create table "platform"."supportConversations" (
   -- sort by time, so "unread" is `thread.last_message_id > this`.
   "lastReadMessageId" text,
   "createdAt"         timestamptz not null default now(),
+  -- When the member's linked Discord account was added to the thread, so
+  -- Discord itself notifies them of replies. Null for guests and for members
+  -- who have not linked Discord yet; linking later fills it on their next
+  -- widget load.
+  "followedInDiscordAt" timestamptz,
 
   constraint "supportConversations_pkey" primary key ("id"),
   constraint "supportConversations_owner_check"

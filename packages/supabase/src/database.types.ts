@@ -1282,6 +1282,7 @@ export type Database = {
       supportConversations: {
         Row: {
           createdAt: string;
+          followedInDiscordAt: string | null;
           guestId: string | null;
           id: string;
           lastReadMessageId: string | null;
@@ -1291,6 +1292,7 @@ export type Database = {
         };
         Insert: {
           createdAt?: string;
+          followedInDiscordAt?: string | null;
           guestId?: string | null;
           id?: string;
           lastReadMessageId?: string | null;
@@ -1300,6 +1302,7 @@ export type Database = {
         };
         Update: {
           createdAt?: string;
+          followedInDiscordAt?: string | null;
           guestId?: string | null;
           id?: string;
           lastReadMessageId?: string | null;
