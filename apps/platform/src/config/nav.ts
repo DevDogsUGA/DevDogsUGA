@@ -166,6 +166,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "Download CSV snapshots of stars, attendance, and reflections.",
   },
   {
+    label: "Docs preview",
+    href: "/preview/docs",
+    icon: "BookOpenIcon",
+    permission: "canPreviewDocs",
+    description:
+      "Read docs pages scheduled for later, marked with when they go live. Anyone without access gets a 404.",
+  },
+  {
     label: "Permissions",
     href: "/console/permissions",
     icon: "LockIcon",

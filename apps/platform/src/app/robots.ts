@@ -30,6 +30,7 @@ export default function robots(): MetadataRoute.Robots {
         "/oauth", // /oauth/consent, mid-authorization-flow only
         "/tools", // /tools/oauth, a member's own test client
         "/teams", // /teams/requests; expectSession() -> /auth
+        "/preview", // /preview/docs: scheduled docs, 404 without canPreviewDocs
 
         // (api) route handlers. None render HTML, and several are guarded by
         // a shared secret rather than a session, so a crawler reaching them

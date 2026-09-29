@@ -49,6 +49,7 @@ const PERMISSION_KEYS = [
   "canManageVerification",
   "canManageAttendance",
   "canExportStars",
+  "canPreviewDocs",
 ] as const satisfies readonly PermissionKey[];
 
 // Two-way exhaustiveness check: fails to compile if a nullable-boolean
@@ -97,6 +98,7 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canManageVerification: false,
   canManageAttendance: false,
   canExportStars: false,
+  canPreviewDocs: false,
 };
 
 /**
@@ -118,6 +120,7 @@ export async function resolveUserPermissions(
       canManageVerification: resolvedUserPermissions.canManageVerification,
       canManageAttendance: resolvedUserPermissions.canManageAttendance,
       canExportStars: resolvedUserPermissions.canExportStars,
+      canPreviewDocs: resolvedUserPermissions.canPreviewDocs,
     })
     .from(resolvedUserPermissions)
     .where(eq(resolvedUserPermissions.userId, userId))
@@ -160,6 +163,7 @@ export async function getCallerContext(userId: string): Promise<{
       canManageVerification: row.canManageVerification,
       canManageAttendance: row.canManageAttendance,
       canExportStars: row.canExportStars,
+      canPreviewDocs: row.canPreviewDocs,
     },
     minRank: row.minRank,
     isLeader: row.isLeader,
@@ -199,6 +203,9 @@ export async function canUserManageAttendance(
 }
 export async function canUserExportStars(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canExportStars);
+}
+export async function canUserPreviewDocs(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canPreviewDocs);
 }
 
 // ── Shared guards ─────────────────────────────────────────────────────────────
@@ -252,6 +259,7 @@ export type CreateRoleInput = {
   canManageVerification?: boolean | null;
   canManageAttendance?: boolean | null;
   canExportStars?: boolean | null;
+  canPreviewDocs?: boolean | null;
 };
 
 export async function createRole(
@@ -282,6 +290,7 @@ export async function createRole(
       canManageVerification: data.canManageVerification ?? null,
       canManageAttendance: data.canManageAttendance ?? null,
       canExportStars: data.canExportStars ?? null,
+      canPreviewDocs: data.canPreviewDocs ?? null,
     })
     .returning({ id: roles.id });
 
@@ -348,6 +357,9 @@ export async function updateRole(
       }),
       ...(data.canExportStars !== undefined && {
         canExportStars: data.canExportStars,
+      }),
+      ...(data.canPreviewDocs !== undefined && {
+        canPreviewDocs: data.canPreviewDocs,
       }),
     })
     .where(eq(roles.id, roleId));
