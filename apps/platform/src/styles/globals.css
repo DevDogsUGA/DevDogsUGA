@@ -1786,6 +1786,25 @@
   color: var(--color-emerald-400);
 }
 
+/* A `<github-username>` the reader has no login to fill in: outlined in amber,
+   over the code's own colors, so it reads as a blank to replace. Filled in
+   (`data-substituted`), it is ordinary code. */
+.prose figure.docs-code [data-github-username]:not([data-substituted]),
+.prose figure.docs-code [data-github-username]:not([data-substituted]) span {
+  color: var(--color-amber-300);
+}
+
+.prose figure.docs-code [data-github-username]:not([data-substituted]) {
+  border-radius: 0.25rem;
+  background-color: color-mix(
+    in oklab,
+    var(--color-amber-400) 16%,
+    transparent
+  );
+  box-shadow: 0 0 0 1px
+    color-mix(in oklab, var(--color-amber-400) 40%, transparent);
+}
+
 .prose figure.docs-code .docs-shell-comment {
   opacity: 0.6;
   font-style: italic;
