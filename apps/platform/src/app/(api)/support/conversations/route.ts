@@ -34,7 +34,7 @@ const body = z.object({
     })
     .nullable()
     .default(null),
-  turnstileToken: z.string().optional(),
+  turnstileToken: z.string().max(2048).optional(),
 });
 
 /**

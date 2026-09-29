@@ -10,7 +10,7 @@ import {
   visitorOrNewGuest,
 } from "~/server/support/http";
 
-const body = z.object({ turnstileToken: z.string().optional() });
+const body = z.object({ turnstileToken: z.string().max(2048).optional() });
 
 /**
  * POST /support/conversations/:threadId/follow

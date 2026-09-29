@@ -61,6 +61,10 @@ granted to `authenticated` and every `requireSession` check, none of which
 were written with a guest in mind.
 
 A guest's first post passes Cloudflare Turnstile, and nothing after it does.
+The server accepts a pass only if siteverify echoes the `support_guest`
+action and the hostname of `BASE_URL`. Staging and production share one
+widget, so a token solved on one is refused by the other. Cloudflare's test
+keys are accepted only when `DEPLOY_ENV` is development.
 Rate limits (`consumeRateLimit`) cap posts per visitor and new guests per IP.
 Nothing a visitor types can ping anyone: every relayed message sets
 `allowed_mentions` to none.

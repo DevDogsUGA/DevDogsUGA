@@ -8,6 +8,13 @@
  * left as an id for the client's fallback to handle.
  */
 
+/**
+ * The Turnstile widget's `action`, set when the widget renders and checked
+ * against siteverify's echo. Both surfaces that mint a guest (asking, and
+ * following a suggestion) share the one widget in the compose view.
+ */
+export const TURNSTILE_ACTION = "support_guest";
+
 export type SupportStatus = "open" | "resolved";
 
 export interface SupportAuthor {

@@ -387,6 +387,12 @@ function ComposeView({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [token, setToken] = useState<string | null>(null);
+  // Bumped after any guest request settles unsuccessfully: it spent the
+  // single-use token, so the widget has to solve again before a retry.
+  const [turnstileReset, setTurnstileReset] = useState(0);
+  const spentToken = () => {
+    if (token) setTurnstileReset((n) => n + 1);
+  };
   const [following, setFollowing] = useState<string | null>(null);
   const start = useStart();
   const follow = useFollow();
@@ -431,7 +437,10 @@ function ComposeView({
           : null,
         turnstileToken: token ?? undefined,
       },
-      { onSuccess: ({ threadId }) => onPosted(threadId) },
+      {
+        onSuccess: ({ threadId }) => onPosted(threadId),
+        onError: spentToken,
+      },
     );
   };
 
@@ -442,6 +451,7 @@ function ComposeView({
       { threadId, turnstileToken: token ?? undefined },
       {
         onSuccess: () => onPosted(threadId),
+        onError: spentToken,
         onSettled: () => setFollowing(null),
       },
     );
@@ -479,7 +489,11 @@ function ComposeView({
         )}
         {needsGuestCheck && siteKey && (
           <div className="flex flex-col gap-1">
-            <Turnstile siteKey={siteKey} onToken={setToken} />
+            <Turnstile
+              siteKey={siteKey}
+              onToken={setToken}
+              resetKey={turnstileReset}
+            />
             <p className="text-muted-foreground text-xs">
               Asking as a guest.{" "}
               <a href={signInHref} className="text-primary hover:underline">
