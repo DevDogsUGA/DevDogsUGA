@@ -21,10 +21,19 @@ under `apps/platform/src/app/(api)/support`.
 ## Discord is the message store
 
 Nothing on the platform stores what anyone said. Each time the widget opens a
-conversation, and every ten seconds while it stays open, the route handler
-reads the forum thread through the bot and maps the messages for display.
-Edits, deletions and officer replies made in Discord show up with nothing to
-sync.
+conversation, and on every poll while it stays open, the route handler reads
+the forum thread through the bot and maps the messages for display. Edits,
+deletions and officer replies made in Discord show up with nothing to sync.
+
+Polls don't each cost a Discord call. `server/support/sharedCache.ts` keeps
+one snapshot of the forum's active posts for five seconds, shared through the
+Workers Cache API by every request in a Cloudflare data center. Each post's
+last message id in that snapshot tells a poll whether anything changed, and a
+thread's messages are only refetched when it has, cached under that id. Edits
+and new reactions don't move the id, so they can take up to a minute to
+appear. The widget polls every 10 seconds while a conversation is active and
+backs off to 30 and then 60 seconds once it goes quiet. A visitor's own write
+evicts the snapshot so they see their message at once.
 
 Postgres holds only what Discord can't:
 

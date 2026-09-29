@@ -45,13 +45,28 @@ export function useInbox(enabled: boolean) {
   });
 }
 
-/** One conversation, polled every ten seconds while it is on screen. */
+/**
+ * How often an open conversation polls, from how long ago its newest message
+ * arrived. A live exchange gets ten-second replies; a thread that has gone
+ * quiet backs off, since a reply to it is hours out anyway. Stateless on
+ * purpose: the visitor's own reply is the newest message, so sending one
+ * snaps polling straight back to ten seconds.
+ */
+export function pollInterval(thread: SupportThread | undefined, now: number) {
+  const newest = thread?.messages.at(-1)?.createdAt;
+  const quietFor = newest ? now - new Date(newest).getTime() : Infinity;
+  if (quietFor < 2 * 60_000) return 10_000;
+  if (quietFor < 15 * 60_000) return 30_000;
+  return 60_000;
+}
+
+/** One conversation, polled while it is on screen (see `pollInterval`). */
 export function useThread(threadId: string | null) {
   return useQuery({
     queryKey: threadKey(threadId ?? ""),
     queryFn: () => request<SupportThread>(`/support/conversations/${threadId}`),
     enabled: threadId !== null,
-    refetchInterval: 10_000,
+    refetchInterval: (query) => pollInterval(query.state.data, Date.now()),
   });
 }
 

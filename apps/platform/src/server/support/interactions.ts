@@ -25,6 +25,7 @@ import {
   getForumTags,
   getMessage,
   getThread,
+  invalidateForumSnapshot,
   tagId,
   updateThread,
   withStatusTag,
@@ -180,6 +181,7 @@ async function markAsAnswer(
   await updateThread(threadId, {
     tagIds: withStatusTag(tags, thread.applied_tags ?? [], "resolved"),
   });
+  await invalidateForumSnapshot(config, threadId);
   await db
     .update(supportForumPosts)
     .set({ isResolved: true })

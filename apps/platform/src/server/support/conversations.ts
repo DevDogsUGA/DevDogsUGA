@@ -22,7 +22,9 @@ import {
   getActiveForumThreads,
   getForumTags,
   getThread,
+  getThreadForRead,
   getThreadMessages,
+  invalidateForumSnapshot,
   postReply,
   tagId,
   tagNames,
@@ -255,6 +257,7 @@ export async function startConversation(
     tagIds,
   });
   const threadId = message.channel_id;
+  await invalidateForumSnapshot(config);
 
   await db.insert(supportConversations).values({
     threadId,
@@ -334,6 +337,7 @@ export async function reply(
     username: displayName(visitor),
     avatarUrl: avatarOf(visitor),
   });
+  await invalidateForumSnapshot(config, threadId);
   await db
     .insert(supportMessages)
     .values({ messageId: message.id, threadId, ...owner(visitor) });
@@ -361,6 +365,7 @@ export async function resolve(
     tagIds: withStatusTag(tags, thread.applied_tags ?? [], "resolved"),
     archived: true,
   });
+  await invalidateForumSnapshot(config, threadId);
   await db
     .update(supportForumPosts)
     .set({ isResolved: true, updatedAt: sql`now()` })
@@ -406,14 +411,17 @@ export async function follow(
     avatarUrl: avatarOf(visitor),
     pingUserIds: ping,
   });
+  await invalidateForumSnapshot(config, threadId);
   await db
     .insert(supportMessages)
     .values({ messageId: message.id, threadId, ...owner(visitor) });
 }
 
 /**
- * One thread as the widget renders it, and marks it read. Two Discord
- * requests (the thread, its messages); everything else is Postgres.
+ * One thread as the widget renders it, and marks it read. Usually no Discord
+ * request of its own: the thread comes from the shared forum snapshot, and
+ * its messages are refetched only when the snapshot shows a new last
+ * message (see `getActiveForumThreads`).
  */
 export async function readThread(
   config: SupportConfig,
@@ -421,12 +429,15 @@ export async function readThread(
   threadId: string,
 ): Promise<SupportThread> {
   const conversation = await conversationFor(visitor, threadId);
-  const [thread, messages, tags, answerMessageId] = await Promise.all([
-    forumThread(config, threadId),
-    getThreadMessages(threadId),
+  const [thread, tags, answerMessageId] = await Promise.all([
+    getThreadForRead(config, threadId),
     getForumTags(config),
     answerMessageIdFor(threadId),
   ]);
+  if (thread?.parent_id !== config.forumId) {
+    throw new SupportError(404, "That post no longer exists.");
+  }
+  const messages = await getThreadMessages(threadId, thread.last_message_id);
 
   const [rendered, roles] = await Promise.all([
     toSupportMessages(messages, {

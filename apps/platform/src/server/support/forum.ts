@@ -13,6 +13,7 @@ import { DiscordAPIError } from "@discordjs/rest";
 import { env } from "~/env";
 import { asBot } from "~/server/discord/api";
 import { SUPPORT_TAGS, type SupportConfig } from "./config";
+import { sharedCache } from "./sharedCache";
 
 /**
  * Everything the widget does to Discord, in one place.
@@ -124,18 +125,28 @@ export async function getThread(
 }
 
 /**
- * The newest `limit` messages of a thread, oldest first. One page is the
- * whole conversation for any realistic support thread; a thread past 100
- * messages shows its most recent 100 and links out for the rest.
+ * The newest 100 messages of a thread, oldest first. One page is the whole
+ * conversation for any realistic support thread; a thread past 100 messages
+ * shows its most recent 100 and links out for the rest.
+ *
+ * Keyed by the thread's last message id, so a poll that finds the id
+ * unchanged in the snapshot costs no Discord call, and each new message
+ * costs one fetch however many visitors are watching.
  */
 export async function getThreadMessages(
   threadId: string,
-  limit = 100,
+  lastMessageId: string | null | undefined,
 ): Promise<APIMessage[]> {
-  const messages = (await asBot().get(Routes.channelMessages(threadId), {
-    query: new URLSearchParams({ limit: String(limit) }),
-  })) as APIMessage[];
-  return messages.reverse();
+  return sharedCache.get(
+    `messages:${threadId}:${lastMessageId ?? "none"}`,
+    MESSAGES_TTL_MS,
+    async () => {
+      const messages = (await asBot().get(Routes.channelMessages(threadId), {
+        query: new URLSearchParams({ limit: "100" }),
+      })) as APIMessage[];
+      return messages.reverse();
+    },
+  );
 }
 
 export async function getMessage(
@@ -171,20 +182,71 @@ export async function deleteMessage(
     .catch(nullOn404);
 }
 
+/** How long every visitor shares one snapshot of the forum's active posts. */
+const SNAPSHOT_TTL_MS = 5_000;
 /**
- * Every active (unarchived) thread in the guild that belongs to the forum.
- * One request covers every conversation's unread state at once, which is
- * why the launcher badge costs a single Discord call however many
- * conversations a visitor has.
+ * How long a thread's messages are reused while its last message id holds
+ * still. New messages change the key, so this only bounds how late edits,
+ * deletions and new reactions (which leave the id alone) show up.
+ */
+const MESSAGES_TTL_MS = 60_000;
+const TAGS_TTL_MS = 5 * 60_000;
+
+const snapshotKey = (config: SupportConfig) => `active:${config.forumId}`;
+
+/**
+ * Every active (unarchived) post in the forum, as one snapshot shared by
+ * every visitor in the data center for five seconds.
+ *
+ * This is the widget's change detector. One guild-wide request carries each
+ * post's last message id, tags and archive state, so the inbox badge and
+ * every open conversation check against the same response instead of asking
+ * Discord about their thread one by one; a thread's messages are only
+ * fetched again once its last message id moves (see `getThreadMessages`).
  */
 export async function getActiveForumThreads(
   config: SupportConfig,
 ): Promise<APIThreadChannel[]> {
-  const result = (await asBot().get(
-    Routes.guildActiveThreads(env.DISCORD_GUILD_ID),
-  )) as RESTGetAPIGuildThreadsResult;
-  return (result.threads as APIThreadChannel[]).filter(
-    (thread) => thread.parent_id === config.forumId,
+  return sharedCache.get(snapshotKey(config), SNAPSHOT_TTL_MS, async () => {
+    const result = (await asBot().get(
+      Routes.guildActiveThreads(env.DISCORD_GUILD_ID),
+    )) as RESTGetAPIGuildThreadsResult;
+    return (result.threads as APIThreadChannel[]).filter(
+      (thread) => thread.parent_id === config.forumId,
+    );
+  });
+}
+
+/**
+ * Makes the next read see a write this request just made: the visitor's
+ * own reply, a new post, a resolve. Only this data center's copy goes;
+ * elsewhere the snapshot is at most five seconds behind.
+ */
+export async function invalidateForumSnapshot(
+  config: SupportConfig,
+  threadId?: string,
+): Promise<void> {
+  await Promise.all([
+    sharedCache.evict(snapshotKey(config)),
+    threadId ? sharedCache.evict(`thread:${threadId}`) : undefined,
+  ]);
+}
+
+/**
+ * The thread for display: from the snapshot when it is active, otherwise
+ * (archived, or created after the snapshot was taken) read directly and
+ * cached a minute, since an archived post takes no new messages. Writes use
+ * `getThread`, which is always fresh.
+ */
+export async function getThreadForRead(
+  config: SupportConfig,
+  threadId: string,
+): Promise<APIThreadChannel | null> {
+  const active = await getActiveForumThreads(config);
+  const hit = active.find((thread) => thread.id === threadId);
+  if (hit) return hit;
+  return sharedCache.get(`thread:${threadId}`, MESSAGES_TTL_MS, () =>
+    getThread(threadId),
   );
 }
 
@@ -209,24 +271,27 @@ export interface ForumTags {
   byId: Map<string, string>;
 }
 
-let tagCache: { at: number; tags: ForumTags } | undefined;
-const TAG_TTL_MS = 5 * 60 * 1000;
-
 /**
- * The forum's tags, cached per isolate for five minutes. Tags change about
- * never, and every post creation and resolve needs them.
+ * The forum's tags, cached five minutes. Tags change about never, and every
+ * read and write needs them. Cached as the plain list (the shared cache
+ * holds JSON) and indexed per call, which is trivial at forum-tag sizes.
  */
 export async function getForumTags(config: SupportConfig): Promise<ForumTags> {
-  if (tagCache && Date.now() - tagCache.at < TAG_TTL_MS) return tagCache.tags;
-  const forum = (await asBot().get(
-    Routes.channel(config.forumId),
-  )) as APIGuildForumChannel;
+  const list = await sharedCache.get(
+    `tags:${config.forumId}`,
+    TAGS_TTL_MS,
+    async () => {
+      const forum = (await asBot().get(
+        Routes.channel(config.forumId),
+      )) as APIGuildForumChannel;
+      return forum.available_tags.map(({ id, name }) => ({ id, name }));
+    },
+  );
   const tags: ForumTags = { byName: new Map(), byId: new Map() };
-  for (const tag of forum.available_tags) {
+  for (const tag of list) {
     tags.byName.set(tag.name.toLowerCase(), tag.id);
     tags.byId.set(tag.id, tag.name);
   }
-  tagCache = { at: Date.now(), tags };
   return tags;
 }
 
