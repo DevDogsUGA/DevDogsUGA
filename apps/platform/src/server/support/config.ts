@@ -30,8 +30,12 @@ export interface SupportConfig {
  * turns the whole feature off: no launcher, and every support route 404s.
  * Both halves are required together; a forum without a webhook could read
  * threads but never post into them.
+ *
+ * Off in production for now, whatever its env holds: the feature is still in
+ * review there.
  */
 export function supportConfig(): SupportConfig | null {
+  if (process.env.DEPLOY_ENV === "production") return null;
   const forumId = env.DISCORD_SUPPORT_FORUM_ID;
   const webhookUrl = env.DISCORD_SUPPORT_WEBHOOK_URL;
   if (!forumId || !webhookUrl) return null;
