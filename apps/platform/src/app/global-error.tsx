@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { reloadForChunkError } from "~/lib/chunkReload";
 
 /**
  * The last boundary: the root layout itself failed, so `(site)/error.tsx`
@@ -23,6 +24,9 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A component whose code failed to download: loading the page again
+    // usually fixes it, so that goes first (see ~/lib/chunkReload).
+    if (reloadForChunkError(error)) return;
     // The root layout itself failed, which is the one boundary Sentry's own
     // Next.js docs single out: https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#error-handling
     // The rest of the app's Server Components/Actions/routes are captured

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { reloadForChunkError } from "~/lib/chunkReload";
 import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
 
 /**
@@ -21,6 +22,9 @@ export default function EventsError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A component whose code failed to download: loading the page again
+    // usually fixes it, so that goes first (see ~/lib/chunkReload).
+    if (reloadForChunkError(error)) return;
     // A Server Component's error reaches the client already stripped of its
     // message, so this logs the placeholder plus the digest rather than
     // anything sensitive. It is also the only record of the failure on the

@@ -7,7 +7,7 @@ import { docsProjectMark } from "~/config/docs";
 type MarkSize = "sm" | "lg";
 
 interface MarkProps {
-  icon: ComponentType<{ className?: string; weight?: "bold" }>;
+  icon: ComponentType<{ className?: string; weight?: "bold" | "fill" }>;
   /** The fill behind the glyph: a solid, saturated Tailwind background. */
   iconBg: string;
   /**
@@ -51,27 +51,30 @@ function Logo({ size = "sm" }: { size?: MarkSize }) {
   );
 }
 
-/** A bold glyph with no tile, in a mark's box so rows still line up. */
+/** A filled glyph in its color with no tile, in a mark's box so rows still
+ * line up. */
 function Glyph({
   icon: Icon,
+  color,
   size = "sm",
 }: {
   icon: MarkProps["icon"];
+  color: string;
   size?: MarkSize;
 }) {
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center text-mauve-200 ${size === "lg" ? "size-12 text-4xl" : "size-6 text-lg"}`}
+      className={`flex shrink-0 items-center justify-center ${color} ${size === "lg" ? "size-12 text-4xl" : "size-6 text-lg"}`}
     >
-      <Icon weight="bold" />
+      <Icon weight="fill" />
     </span>
   );
 }
 
 /**
- * A documented project's mark: the mascot for the platform, an app's own app
- * icon, or a bare glyph for a project that is not an app (see
+ * A documented project's mark: the mascot for the platform, else a bare
+ * glyph in the project's color: an app's own logo, or a Phosphor icon (see
  * DOCS_PROJECT_MARKS).
  */
 export default function DocsProjectMark({
@@ -82,9 +85,8 @@ export default function DocsProjectMark({
   slug: string;
   size?: MarkSize;
 }) {
-  const { kind, icon, iconBg } = docsProjectMark(slug);
+  const { kind, icon, color } = docsProjectMark(slug);
 
   if (kind === "logo") return <Logo size={size} />;
-  if (kind === "glyph") return <Glyph icon={icons[icon]} size={size} />;
-  return <Mark icon={icons[icon]} iconBg={iconBg} size={size} />;
+  return <Glyph icon={icons[icon]} color={color} size={size} />;
 }

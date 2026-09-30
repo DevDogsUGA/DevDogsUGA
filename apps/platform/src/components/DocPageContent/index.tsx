@@ -8,6 +8,7 @@ import DocsVscode from "~/components/DocsVscode";
 import TableOfContents, {
   InlineTableOfContents,
 } from "~/components/TableOfContents";
+import { cn } from "~/lib/cn";
 import { splitDocsDiffs } from "~/lib/docsDiffs";
 import type { DocHeading, TOCItem } from "~/lib/toc";
 
@@ -32,6 +33,8 @@ export default function DocPageContent({
   footer,
   notice,
 }: Props) {
+  // Only a local build shows the "Review in VS Code" links.
+  const vscode = (process.env.DEPLOY_ENV ?? "development") === "development";
   const toc: TOCItem[] = headings.map((h) => ({
     title: h.title,
     url: `#${h.id}`,
@@ -68,18 +71,24 @@ export default function DocPageContent({
             </div>
           ) : null}
 
-          <article className="prose prose-invert mx-auto max-w-3xl">
+          <article
+            className={cn(
+              "prose prose-invert mx-auto max-w-3xl",
+              !vscode && "docs-no-vscode",
+            )}
+          >
             {splitDocsDiffs(html).map((part, i) =>
               part.kind === "diff" ? (
                 <DocsDiff
                   key={i}
                   file={part.file}
                   lang={part.lang}
+                  icon={part.icon}
                   patch={part.patch}
                   oldContent={part.oldContent}
                   newContent={part.newContent}
                   href={part.href}
-                  vscode={part.vscode}
+                  vscode={vscode ? part.vscode : undefined}
                 />
               ) : (
                 // Our own repo's markdown, compiled at build time; nothing a
@@ -95,7 +104,7 @@ export default function DocPageContent({
           </article>
           {footer}
           <DocsCodeCopy />
-          <DocsVscode />
+          {vscode && <DocsVscode />}
           <DocsGithubLogin />
         </div>
 
