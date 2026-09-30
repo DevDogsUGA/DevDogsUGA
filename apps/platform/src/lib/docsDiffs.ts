@@ -11,6 +11,8 @@
 export interface DocsDiff {
   file: string;
   lang: string;
+  /** The tab's file icon: the compiler's `CodeIcon` (see its codeicons.ts). */
+  icon?: string;
   patch: string;
   oldContent?: string;
   newContent?: string;
@@ -19,7 +21,13 @@ export interface DocsDiff {
   vscode?: string;
 }
 
-const OPTIONAL = ["oldContent", "newContent", "href", "vscode"] as const;
+const OPTIONAL = [
+  "icon",
+  "oldContent",
+  "newContent",
+  "href",
+  "vscode",
+] as const;
 
 export type DocsHtmlPart =
   { kind: "html"; html: string } | ({ kind: "diff" } & DocsDiff);

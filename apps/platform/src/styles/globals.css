@@ -1622,6 +1622,50 @@
   white-space: nowrap;
 }
 
+/* The tab's icon (the compiler's codeicons.ts, and DocsDiff's): a terminal
+   window for a shell block, else the file's kind, in a color of its own so
+   it doesn't read as part of the name. */
+.docs-code-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-mauve-400);
+}
+
+.docs-code-icon[data-icon="terminal"] {
+  color: var(--color-emerald-400);
+}
+.docs-code-icon[data-icon="ts"] {
+  color: var(--color-blue-400);
+}
+.docs-code-icon[data-icon="tsx"] {
+  color: var(--color-sky-400);
+}
+.docs-code-icon:is([data-icon="js"], [data-icon="jsx"]) {
+  color: var(--color-yellow-300);
+}
+.docs-code-icon[data-icon="css"] {
+  color: var(--color-violet-400);
+}
+.docs-code-icon[data-icon="html"] {
+  color: var(--color-orange-400);
+}
+.docs-code-icon[data-icon="sql"] {
+  color: var(--color-amber-300);
+}
+.docs-code-icon[data-icon="md"] {
+  color: var(--color-cyan-300);
+}
+.docs-code-icon[data-icon="py"] {
+  color: var(--color-blue-300);
+}
+.docs-code-icon[data-icon="config"] {
+  color: var(--color-rose-300);
+}
+.docs-code-icon[data-icon="code"] {
+  color: var(--color-teal-300);
+}
+
 .docs-code-actions {
   display: flex;
   flex-shrink: 0;
@@ -1783,18 +1827,6 @@
 .prose figure.docs-code[data-kind="terminal"] .docs-code-tab {
   border-bottom-color: var(--color-mauve-950);
   background-color: var(--color-mauve-950);
-}
-
-.docs-code-dots {
-  display: inline-block;
-  width: 0.5rem;
-  height: 0.5rem;
-  margin-right: 1.25rem;
-  border-radius: 9999px;
-  background-color: var(--color-red-400);
-  box-shadow:
-    0.75rem 0 var(--color-amber-400),
-    1.5rem 0 var(--color-emerald-400);
 }
 
 .prose figure.docs-code .docs-prompt {
@@ -1979,6 +2011,15 @@
 .prose .docs-step-actions a[href^="vscode://devdogsuga.workshops/"]:hover {
   background-color: var(--color-mauve-800);
   color: white;
+}
+
+/* Outside development (DocPageContent), no VS Code links at all. */
+.docs-no-vscode
+  :is(
+    .docs-code-vscode,
+    .docs-step-actions > p:has(> a[href^="vscode://devdogsuga.workshops/"])
+  ) {
+  display: none;
 }
 
 .docs-code-vscode {

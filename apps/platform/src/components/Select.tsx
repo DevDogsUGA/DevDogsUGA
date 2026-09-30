@@ -1,11 +1,7 @@
 "use client";
 
 import * as SelectPrimitive from "@radix-ui/react-select";
-import {
-  ArrowRightIcon,
-  CaretUpDownIcon,
-  CheckIcon,
-} from "@phosphor-icons/react/ssr";
+import { CaretUpDownIcon, CheckIcon } from "@phosphor-icons/react/ssr";
 import type { ComponentPropsWithoutRef } from "react";
 import { cn } from "~/lib/cn";
 
@@ -79,6 +75,15 @@ interface ItemProps extends ComponentPropsWithoutRef<
   description?: string;
 }
 
+/** The chosen row's check, at the row's right end. */
+function Check() {
+  return (
+    <SelectPrimitive.ItemIndicator className="ml-auto flex shrink-0 pl-3">
+      <CheckIcon weight="bold" className="size-4 text-emerald-400" />
+    </SelectPrimitive.ItemIndicator>
+  );
+}
+
 function SelectItem({ children, icon, description, ...props }: ItemProps) {
   if (icon && description) {
     return (
@@ -90,14 +95,9 @@ function SelectItem({ children, icon, description, ...props }: ItemProps) {
 
   return (
     <SelectPrimitive.Item
-      className="relative flex cursor-default items-center gap-2 py-1.5 pr-3 pl-8 text-sm text-white select-none focus:outline-none focus:not-data-[state=checked]:bg-mauve-700 data-disabled:pointer-events-none data-disabled:opacity-40 data-[state=checked]:bg-mauve-950"
+      className="relative flex cursor-default items-center gap-2 px-3 py-1.5 text-sm text-white select-none focus:outline-none focus:not-data-[state=checked]:bg-mauve-700 data-disabled:pointer-events-none data-disabled:opacity-40 data-[state=checked]:bg-mauve-950"
       {...props}
     >
-      <span className="absolute left-2.5 flex items-center">
-        <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-3.5 text-mauve-400" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
       <SelectPrimitive.ItemText>
         {icon ? (
           <span className="flex items-center gap-2.5">
@@ -108,20 +108,18 @@ function SelectItem({ children, icon, description, ...props }: ItemProps) {
           children
         )}
       </SelectPrimitive.ItemText>
+      <Check />
     </SelectPrimitive.Item>
   );
 }
 
 /**
- * A two-line row: the mark in a slot of its own, centred on the name and the
- * description together, with no separate check gutter. The chosen row swaps
- * its mark for an arrow and sits on a darker fill, so which option is chosen
- * still shows while another is hovered.
+ * A two-line row: the mark, centred on the name and the description together.
+ * The chosen row sits on a darker fill with a check at its right end, so which
+ * option is chosen still shows while another is hovered.
  *
- * The description sits inside ItemText with the name, so the closed control
- * shows both. The mark does too, hidden in the list and shown only once Radix
- * has cloned that node into the trigger, so the closed control keeps the mark
- * beside the chosen name.
+ * The mark and the description sit inside ItemText with the name, so the
+ * closed control shows all three.
  */
 function DescribedItem({
   children,
@@ -131,22 +129,12 @@ function DescribedItem({
 }: ItemProps & { icon: React.ReactNode; description: string }) {
   return (
     <SelectPrimitive.Item
-      className="group/item relative flex cursor-default items-center gap-2.5 px-3.5 py-2 text-sm text-white select-none focus:outline-none focus:not-data-[state=checked]:bg-mauve-800 data-disabled:pointer-events-none data-disabled:opacity-40 data-[state=checked]:bg-mauve-950"
+      className="relative flex cursor-default items-center gap-2.5 px-3.5 py-2 text-sm text-white select-none focus:outline-none focus:not-data-[state=checked]:bg-mauve-800 data-disabled:pointer-events-none data-disabled:opacity-40 data-[state=checked]:bg-mauve-950"
       {...props}
     >
-      <span className="relative flex shrink-0">
-        <span className="flex group-data-[state=checked]/item:invisible">
-          {icon}
-        </span>
-        <SelectPrimitive.ItemIndicator className="absolute inset-0 flex items-center justify-center">
-          <ArrowRightIcon weight="bold" className="size-5 text-white" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
       <SelectPrimitive.ItemText>
         <span className="flex min-w-0 items-center gap-2.5">
-          <span className="hidden shrink-0 [[data-select-trigger]_&]:flex">
-            {icon}
-          </span>
+          <span className="flex shrink-0">{icon}</span>
           {/* Bounded, so a long name cannot widen the popover past the
               sidebar and the mobile sheet it opens inside. */}
           <span className="flex max-w-52 min-w-0 flex-col gap-0.5 text-left">
@@ -157,6 +145,7 @@ function DescribedItem({
           </span>
         </span>
       </SelectPrimitive.ItemText>
+      <Check />
     </SelectPrimitive.Item>
   );
 }

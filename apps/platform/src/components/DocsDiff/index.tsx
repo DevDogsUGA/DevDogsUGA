@@ -1,6 +1,22 @@
 "use client";
 
-import { CopyIcon, GithubLogoIcon } from "@phosphor-icons/react/ssr";
+import {
+  CopyIcon,
+  FileCodeIcon,
+  FileCssIcon,
+  FileHtmlIcon,
+  FileIniIcon,
+  FileJsIcon,
+  FileJsxIcon,
+  FileMdIcon,
+  FilePyIcon,
+  FileSqlIcon,
+  FileTextIcon,
+  FileTsIcon,
+  FileTsxIcon,
+  GithubLogoIcon,
+} from "@phosphor-icons/react/ssr";
+import type { Icon } from "@phosphor-icons/react";
 import { DiffFile, DiffModeEnum, DiffView } from "@git-diff-view/react";
 import "@git-diff-view/react/styles/diff-view-pure.css";
 import { useEffect, useMemo, useState } from "react";
@@ -12,6 +28,23 @@ const MODES = [
   { mode: DiffModeEnum.Unified, label: "Unified" },
   { mode: DiffModeEnum.Split, label: "Split" },
 ] as const;
+
+/** The compiler's `CodeIcon`s, as the Phosphor icons its code blocks draw
+ * (colored by `data-icon` in globals.css). */
+const FILE_ICONS: Record<string, Icon> = {
+  ts: FileTsIcon,
+  tsx: FileTsxIcon,
+  js: FileJsIcon,
+  jsx: FileJsxIcon,
+  css: FileCssIcon,
+  html: FileHtmlIcon,
+  sql: FileSqlIcon,
+  md: FileMdIcon,
+  py: FilePyIcon,
+  config: FileIniIcon,
+  text: FileTextIcon,
+  code: FileCodeIcon,
+};
 
 /** The code as it stands after the change: every context and added line of
  * the diff's hunks, a blank line between hunks. What "Copy" takes. */
@@ -43,6 +76,7 @@ export function newSide(patch: string): string {
 export default function DocsDiff({
   file,
   lang,
+  icon = "code",
   patch,
   oldContent = "",
   newContent = "",
@@ -67,6 +101,8 @@ export default function DocsDiff({
     }
   }
 
+  const FileIcon = FILE_ICONS[icon] ?? FileCodeIcon;
+
   const diffFile = useMemo(() => {
     const diff = new DiffFile(
       file,
@@ -87,7 +123,15 @@ export default function DocsDiff({
   return (
     <figure className="docs-diff not-prose border-border my-6 overflow-hidden rounded-md border">
       <figcaption className="docs-code-bar">
-        <span className="docs-code-tab">{file}</span>
+        <span className="docs-code-tab">
+          <FileIcon
+            weight="fill"
+            aria-hidden
+            data-icon={icon in FILE_ICONS ? icon : "code"}
+            className="docs-code-icon"
+          />
+          {file}
+        </span>
         <div className="flex shrink-0 items-center gap-2 self-center pb-1.5">
           <div
             role="group"
