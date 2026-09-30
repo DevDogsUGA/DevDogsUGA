@@ -3,10 +3,11 @@
 import { useEffect } from "react";
 
 /**
- * The copy buttons on a docs page's code blocks. The compiler writes each
- * block's button into the page's HTML (`[data-copy]` in `figure.docs-code`,
- * see @devdogsuga/docs-compiler's codeblocks.ts), so one listener here serves
- * them all.
+ * The copy buttons on a docs page's code blocks and table cells. The compiler
+ * writes each button into the page's HTML (`[data-copy]` in `figure.docs-code`,
+ * see @devdogsuga/docs-compiler's codeblocks.ts; `[data-copy-inline]` in a
+ * table cell's `.docs-copyable`, see its tables.ts), so one listener here
+ * serves them all. A cell copies its code span's text.
  *
  * A terminal copies its commands alone: no prompts, no `#` annotations, no
  * idle prompt. Other code copies every line, less the rows marking skipped
@@ -36,11 +37,17 @@ export default function DocsCodeCopy() {
     const timers = new Set<ReturnType<typeof setTimeout>>();
 
     async function onClick(event: MouseEvent) {
-      const button = (event.target as Element | null)?.closest("[data-copy]");
-      const figure = button?.closest("figure.docs-code");
-      if (!button || !figure) return;
+      const target = event.target as Element | null;
+      const block = target?.closest("[data-copy]");
+      const cell = target?.closest("[data-copy-inline]");
+      const figure = block?.closest("figure.docs-code");
+      const code = cell?.closest(".docs-copyable")?.querySelector("code");
+      const button = figure ? block : code ? cell : null;
+      if (!button) return;
       try {
-        await navigator.clipboard.writeText(blockText(figure));
+        await navigator.clipboard.writeText(
+          figure ? blockText(figure) : (code?.textContent ?? ""),
+        );
       } catch {
         return;
       }

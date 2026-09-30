@@ -1683,6 +1683,34 @@
   color: var(--color-emerald-300);
 }
 
+/* A table cell that is one code span gets its own copy button (the
+   compiler's tables.ts): the value a reader pastes into another form. */
+.docs-copyable {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.docs-copyable-copy {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0.25rem;
+  border-radius: calc(var(--radius) - 4px);
+  color: var(--color-mauve-400);
+  transition:
+    color 150ms,
+    background-color 150ms;
+}
+
+.docs-copyable-copy:hover {
+  background-color: var(--color-mauve-800);
+  color: white;
+}
+
+.docs-copyable-copy[data-copied] {
+  color: var(--color-emerald-300);
+}
+
 .prose figure.docs-code {
   margin-block: 1.5em;
   overflow: hidden;

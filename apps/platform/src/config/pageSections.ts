@@ -144,6 +144,12 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
       label: "Credentials",
       fields: [
         {
+          id: "issuer",
+          label: "Issuer URL",
+          description:
+            "Where an OpenID Connect provider (a custom OIDC provider in Supabase, for one) discovers DevDogs sign-in.",
+        },
+        {
           id: "client-credentials",
           label: "Client ID",
           description:
