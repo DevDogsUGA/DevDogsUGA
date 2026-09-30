@@ -799,8 +799,8 @@ importers:
   docs:
     dependencies:
       '@devdogsuga/docs-compiler':
-        specifier: ^0.1.10
-        version: 0.1.10
+        specifier: ^0.1.11
+        version: 0.1.11
 
   packages/deploy-checks:
     devDependencies:
@@ -1350,8 +1350,8 @@ packages:
       '@devdogsuga/events':
         optional: true
 
-  '@devdogsuga/docs-compiler@0.1.10':
-    resolution: {integrity: sha512-sNMluUwybLWTpX+0y9gJCQYRw6CHu/1n8IDgdEob3EzfwCZshVF+OO5FDrTiwT2qZg/s9CQeDNOTXncjsxx+0Q==}
+  '@devdogsuga/docs-compiler@0.1.11':
+    resolution: {integrity: sha512-HUurvFKEv5ZxFdRDlX3GmglZ71jBylhqBQqpy/yqije7300n/dG5xRYoECVKq8CY3useGB14/PQKuAA4a9ZM6g==}
     hasBin: true
 
   '@devdogsuga/env@0.1.2':
@@ -9811,7 +9811,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@devdogsuga/docs-compiler@0.1.10':
+  '@devdogsuga/docs-compiler@0.1.11':
     dependencies:
       '@shikijs/rehype': 4.4.3
       github-slugger: 2.0.0
