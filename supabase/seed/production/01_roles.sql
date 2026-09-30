@@ -32,7 +32,7 @@ insert into "platform"."roles" (
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
   "canViewAuditLog", "canCreateCredentials", "canManageVerification",
-  "canManageAttendance", "canExportStars"
+  "canManageAttendance", "canExportStars", "canPreviewDocs"
 )
 values
   (
@@ -41,7 +41,7 @@ values
     'Default role for every member. No special permissions.',
     'default', null, true, false,
     null, null, null, null,
-    null, null, null, null, null, null, null, null
+    null, null, null, null, null, null, null, null, null
   ),
   (
     '00000000-0000-0000-0000-000000000002',
@@ -49,7 +49,7 @@ values
     'President of DevDogs.',
     'custom', 100, true, true,
     '#9b59b6', '1237558680120070196', 'President', 10181046,
-    true, true, true, true, true, true, true, true
+    true, true, true, true, true, true, true, true, true
   ),
   (
     '00000000-0000-4000-8000-000000000002',
@@ -57,7 +57,7 @@ values
     'Vice President of DevDogs.',
     'custom', 200, true, true,
     '#1abc9c', '1237559269474308107', 'Vice President', 1752220,
-    true, true, true, true, true, true, true, true
+    true, true, true, true, true, true, true, true, true
   ),
   (
     '00000000-0000-4000-8000-000000000003',
@@ -65,7 +65,7 @@ values
     'Maintains the platform and its deployment infrastructure.',
     'custom', 300, true, true,
     null, null, null, null,
-    true, true, true, true, true, true, true, true
+    true, true, true, true, true, true, true, true, true
   ),
   (
     '00000000-0000-4000-8000-000000000004',
@@ -73,7 +73,7 @@ values
     'Leads the Campus Engagement and Corporate Outreach teams.',
     'custom', 400, true, true,
     '#1abc9c', '1513222394691715132', 'External Affairs Director', 1752220,
-    null, null, null, null, null, true, true, true
+    null, null, null, null, null, true, true, true, true
   ),
   (
     '00000000-0000-4000-8000-000000000005',
@@ -81,7 +81,7 @@ values
     'Builds participation and relationships across the UGA campus.',
     'custom', 500, true, true,
     '#1abc9c', '1237558784017305642', 'Campus Engagement Team', 1752220,
-    null, null, null, null, null, true, true, null
+    null, null, null, null, null, true, true, null, true
   ),
   (
     '00000000-0000-4000-8000-000000000006',
@@ -89,7 +89,7 @@ values
     'Builds relationships with companies, alumni, and technology professionals.',
     'custom', 600, true, true,
     '#1abc9c', '1237558910848733254', 'Corporate Outreach Team', 1752220,
-    null, null, null, null, null, null, null, null
+    null, null, null, null, null, null, null, null, true
   ),
   (
     '00000000-0000-4000-8000-000000000007',
@@ -97,7 +97,7 @@ values
     'Leads delivery of a DevDogs project.',
     'custom', 700, true, true,
     '#1abc9c', '1390065004287627264', 'Project Manager', 1752220,
-    null, null, null, null, null, null, true, null
+    null, null, null, null, null, null, true, null, true
   ),
   (
     '00000000-0000-4000-8000-000000000008',
@@ -105,7 +105,7 @@ values
     'Leads a DevDogs focus area.',
     'custom', 800, true, true,
     '#1abc9c', '1283289579700621322', 'Focus Lead', 1752220,
-    null, null, null, null, null, null, null, null
+    null, null, null, null, null, null, null, null, true
   )
 on conflict ("title") do update set
   "description" = excluded."description",
@@ -124,4 +124,5 @@ on conflict ("title") do update set
   "canCreateCredentials" = excluded."canCreateCredentials",
   "canManageVerification" = excluded."canManageVerification",
   "canManageAttendance" = excluded."canManageAttendance",
-  "canExportStars" = excluded."canExportStars";
+  "canExportStars" = excluded."canExportStars",
+  "canPreviewDocs" = excluded."canPreviewDocs";

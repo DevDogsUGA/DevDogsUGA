@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import devdog from "~/assets/devdog.svg";
-import { getDocsProjects } from "~/server/docs/queries";
+import { getVisibleDocsProjects } from "~/server/docs/queries";
 import AppSwitcherButton from "./AppSwitcherButton";
 import NavLinks, { NavLinksFallback } from "./NavLinks";
 import NavShell from "./NavShell";
@@ -10,14 +10,13 @@ import { NavUserRefresh } from "./NavUserProvider";
 import SearchButton from "./SearchButton";
 import { TopNavMobile, TopNavProfile } from "./TopNavUser";
 
-export default function TopNav() {
+export default async function TopNav() {
   // Parsed from `docs/` at build time, so this is an in-memory read; the whole
-  // docs module stays server-side and only the slugs reach the client.
-  const docsProjects = getDocsProjects().map(({ slug, name, description }) => ({
-    slug,
-    name,
-    description,
-  }));
+  // docs module stays server-side and only the slugs reach the client. A
+  // project whose pages are all still scheduled is left out until one is live.
+  const docsProjects = (await getVisibleDocsProjects()).map(
+    ({ slug, name, description }) => ({ slug, name, description }),
+  );
 
   return (
     <header className="sticky top-0 z-50 border-b-2 border-mauve-800 bg-mauve-950/90 backdrop-blur">

@@ -92,6 +92,7 @@ export function useRoles(
             canManageVerification: data.canManageVerification ?? null,
             canManageAttendance: data.canManageAttendance ?? null,
             canExportStars: data.canExportStars ?? null,
+            canPreviewDocs: data.canPreviewDocs ?? null,
             discordRoleId: null,
             discordSyncedName: null,
             discordRolePosition: null,
@@ -154,6 +155,7 @@ export function useRoles(
                 }),
                 ...(data.canExportStars !== undefined && {
                   canExportStars: data.canExportStars ?? null,
+                  canPreviewDocs: data.canPreviewDocs ?? null,
                 }),
               }
             : r,

@@ -9,6 +9,7 @@ import {
 } from "~/server/actions/permissions";
 import { expectUserWith } from "~/server/auth";
 import type { profiles } from "~/server/db/schema";
+import { githubLoginFor } from "~/server/github/teamSync";
 import {
   getInvolvementFullName,
   getVerificationStatus,
@@ -21,6 +22,8 @@ export interface NavUser {
   credentialsAccess: boolean;
   highestRole: HighestRankingRole;
   verification: VerificationData | null;
+  /** The linked GitHub account's login, or null when none is linked. */
+  githubLogin: string | null;
 }
 
 /**
@@ -34,13 +37,19 @@ export const getNavUser = cache(async (): Promise<NavUser | null> => {
   const user = await expectUserWith({ profile: true }).catch(() => null);
   if (!user?.profile) return null;
 
-  const [callerContext, credentialsAccess, highestRole, verificationStatus] =
-    await Promise.all([
-      getCallerContext(user.id).catch(() => null),
-      canSeeCredentialsPage(user.id).catch(() => false),
-      getHighestRankingRole(user.id),
-      getVerificationStatus(user.id).catch(() => null),
-    ]);
+  const [
+    callerContext,
+    credentialsAccess,
+    highestRole,
+    verificationStatus,
+    githubLogin,
+  ] = await Promise.all([
+    getCallerContext(user.id).catch(() => null),
+    canSeeCredentialsPage(user.id).catch(() => false),
+    getHighestRankingRole(user.id),
+    getVerificationStatus(user.id).catch(() => null),
+    githubLoginFor(user.id).catch(() => null),
+  ]);
 
   return {
     profile: user.profile,
@@ -55,6 +64,7 @@ export const getNavUser = cache(async (): Promise<NavUser | null> => {
           involvementFullName: getInvolvementFullName(user.profile),
         }
       : null,
+    githubLogin,
   };
 });
 
@@ -74,6 +84,7 @@ export function toMeResponse(user: NavUser | null): MeResponse {
       highestRole: user.highestRole,
     },
     verification: user.verification,
+    githubLogin: user.githubLogin,
     consoleItems: visibleConsoleItems(user.permissions, user.credentialsAccess),
   };
 }

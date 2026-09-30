@@ -2,6 +2,7 @@
 name: "Store Names on the Server"
 description: "Move display names into a profiles table the server fills in, so the app stops trusting the client."
 order: 4
+checkpoint: "02-supabase/04-profiles"
 ---
 
 <!-- Generated from Backstage apps/slides/decks/2026-09-28-supabase.md by `pnpm export:md`; edit the deck, not this file. -->
@@ -10,19 +11,35 @@ order: 4
 
 <!-- prettier-ignore-start -->
 
-<details>
-<summary>Behind? Start from where the last step ended</summary>
+<div class="docs-step-actions">
 
-These put your copy of the workshop code exactly where the previous step left it.
+[Review in VS Code](vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F04-profiles&from=02-supabase%2F03-insert-naive)
+
+<details>
+<summary>Behind? Catch up to where the last step ended</summary>
+
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
 
 ```bash cwd=~/Mobile-Workshops
-# Get the checkpoint tags
 git fetch origin --tags
-# Throws away your changes to the workshop code
-git switch --detach --discard-changes demo/03-insert-naive
+# Save your own changes first
+git add -A
+git commit -m "My work"
+# Bring in the code from the end of the last step
+git merge --no-edit 02-supabase/03-insert-naive
+```
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+
+```bash cwd=~/Mobile-Workshops
+git fetch origin --tags
+# Moves your branch to the end of the last step
+git switch --discard-changes -C <github-username>/02-supabase 02-supabase/03-insert-naive
 ```
 
 </details>
+
+</div>
 
 Store each person's name once, on the server, when they sign up. Every message then shows the name from their account, and the app stops sending a name at all.
 
@@ -32,7 +49,7 @@ Store each person's name once, on the server, when they sign up. Every message t
 
 A `profiles` table: one row per person, keyed by their `auth.users` id.
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=6-11 href=https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql#L6-L11
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=6-11 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L6-L11 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=6-11
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   name text not null
@@ -43,7 +60,7 @@ alter table public.profiles enable row level security;
 
 Names are public, so everyone can read profiles. There's no write policy: only the trigger below writes here.
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=13-19 href=https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql#L13-L19
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=13-19 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L13-L19 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=13-19
 -- Names are public (they show up next to every message), but nobody can
 -- write to this table directly -- only the trigger below does that.
 create policy "profiles are readable by everyone"
@@ -55,7 +72,7 @@ create policy "profiles are readable by everyone"
 
 A function that runs as its owner (`security definer`), so it can write a profile the signed-in user can't.
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=25-30 href=https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql#L25-L30
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=25-30 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L25-L30 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=25-30
 create function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -66,7 +83,7 @@ as $$
 
 It inserts one profile for each new user…
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=31-37 href=https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql#L31-L37
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=31-37 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L31-L37 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=31-37
 begin
   insert into public.profiles (id, name)
   values (
@@ -78,7 +95,7 @@ begin
 
 …named by `coalesce`: the first of `name`, `full_name`, `preferred_username`, or the start of the email.
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=38-44 href=https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql#L38-L44
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=38-44 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L38-L44 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=38-44
       new.raw_user_meta_data ->> 'preferred_username',
       split_part(new.email, '@', 1)
     )
@@ -90,7 +107,7 @@ $$;
 
 The trigger runs that function every time someone signs up.
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=46-48 href=https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql#L46-L48
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=46-48 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L46-L48 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=46-48
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -98,7 +115,7 @@ create trigger on_auth_user_created
 
 The backfill gives everyone who signed up before tonight a profile too.
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=50-61 href=https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql#L50-L61
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=50-61 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L50-L61 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=50-61
 -- Backfill: give everyone who signed up before this migration a profile too.
 insert into public.profiles (id, name)
 select
@@ -115,7 +132,7 @@ on conflict (id) do nothing;
 
 Messages now point at profiles, and the `author_name` column goes away.
 
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=63-70 href=https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql#L63-L70
+```sql file=supabase/migrations/20260928000100_profiles.sql lines=63-70 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L63-L70 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=63-70
 -- Messages now point at profiles (not auth.users directly), so PostgREST
 -- can embed `profiles(name)` in a single select. The client can no longer
 -- send its own author_name -- the name always comes from the server.
@@ -126,13 +143,13 @@ alter table public.messages
 alter table public.messages drop column author_name;
 ```
 
-[The whole `supabase/migrations/20260928000100_profiles.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/cd01fa1e5cad6019bb5315f8c30a960c6646fd39/supabase/migrations/20260928000100_profiles.sql)
+[The whole `supabase/migrations/20260928000100_profiles.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql)
 
 ## One Name per Account
 
 No more name field: its controller, its `dispose` call, and the `TextField` go.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/191e71aeec4819dfa82c46d12d2e2bcd5e68a4cd...3b10b23bff5732a6487ba58887feab9a3d5c5f7c#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/4ee8113af098be0a3737bdc0e4cf703a9a8678d7...c7d9b57d87f8138568a002061fbbeac7316fa112#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F04-profiles&from=02-supabase%2F03-insert-naive&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,164 +1,155 @@
@@ -305,7 +322,7 @@ No more name field: its controller, its `dispose` call, and the `TextField` go.
 
 Only the message is required now.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/191e71aeec4819dfa82c46d12d2e2bcd5e68a4cd...3b10b23bff5732a6487ba58887feab9a3d5c5f7c#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/4ee8113af098be0a3737bdc0e4cf703a9a8678d7...c7d9b57d87f8138568a002061fbbeac7316fa112#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F04-profiles&from=02-supabase%2F03-insert-naive&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,155 +1,153 @@
@@ -469,7 +486,7 @@ Only the message is required now.
 
 The insert sends just the message; the server knows who's signed in.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/191e71aeec4819dfa82c46d12d2e2bcd5e68a4cd...3b10b23bff5732a6487ba58887feab9a3d5c5f7c#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/4ee8113af098be0a3737bdc0e4cf703a9a8678d7...c7d9b57d87f8138568a002061fbbeac7316fa112#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F04-profiles&from=02-supabase%2F03-insert-naive&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,153 +1,154 @@
@@ -638,7 +655,7 @@ Names live in `profiles` now, so the app fetches them along with each message.
 
 `profiles(name)` embeds the author's profile through the foreign key, in the same query.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/191e71aeec4819dfa82c46d12d2e2bcd5e68a4cd...3b10b23bff5732a6487ba58887feab9a3d5c5f7c#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/4ee8113af098be0a3737bdc0e4cf703a9a8678d7...c7d9b57d87f8138568a002061fbbeac7316fa112#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F04-profiles&from=02-supabase%2F03-insert-naive&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,154 +1,154 @@
@@ -801,7 +818,7 @@ Names live in `profiles` now, so the app fetches them along with each message.
 
 The profile arrives as a `Map` (or `null`); `?.` and `??` fall back to "Unknown".
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/191e71aeec4819dfa82c46d12d2e2bcd5e68a4cd...3b10b23bff5732a6487ba58887feab9a3d5c5f7c#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/4ee8113af098be0a3737bdc0e4cf703a9a8678d7...c7d9b57d87f8138568a002061fbbeac7316fa112#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F04-profiles&from=02-supabase%2F03-insert-naive&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,154 +1,161 @@
@@ -970,7 +987,7 @@ The profile arrives as a `Map` (or `null`); `?.` and `??` fall back to "Unknown"
 
 The tile's title shows that name.
 
-```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/191e71aeec4819dfa82c46d12d2e2bcd5e68a4cd...3b10b23bff5732a6487ba58887feab9a3d5c5f7c#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee
+```diff file=lib/guestbook.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/4ee8113af098be0a3737bdc0e4cf703a9a8678d7...c7d9b57d87f8138568a002061fbbeac7316fa112#diff-421311fd7986258c9b94592881ea0ebcdeb72cd931b1e96689ee04ac1c77d2ee vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=02-supabase%2F04-profiles&from=02-supabase%2F03-insert-naive&file=lib%2Fguestbook.dart
 --- a/lib/guestbook.dart
 +++ b/lib/guestbook.dart
 @@ -1,161 +1,161 @@
@@ -1138,6 +1155,6 @@ The tile's title shows that name.
  }
 ```
 
-[The whole `lib/guestbook.dart` at this point](https://github.com/DevDogsUGA/Mobile-Workshops/blob/3b10b23bff5732a6487ba58887feab9a3d5c5f7c/lib/guestbook.dart)
+[The whole `lib/guestbook.dart` at this point](https://github.com/DevDogsUGA/Mobile-Workshops/blob/c7d9b57d87f8138568a002061fbbeac7316fa112/lib/guestbook.dart)
 
 <!-- prettier-ignore-end -->

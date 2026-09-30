@@ -14,10 +14,10 @@ order: 0
 
 ```bash cwd=~
 # Download the workshop repo
-gh repo clone DevDogsUGA/Web-Workshops
+git clone https://github.com/DevDogsUGA/Web-Workshops
 cd Web-Workshops
-# Start from Setup Night's code
-git switch 01-nextjs-intro
+# Your own branch, starting from Setup Night's code
+git switch -c <github-username>/02-supabase origin/01-nextjs-intro
 # Install dependencies
 pnpm install
 ```
@@ -28,7 +28,7 @@ pnpm install
 - Copy the **Project URL** and the **publishable key** from Project Settings → API
 - Copy `.env.example` to `.env.local` and paste them in
 
-```dotenv file=.env.example lines=1-4 href=https://github.com/DevDogsUGA/Web-Workshops/blob/9c96784c95f0f1afc8ebf730e98106a3471c3dc6/.env.example
+```dotenv file=.env.example lines=1-4 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/.env.example vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F05-delete&file=.env.example
 # Copy this file to .env.local and fill in your own Supabase project's values.
 # Find both on your project's dashboard under Project Settings > API.
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co

@@ -10,12 +10,26 @@
  * preview is just a preview deployment of the whole site from that branch.
  */
 
+/** Where the public docs live. */
+export const DOCS_BASE = "/docs";
+
+/**
+ * Where the early-access copy lives: the same tree, with pages that are
+ * scheduled but not live yet included and marked. See `/preview/docs`.
+ */
+export const DOCS_PREVIEW_BASE = "/preview/docs";
+
 /**
  * Builds a docs URL. `path` is project-relative: the segments below the
- * project folder, without the project itself.
+ * project folder, without the project itself. `base` is `DOCS_BASE` unless the
+ * link is inside the preview, where every link has to stay in it.
  */
-export function docsHref(project: string, path: string[]): string {
-  return "/" + ["docs", project, ...path].map(encodeURIComponent).join("/");
+export function docsHref(
+  project: string,
+  path: string[],
+  base: string = DOCS_BASE,
+): string {
+  return base + "/" + [project, ...path].map(encodeURIComponent).join("/");
 }
 
 /**

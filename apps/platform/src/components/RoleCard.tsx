@@ -30,6 +30,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   canManageVerification: "Manage verification",
   canManageAttendance: "Manage attendance",
   canExportStars: "Export stars",
+  canPreviewDocs: "Preview docs",
 };
 
 const PERMISSION_KEYS = Object.keys(

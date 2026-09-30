@@ -2,6 +2,7 @@
 name: "Let Signed-In Users Post"
 description: "Let signed-in users post, with a policy that only lets them post as themselves."
 order: 3
+checkpoint: "02-supabase/03-insert-naive"
 ---
 
 <!-- Generated from Backstage apps/slides/decks/2026-09-28-supabase.md by `pnpm export:md`; edit the deck, not this file. -->
@@ -10,19 +11,35 @@ order: 3
 
 <!-- prettier-ignore-start -->
 
-<details>
-<summary>Behind? Start from where the last step ended</summary>
+<div class="docs-step-actions">
 
-These put your copy of the workshop code exactly where the previous step left it.
+[Review in VS Code](vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in)
+
+<details>
+<summary>Behind? Catch up to where the last step ended</summary>
+
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
 
 ```bash cwd=~/Web-Workshops
-# Get the checkpoint tags
 git fetch origin --tags
-# Throws away your changes to the workshop code
-git switch --detach --discard-changes demo/02-sign-in
+# Save your own changes first
+git add -A
+git commit -m "My work"
+# Bring in the code from the end of the last step
+git merge --no-edit 02-supabase/02-sign-in
+```
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+
+```bash cwd=~/Web-Workshops
+git fetch origin --tags
+# Moves your branch to the end of the last step
+git switch --discard-changes -C <github-username>/02-supabase 02-supabase/02-sign-in
 ```
 
 </details>
+
+</div>
 
 ## Allow Signed-In Posts
 
@@ -32,7 +49,7 @@ The table and read policy from step 1. The new policy goes at the end.
 
 Only signed-in users can insert, and `with check (auth.uid() = user_id)` means only as themselves.
 
-```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql
 --- a/supabase/migrations/20260928000000_guestbook.sql
 +++ b/supabase/migrations/20260928000000_guestbook.sql
 @@ -1,22 +1,29 @@
@@ -67,7 +84,7 @@ Only signed-in users can insert, and `with check (auth.uid() = user_id)` means o
 +  with check (auth.uid() = user_id);
 ```
 
-[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe/supabase/migrations/20260928000000_guestbook.sql)
+[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9b7fb5c960e2ad2086522f6f3a1f55e1720943b9/supabase/migrations/20260928000000_guestbook.sql)
 
 ## Posting a Message
 
@@ -75,7 +92,7 @@ The form from Setup Night comes back, now saving to the database.
 
 Controlled inputs: each field's text lives in state (`useState`) and updates on every keystroke.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,89 +1,91 @@
@@ -174,7 +191,7 @@ Controlled inputs: each field's text lives in state (`useState`) and updates on 
 
 `handleSubmit` is `async`, so it can `await` the database. `preventDefault` stops the browser's own page-reloading submit.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,91 +1,99 @@
@@ -281,7 +298,7 @@ Controlled inputs: each field's text lives in state (`useState`) and updates on 
 
 The insert sends the typed name and the message; `.select().single()` hands back the saved row.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,99 +1,107 @@
@@ -396,7 +413,7 @@ The insert sends the typed name and the message; `.select().single()` hands back
 
 Put the new row at the top of the list and clear the form.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,107 +1,114 @@
@@ -518,7 +535,7 @@ Put the new row at the top of the list and clear the form.
 
 `{session && (…)}` shows the form only to signed-in users; `onChange` copies each keystroke into state.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,114 +1,121 @@
@@ -650,7 +667,7 @@ Put the new row at the top of the list and clear the form.
 
 The message box works the same way, and signed-out visitors get a hint instead of the form.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/edc945f9755121c1d6d0ecf54be2ace9c1fc9237...1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,121 +1,140 @@
@@ -796,7 +813,7 @@ The message box works the same way, and signed-out visitors get a hint instead o
  }
 ```
 
-[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/1b91fdba8d5d9f3494b4d1a1ad8c2b702633abfe/components/Guestbook.tsx)
+[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9b7fb5c960e2ad2086522f6f3a1f55e1720943b9/components/Guestbook.tsx)
 
 ## What's Wrong with This?
 

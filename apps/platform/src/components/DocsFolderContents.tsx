@@ -3,7 +3,8 @@ import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
 import { Mark } from "~/components/DocsProjectMark";
 import DocsTileGrid from "~/components/DocsTileGrid";
 import { docsProjectMark } from "~/config/docs";
-import { docsHref } from "~/lib/docsSlug";
+import DocsScheduled from "~/components/DocsScheduled";
+import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import type { DocsFolderEntry } from "~/server/docs/queries";
 
 interface Props {
@@ -11,6 +12,8 @@ interface Props {
   title: string;
   breadcrumbs: string[];
   entries: DocsFolderEntry[];
+  /** `/docs`, or the preview's prefix. */
+  base?: string;
 }
 
 /**
@@ -27,6 +30,7 @@ export default function DocsFolderContents({
   title,
   breadcrumbs,
   entries,
+  base = DOCS_BASE,
 }: Props) {
   const { iconBg } = docsProjectMark(project);
 
@@ -43,9 +47,10 @@ export default function DocsFolderContents({
       {entries.length > 0 ? (
         <DocsTileGrid
           tiles={entries.map((entry) => ({
-            href: docsHref(project, entry.path.split("/")),
+            href: docsHref(project, entry.path.split("/"), base),
             title: entry.title,
             description: entry.description,
+            note: entry.publishAt && <DocsScheduled at={entry.publishAt} />,
             mark: (
               <Mark
                 icon={entry.kind === "folder" ? FolderIcon : FileTextIcon}

@@ -2,21 +2,29 @@ import { Suspense } from "react";
 import Field from "~/ui/field";
 import OAuthCredentialsField from "~/components/OAuthCredentialsField";
 import OAuthGateDialog from "~/components/OAuthGateDialog";
+import Input from "~/components/Input";
 import OAuthTestAccountsField from "~/components/OAuthTestAccountsField";
 import PageShell from "~/components/PageShell";
 import { CardSkeleton } from "~/components/Skeletons";
 import { ConsoleCard } from "~/ui/card";
 import { getOAuthPageData } from "~/server/loaders/console";
+import { resolveIssuer } from "~/server/oauth/issuer";
 
 interface Props {
   searchParams: Promise<Record<string, string>>;
 }
 
 async function OAuthData({ searchParams }: Props) {
-  const [data, { add_redirect_uri: prefillRedirectUri }] = await Promise.all([
-    getOAuthPageData(),
-    searchParams,
-  ]);
+  const [data, issuer, { add_redirect_uri: prefillRedirectUri }] =
+    await Promise.all([
+      getOAuthPageData(),
+      // Read from discovery rather than written down: Supabase advertises
+      // the project's raw host, not api.devdogsuga.org, and a provider set
+      // to anything else fails its issuer check (TASK-347). If that's ever
+      // fixed, this follows on its own.
+      resolveIssuer().catch(() => null),
+      searchParams,
+    ]);
 
   return (
     <>
@@ -29,6 +37,20 @@ async function OAuthData({ searchParams }: Props) {
       <ConsoleCard.Root id="credentials">
         <ConsoleCard.Header title="Credentials" />
         <ConsoleCard.Content>
+          <Field
+            id="issuer"
+            label="Issuer URL"
+            description="Where an OpenID Connect provider (a custom OIDC provider in Supabase, for one) discovers DevDogs sign-in."
+          >
+            {issuer ? (
+              <Input mono copy className="max-w-sm" value={issuer} />
+            ) : (
+              <p className="text-sm text-mauve-400">
+                Couldn&rsquo;t load the issuer right now. Try again in a moment.
+              </p>
+            )}
+          </Field>
+
           <Field
             id="client-credentials"
             label="Client ID"

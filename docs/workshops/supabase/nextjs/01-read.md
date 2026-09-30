@@ -2,6 +2,7 @@
 name: "Read the Guestbook"
 description: "Create the messages table with row-level security, and load the guestbook from Supabase."
 order: 1
+checkpoint: "02-supabase/01-read"
 ---
 
 <!-- Generated from Backstage apps/slides/decks/2026-09-28-supabase.md by `pnpm export:md`; edit the deck, not this file. -->
@@ -10,17 +11,35 @@ order: 1
 
 <!-- prettier-ignore-start -->
 
-<details>
-<summary>Behind? Start from where the last step ended</summary>
+<div class="docs-step-actions">
 
-These put your copy of the workshop code exactly where the previous step left it.
+[Review in VS Code](vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start)
+
+<details>
+<summary>Behind? Catch up to where the last step ended</summary>
+
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
 
 ```bash cwd=~/Web-Workshops
-# Throws away your changes to the workshop code
-git switch --discard-changes 01-nextjs-intro
+git fetch origin --tags
+# Save your own changes first
+git add -A
+git commit -m "My work"
+# Bring in the code from the end of the last step
+git merge --no-edit 02-supabase/00-start
+```
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+
+```bash cwd=~/Web-Workshops
+git fetch origin --tags
+# Moves your branch to the end of the last step
+git switch --discard-changes -C <github-username>/02-supabase 02-supabase/00-start
 ```
 
 </details>
+
+</div>
 
 The guestbook is the part we didn't get to at Setup Night. It's already in your starter code, keeping messages in memory. Now we'll give it a real database.
 
@@ -30,7 +49,7 @@ The guestbook is the part we didn't get to at Setup Night. It's already in your 
 
 `create table` makes the `messages` table. `default auth.uid()` fills in `user_id` with whoever is signed in.
 
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/supabase/migrations/20260928000000_guestbook.sql#L7-L13
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L7-L13 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=7-13
 create table public.messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
@@ -42,13 +61,13 @@ create table public.messages (
 
 Row-level security goes on: from now on, nobody can read or write a row unless a policy says so.
 
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=15 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/supabase/migrations/20260928000000_guestbook.sql#L15-L15
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=15 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L15-L15 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=15
 alter table public.messages enable row level security;
 ```
 
 The first policy: anyone, signed in (`authenticated`) or not (`anon`), can read every message.
 
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=17-22 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/supabase/migrations/20260928000000_guestbook.sql#L17-L22
+```sql file=supabase/migrations/20260928000000_guestbook.sql lines=17-22 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L17-L22 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=17-22
 -- Anyone (signed in or not) can read the guestbook.
 create policy "messages are readable by everyone"
   on public.messages
@@ -57,7 +76,7 @@ create policy "messages are readable by everyone"
   using (true);
 ```
 
-[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/supabase/migrations/20260928000000_guestbook.sql)
+[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql)
 
 ## Install the Supabase Client
 
@@ -70,7 +89,7 @@ pnpm add @supabase/supabase-js
 
 `"use client"` marks this module for the browser: the Supabase client runs in the page.
 
-```ts file=lib/supabase.ts lines=1-5 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/lib/supabase.ts#L1-L5
+```ts file=lib/supabase.ts lines=1-5 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/lib/supabase.ts#L1-L5 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=lib%2Fsupabase.ts&lines=1-5
 "use client";
 
 // A single Supabase client for the browser. Every client component
@@ -80,18 +99,18 @@ import { createClient } from "@supabase/supabase-js";
 
 `process.env.NEXT_PUBLIC_…` reads the values from `.env.local`. Next.js only hands the browser variables that start with `NEXT_PUBLIC_`.
 
-```ts file=lib/supabase.ts lines=7-8 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/lib/supabase.ts#L7-L8
+```ts file=lib/supabase.ts lines=7-8 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/lib/supabase.ts#L7-L8 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=lib%2Fsupabase.ts&lines=7-8
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 ```
 
 `createClient` builds one Supabase client, and every component imports this same one.
 
-```ts file=lib/supabase.ts lines=10 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/lib/supabase.ts#L10-L10
+```ts file=lib/supabase.ts lines=10 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/lib/supabase.ts#L10-L10 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=lib%2Fsupabase.ts&lines=10
 export const supabase = createClient(supabaseUrl, supabasePublishableKey);
 ```
 
-```ts file=lib/supabase.ts lines=1-10 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/lib/supabase.ts
+```ts file=lib/supabase.ts lines=1-10 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/lib/supabase.ts vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=lib%2Fsupabase.ts
 "use client";
 
 // A single Supabase client for the browser. Every client component
@@ -110,7 +129,7 @@ Setup Night's guestbook kept entries in memory, so they vanished on refresh.
 
 `type Message` describes one row of the `messages` table, so TypeScript can check how we use it.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/a0b1b0bb862a395994c3bac3654201747e2f2e72...8b11ef05caa8e406de1e718a922562c37da330ed#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/bd3068777f51e91e40c27888418eda4cadcd78c7...469df6f2a496d788b9887ffae477a40995ccc0fd#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,79 +1,82 @@
@@ -206,7 +225,7 @@ Setup Night's guestbook kept entries in memory, so they vanished on refresh.
 
 `useState` holds the messages this component shows; setting it re-renders the list.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/a0b1b0bb862a395994c3bac3654201747e2f2e72...8b11ef05caa8e406de1e718a922562c37da330ed#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/bd3068777f51e91e40c27888418eda4cadcd78c7...469df6f2a496d788b9887ffae477a40995ccc0fd#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,82 +1,72 @@
@@ -297,7 +316,7 @@ Setup Night's guestbook kept entries in memory, so they vanished on refresh.
 
 `useEffect` runs after the first render, and the empty `[]` means just once. It asks Supabase for the rows, newest first.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/a0b1b0bb862a395994c3bac3654201747e2f2e72...8b11ef05caa8e406de1e718a922562c37da330ed#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/bd3068777f51e91e40c27888418eda4cadcd78c7...469df6f2a496d788b9887ffae477a40995ccc0fd#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,72 +1,69 @@
@@ -385,7 +404,7 @@ Setup Night's guestbook kept entries in memory, so they vanished on refresh.
 
 The form goes away for now. Posting comes back in step 3, once people can sign in.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/a0b1b0bb862a395994c3bac3654201747e2f2e72...8b11ef05caa8e406de1e718a922562c37da330ed#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/bd3068777f51e91e40c27888418eda4cadcd78c7...469df6f2a496d788b9887ffae477a40995ccc0fd#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,69 +1,47 @@
@@ -463,7 +482,7 @@ The form goes away for now. Posting comes back in step 3, once people can sign i
 
 `key={message.id}` gives React a stable id for each row, so it can update the list efficiently.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/a0b1b0bb862a395994c3bac3654201747e2f2e72...8b11ef05caa8e406de1e718a922562c37da330ed#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/bd3068777f51e91e40c27888418eda4cadcd78c7...469df6f2a496d788b9887ffae477a40995ccc0fd#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,47 +1,47 @@
@@ -521,7 +540,7 @@ The form goes away for now. Posting comes back in step 3, once people can sign i
 
 Each field now comes from the database row: `author_name`, `created_at`, and `body`.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/a0b1b0bb862a395994c3bac3654201747e2f2e72...8b11ef05caa8e406de1e718a922562c37da330ed#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/bd3068777f51e91e40c27888418eda4cadcd78c7...469df6f2a496d788b9887ffae477a40995ccc0fd#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F01-read&from=02-supabase%2F00-start&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,47 +1,47 @@
@@ -576,6 +595,6 @@ Each field now comes from the database row: `author_name`, `created_at`, and `bo
  }
 ```
 
-[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8b11ef05caa8e406de1e718a922562c37da330ed/components/Guestbook.tsx)
+[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/components/Guestbook.tsx)
 
 <!-- prettier-ignore-end -->

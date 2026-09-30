@@ -8,6 +8,7 @@ import apple from "~/assets/os/apple.svg";
 import linux from "~/assets/os/linux.svg";
 import windows from "~/assets/os/windows.svg";
 import { DOCS_PROJECT_LABELS } from "~/config/docs";
+import { DOCS_BASE } from "~/lib/docsSlug";
 import type { DocsSidebarTree } from "~/lib/docsTree";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
@@ -81,6 +82,8 @@ export interface DocsSidebarProps {
   /** The platforms this project's setup pages cover, in display order. */
   platforms: { value: string; label: string }[];
   tree: DocsSidebarTree;
+  /** `/docs`, or the preview's prefix. */
+  base?: string;
 }
 
 function SidebarContent({
@@ -88,6 +91,7 @@ function SidebarContent({
   project,
   platforms,
   tree,
+  base = DOCS_BASE,
 }: DocsSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -97,10 +101,10 @@ function SidebarContent({
       pathname
         .split("/")
         .filter(Boolean)
-        .slice(2) // drop "docs" and the project segment
+        .slice(base.split("/").filter(Boolean).length + 1) // drop the base and the project segment
         .map(decodeURIComponent)
         .join("/"),
-    [pathname],
+    [pathname, base],
   );
 
   const offeredOs = useMemo(
@@ -110,7 +114,7 @@ function SidebarContent({
   const os = useDocsVariant("os", offeredOs);
 
   function onProjectChange(slug: string) {
-    router.push(`/docs/${encodeURIComponent(slug)}`);
+    router.push(`${base}/${encodeURIComponent(slug)}`);
   }
 
   return (
@@ -173,7 +177,7 @@ function SidebarContent({
         })}
       </Select>
 
-      <Tree tree={tree} ctx={{ project, activePath }} />
+      <Tree tree={tree} ctx={{ project, activePath, base }} />
     </div>
   );
 }

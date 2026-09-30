@@ -50,6 +50,10 @@ export async function searchDocs(
       -- connection's search_path does not include "platform".
       from platform."docsPages" p
       where p."search" @@ websearch_to_tsquery('english', ${query})
+        -- A page scheduled for later is not found until its time, to the
+        -- second: now() is read per query, not per deploy. See
+        -- "publishAt" on the table, and devtools docs index.
+        and (p."publishAt" is null or p."publishAt" <= now())
       order by "rank" desc
       limit ${limit}
     )

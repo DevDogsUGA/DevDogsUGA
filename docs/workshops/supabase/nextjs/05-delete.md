@@ -2,6 +2,7 @@
 name: "Deleting Your Own Messages"
 description: "Let people delete only their own messages, enforced by a row-level security policy."
 order: 5
+checkpoint: "02-supabase/05-delete"
 ---
 
 <!-- Generated from Backstage apps/slides/decks/2026-09-28-supabase.md by `pnpm export:md`; edit the deck, not this file. -->
@@ -10,19 +11,35 @@ order: 5
 
 <!-- prettier-ignore-start -->
 
-<details>
-<summary>Behind? Start from where the last step ended</summary>
+<div class="docs-step-actions">
 
-These put your copy of the workshop code exactly where the previous step left it.
+[Review in VS Code](vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F05-delete&from=02-supabase%2F04-profiles)
+
+<details>
+<summary>Behind? Catch up to where the last step ended</summary>
+
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
 
 ```bash cwd=~/Web-Workshops
-# Get the checkpoint tags
 git fetch origin --tags
-# Throws away your changes to the workshop code
-git switch --detach --discard-changes demo/04-profiles
+# Save your own changes first
+git add -A
+git commit -m "My work"
+# Bring in the code from the end of the last step
+git merge --no-edit 02-supabase/04-profiles
+```
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+
+```bash cwd=~/Web-Workshops
+git fetch origin --tags
+# Moves your branch to the end of the last step
+git switch --discard-changes -C <github-username>/02-supabase 02-supabase/04-profiles
 ```
 
 </details>
+
+</div>
 
 ## Let Users Delete Their Own Messages
 
@@ -32,7 +49,7 @@ One more policy, at the end.
 
 Signed-in users can delete a message only when it's theirs. There's no update policy, on purpose.
 
-```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/cd01fa1e5cad6019bb5315f8c30a960c6646fd39...9c96784c95f0f1afc8ebf730e98106a3471c3dc6#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1
+```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/6fc4e76029e55c0299adc31cb9b570101023b3d1...8f26e3ad3d31168d85c4e4b402f59da66376522f#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F05-delete&from=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql
 --- a/supabase/migrations/20260928000000_guestbook.sql
 +++ b/supabase/migrations/20260928000000_guestbook.sql
 @@ -1,29 +1,37 @@
@@ -75,7 +92,7 @@ Signed-in users can delete a message only when it's theirs. There's no update po
 +  using (auth.uid() = user_id);
 ```
 
-[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9c96784c95f0f1afc8ebf730e98106a3471c3dc6/supabase/migrations/20260928000000_guestbook.sql)
+[The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/migrations/20260928000000_guestbook.sql)
 
 ## Only Your Own Delete Button
 
@@ -83,7 +100,7 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 `.delete().eq("id", id)` deletes the matching row (RLS refuses anyone else's), then drops it from the list.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/cd01fa1e5cad6019bb5315f8c30a960c6646fd39...9c96784c95f0f1afc8ebf730e98106a3471c3dc6#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/6fc4e76029e55c0299adc31cb9b570101023b3d1...8f26e3ad3d31168d85c4e4b402f59da66376522f#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F05-delete&from=02-supabase%2F04-profiles&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,140 +1,147 @@
@@ -238,7 +255,7 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 `session?.user.id === message.user_id` shows the button only on your own messages.
 
-```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/cd01fa1e5cad6019bb5315f8c30a960c6646fd39...9c96784c95f0f1afc8ebf730e98106a3471c3dc6#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305
+```diff file=components/Guestbook.tsx lang=tsx context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/6fc4e76029e55c0299adc31cb9b570101023b3d1...8f26e3ad3d31168d85c4e4b402f59da66376522f#diff-7f4f2a0c38fe37a604add3d5767aaccc99567b3379cb7842f526147e60801305 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F05-delete&from=02-supabase%2F04-profiles&file=components%2FGuestbook.tsx
 --- a/components/Guestbook.tsx
 +++ b/components/Guestbook.tsx
 @@ -1,147 +1,155 @@
@@ -399,6 +416,6 @@ Deleting takes a handler and a button, shown only on your own messages.
  }
 ```
 
-[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9c96784c95f0f1afc8ebf730e98106a3471c3dc6/components/Guestbook.tsx)
+[The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/components/Guestbook.tsx)
 
 <!-- prettier-ignore-end -->

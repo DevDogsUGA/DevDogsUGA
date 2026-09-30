@@ -285,6 +285,15 @@ export function formatEventDate(at: Date | string): string {
   });
 }
 
+/** "Oct 5": the day alone, for a list of dates that need no year or time. */
+export function formatEventShortDate(at: Date | string): string {
+  return new Date(at).toLocaleDateString("en-US", {
+    timeZone: EVENT_TZ,
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function formatEventTime(at: Date | string): string {
   return new Date(at).toLocaleTimeString("en-US", {
     timeZone: EVENT_TZ,

@@ -40,6 +40,8 @@ export interface NavUserClientData {
 export type MeResponse = {
   user: NavUserClientData;
   verification: VerificationData | null;
+  /** The viewer's linked GitHub login; docs pages fill it into commands. */
+  githubLogin: string | null;
   /** Console pages this viewer may see. Already filtered server-side. */
   consoleItems: ConsoleItem[];
 } | null;
