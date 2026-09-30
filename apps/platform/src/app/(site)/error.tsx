@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { reloadForChunkError } from "~/lib/chunkReload";
 
 /**
  * The boundary for every page in the site layout that does not bring its own:
@@ -26,6 +27,9 @@ export default function SiteError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A component whose code failed to download: loading the page again
+    // usually fixes it, so that goes first (see ~/lib/chunkReload).
+    if (reloadForChunkError(error)) return;
     // captureException is safe unconditionally -- it no-ops with no DSN
     // configured, same contract as everywhere else in this app's Sentry
     // wiring.
