@@ -55,13 +55,18 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/01-rea
 1. Authentication → **Sign In / Providers** → Add a Custom **OIDC** Provider
 1. Fill it in, save, and check that it's enabled:
 
-   | Setting              | Value                                |
-   | -------------------- | ------------------------------------ |
-   | Identifier           | `custom:devdogsuga`                  |
-   | Name                 | `DevDogs`                            |
-   | Issuer URL           | `https://api.devdogsuga.org/auth/v1` |
-   | Client ID and secret | From your DevDogs client             |
-   | Scopes               | `openid email profile`               |
+   :::copyable
+
+   | Setting       | Value                                                                       |
+   | ------------- | --------------------------------------------------------------------------- |
+   | Identifier    | `custom:devdogsuga`                                                         |
+   | Name          | `DevDogs`                                                                   |
+   | Issuer URL    | `https://crhqsbngqmwtsplabmhj.supabase.co/auth/v1`                          |
+   | Client ID     | [Copy from your OAuth page](https://devdogsuga.org/tools/oauth#credentials) |
+   | Client Secret | [Copy from your OAuth page](https://devdogsuga.org/tools/oauth#credentials) |
+   | Scopes        | `openid email profile`                                                      |
+
+   :::
 
 ## Sign In / Sign Out
 

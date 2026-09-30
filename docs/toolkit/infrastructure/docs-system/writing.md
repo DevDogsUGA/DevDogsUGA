@@ -170,6 +170,18 @@ Standard GitHub Flavored Markdown renders — headings, tables, task lists, bloc
 
 **File diffs**: a top-level ` ```diff file=<path> ` fence around a unified diff renders as a diff viewer.
 
+**Copyable tables**: inside `:::copyable`, a table cell holding one code span gets a copy button, for values readers paste elsewhere.
+
+```md
+:::copyable
+
+| Setting    | Value               |
+| ---------- | ------------------- |
+| Identifier | `custom:devdogsuga` |
+
+:::
+```
+
 **Callouts** are GitHub-style blockquotes — `> [!NOTE]`, `> [!WARNING]`, `> [!TIP]` on the first line, the body on the lines below.
 
 **Math** renders via KaTeX: `$inline$` and `$$display$$`.
