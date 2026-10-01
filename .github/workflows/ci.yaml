@@ -50,26 +50,15 @@ jobs:
           # on a push.
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
-      # Turbo used to auto-detect this; pnpm's `[<since>]` filter needs the
-      # ref named explicitly. A pull request diffs against the branch it
-      # targets (its head may be several commits ahead of where it forked,
-      # so the base branch's current tip is the right comparison point); a
-      # push compares against the commit that `HEAD` pointed to before the
-      # push landed, falling back to the previous commit if that value is
-      # unset or unreachable (a repository's first push, or history pnpm
-      # cannot see for another reason).
+      # pnpm's `[<since>]` filter needs the ref named explicitly (turbo used to
+      # auto-detect it); the composite action owns how it is computed.
       - name: Determine base ref for affected-package detection
         id: base
+        uses: ./.github/actions/base-ref
+      - name: Select affected packages
+        id: since
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            REF="${{ github.event.pull_request.base.sha }}"
-          else
-            REF="${{ github.event.before }}"
-            if [ -z "$REF" ] || [ "$REF" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$REF" 2>/dev/null; then
-              REF="HEAD~1"
-            fi
-          fi
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          REF="${{ steps.base.outputs.ref }}"
           # These are turbo's globalDependencies equivalents, but pnpm
           # attributes root-level files to the workspace root package, which
           # the filters below exclude -- a root-only change would otherwise
@@ -115,9 +104,9 @@ jobs:
       - name: Lint + typecheck + test (affected)
         run: |
           status=0
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' run lint || status=1
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' run typecheck || status=1
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' run test || status=1
+          pnpm -r --if-present ${{ steps.since.outputs.since }} --filter '!study-group-finder' run lint || status=1
+          pnpm -r --if-present ${{ steps.since.outputs.since }} --filter '!study-group-finder' run typecheck || status=1
+          pnpm -r --if-present ${{ steps.since.outputs.since }} --filter '!study-group-finder' run test || status=1
           exit $status
       # REMOVED: "Events config passes its publishability checks"
       # (`pnpm --filter @devdogsuga/events check`), the CLI that parses
@@ -152,7 +141,7 @@ jobs:
       - name: .env.example agrees with the env manifests
         run: pnpm exec devtools env example --check
       - name: Cloudflare binding types match the Worker configuration
-        run: pnpm --filter platform cf:typegen:check && pnpm --filter schedule-builder cf:typegen:check
+        run: pnpm --filter platform types:cf:check && pnpm --filter schedule-builder types:cf:check
       # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
       #
       # It existed because `scripts/` was not a workspace package, so the
@@ -219,9 +208,7 @@ jobs:
       # being regenerated -- which typechecks fine everywhere until something
       # reads a column the types still claim exists.
       - name: Generated Database types match the migrations
-        run: |
-          pnpm exec devtools db types
-          git diff --exit-code -- packages/supabase/src/database.types.ts
+        run: pnpm --filter @devdogsuga/supabase run types:db:check
       # 59 tests. All app schemas share one PostgREST endpoint and one anon key,
       # so RLS -- not the schema boundary -- is what isolates one app's data from
       # another's. This is the only thing that checks it.
@@ -286,9 +273,7 @@ jobs:
       # answered one question: does study-group-finder, or anything it
       # depends on, appear in the changed set since the merge base? pnpm has
       # no single flag for that, so this rebuilds it from two pieces: the
-      # same base-ref logic as the `validate` job's "Determine base ref" step
-      # (duplicated rather than shared — jobs don't share step outputs, and
-      # it's five lines), and `study-group-finder...` (pnpm's "package and
+      # shared base-ref action, and `study-group-finder...` (pnpm's "package and
       # its dependencies" selector) to list exactly the directories whose
       # content decides this — the app itself, plus @devdogsuga/config,
       # @devdogsuga/env and @devdogsuga/supabase's actual resolved graph,
@@ -296,17 +281,12 @@ jobs:
       # drift. A plain `git diff --quiet` over those directories since the
       # base ref is then exactly turbo's "changed or a dependency changed"
       # check.
+      - id: base
+        uses: ./.github/actions/base-ref
       - name: Is study-group-finder affected?
         id: affected
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE="${{ github.event.before }}"
-            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
-              BASE="HEAD~1"
-            fi
-          fi
+          BASE="${{ steps.base.outputs.ref }}"
           PATHS=$(pnpm -r --filter 'study-group-finder...' list --depth -1 --json 2>/dev/null \
             | node -e '
                 let d = "";

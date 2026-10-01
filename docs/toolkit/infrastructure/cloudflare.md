@@ -71,10 +71,10 @@ Staging's `triggers.crons` is empty on purpose rather than merely omitted: stagi
 `.github/workflows/deploy-app.yaml` is the reusable deploy job both `staging-deploy` and `production-deploy` call. For each of `platform` and `schedule-builder`, in a matrix:
 
 ```bash
-pnpm --filter <app> run cf:build:<staging|production>  # with-env vinext build, env validation enforced
+DEPLOY_ENV=<staging|production> pnpm --filter <app> run build  # with-env vinext build, env validation enforced
 ```
 
-Workspace packages export TypeScript source, so there is no package build step. The `precf:build:*` script runs codegen before the build.
+Workspace packages export TypeScript source, so there is no package build step. The `prebuild` script runs codegen before the build.
 
 `sandbox` is not part of this pipeline — there is no team-sandbox integration for it to proxy any more, so deploying it is a manual `pnpm --filter sandbox exec wrangler deploy`.
 

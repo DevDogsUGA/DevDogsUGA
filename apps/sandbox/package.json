@@ -8,8 +8,7 @@
     "dev": "wrangler dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@devdogsuga/telemetry": "^0.1.1",
@@ -18,7 +17,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",
     "@devdogsuga/config": "^0.1.1",
-    "@devdogsuga/env": "^0.1.2",
+    "@devdogsuga/env": "^0.1.4",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",

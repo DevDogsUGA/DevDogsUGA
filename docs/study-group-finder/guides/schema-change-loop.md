@@ -51,10 +51,10 @@ it and the table is wide open.
 
 ```bash
 pnpm devtools db migrate
-pnpm --filter study-group-finder generate-types
+pnpm --filter study-group-finder types:db
 ```
 
-`generate-types` reads whatever tables exist through supadart, so a new
+`types:db` reads whatever tables exist through supadart, so a new
 table is picked up automatically — nothing to register. Regenerate rather
 than hand-editing `lib/generated/`; it is gitignored output, not source.
 
