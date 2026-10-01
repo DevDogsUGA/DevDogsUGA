@@ -35,7 +35,8 @@
  *
  * The bare mode also runs two FAILING checks the `check` subcommand does not:
  * `link-check.ts` (internal links have to resolve) and `command-check.ts`
- * (a documented `pnpm …` command has to be a real one). Unlike the prose lint,
+ * (a documented `pnpm …` command has to be a real one, checked against what
+ * `devtools` and `backstage` list under `--help --json`). Unlike the prose lint,
  * either one failing sets the exit code — see their own headers for why they
  * are held to a different standard than page length.
  */
@@ -125,7 +126,12 @@ async function compile(contentRoot: string): Promise<boolean> {
   const { pages } = compileDocs(contentRoot);
   const failing = await runFailingChecks(contentRoot, pages);
   printFailingChecks(failing);
-  return failing.linkErrors.length + failing.commandErrors.length === 0;
+  return (
+    failing.linkErrors.length +
+      failing.commandErrors.length +
+      failing.catalogErrors.length ===
+    0
+  );
 }
 
 /** `gen`: regenerate the reference trees under `<repo>/docs`. */

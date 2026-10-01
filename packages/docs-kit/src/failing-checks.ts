@@ -1,7 +1,7 @@
 /**
  * Wires `link-check.ts` and `command-check.ts` together for the bare mode:
  * gathers what each needs (the compiled pages, the workspace's own packages,
- * devtools' command catalog when it is reachable), runs both, and prints
+ * the command lists of devtools and backstage), runs both, and prints
  * anything either one found in the one shape `cli.ts` needs to decide an exit
  * code from.
  *
@@ -12,7 +12,7 @@
  */
 import { checkCommands } from "./command-check.js";
 import type { CommandCheckError } from "./command-check.js";
-import { loadDevtoolsCommands } from "./devtools-catalog.js";
+import { loadCliCommands } from "./cli-catalog.js";
 import { checkLinks } from "./link-check.js";
 import type { LinkCheckError } from "./link-check.js";
 import type { CompiledPage } from "./types.js";
@@ -27,23 +27,21 @@ export interface FailingChecksResult {
   linkErrors: LinkCheckError[];
   commandErrors: CommandCheckError[];
   /**
-   * True when `pnpm devtools …` lines went unchecked because the devtools
-   * catalog could not be loaded (see `devtools-catalog.ts`) — a silent skip
-   * otherwise, since `commandErrors` looks identical to "every line was
-   * checked and passed".
+   * Why a CLI's command list could not be loaded (see `cli-catalog.ts`). These
+   * fail the build like any other error: without the list, `commandErrors`
+   * would look identical to "every line was checked and passed".
    */
-  devtoolsCatalogMissing: boolean;
+  catalogErrors: string[];
 }
 
 /**
  * `contentRoot` is where the bare mode is standing (normally `docs/`);
  * `pages` is what `compileDocs` just produced from it, mounting included.
  *
- * The workspace walk and the devtools catalog are both best-effort: a content
- * package built on its own, with no monorepo above it, has no workspace to
- * check `pnpm --filter`/`pnpm run` against and no devtools to check
- * `pnpm devtools` against, so both checks quietly narrow to whichever half
- * they can still answer rather than failing a build that has no way to know.
+ * With no monorepo above the content (a package built on its own) there is
+ * no workspace to check `pnpm --filter`/`pnpm run` against and no CLIs to ask,
+ * so only the links are checked. Inside a monorepo nothing is best-effort: a
+ * command list that cannot be loaded is reported in `catalogErrors`.
  */
 export async function runFailingChecks(
   contentRoot: string,
@@ -53,13 +51,30 @@ export async function runFailingChecks(
 
   const repoRoot = findWorkspaceRoot(contentRoot);
   if (repoRoot === null) {
-    return { linkErrors, commandErrors: [], devtoolsCatalogMissing: false };
+    return { linkErrors, commandErrors: [], catalogErrors: [] };
   }
 
-  const devtoolsCommands = await loadDevtoolsCommands(repoRoot);
+  const [devtools, backstage] = await Promise.allSettled([
+    loadCliCommands(repoRoot, "devtools"),
+    loadCliCommands(repoRoot, "backstage"),
+  ]);
+  const catalogErrors = [devtools, backstage].flatMap((result) =>
+    result.status === "rejected"
+      ? [
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason),
+        ]
+      : [],
+  );
+  if (devtools.status === "rejected" || backstage.status === "rejected") {
+    return { linkErrors, commandErrors: [], catalogErrors };
+  }
+
   const packages = discoverWorkspacePackages(repoRoot);
   const commandErrors = checkCommands(pages, {
-    devtoolsCommands,
+    devtoolsCommands: devtools.value,
+    backstageCommands: backstage.value,
     packages,
     appBySlug: appPackagesBySlug(packages),
     rootPackage: readRootPackage(repoRoot),
@@ -68,31 +83,23 @@ export async function runFailingChecks(
   return {
     linkErrors,
     commandErrors,
-    devtoolsCatalogMissing: devtoolsCommands === null,
+    catalogErrors,
   };
 }
 
 /** Prints every error found, `path:line: message`, and says how many. */
 export function printFailingChecks(result: FailingChecksResult): void {
   const all = [...result.linkErrors, ...result.commandErrors];
+  const count = all.length + result.catalogErrors.length;
 
-  if (all.length > 0) {
-    console.error(`[docs-kit] ${all.length} error(s):`);
+  if (count > 0) {
+    console.error(`[docs-kit] ${count} error(s):`);
     for (const error of all) {
       const at = error.line === null ? "" : `:${error.line}`;
       console.error(`[docs-kit] error: ${error.file}${at}: ${error.message}`);
     }
-  }
-
-  // Not an error — the check quietly narrows to link-checking alone whenever
-  // devtools isn't installed/built next to this content (see
-  // `devtools-catalog.ts`), which is correct in TASK-302's "pnpm dlx" world
-  // but is otherwise indistinguishable from every `pnpm devtools` line
-  // actually having been checked and passed. Said once so that silence is a
-  // choice a reader can see, not a gap they have to already know about.
-  if (result.devtoolsCatalogMissing) {
-    console.error(
-      '[docs-kit] notice: devtools catalog not found — "pnpm devtools …" commands were not checked',
-    );
+    for (const message of result.catalogErrors) {
+      console.error(`[docs-kit] error: ${message}`);
+    }
   }
 }
