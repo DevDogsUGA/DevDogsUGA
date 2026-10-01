@@ -1140,7 +1140,7 @@
   --alert-accent: var(--destructive);
 }
 
-/* Variants (`:::tabs`, `:::only{os=…}`), rendered by @devdogsuga/docs-compiler.
+/* Variants (`:::tabs`, `:::only{os=…}`), rendered by @devdogsuga/docs-kit.
    Every variant ships in the HTML; the docs layout's wrapper carries the
    reader's choice as `data-os`/`data-supabase` (set by an inline script before
    first paint, see DocsVariants), and these rules hide whatever does not match.
@@ -1586,7 +1586,7 @@
 }
 
 /* ── Code blocks in the docs ───────────────────────────────────────────────
-   @devdogsuga/docs-compiler frames every highlighted block (codeblocks.ts):
+   @devdogsuga/docs-kit frames every highlighted block (codeblocks.ts):
    `figure.docs-code` > `.docs-code-bar` (a file tab and a copy button) + the
    Shiki `pre`. File diffs (components/DocsDiff) reuse the bar and tab, so a
    diff and a plain block read as the same kind of thing. The bar is the

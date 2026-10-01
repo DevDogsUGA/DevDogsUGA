@@ -11,35 +11,35 @@ There is no separate preview tool. Docs are compiled into the platform app, so *
 
 ## The loop
 
-One terminal, and a re-run after each save — there is no file watcher wired into `@devdogsuga/docs`'s build (the underlying `docs-compiler` compiler has no `--watch` mode, and nothing in this repo wraps one around it):
+The platform's dev server watches `docs/`. Save a page and it re-runs `codegen` for the docs package (and then re-indexes search, see below), and hot-reloads the page. No restart, no second terminal:
 
 ```bash
-pnpm dev                                          # the app
-pnpm --filter @devdogsuga/docs run codegen        # re-parses docs/ after a save
+pnpm -F platform dev
 ```
 
-Re-running the docs package's build rewrites the module the routes import; the running dev server picks up the changed module and hot-reloads the page. No restart.
+`cd apps/platform && pnpm dev` does the same. Then open <http://localhost:3000/docs>.
 
-Then open <http://localhost:3000/docs>.
+The watcher lives in the platform's `vite.config.ts` and only calls package scripts, so the same step is available by hand when the dev server is not running:
 
-> [!TIP]
-> `pnpm dev` alone still works — you just have to re-run the build command above (or restart `pnpm dev`) to pick up doc edits. Re-run it in a second terminal when you are actually writing.
+```bash
+pnpm --filter @devdogsuga/docs run codegen
+```
 
 ## Searching your local docs
 
-Search reads a Postgres index rather than the compiled module, so it takes one extra step to see your working copy. With the local Supabase stack running:
+Search reads a Postgres index rather than the compiled module. The dev server writes your working copy into it after every docs change, so a page you just wrote is findable in the search dialog (`Ctrl`/`⌘` + `K`). To do it by hand:
 
 ```bash
-pnpm --filter @devdogsuga/docs codegen   # build the docs artifact first
-pnpm devtools docs index               # push it into the local search index
+pnpm --filter @devdogsuga/docs codegen         # build the docs artifact first
+pnpm --filter @devdogsuga/docs populate:search  # push it into the search index
 ```
 
-That indexes your working copy into the local stack, so a page you just wrote is findable in the search dialog (`Ctrl`/`⌘` + `K`). Re-run it after further edits — the dev server does not re-index for you. Like every `with-env`-wrapped command it targets the local stack whenever one is running, and prints which env files it loaded.
+It is one call to the `platform.replace_docs_index` function, which skips the write when the pages match what is already stored. Like every `with-env`-wrapped command it targets the local stack whenever one is running, and prints which env files it loaded. If the local database is down the dev server prints the failure and keeps serving.
 
 > [!WARNING]
-> Without the local stack running, `pnpm dev` and `docs index` point at the **deployed** database. Pages still render from your working copy, but search results come from whatever that database has indexed. Boot the local stack (`pnpm devtools db start`) when you care about search.
+> Without the local stack running, `pnpm dev` and `populate:search` point at the **deployed** database. Pages still render from your working copy, but search results come from whatever that database has indexed. Boot the local stack (`pnpm devtools db start`) when you care about search.
 >
-> The indexer will not write to a non-local database on its own. It removes rows for pages that no longer exist, so running it against a deployed database from a working copy would replace the live search index with your local state. At a terminal it asks first; with no TTY — in a script or a CI job, where there is nobody to ask — it refuses and exits non-zero unless `--target remote` is given. That flag is how the deploy scripts say yes.
+> The function removes rows for pages that no longer exist, so running `populate:search` against a deployed database from a working copy replaces the live search index with your local state. Check which env files `with-env` printed first.
 
 ## What you are checking
 
@@ -48,9 +48,9 @@ Because the dev server uses the same parser and the same renderer as production,
 - The page appears in the sidebar, under the right project **and section**, with the title you expect.
 - A mounted `_shared` page appears under every project you listed in `mount`, at the path you expected.
 - Code blocks are highlighted — an unregistered language falls back to plain text silently.
-- Links between docs pages use site paths (`/docs/toolkit/infrastructure/docs-system/writing`), not file paths. `pnpm --filter @devdogsuga/docs exec docs-compiler check` fails the build on a broken one rather than warning.
+- Links between docs pages use site paths (`/docs/toolkit/infrastructure/docs-system/writing`), not file paths. `pnpm --filter @devdogsuga/docs exec docs-kit check` fails the build on a broken one rather than warning.
 - Every command in a fenced code block is a real one, or the fence is tagged `nocheck` on purpose.
 - The table of contents on the right lists the headings you intended, and no heading you buried in a `<details>`.
-- `pnpm dev` printed no budget warnings for your page. `pnpm --filter @devdogsuga/docs exec docs-compiler check` prints the detail behind that count.
+- `pnpm dev` printed no budget warnings for your page. `pnpm --filter @devdogsuga/docs exec docs-kit check` prints the detail behind that count.
 
 Per-branch documentation URLs do not exist. To share docs changes before merge, use a preview deployment of the branch — it serves the whole site, docs included, built from that branch.

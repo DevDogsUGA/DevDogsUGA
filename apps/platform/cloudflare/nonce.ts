@@ -14,7 +14,7 @@
  *
  * Stamping every script is safe only because nothing else can put a
  * `<script>` in the server HTML. React escapes text; the docs compiler fails
- * the build on script in a page (Backstage `packages/docs-compiler`,
+ * the build on script in a page (`packages/docs-kit`,
  * `sanitize.ts`); and the handful of server-rendered `dangerouslySetInnerHTML`
  * sites carry fixed scripts, escaped JSON-LD, or generated markup. A new
  * server-rendered `dangerouslySetInnerHTML` of anything a user wrote would
