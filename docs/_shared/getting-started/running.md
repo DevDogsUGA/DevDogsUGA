@@ -236,7 +236,7 @@ guide under Infrastructure in the platform docs.
 :::only{project="platform"}
 
 ```bash
-pnpm dev --filter platform
+pnpm -F platform dev
 ```
 
 Serves on **port 3000**.
@@ -245,14 +245,12 @@ Serves on **port 3000**.
 :::only{project="schedule-builder"}
 
 ```bash
-pnpm dev --filter schedule-builder
+pnpm -F schedule-builder dev
 ```
 
-`dev` is `with-env next dev` — it reads the shared root `.env` (and
-`.env.generated`, when a local Supabase stack is running) before Next.js
-starts. Local dev runs on the standard Next.js dev server, not vinext —
-builds and deploys still go through `vinext build` / `wrangler dev`. The app
-serves on **port 3001** (platform takes 3000, so both can run together).
+`dev` is `with-env vinext dev` — it reads the shared root `.env` (and
+`.env.generated`, when a local Supabase stack is running) before the dev
+server starts. The app serves on **port 3001** (platform takes 3000, so both can run together).
 
 This app has no user store of its own — it authenticates against the
 platform's OAuth server in development, restricted to `hd: uga.edu` Google in
@@ -261,7 +259,7 @@ visitor's drafts live in `localStorage` until they sign in.
 
 A fresh database has no courses, so there is nothing for the generator to
 plan against yet. Trigger the registrar scrape through devtools — it starts
-a temporary local Wrangler session (the Workflow runtime `next dev` doesn't
+a temporary local Wrangler session (the Workflow runtime the dev server doesn't
 provide on its own), runs the scrape against your database, and waits for it
 to finish:
 
@@ -275,7 +273,7 @@ This can take a while on a first run — it pulls every available term.
 :::only{project="study-group-finder"}
 
 ```bash
-pnpm dev --filter study-group-finder
+pnpm -F study-group-finder dev
 ```
 
 Do not call `flutter run` directly. The app reads its Supabase configuration
@@ -289,9 +287,9 @@ It uses your local Supabase stack if one is running, and the hosted project
 `.env` names otherwise.
 :::
 
-Going through `pnpm dev --filter <app>` (the `devtools run` picker) rather
-than `pnpm --filter <app> dev` directly also builds that app's workspace
-dependencies first.
+You can also start an app from inside its folder (`cd apps/<app> && pnpm dev`).
+Either way, the app's `predev` step regenerates the email templates, the docs
+module and the route types first, so there is nothing to build beforehand.
 
 ## Test logins
 

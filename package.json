@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "devtools": "pnpm --config.ignore-scripts=true dlx @devdogsuga/devtools",
-    "build": "pnpm devtools run build",
-    "dev": "pnpm devtools run dev",
-    "typecheck": "pnpm devtools run typecheck",
-    "lint": "pnpm devtools run lint",
-    "lint:fix": "pnpm devtools run lint:fix",
-    "test": "pnpm devtools run test",
+    "build": "pnpm -r -F '!study-group-finder' run build",
+    "dev": "echo 'Start one app: pnpm -F <app> dev, or cd apps/<app> && pnpm dev (apps: platform, schedule-builder)'",
+    "typecheck": "pnpm -r -F '!study-group-finder' run typecheck",
+    "lint": "pnpm -r -F '!study-group-finder' run lint",
+    "lint:fix": "pnpm -r -F '!study-group-finder' run lint:fix",
+    "test": "pnpm -r -F '!study-group-finder' run test",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore"
   },

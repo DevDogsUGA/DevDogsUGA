@@ -135,7 +135,7 @@ restart it. Never Colima.
 
 ### Flutter missing
 
-**Symptom:** `pnpm dev --filter study-group-finder` fails immediately, or
+**Symptom:** `pnpm -F study-group-finder dev` fails immediately, or
 `pnpm devtools setup` reports Flutter as not found.
 
 **Cause:** The Flutter SDK isn't installed or isn't on `PATH`. Only matters

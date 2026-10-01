@@ -38,7 +38,7 @@ A command you already typed in full prints nothing extra.
 pnpm devtools setup
 pnpm devtools db start
 pnpm devtools oauth
-pnpm devtools run dev
+pnpm -F platform dev
 ```
 
 `setup` checks the machine and creates `.env` when it is missing. After the
