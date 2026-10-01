@@ -190,7 +190,8 @@ jobs:
       # The runner's volume is always empty, so this applies every migration to
       # a fresh database and fails if any of them does not apply -- which is the
       # "migrations apply cleanly from scratch" check, with no separate reset
-      # needed. Also writes .env.generated, which the suites below read.
+      # needed. The step after it writes .env.generated, which the suites below
+      # read.
       #
       # ⚠️ The RLS suite and the builds run through `with-env`, which REFUSES a
       # missing .env by design. Seed it before the stack writes the local
@@ -207,6 +208,12 @@ jobs:
       # stack, whatever the runner's .env says.
       - name: Start the local Supabase stack
         run: pnpm devtools supabase start --tier development:local
+      # `devtools supabase start` is the bare Supabase CLI, so unlike the old
+      # `devtools db start` it writes no .env.generated. Write it here; with-env
+      # only generates it for a session that finds the file missing, and the
+      # next step sources it directly.
+      - name: Write .env.generated from the running stack
+        run: pnpm exec supabase status -o env > .env.generated
       # The Supabase half comes from .env.generated, so the suites and the
       # build run against a real Postgres and a real PostgREST rather than a
       # mock. The NEXT_PUBLIC pair is derived rather than hardcoded: it has to
