@@ -63,7 +63,7 @@ Four of the catalog's ranges are held back deliberately: ESLint stays on 9.x (`e
 
 An [API reference](/docs/toolkit/reference/api/supabase) page exists for each
 `packages/*` published with a public surface — `deploy-checks`, `email`,
-`open-graph`, `repo-checks`, `security-headers`, and `supabase` today —
+`open-graph`, `repo-checks`, and `supabase` today —
 generated from that package's source on every build, so it never drifts from
 what the code exports. `@devdogsuga/env` is Backstage-published tooling
 rather than a `packages/*` workspace member, so it is documented by hand in

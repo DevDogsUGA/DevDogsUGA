@@ -52,7 +52,7 @@ export default function GlobalError({
             script in this app carries. It earns CSP trust instead through
             `THEME_INIT_SCRIPT_HASH`, a content hash of this exact literal --
             see that constant's doc comment and
-            `@devdogsuga/security-headers`'s `CspInput.extraScriptSources`. */}
+            `scheduleBuilderCsp` (`~/config/csp.ts`). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <style
           dangerouslySetInnerHTML={{
