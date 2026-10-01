@@ -97,7 +97,7 @@ Platform is its only consumer, which makes it tempting. But `docs` would have to
 
 Docs used to be ingested from the GitHub API into three tables — `docsRepos`, `docsBranches`, `docsPages` — by a push-webhook sync, then served through `"use cache"` and `revalidateTag`. That design existed because docs lived in repositories deploying on a different cadence than the site, which stopped being true once everything moved into this monorepo.
 
-The invalidation half never worked anyway: the Cloudflare adapter leaves `tagCache` at `"dummy"`, so every `revalidateTag` call was a no-op. Nothing in the repo calls it today either.
+The old OpenNext adapter left `tagCache` at `"dummy"`, so that design's `revalidateTag` calls were no-ops. vinext's KV data adapter now supports tag invalidation, but the docs sync and its tags were removed rather than carried into the monorepo compiler. The platform uses the working mechanism where writes still need push invalidation, such as the leadership board.
 
 Per-branch documentation previews went away with the sync. A branch preview is now a preview deployment of the whole site from that branch, docs included.
 

@@ -17,10 +17,9 @@
   //      deploy with the apex at top level reassigns devdogsuga.org away from
   //      production -- wrangler says so in a warning and then does it anyway.
   //      Nothing here is inherited, so nothing can be stolen.
-  //   2. `wrangler deploy` with no `--env` uses this block. Named `platform` it
-  //      would have overwritten the pre-monorepo production worker, which is
-  //      still serving the apex. `development-platform` cannot collide with
-  //      anything real.
+  //   2. `wrangler deploy` with no `--env` uses this block.
+  //      `development-platform` cannot collide with `production-platform`,
+  //      the Worker serving the apex.
   //
   // NON-INHERITABLE keys must be repeated in full in every environment:
   // `vars`, `ratelimits`, `images`, `send_email`, `hyperdrive`, `kv_namespaces`,
@@ -176,10 +175,10 @@
           "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
         },
       ],
-      // ASSUMPTION, and the one value here nobody has confirmed: staging is
-      // assumed to live at staging.devdogsuga.org. One label deep, so Universal
-      // SSL covers it without Advanced Certificate Manager -- the same
-      // constraint the sandbox worker's wildcard route is shaped around.
+      // The staging deployment lives at staging.devdogsuga.org. One label
+      // deep, so Universal SSL covers it without Advanced Certificate Manager
+      // -- the same constraint the sandbox worker's wildcard route is shaped
+      // around.
       // Change it here and in the staging BASE_URL secret together; they are
       // read by different things and nothing cross-checks them.
       "routes": [
@@ -268,11 +267,7 @@
           "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
         },
       ],
-      // The production apex. It is currently bound to the pre-monorepo worker,
-      // which was named `platform`; the first deploy under this name has to
-      // take the domain over. That is a deliberate cutover, not something a
-      // deploy does quietly -- until it happens this worker is reachable only
-      // on workers.dev.
+      // The production deployment serves the apex through this custom domain.
       "routes": [
         {
           "pattern": "devdogsuga.org",

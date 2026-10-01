@@ -164,12 +164,11 @@ async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
  *
  * Meetings reach this app through the config reconcile, which runs every
  * fifteen minutes and is not tied to a deploy, so a sitemap frozen at build time stops
- * naming new meetings the moment an officer schedules one. A TTL is the only
- * mechanism available: `revalidateTag` is inert on the Cloudflare adapter,
- * whose `tagCache` is `"dummy"` (the same reason `events/layout.tsx` reaches
- * for `cacheLife` rather than a tag), so there is no push invalidation to hang
- * this off. An hour is well inside how often anything recrawls a sitemap and
- * costs at most 24 pairs of queries a day.
+ * naming new meetings the moment an officer schedules one. No sitemap-specific
+ * push invalidation is wired, so this uses a TTL. An hour is well inside how
+ * often anything recrawls a sitemap and costs at most 24 pairs of queries a
+ * day. vinext's KV data adapter supports tag invalidation if the config
+ * reconcile later starts emitting a tag this sitemap can consume.
  *
  * It also recovers from a build that ran without a database: the fallback above
  * is what gets prerendered, and the first revalidation after deploy replaces it

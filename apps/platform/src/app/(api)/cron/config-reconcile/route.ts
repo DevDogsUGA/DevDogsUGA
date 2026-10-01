@@ -19,10 +19,8 @@ import { reconcileFromConfig } from "~/server/config/reconcile";
  * header) right after each deploy of THIS app -- deliberately not at
  * migrate time: `@devdogsuga/events`' config is bundled into the Worker at
  * build time, so a call before this deploy would reconcile the PREVIOUS
- * release's config, and the pre-redesign production Worker this pipeline
- * first promotes onto has no route here at all to call yet. So a promoted
- * config lands the moment THIS deploy finishes, rather than waiting on the
- * next fifteen-minute tick.
+ * release's config. A promoted config therefore lands the moment THIS deploy
+ * finishes, rather than waiting on the next fifteen-minute tick.
  *
  * `getClubConfig()` parses and validates the committed data file; a failure
  * there means the file itself is broken (wrong shape, or its content fails

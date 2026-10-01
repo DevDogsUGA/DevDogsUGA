@@ -172,11 +172,7 @@ jobs:
       # deploy, and not at migrate time in deploy.yaml: the config
       # `@devdogsuga/events` bundles into the Worker is baked in at build
       # time, so calling this route at migrate time would reconcile against
-      # whatever config the PREVIOUS release shipped with, not this one's —
-      # and on production specifically, the currently-deployed Worker (still
-      # pre-redesign, ahead of this pipeline's first promote) has no
-      # `/cron/config-reconcile` route at all, so a migrate-time call there
-      # 404s and would block that promote forever.
+      # whatever config the PREVIOUS release shipped with, not this one's.
       #
       # `devtools cron run` was NOT used here even though it already wraps
       # an authenticated GET at this route: it only checks the HTTP status,

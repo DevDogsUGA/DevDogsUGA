@@ -9,11 +9,9 @@
  * apps/platform/src/app/(api)/cron/config-reconcile/route.ts), but placed
  * after THIS deploy rather than at migrate time. `@devdogsuga/events`'
  * config is bundled into the Worker at build time, so a migrate-time call
- * would reconcile against the PREVIOUS release's config, not this deploy's;
- * on production specifically, the currently-deployed Worker predates this
- * route entirely, so a migrate-time call there would 404 and block the
- * first promote of this pipeline forever. Exits non-zero on a failed
- * reconcile, which fails the deploy step running it.
+ * would reconcile against the PREVIOUS release's config, not this deploy's.
+ * Exits non-zero on a failed reconcile, which fails the deploy step running
+ * it.
  *
  * Only platform serves this route; the config being reconciled (meetings,
  * workshops) is platform's alone.

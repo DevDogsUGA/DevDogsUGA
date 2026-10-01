@@ -17,13 +17,9 @@ import type { ReactElement } from "react";
  *
  * ## Why `next/og` and not `@vercel/og`
  *
- * They are the same library, but this app deploys to Cloudflare Workers through
- * OpenNext, and OpenNext patches Next's own vendored copy —
- * `next/dist/compiled/@vercel/og` — on the way into the Worker: it swaps the
- * Node entry for the edge one and turns the library's `fetch()` of its fallback
- * font into a bundled import, because a Worker has neither `fs` nor a relative
- * URL to fetch from. A directly-installed `@vercel/og` gets none of that
- * treatment and fails at runtime, in production only.
+ * `next/og` is Next's file-convention renderer, and vinext bundles Next's own
+ * vendored copy of `@vercel/og` into the Worker. A directly installed
+ * `@vercel/og` would bypass that integration and duplicate the renderer.
  *
  * ## Fonts
  *

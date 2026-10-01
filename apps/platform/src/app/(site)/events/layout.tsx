@@ -70,12 +70,12 @@ async function EventsBody() {
 /**
  * Everything time- and database-dependent about the page, resolved once.
  *
- * `cacheLife` rather than a tag, because `revalidateTag` is inert here: the
- * Cloudflare adapter's `tagCache` is `"dummy"`. There is no push invalidation
- * to reach for, so freshness has to come from a TTL. The config reconcile
- * runs every 15 minutes, so a five-minute revalidate means the page is never
- * more than one reconcile window behind, and `stale` lets a visitor have the
- * previous answer instantly while that happens.
+ * `cacheLife` rather than a tag because no event-specific push invalidation is
+ * wired. The config reconcile runs every 15 minutes, so a five-minute
+ * revalidate means the page is never more than one reconcile window behind,
+ * and `stale` lets a visitor have the previous answer instantly while that
+ * happens. vinext's KV data adapter does support tag invalidation; if the
+ * reconcile starts emitting an events tag, this scope can consume it.
  *
  * Reading the clock is legal here because this IS a cache scope; the value is
  * resolved when the entry is built and handed down as data, so no component
