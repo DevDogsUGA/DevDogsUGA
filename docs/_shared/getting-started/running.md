@@ -164,8 +164,61 @@ fails at the provider's redirect step — see
 [Redirect URL missing](./troubleshooting#redirect-url-missing).
 
 :::only{project="study-group-finder"}
-study-group-finder doesn't sign anyone in yet, so it has no redirect URL to
-add.
+study-group-finder is a mobile app, so it has no `localhost` URL to add. Its
+return address is a URL scheme instead; see [Mobile sign-in](#mobile-sign-in)
+below.
+:::
+
+:::only{project="study-group-finder"}
+
+### Mobile sign-in
+
+The app is still a placeholder screen, so nothing in it starts a sign-in
+yet. The configuration for one is already in place, and it works like the
+web apps' sign-in.
+
+**`AUTH_MODE` picks the provider.** It has two values:
+
+| `AUTH_MODE` | Provider ID         | Used for                                                              |
+| ----------- | ------------------- | --------------------------------------------------------------------- |
+| `devdogs`   | `custom:devdogsuga` | Development. The platform's own OAuth server, "Sign in with DevDogs". |
+| `google`    | `google`            | Production. The shared Google provider.                               |
+
+`devdogs` is the default whenever nothing sets it.
+
+**Where it comes from.** You never pass `AUTH_MODE` yourself. Set
+`NEXT_PUBLIC_AUTH_MODE` in the root `.env` (it's commented out in
+`.env.example`, shared with the web apps) and `pnpm dev --filter
+study-group-finder` hands it to Flutter as `--dart-define=AUTH_MODE=...`,
+falling back to `devdogs` when it's unset. `AUTH_MODE` is just the name it
+has on the Dart side, where `lib/main.dart` reads it with
+`String.fromEnvironment`. It is fixed at compile time, so restart `pnpm dev`
+after changing it.
+
+<details>
+<summary>Where sign-in returns to</summary>
+
+After the provider, Supabase sends the user
+back to `dev.dogpack://login-callback`. `dev.dogpack` is the app's ID on both
+platforms, and the return address is registered in three places that have to
+agree:
+
+- `apps/study-group-finder/android/app/src/main/AndroidManifest.xml`, an
+  intent filter for scheme `dev.dogpack`, host `login-callback`.
+- `apps/study-group-finder/ios/Runner/Info.plist`, a `CFBundleURLTypes`
+  entry for the scheme `dev.dogpack`.
+- `supabase/config.toml`, in `additional_redirect_urls`. A local stack picks
+  the change up on `pnpm devtools db restart`. Production receives it
+  through the deploy workflow's `supabase config push`.
+
+A hosted project of your own doesn't read `config.toml`, so add
+`dev.dogpack://login-callback` to its Redirect URLs by hand (Dashboard →
+Authentication → URL Configuration), next to the web URLs. Without it,
+sign-in fails at the redirect step like
+[Redirect URL missing](./troubleshooting#redirect-url-missing).
+
+</details>
+
 :::
 
 <details>
@@ -230,6 +283,10 @@ from compile-time `--dart-define` values, and the package script is what
 supplies them — running `flutter run` bare leaves those defines empty, so
 `Supabase.initialize` gets blank credentials. Pick your emulator (or a
 connected device) when Flutter asks.
+
+This needs the Flutter SDK on your `PATH` (see [Prerequisites](./prerequisites)).
+It uses your local Supabase stack if one is running, and the hosted project
+`.env` names otherwise.
 :::
 
 Going through `pnpm dev --filter <app>` (the `devtools run` picker) rather
