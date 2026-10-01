@@ -33,7 +33,7 @@ export type GenerationOutcome =
 // reordering rule modules changes generation behaviour without touching any
 // of this file.
 
-function activeRules(ctx: GenerationConstraints): ScheduleRule[] {
+export function activeRules(ctx: GenerationConstraints): ScheduleRule[] {
   return RULES.filter((rule) => rule.isActive?.(ctx) ?? true);
 }
 
@@ -99,7 +99,10 @@ function generateRecursive(
   rules: ScheduleRule[],
   ctx: GenerationConstraints,
   results: Section[][],
+  limit: number,
 ): void {
+  if (results.length >= limit) return;
+
   // The always-on invariant: called directly, never through the registry.
   if (!noConflicts(partial)) return;
 
@@ -119,8 +122,24 @@ function generateRecursive(
   const [next, ...rest] = remaining;
   for (const section of next!.sections) {
     if (!allowSection(rules, section, ctx)) continue;
-    generateRecursive([...partial, section], rest, rules, ctx, results);
+    generateRecursive([...partial, section], rest, rules, ctx, results, limit);
   }
+}
+
+/**
+ * Every valid complete schedule under `rules`, stopping early once `limit`
+ * are found. `diagnose.ts` reuses this with a rule removed and a limit of 1
+ * to ask "would this constraint alone have made the difference?".
+ */
+export function searchSchedules(
+  courses: GenerationCourse[],
+  rules: ScheduleRule[],
+  ctx: GenerationConstraints,
+  limit = Infinity,
+): Section[][] {
+  const complete: Section[][] = [];
+  generateRecursive([], courses, rules, ctx, complete, limit);
+  return complete;
 }
 
 /**
@@ -151,8 +170,7 @@ export function generateSchedules(
   }
 
   const rules = activeRules(ctx);
-  const complete: Section[][] = [];
-  generateRecursive([], courses, rules, ctx, complete);
+  const complete = searchSchedules(courses, rules, ctx);
 
   if (complete.length === 0) return { ok: false, reason: "no-schedules" };
 

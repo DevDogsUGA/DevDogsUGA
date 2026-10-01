@@ -81,6 +81,21 @@ export interface ScheduleRule {
   score?(complete: Section[], ctx: GenerationConstraints): number;
 
   /**
+   * Plain-language description of this rule, used to explain a failed run
+   * (see `diagnose.ts`). Called only for an active rule.
+   *
+   * `setting` names the user's input, as a noun phrase ("your 5 PM latest
+   * end time"), for "relax this" advice. `requirement` is for rules that
+   * reject single sections (`allowSection`): a verb phrase completing "No
+   * section of CHEM 1211L ..." ("ends by 5 PM"). Omit it for a rule that
+   * only judges whole schedules.
+   */
+  describe?(ctx: GenerationConstraints): {
+    setting: string;
+    requirement?: string;
+  };
+
+  /**
    * Relative weight of this rule's `score` in that average. Defaults to
    * `"normal"` when omitted. Has no effect on a rule that doesn't define
    * `score`.

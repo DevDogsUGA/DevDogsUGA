@@ -30,6 +30,18 @@ function endsAtOrBefore(section: Section, time: string): boolean {
   );
 }
 
+/** "17:00" -> "5 PM", "09:30" -> "9:30 AM". */
+export function formatTimeOfDay(time: string): string {
+  const minutes = timeToMinutes(time);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  const suffix = h < 12 ? "AM" : "PM";
+  return m === 0
+    ? `${hour} ${suffix}`
+    : `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
 /** Rejects any section with a meeting that starts before `prefStartTime`. */
 export const preferredStartTimeRule: ScheduleRule = {
   isActive: (ctx: GenerationConstraints) => ctx.prefStartTime !== undefined,
@@ -38,6 +50,13 @@ export const preferredStartTimeRule: ScheduleRule = {
       ctx.prefStartTime === undefined ||
       startsAtOrAfter(section, ctx.prefStartTime)
     );
+  },
+  describe(ctx) {
+    const time = formatTimeOfDay(ctx.prefStartTime ?? "00:00");
+    return {
+      setting: `your ${time} earliest start time`,
+      requirement: `starts at or after ${time}`,
+    };
   },
 };
 
@@ -48,5 +67,12 @@ export const preferredEndTimeRule: ScheduleRule = {
     return (
       ctx.prefEndTime === undefined || endsAtOrBefore(section, ctx.prefEndTime)
     );
+  },
+  describe(ctx) {
+    const time = formatTimeOfDay(ctx.prefEndTime ?? "23:59");
+    return {
+      setting: `your ${time} latest end time`,
+      requirement: `ends by ${time}`,
+    };
   },
 };
