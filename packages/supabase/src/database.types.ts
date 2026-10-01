@@ -412,6 +412,32 @@ export type Database = {
         };
         Relationships: [];
       };
+      discordRoleMemberships: {
+        Row: {
+          roleId: string;
+          syncedAt: string;
+          userId: string;
+        };
+        Insert: {
+          roleId: string;
+          syncedAt?: string;
+          userId: string;
+        };
+        Update: {
+          roleId?: string;
+          syncedAt?: string;
+          userId?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "discordRoleMemberships_roleId_roles_id_fkey";
+            columns: ["roleId"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       docsPages: {
         Row: {
           description: string | null;
@@ -690,6 +716,24 @@ export type Database = {
           createdAt?: string;
           ownerUserId?: string;
           testUserId?: string;
+        };
+        Relationships: [];
+      };
+      officerDiscordIds: {
+        Row: {
+          createdAt: string;
+          discordUserId: string;
+          userId: string;
+        };
+        Insert: {
+          createdAt?: string;
+          discordUserId: string;
+          userId: string;
+        };
+        Update: {
+          createdAt?: string;
+          discordUserId?: string;
+          userId?: string;
         };
         Relationships: [];
       };

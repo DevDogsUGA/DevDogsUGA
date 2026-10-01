@@ -4,10 +4,20 @@ import { Routes, type APIGuildMember } from "discord-api-types/v10";
 import { asBot } from "./api";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { roles, userRoles } from "~/server/db/schema";
+import {
+  discordRoleMemberships,
+  officerDiscordIds,
+  roles,
+  userRoles,
+} from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
 
-/** Returns the Discord snowflake linked to a DevDogs user, or null if unlinked. */
+/**
+ * Returns the Discord snowflake for a DevDogs user, or null if none is known.
+ * A linked OAuth identity is authoritative; an officer's stored id
+ * (`officerDiscordIds`, entered by an admin without OAuth proof) is the
+ * fallback until they link.
+ */
 export async function getDiscordUserId(userId: string): Promise<string | null> {
   const [row] = await db
     .select({ providerId: identitiesInAuth.providerId })
@@ -19,7 +29,41 @@ export async function getDiscordUserId(userId: string): Promise<string | null> {
       ),
     )
     .limit(1);
-  return row?.providerId ?? null;
+  if (row) return row.providerId;
+
+  const [officer] = await db
+    .select({ discordUserId: officerDiscordIds.discordUserId })
+    .from(officerDiscordIds)
+    .where(eq(officerDiscordIds.userId, userId))
+    .limit(1);
+  return officer?.discordUserId ?? null;
+}
+
+/**
+ * Every user whose Discord id is known, as platform user id to Discord id.
+ * Officers' stored ids come first and a linked OAuth identity overrides them.
+ */
+export async function loadDiscordUserIds(): Promise<Map<string, string>> {
+  const [officers, identities] = await Promise.all([
+    db
+      .select({
+        userId: officerDiscordIds.userId,
+        discordUserId: officerDiscordIds.discordUserId,
+      })
+      .from(officerDiscordIds),
+    db
+      .select({
+        userId: identitiesInAuth.userId,
+        discordUserId: identitiesInAuth.providerId,
+      })
+      .from(identitiesInAuth)
+      .where(eq(identitiesInAuth.provider, "discord")),
+  ]);
+
+  const ids = new Map<string, string>();
+  for (const r of officers) ids.set(r.userId, r.discordUserId);
+  for (const r of identities) ids.set(r.userId, r.discordUserId);
+  return ids;
 }
 
 /** Adds or removes a single Discord role from a guild member. */
@@ -76,7 +120,11 @@ export async function syncRolesOnLink(
     .onConflictDoNothing();
 }
 
-/** Run when a user unlinks Discord. Strips every synced DevDogs role. */
+/**
+ * Run when a user unlinks Discord. Strips every synced DevDogs role and forgets
+ * their sync snapshot, so a later relink pulls what they hold on Discord
+ * instead of reading the strip as a platform revoke.
+ */
 export async function removeSyncedRolesOnUnlink(userId: string): Promise<void> {
   const syncedRoleIds = db
     .select({ id: roles.id })
@@ -91,4 +139,8 @@ export async function removeSyncedRolesOnUnlink(userId: string): Promise<void> {
         inArray(userRoles.roleId, syncedRoleIds),
       ),
     );
+
+  await db
+    .delete(discordRoleMemberships)
+    .where(eq(discordRoleMemberships.userId, userId));
 }

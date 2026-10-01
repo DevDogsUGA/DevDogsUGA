@@ -11,7 +11,6 @@ import {
   getDiscordSyncCapability,
 } from "~/server/discord/adminCapability";
 import {
-  countUsersWithoutLinkedDiscord as _countUsersWithoutLinkedDiscord,
   createDiscordRoleFromRole as _createDiscordRoleFromRole,
   fetchGuildRoles,
   importRoleFromDiscord as _importRoleFromDiscord,
@@ -62,16 +61,6 @@ export async function importRoleFromDiscord(
   }
 
   return _importRoleFromDiscord(discordRoleId, fields);
-}
-
-/** Number of users who would lose `roleId` if it were linked to Discord. */
-export async function countUsersWithoutLinkedDiscord(
-  roleId: string,
-): Promise<number> {
-  const { ctx } = await requireManageRoles();
-  const target = await getTargetRole(roleId);
-  requireRankGuard(requireCustomRole(target), ctx.minRank);
-  return _countUsersWithoutLinkedDiscord(roleId);
 }
 
 export async function linkRoleToDiscord(

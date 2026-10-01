@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, notInArray } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import {
   Routes,
   type APIRole,
@@ -6,7 +6,7 @@ import {
   type RESTPostAPIGuildRoleJSONBody,
 } from "discord-api-types/v10";
 import { asBot } from "./api";
-import { pushMemberRoleChange } from "./memberSync";
+import { loadDiscordUserIds, pushMemberRoleChange } from "./memberSync";
 import {
   decimalToHex,
   decodeSharedPermissions,
@@ -15,8 +15,7 @@ import {
 } from "./permissions";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { roles, userRoles } from "~/server/db/schema";
-import { identitiesInAuth } from "~/supabase/drizzle/schema";
+import { discordRoleMemberships, roles, userRoles } from "~/server/db/schema";
 import type { CreateRoleInput } from "~/server/actions/permissions";
 
 /** Fields needed by `importRoleFromDiscord`. `title` and `color` come from the live Discord role. */
@@ -163,84 +162,45 @@ export async function importRoleFromDiscord(
 }
 
 /**
- * Counts how many users hold `roleId` without a linked Discord account, i.e.
- * how many would lose the role if it were synced with Discord. Used by the
- * confirmation UI before linking.
- */
-export async function countUsersWithoutLinkedDiscord(
-  roleId: string,
-): Promise<number> {
-  const discordUserIds = db
-    .select({ userId: identitiesInAuth.userId })
-    .from(identitiesInAuth)
-    .where(eq(identitiesInAuth.provider, "discord"));
-
-  const rows = await db
-    .select({ userId: userRoles.userId })
-    .from(userRoles)
-    .where(
-      and(
-        eq(userRoles.roleId, roleId),
-        notInArray(userRoles.userId, discordUserIds),
-      ),
-    );
-
-  return rows.length;
-}
-
-/**
- * Shared side effects of linking a DevDogs role to a Discord role:
- * - strips the role from any user without a linked Discord account
- *   (the count shown by `countUsersWithoutLinkedDiscord` before confirming)
- * - best-effort grants the linked Discord role to remaining members, so
- *   membership starts in sync
+ * Shared side effects of linking a DevDogs role to a Discord role. Existing
+ * grants are kept: they have no sync snapshot, so the next membership
+ * reconcile pushes them to Discord (and pulls anyone who already holds the
+ * Discord role). Linked members are granted the Discord role now, best effort,
+ * so membership starts in sync without waiting for the cron.
  */
 export async function applyDiscordLinkSideEffects(
   roleId: string,
   discordRoleId: string,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx.update(roles).set({ discordRoleId }).where(eq(roles.id, roleId));
+  await db.update(roles).set({ discordRoleId }).where(eq(roles.id, roleId));
 
-    const discordUserIds = tx
-      .select({ userId: identitiesInAuth.userId })
-      .from(identitiesInAuth)
-      .where(eq(identitiesInAuth.provider, "discord"));
+  const holders = await db
+    .select({ userId: userRoles.userId })
+    .from(userRoles)
+    .where(eq(userRoles.roleId, roleId));
+  if (holders.length === 0) return;
 
-    await tx
-      .delete(userRoles)
-      .where(
-        and(
-          eq(userRoles.roleId, roleId),
-          notInArray(userRoles.userId, discordUserIds),
-        ),
-      );
+  const discordUserIds = await loadDiscordUserIds();
 
-    const remaining = await tx
-      .select({ discordUserId: identitiesInAuth.providerId })
-      .from(userRoles)
-      .innerJoin(
-        identitiesInAuth,
-        and(
-          eq(identitiesInAuth.userId, userRoles.userId),
-          eq(identitiesInAuth.provider, "discord"),
-        ),
-      )
-      .where(eq(userRoles.roleId, roleId));
-
-    await Promise.all(
-      remaining.map((row) =>
-        pushMemberRoleChange(row.discordUserId, discordRoleId, "add").catch(
-          (err: unknown) => {
-            console.error(
-              `Failed to add Discord role ${discordRoleId} to member ${row.discordUserId}:`,
-              err,
-            );
-          },
-        ),
-      ),
-    );
-  });
+  await Promise.all(
+    holders.map(async ({ userId }) => {
+      const discordUserId = discordUserIds.get(userId);
+      if (!discordUserId) return;
+      try {
+        await pushMemberRoleChange(discordUserId, discordRoleId, "add");
+        await db
+          .insert(discordRoleMemberships)
+          .values({ userId, roleId })
+          .onConflictDoNothing();
+      } catch (err) {
+        // The snapshot stays stale, so the cron retries.
+        console.error(
+          `Failed to add Discord role ${discordRoleId} to member ${discordUserId}:`,
+          err,
+        );
+      }
+    }),
+  );
 }
 
 /**
@@ -299,10 +259,13 @@ export async function createDiscordRoleFromRole(roleId: string): Promise<void> {
 }
 
 /**
- * Unsyncs a role from Discord. Clears the link and sync snapshot only, with no
- * membership or Discord-side side effects.
+ * Unsyncs a role from Discord. Clears the link and the sync snapshots only,
+ * with no membership or Discord-side side effects.
  */
 export async function unsyncRole(roleId: string): Promise<void> {
+  await db
+    .delete(discordRoleMemberships)
+    .where(eq(discordRoleMemberships.roleId, roleId));
   await db
     .update(roles)
     .set({
