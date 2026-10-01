@@ -78,7 +78,7 @@ jobs:
         # insist on reading, so routing it through tier resolution would fail
         # on a missing env file for its own output. See deploy.yaml's header
         # for what `--no-env` means.
-        run: pnpm backstage deploy write-env --no-env
+        run: pnpm backstage deploy write-env --no-env --yes
       # The Sentry release action runs in its own container and never sees the
       # file above, so the org slug (a committed value in devtools' manifest,
       # not a GitHub variable) is lifted into the job environment for it and
@@ -160,7 +160,7 @@ jobs:
           # associate with the release this job's `action-release` step
           # created and uploaded source maps against.
           SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm backstage deploy ${{ matrix.app }} --tier $DEPLOY_ENV
+        run: pnpm backstage deploy ${{ matrix.app }} --tier $DEPLOY_ENV --yes
       # The docs search index lives in the platform's database, written from the
       # compiled docs the build step above produced, and the Worker serves it as
       # soon as it is live. After the deploy rather than before: the index
@@ -196,7 +196,7 @@ jobs:
         if: matrix.app == 'platform'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: pnpm backstage deploy reconcile --tier $DEPLOY_ENV --no-env
+        run: pnpm backstage deploy reconcile --tier $DEPLOY_ENV --no-env --yes
       # Read-only smoke test against the Worker version just deployed: every
       # listed public route answers 200, the one known protected route
       # redirects an anonymous request, and — only when SENTRY_AUTH_TOKEN is
@@ -211,5 +211,5 @@ jobs:
         env:
           SENTRY_PROJECT: ${{ matrix.app }}
         run: >-
-          pnpm backstage deploy smoke --tier $DEPLOY_ENV
+          pnpm backstage deploy smoke --tier $DEPLOY_ENV --yes
           --app ${{ matrix.app }} --no-env

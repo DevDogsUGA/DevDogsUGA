@@ -66,6 +66,10 @@ env:
 # `pnpm dlx @devdogsuga/backstage`, always the latest publish and never a
 # pinned version (the repository carries no devDependency on it).
 #
+# Every step also passes `--yes`. backstage asks before acting on staging or
+# production, and with no terminal it refuses rather than ask; here the
+# workflow, its triggers and the environments' reviewers are the confirmation.
+#
 # Whether a step passes `--no-env` is NOT a style choice:
 #
 #   --no-env     No tier resolution, no env file: the environment the step
@@ -129,7 +133,7 @@ jobs:
         env:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
-        run: pnpm backstage deploy preflight --no-env
+        run: pnpm backstage deploy preflight --no-env --yes
 
   # Staging had no migrate job at all, which meant staging ran whatever schema
   # it happened to be left with. A migration that added a function some
@@ -161,7 +165,7 @@ jobs:
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm backstage deploy migrate --no-env
+        run: pnpm backstage deploy migrate --no-env --yes
 
   # The per-tier deploy recipe lives in the reusable `deploy-app.yaml`; this
   # caller is the gating in front of it. `secrets: inherit` is load-bearing —
@@ -207,7 +211,7 @@ jobs:
       - name: The credential is the planner role, and no more
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm backstage planner status --no-env
+        run: pnpm backstage planner status --no-env --yes
       # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
       # push` exits 1 on a connection failure, and a pipeline without it reports
       # the exit code of `tee` — so a dry run that never connected reads as a
@@ -222,7 +226,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm backstage deploy plan --no-env
+          pnpm backstage deploy plan --no-env --yes
           --label 'Migration plan — production (from `main`)'
 
   # ── production ──────────────────────────────────────────────────────────────
@@ -248,7 +252,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm backstage deploy plan --no-env
+          pnpm backstage deploy plan --no-env --yes
           --label 'Migration plan — production'
       # `supabase config` has exactly one subcommand — `push`. No pull, no diff,
       # no --dry-run. So config.toml is the highest blast radius (site_url and
@@ -299,7 +303,7 @@ jobs:
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm backstage deploy migrate --no-env
+        run: pnpm backstage deploy migrate --no-env --yes
 
   # The one mutation with no dry run gets its own approval step, which is what
   # `production-apply` is: the same Bitwarden project as `production`, split
@@ -341,7 +345,7 @@ jobs:
         # --no-env for the same bootstrap reason as the other write-env
         # steps: this composes .env.production, which nothing has written yet.
         run: >-
-          pnpm backstage deploy write-env --no-env
+          pnpm backstage deploy write-env --no-env --yes
           --source supabase
       # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
       # the operator manifest, not to supabase's, and `with-env` leaves a value
@@ -395,7 +399,7 @@ jobs:
       - name: Report orphaned Worker secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: pnpm backstage env audit --target production --no-env
+        run: pnpm backstage env audit --target production --no-env --yes
 
   # Deleting them is a separate, deliberate, human-triggered run — never
   # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
