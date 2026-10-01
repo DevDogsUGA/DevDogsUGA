@@ -1,5 +1,5 @@
-import { ACCENT, PageCard } from "@devdogsuga/open-graph";
-import { ogResponse, size } from "~/lib/ogImage";
+import { ACCENT, PageCard } from "@devdogsuga/brand";
+import { ogResponse, size } from "@devdogsuga/brand/next";
 import { toTitleCase } from "~/lib/toTitleCase";
 import {
   docsPathExists,

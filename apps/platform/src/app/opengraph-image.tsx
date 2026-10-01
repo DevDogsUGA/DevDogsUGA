@@ -1,5 +1,5 @@
-import { PAGE_CARDS, PageCard } from "@devdogsuga/open-graph";
-import { contentType, ogResponse, size } from "~/lib/ogImage";
+import { PAGE_CARDS, PageCard } from "@devdogsuga/brand";
+import { contentType, ogResponse, size } from "@devdogsuga/brand/next";
 
 /**
  * The club's own card, on `/` and as the fallback under every segment that does
@@ -13,8 +13,8 @@ import { contentType, ogResponse, size } from "~/lib/ogImage";
  * card says only what the front page says. Nothing here reads a session, a
  * param, or a row.
  *
- * The public pages each override it with their own; see `pages.ts` in
- * `@devdogsuga/open-graph` for which ones, and why that list is the sitemap's.
+ * The public pages each override it with their own; see `PAGE_CARDS` in
+ * `@devdogsuga/brand` for which ones, and why that list is the sitemap's.
  */
 export const alt = "DevDogs — learn by doing";
 export { contentType, size };

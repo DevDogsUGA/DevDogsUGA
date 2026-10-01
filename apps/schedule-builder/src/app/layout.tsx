@@ -4,7 +4,7 @@ import { SessionProvider } from "~/components/providers/SessionProvider";
 import { TermProvider } from "~/components/providers/TermProvider";
 import { ToastProvider } from "~/hooks/useToast";
 import "~/styles/globals.css";
-import { APPS } from "@devdogsuga/open-graph";
+import { APPS } from "@devdogsuga/brand";
 import { type Metadata } from "next";
 import { headers } from "next/headers";
 import { Hanken_Grotesk, Alan_Sans, Cascadia_Code } from "next/font/google";

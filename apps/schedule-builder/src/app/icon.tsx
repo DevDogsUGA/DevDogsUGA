@@ -1,5 +1,5 @@
-import { AppIcon } from "@devdogsuga/open-graph";
-import { imageResponse } from "~/lib/ogImage";
+import { AppIcon } from "@devdogsuga/brand";
+import { imageResponse } from "@devdogsuga/brand/next";
 
 /**
  * The favicon, generated rather than committed.

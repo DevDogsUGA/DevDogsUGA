@@ -1,4 +1,4 @@
-import { DogDaysMark } from "@devdogsuga/open-graph";
+import { DogDaysMark } from "@devdogsuga/brand";
 import Link from "next/link";
 
 export default function NotFound() {

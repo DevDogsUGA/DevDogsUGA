@@ -123,7 +123,7 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
     icon: "QrCodeIcon",
     permission: "canManageAttendance",
     description:
-      "Generate branded QR codes for attendance, posters, and other club materials.",
+      "Deprecated: use `backstage qr`. Generate branded QR codes for attendance, posters, and other club materials.",
   },
   {
     label: "Moderation",
