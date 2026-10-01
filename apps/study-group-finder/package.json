@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "comment": "pnpm task wrapper for the Flutter app. `type: module` is load-bearing for env.ts: without it tsx compiles the manifest as CommonJS, whose require() of the ESM @devdogsuga/env creates a SECOND registry instance — declare() then registers into a copy nobody reads, and the app's variables silently vanish from the generated .env.example (vitest ESM-ifies everything, so the completeness test cannot see the difference). The real toolchain is Flutter/Dart; these scripts shell out to it via the root `with-env` helper so the Flutter build reads the shared root .env. They use `with-env -c` because $API_URL and friends must expand from the loaded .env rather than the ambient environment. Requires the Flutter SDK on PATH.",
+  "comment": "pnpm task wrapper for the Flutter app. `type: module` is load-bearing for env.ts: without it tsx compiles the manifest as CommonJS, whose require() of the ESM @devdogsuga/env creates a SECOND registry instance \u2014 declare() then registers into a copy nobody reads, and the app's variables silently vanish from the generated .env.example (vitest ESM-ifies everything, so the completeness test cannot see the difference). The real toolchain is Flutter/Dart; these scripts shell out to it via the root `with-env` helper so the Flutter build reads the shared root .env. They use `with-env -c` because $API_URL and friends must expand from the loaded .env rather than the ambient environment. Requires the Flutter SDK on PATH.",
   "dependencies": {
     "@devdogsuga/env": "^0.1.4",
     "@devdogsuga/supabase": "workspace:*",
@@ -12,7 +12,7 @@
   "scripts": {
     "build": "with-env -c 'flutter build apk --debug --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
     "dev": "with-env -c 'flutter run --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
-    "docs:extract": "dart run tool/docs_extract.dart",
+    "codegen": "dart run tool/docs_extract.dart",
     "test": "flutter test",
     "lint": "flutter analyze",
     "lint:fix": "dart fix --apply",

@@ -26,11 +26,7 @@
     "types:cf": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv",
     "types:cf:check": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv --check",
     "types:drizzle": "with-env tsx ../../scripts/drizzle-pull.ts",
-    "fetch:campus-map": "tsx scripts/fetch-campus-map.ts && prettier --write src/components/EventsSection/FindUs/campusMapData.ts src/components/EventsSection/FindUs/campusMapMeta.ts",
-    "cf:build:staging": "DEPLOY_ENV=staging pnpm run build",
-    "cf:build:production": "DEPLOY_ENV=production pnpm run build",
-    "cf:typegen": "pnpm run types:cf",
-    "cf:typegen:check": "pnpm run types:cf:check"
+    "fetch:campus-map": "tsx scripts/fetch-campus-map.ts && prettier --write src/components/EventsSection/FindUs/campusMapData.ts src/components/EventsSection/FindUs/campusMapMeta.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
