@@ -18,18 +18,20 @@ checkpoint: "01-flutter-intro/01-widgets"
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
 
-**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](/docs/workshops/getting-started/prerequisites#git-and-a-github-account).
 
 ```bash cwd=~/Mobile-Workshops
 git fetch origin --tags
-# Save your own changes first
+# Save your own changes first (fine if there's nothing to save)
 git add -A
 git commit -m "My work"
 # Bring in the code from the end of the last step
 git merge --no-edit 01-flutter-intro/00-start
 ```
 
-**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+Where you and the step changed the same lines, the merge stops with a conflict. Open each file git lists, keep the code you want between the `<<<<<<<` and `>>>>>>>` markers, delete the markers, then finish with `git add -A` and `git commit --no-edit`. To back out instead, run `git merge --abort`.
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes to the step's files are lost; new files you made stay. If you're in the middle of a merge, run `git merge --abort` first.
 
 ```bash cwd=~/Mobile-Workshops
 git fetch origin --tags
@@ -56,7 +58,7 @@ In Flutter, everything on screen is a widget: text, buttons, padding, whole scre
 
 ## The Home Screen, in Its Own File
 
-Make `lib/homepage.dart` for the home screen, so `main.dart` doesn't grow with every screen you add. `HomePage` is a `StatefulWidget`: the widget itself is small, and `createState` hands it a `State` object to keep.
+Make `lib/homepage.dart` for the home screen, so `main.dart` doesn't grow with every screen you add. It comes in two parts here: put them one after the other. `HomePage` is a `StatefulWidget`: the widget itself is small, and `createState` hands it a `State` object to keep.
 
 ```dart file=lib/homepage.dart lines=1-8 href=https://github.com/DevDogsUGA/Mobile-Workshops/blob/87abfe6b0226d13d96e4635e24579181396ce47f/lib/homepage.dart#L1-L8 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FMobile-Workshops&ref=01-flutter-intro%2F01-widgets&file=lib%2Fhomepage.dart&lines=1-8
 import 'package:flutter/material.dart';
@@ -91,7 +93,7 @@ class _HomePageState extends State<HomePage> {
 
 ## Import It in main.dart
 
-`main()` runs the app. `MyApp` sets its title and theme, and `home` is the first screen. The old `HomePage` comes out of this file, and an import brings in the new one. `package:flutter_workshop/` is this app's own `lib` folder: `flutter_workshop` is the name in `pubspec.yaml`.
+`main()` runs the app. `MyApp` sets its title and theme, and `home` is the first screen. Delete the old `HomePage` class from the bottom of this file, and add the import of the new one as the first line. `package:flutter_workshop/` is this app's own `lib` folder: `flutter_workshop` is the name in `pubspec.yaml`.
 
 ```diff file=lib/main.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/899d081e2d2b529508b3e74c0432cf081690590e...87abfe6b0226d13d96e4635e24579181396ce47f#diff-e61eb31d013d12616f5532636a88cfa63631dda8f7829e5424e68542214d1608 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=01-flutter-intro%2F01-widgets&from=01-flutter-intro%2F00-start&file=lib%2Fmain.dart
 --- a/lib/main.dart
@@ -155,6 +157,6 @@ class _HomePageState extends State<HomePage> {
 
 In `homepage.dart`, wrap the `Text` in a `Column`, add a second `Text` under it, and put the whole thing in a `Card`. Save, and press `r` in the terminal running the app: the change appears without restarting.
 
-This one's for practice, with no checkpoint. Undo it before step 2, so your code matches ours.
+This one's for practice, with no checkpoint. Undo it before step 2 (**Ctrl+Z**, or **Cmd+Z** on macOS, in the editor), so your code matches ours.
 
 <!-- prettier-ignore-end -->

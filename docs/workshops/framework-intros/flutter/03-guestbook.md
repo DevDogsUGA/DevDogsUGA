@@ -18,18 +18,20 @@ checkpoint: "01-flutter-intro/03-guestbook"
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
 
-**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](/docs/workshops/getting-started/prerequisites#git-and-a-github-account).
 
 ```bash cwd=~/Mobile-Workshops
 git fetch origin --tags
-# Save your own changes first
+# Save your own changes first (fine if there's nothing to save)
 git add -A
 git commit -m "My work"
 # Bring in the code from the end of the last step
 git merge --no-edit 01-flutter-intro/02-navigation
 ```
 
-**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+Where you and the step changed the same lines, the merge stops with a conflict. Open each file git lists, keep the code you want between the `<<<<<<<` and `>>>>>>>` markers, delete the markers, then finish with `git add -A` and `git commit --no-edit`. To back out instead, run `git merge --abort`.
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes to the step's files are lost; new files you made stay. If you're in the middle of a merge, run `git merge --abort` first.
 
 ```bash cwd=~/Mobile-Workshops
 git fetch origin --tags
@@ -45,7 +47,7 @@ A guestbook uses everything so far: a Stateful widget, a `Scaffold`, and the tab
 
 ## The Guestbook Screen
 
-Make `lib/guestbook.dart`. `GuestbookEntry` is plain Dart: one entry's name, message and time. `required` means every entry has all three.
+Make `lib/guestbook.dart`. It's long, so it comes in five parts: put them one after another, in order, or copy the whole file from the link after the last part. `GuestbookEntry` is plain Dart: one entry's name, message and time. `required` means every entry has all three.
 
 ```dart file=lib/guestbook.dart lines=1-10 href=https://github.com/DevDogsUGA/Mobile-Workshops/blob/e0c3c4d79c64d4b46da8c6402727a1fd1b907ec1/lib/guestbook.dart#L1-L10 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FMobile-Workshops&ref=01-flutter-intro%2F03-guestbook&file=lib%2Fguestbook.dart&lines=1-10
 import 'package:flutter/material.dart';

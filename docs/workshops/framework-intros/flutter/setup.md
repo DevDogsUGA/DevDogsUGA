@@ -44,11 +44,11 @@ git switch -c <github-username>/01-flutter-intro 01-flutter-intro/00-start
 flutter pub get
 ```
 
-The workshop started from `flutter create workshop_demo`, which makes a fresh Flutter app. The repo's `main` branch is that same starter, trimmed down, so every step below has a checkpoint to catch up to if you fall behind.
+Open the `Mobile-Workshops` folder in VS Code (`code .` from that terminal works too). If `flutter pub get` says your Dart SDK is too old, run `flutter upgrade`. The workshop started from `flutter create workshop_demo`, which makes a fresh Flutter app. `01-flutter-intro/00-start` is that same starter, trimmed down, and every step below ends at a checkpoint like it, so you can catch up if you fall behind.
 
 ## Run It
 
-Start your emulator from Android Studio's Device Manager first. Then:
+Start your emulator first: in Android Studio, **More Actions → Virtual Device Manager**, then the play button beside your device. `flutter devices` should list it. Then:
 
 ```bash cwd=~/Mobile-Workshops
 # Build the app and start it on the emulator

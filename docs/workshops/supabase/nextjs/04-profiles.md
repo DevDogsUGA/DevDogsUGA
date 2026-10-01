@@ -18,18 +18,20 @@ checkpoint: "02-supabase/04-profiles"
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
 
-**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](/docs/workshops/getting-started/prerequisites#git-and-a-github-account).
 
 ```bash cwd=~/Web-Workshops
 git fetch origin --tags
-# Save your own changes first
+# Save your own changes first (fine if there's nothing to save)
 git add -A
 git commit -m "My work"
 # Bring in the code from the end of the last step
 git merge --no-edit 02-supabase/03-insert-naive
 ```
 
-**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+Where you and the step changed the same lines, the merge stops with a conflict. Open each file git lists, keep the code you want between the `<<<<<<<` and `>>>>>>>` markers, delete the markers, then finish with `git add -A` and `git commit --no-edit`. To back out instead, run `git merge --abort`.
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes to the step's files are lost; new files you made stay. If you're in the middle of a merge, run `git merge --abort` first.
 
 ```bash cwd=~/Web-Workshops
 git fetch origin --tags

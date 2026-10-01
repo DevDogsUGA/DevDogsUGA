@@ -139,6 +139,16 @@ authenticate to GitHub over the command line — SSH keys or
 [`gh auth login`](https://cli.github.com/) both work; pick whichever you
 already use.
 
+Tell Git who you are, once per machine. Every commit records it, and
+`git commit` refuses to run without it:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+Use the email on your GitHub account, so GitHub links your commits to you.
+
 <details>
 <summary>Why?</summary>
 

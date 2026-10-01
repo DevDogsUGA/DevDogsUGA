@@ -34,7 +34,7 @@ git switch -c <github-username>/01-nextjs-intro 01-nextjs-intro/00-start
 pnpm install
 ```
 
-The workshop started from `pnpm create next-app@latest my-app --yes`, which makes a fresh Next.js app. The repo's `main` branch is that same starter, trimmed down, so every step below has a checkpoint to catch up to if you fall behind.
+Open the `Web-Workshops` folder in VS Code (`code .` from that terminal works too). The workshop started from `pnpm create next-app@latest my-app --yes`, which makes a fresh Next.js app. `01-nextjs-intro/00-start` is that same starter, trimmed down, and every step below ends at a checkpoint like it, so you can catch up if you fall behind.
 
 ## Run It
 
@@ -43,6 +43,6 @@ The workshop started from `pnpm create next-app@latest my-app --yes`, which make
 pnpm dev
 ```
 
-Open [localhost:3000](http://localhost:3000): a page with one heading. Leave the server running while you work; the page reloads every time you save a file.
+Open [localhost:3000](http://localhost:3000): a page with one heading. Leave the server running while you work; the page reloads every time you save a file. If something else already uses port 3000, run `pnpm dev --port 3001` and use that port instead.
 
 <!-- prettier-ignore-end -->

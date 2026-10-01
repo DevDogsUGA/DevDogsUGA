@@ -18,18 +18,20 @@ checkpoint: "01-nextjs-intro/06-guestbook"
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
 
-**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](/docs/workshops/getting-started/prerequisites#git-and-a-github-account).
 
 ```bash cwd=~/Web-Workshops
 git fetch origin --tags
-# Save your own changes first
+# Save your own changes first (fine if there's nothing to save)
 git add -A
 git commit -m "My work"
 # Bring in the code from the end of the last step
 git merge --no-edit 01-nextjs-intro/05-interactivity
 ```
 
-**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.
+Where you and the step changed the same lines, the merge stops with a conflict. Open each file git lists, keep the code you want between the `<<<<<<<` and `>>>>>>>` markers, delete the markers, then finish with `git add -A` and `git commit --no-edit`. To back out instead, run `git merge --abort`.
+
+**Or start over from the last step.** This moves your branch to the end of the last step. Your changes to the step's files are lost; new files you made stay. If you're in the middle of a merge, run `git merge --abort` first.
 
 ```bash cwd=~/Web-Workshops
 git fetch origin --tags
@@ -97,7 +99,7 @@ export default function GuestbookPage() {
 
 ## The Guestbook Component
 
-`Guestbook` is a Client Component: it holds state, and its form reacts to typing. `Entry` describes one message. The component keeps three pieces of state: the list of entries, and what's typed in each field so far.
+The file is long, so it comes in four parts: put them one after another, in order (the line numbers show where each goes), or copy the whole file from the link after the last part. `Guestbook` is a Client Component: it holds state, and its form reacts to typing. `Entry` describes one message. The component keeps three pieces of state: the list of entries, and what's typed in each field so far.
 
 ```tsx file=components/Guestbook.tsx lines=1-14 href=https://github.com/DevDogsUGA/Web-Workshops/blob/062a77d02cc1fc92d4dde9f138aba594bada96ba/components/Guestbook.tsx#L1-L14 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=01-nextjs-intro%2F06-guestbook&file=components%2FGuestbook.tsx&lines=1-14
 "use client";
