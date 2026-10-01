@@ -41,7 +41,7 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/00-sta
 
 </div>
 
-The guestbook is the part we didn't get to at Setup Night. It's already in your starter code, keeping messages in memory. Now we'll give it a real database.
+The guestbook from Framework Intros is already in your starter code, keeping messages in memory. Now we'll give it a real database.
 
 ## Create the Messages Table
 
@@ -177,7 +177,7 @@ flutter pub add supabase_flutter gotrue
 
 ## From In-Memory to Supabase
 
-Setup Night's guestbook kept entries in a list in memory, so they vanished on restart.
+The guestbook from Framework Intros kept entries in a list in memory, so they vanished on restart.
 
 `Supabase.instance.client` is the client `main.dart` set up, shared by the whole app.
 

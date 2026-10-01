@@ -88,7 +88,7 @@ Only signed-in users can insert, and `with check (auth.uid() = user_id)` means o
 
 ## Posting a Message
 
-The form from Setup Night comes back, now saving to the database.
+The form from Framework Intros comes back, now saving to the database.
 
 A `TextEditingController` holds what's typed in a text field.
 

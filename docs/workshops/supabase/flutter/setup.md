@@ -16,7 +16,7 @@ order: 0
 # Download the workshop repo
 git clone https://github.com/DevDogsUGA/Mobile-Workshops
 cd Mobile-Workshops
-# Your own branch, starting from Setup Night's code
+# Your own branch, starting from the Framework Intros code
 git switch -c <github-username>/02-supabase origin/01-flutter-intro
 # Install dependencies
 flutter pub get

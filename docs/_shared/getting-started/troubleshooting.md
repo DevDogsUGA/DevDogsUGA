@@ -157,8 +157,12 @@ WSL2 — fighting over the same port.
 **Fix:** From a Windows terminal, `adb kill-server`, then let WSL2 start its
 own. Without Windows 11's mirrored networking mode
 (`networkingMode=mirrored` in `.wslconfig`), the emulator and WSL2 can't
-reach each other at all — see
-[Prerequisites](./prerequisites#running-the-sdk-inside-wsl2-against-an-emulator-on-windows).
+reach each other at all.
+
+:::only{project="study-group-finder"}
+See [Prerequisites](./prerequisites#running-the-sdk-inside-wsl2-against-an-emulator-on-windows)
+for the full setup.
+:::
 
 ## Environment and Supabase
 
