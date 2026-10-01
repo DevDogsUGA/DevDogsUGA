@@ -38,7 +38,13 @@ local stack, a hosted development project, staging, or production — and waits
 for it to finish:
 
 ```bash
-pnpm devtools db start && pnpm devtools db reset          # local stack, once
+pnpm devtools supabase start && pnpm devtools supabase db reset   # local stack, once
+pnpm -F schedule-builder populate:courses
+```
+
+`populate:courses` is `devtools workflows run` for the development tier. Run that directly to pick a workflow interactively:
+
+```bash
 pnpm devtools workflows run --app schedule-builder --tier development
 ```
 
