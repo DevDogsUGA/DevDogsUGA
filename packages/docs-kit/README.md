@@ -31,9 +31,16 @@ get a generated reference.
 The bare mode (and so `build`) also runs two checks that DO fail the build: broken
 internal links (`/docs/<project>/<path>#anchor` and relative `*.md` links have
 to resolve, mounting from `docs/_shared/**` included) and a documented
-`pnpm devtools …` / `pnpm --filter … <script>` / `pnpm run <script>` that does
-not match a real command or script. Opt a fenced sample out with a `nocheck`
-fence-info word (` ```sh nocheck `).
+`pnpm devtools …` / `pnpm backstage …` / `pnpm --filter … <script>` /
+`pnpm run <script>` that does not match a real command or script. Opt a fenced
+sample out with a `nocheck` fence-info word (` ```sh nocheck `).
+
+The two CLIs' command lists come from running `pnpm devtools --help --json` and
+`pnpm backstage --help --json` from the repo root, so the docs are checked
+against the latest publish. If a list cannot be loaded the build fails; there
+is no silent skip. To check against a build that is not published yet, set
+`DOCS_KIT_DEVTOOLS_CMD` / `DOCS_KIT_BACKSTAGE_CMD` to the command that runs it
+(`DOCS_KIT_DEVTOOLS_CMD="node /path/to/devtools.mjs"`).
 
 Each page ships as HTML rendered at build time (Shiki, KaTeX, GitHub alerts),
 along with its headings and search text.

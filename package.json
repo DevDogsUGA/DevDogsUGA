@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "devtools": "pnpm --config.ignore-scripts=true dlx @devdogsuga/devtools",
+    "backstage": "pnpm --config.ignore-scripts=true dlx @devdogsuga/backstage",
     "build": "pnpm -r -F './apps/**' -F '!study-group-finder' run build",
     "dev": "echo 'Start one app: pnpm -F <app> dev, or cd apps/<app> && pnpm dev (apps: platform, schedule-builder)'",
     "typecheck": "pnpm -r -F '!study-group-finder' run typecheck",
@@ -19,7 +20,6 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.1",
-    "@devdogsuga/devtools": "0.1.24",
     "@devdogsuga/env": "^0.1.4",
     "@types/node": "catalog:",
     "prettier": "3.9.6",

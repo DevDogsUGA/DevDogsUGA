@@ -5,10 +5,10 @@
 # nothing the package needs to work. supabase is `true` here for the same
 # reason it is in the older list — its postinstall fetches the CLI binary.
 #
-# None of this reaches `pnpm devtools`: its `pnpm dlx` installs into a
-# throwaway project that ignores this file and prompts for every build
-# script (core-js, esbuild). The root package.json's `devtools` script skips
-# them all with ignore-scripts instead. devtools needs none of them: esbuild
+# None of this reaches `pnpm devtools` or `pnpm backstage`: their `pnpm dlx`
+# installs into a throwaway project that ignores this file and prompts for
+# every build script (core-js, esbuild). The root package.json's scripts for
+# them skip them all with ignore-scripts instead. Neither needs any: esbuild
 # finds its prebuilt @esbuild/<platform> binary without its postinstall, and
 # sharp, resvg and the Bitwarden SDK ship prebuilt too.
 allowBuilds:
@@ -259,6 +259,13 @@ packages:
 # Windows and POSIX, so no script needs an `sh -c` wrapper. Note it also globs
 # unquoted [...] patterns; keep such arguments quoted.
 shellEmulator: true
+
+# `pnpm devtools` and `pnpm backstage` are `pnpm dlx` runs, and dlx reuses a
+# cached install for as long as this allows (a day by default). Zero resolves
+# the `latest` dist-tag on every run, so a publish reaches everyone, CI
+# included, at once. The `@devdogsuga/*` release-age exclude above is what lets
+# a version minutes old through.
+dlxCacheMaxAge: 0
 
 patchedDependencies:
   # The request @vinext/cloudflare's gateway builds for the cached response

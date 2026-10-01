@@ -94,7 +94,6 @@ describe("collectInputs", () => {
       "apps/platform/package.json",
       "docs/package.json",
       "docs/platform/index.md",
-      "node_modules/@devdogsuga/devtools/dist/commands.js",
       "package.json",
       "packages/env/package.json",
       "packages/env/src/index.ts",

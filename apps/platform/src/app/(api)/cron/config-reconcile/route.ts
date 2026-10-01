@@ -58,7 +58,7 @@ export async function GET(request: Request) {
       "Config reconcile aborted: committed config does not parse",
       [e instanceof Error ? e.message : String(e)],
       "`getClubConfig()` threw before reconcile ever ran. Run " +
-        "`pnpm --filter @devdogsuga/events check` to see the same " +
+        "`pnpm -F @devdogsuga/events check:events` to see the same " +
         "failure locally.",
     );
     return NextResponse.json({ success: false, reason: "invalid_config_file" });
