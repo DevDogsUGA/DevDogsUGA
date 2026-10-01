@@ -45,7 +45,7 @@ Every page other than a project's own `index.md` carries a `section` in its fron
 
 Prose checks — page length, collapsible defects, missing descriptions — **warn and never fail**; see [Writing docs](/docs/toolkit/infrastructure/docs-system/writing#why-its-like-this) for why. The bare `docs-kit` run prints the count on its summary line; `docs-kit check` prints the detail.
 
-Link and command checks are the opposite: they **fail the build**. Every link between docs pages is resolved against the pages that actually exist, and every `pnpm`/`devtools` command inside a fenced code block is checked against the real command tree, so a renamed page, a moved mount, or a renamed CLI subcommand breaks the build the same day it happens rather than going stale until someone notices. A code block that isn't a command to run — example output, a hypothetical invocation, a snippet from another tool — opts out with a `nocheck` fence-info-string suffix:
+Link and command checks are the opposite: they **fail the build**. Every link between docs pages is resolved against the pages that actually exist, and every `pnpm`/`devtools` command inside a fenced code block is checked against the real command tree, so a renamed page, a moved mount, or a removed CLI subcommand breaks the build the same day it happens rather than going stale until someone notices. A code block that isn't a command to run — example output, a hypothetical invocation, a snippet from another tool — opts out with a `nocheck` fence-info-string suffix:
 
 ````md
 ```bash nocheck
@@ -68,7 +68,7 @@ Heading ids are slugged with `github-slugger` — the same slugger `rehype-slug`
 
 Search is the one part that still uses Postgres, because it is the one part whose cost scales with how much documentation exists. `platform."docsPages"` holds `path`, `title`, `description` and `plainText` alongside a generated `tsvector` weighting title `A`, description `B` and body `C` — so page bodies are searchable, and a title match outranks a body match. `searchDocs` queries it with `websearch_to_tsquery`, ranks with `ts_rank`, and builds snippets with `ts_headline`.
 
-The build does not write that index. `pnpm -F @devdogsuga/docs populate:search` (`docs-kit index`) pushes the compiled artifact into the database through `platform.replace_docs_index`, and the dev server runs it after every docs change. The deploy scripts still run it ahead of every release — see [Local preview](/docs/toolkit/infrastructure/docs-system/preview) for pointing it at your own stack.
+The build does not write that index. `pnpm -F @devdogsuga/docs populate:search` (`docs-kit index`) pushes the compiled artifact into the database through `platform.replace_docs_index`, and the dev server runs it after every docs change. The deploy workflow runs it after the platform Worker deploys — see [Local preview](/docs/toolkit/infrastructure/docs-system/preview) for pointing it at your own stack.
 
 <details>
 <summary>Why Postgres rather than an in-memory JS index?</summary>
