@@ -1,4 +1,4 @@
-# Cloudflare local dev vars for `wrangler dev` / `cf:preview` / `cf:dev`.
+# Cloudflare local dev vars for `wrangler dev` / `pnpm -F schedule-builder preview`.
 # Not read by `pnpm dev` (plain `next dev`, no workerd underneath) — only by
 # the Worker-runtime paths that build through vinext.
 # Copy to .dev.vars (gitignored). Mirror the server env the worker needs at

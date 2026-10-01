@@ -35,11 +35,11 @@ import type { env as scheduleBuilderEnv } from "~/env";
  * The bindings this entry reads, borrowed by type from `~/env` -- same
  * pattern as the platform app's `WorkerEnv`. `SCHEDULE_BUILDER_SENTRY_DSN` is a Worker secret;
  * `DEPLOY_ENV` is set by wrangler.jsonc's per-env `vars` block and the
- * cf:build:* scripts.
+ * build step.
  *
  * `SENTRY_RELEASE` is NOT part of `~/env`'s schema -- see `apps/platform/
  * cloudflare/worker.ts`'s `WorkerEnv` for why. It reaches this Worker as a
- * `--var` on `wrangler deploy` (see `devtools`' `ci.ts`), same as platform.
+ * `--var` on `wrangler deploy` (see `backstage deploy`), same as platform.
  *
  * `@sentry/cloudflare`'s `withSentry` infers ONE `Env` type parameter shared
  * by both the options callback below and the `fetch`/`scheduled` handler

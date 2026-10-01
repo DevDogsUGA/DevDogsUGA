@@ -29,16 +29,14 @@ Each app binds `Database` once in its own `~/supabase/{client,server,admin}.ts`
 wrapper rather than threading the type argument through every call site — see
 those files for the concrete pattern.
 
-The database lifecycle used to live here as package scripts — `start-local-stack`,
-`link-remote-project`, `push-migrations` and the two `reset-*-database` scripts —
-which `pnpm devtools` shelled out to by name. It no longer does: devtools drives
-the Supabase CLI directly (see `link`, `push`, `reset` in the
-[database guide](../../docs/toolkit/guides/database.md)), and regenerates
-`database.types.ts` here via `@devdogsuga/db/typegen`. This package's own
-scripts are the standard `build`/`typecheck`/`test` lifecycle plus `test:rls`.
-That last one is the RLS suite, run directly
-(`pnpm --filter @devdogsuga/supabase test:rls`) and in CI, with no `pnpm devtools`
-verb behind it.
+The database lifecycle used to live here as package scripts, then in a `db`
+namespace of `pnpm devtools`. Neither remains: use `pnpm devtools supabase …`
+(the Supabase CLI with the session's tier filled in) and `preset
+apply-migrations`. This package's own scripts are the standard
+`typecheck`/`test` lifecycle, `types:db` (regenerates `database.types.ts`;
+`types:db:check` fails on drift) and `test:rls`, the RLS suite
+(`pnpm -F @devdogsuga/supabase test:rls`), which has no `pnpm devtools` verb
+behind it.
 
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/supabase) ·
 [Database](../../docs/platform/guides/database.md)

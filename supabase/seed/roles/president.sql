@@ -9,7 +9,7 @@
 -- FALSE, so an officer's roles compose as the union of their grants.
 --
 -- President is the top of the ladder, and no other role outranks it. It has the
--- fixed id `devtools grant-root` writes, so that command can bootstrap the
+-- fixed id `devtools roles grant` writes, so that command can bootstrap the
 -- first President on an instance with nobody on it. That Member and President
 -- exist, and that President holds every permission, is guaranteed by the
 -- 20261001130000_42_platform_core_roles.sql migration (a permission column added
