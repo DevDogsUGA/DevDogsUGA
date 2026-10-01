@@ -4,8 +4,8 @@ import { scheduleBuilderCsp } from "~/config/csp";
 import golden from "./securityHeaders.golden.json";
 
 /**
- * `securityHeaders.golden.json` is the header set the retired
- * `packages/security-headers` produced for schedule-builder in each environment
+ * `securityHeaders.golden.json` is the header set
+ * the retired security-headers package produced for schedule-builder in each environment
  * (with a nonce and Sentry, and with neither). The new build must send the same headers; only the
  * order of directives and sources may differ.
  */

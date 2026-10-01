@@ -64,7 +64,7 @@ other cron route):
 
 - **The deploy pipeline**, immediately after each deploy of `platform`
   (`.github/workflows/deploy-app.yaml`'s "Reconcile meetings/workshops from
-  @devdogsuga/events" step, via `@devdogsuga/deploy-checks`' reconcile-cli).
+  @devdogsuga/events" step, via `backstage deploy reconcile`).
   This is the primary trigger: a promoted config lands the moment its own
   build goes live, because the `@devdogsuga/events` version reconciled
   against is whichever one that build bundled in — reconciling at migrate

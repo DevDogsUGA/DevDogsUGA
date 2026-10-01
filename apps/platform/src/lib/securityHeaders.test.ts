@@ -4,8 +4,8 @@ import { platformCsp } from "~/lib/csp";
 import golden from "./securityHeaders.golden.json";
 
 /**
- * `securityHeaders.golden.json` is the header set the retired
- * `packages/security-headers` produced for the platform in each environment
+ * `securityHeaders.golden.json` is the header set
+ * the retired security-headers package produced for the platform in each environment
  * (nonce'd and not). The new build must send the same headers; only the
  * order of directives and sources may differ.
  */
