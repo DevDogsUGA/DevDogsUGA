@@ -1,5 +1,5 @@
-import { MARK, Mark } from "@devdogsuga/open-graph";
-import { imageResponse } from "~/lib/ogImage";
+import { MARK, Mark } from "@devdogsuga/brand";
+import { imageResponse } from "@devdogsuga/brand/next";
 
 /**
  * The browser favicon: the DevDogs mascot on a transparent canvas, without the

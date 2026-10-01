@@ -31,13 +31,17 @@ import {
   ERROR_LEVELS,
   QR_DEFAULTS,
   QR_FORMATS,
+  QR_THEMES,
   contrastingBackground,
   qrVersionIssue,
   renderQrSvg,
+  resolveQrRequest,
   type ErrorLevel,
   type QrFormat,
   type QrShape,
-} from "~/lib/qr";
+  type QrTheme,
+} from "@devdogsuga/brand/qr";
+import { ZodError } from "zod";
 
 const DISCORD_LOGO_PATHS = {
   "discord-white": "/brand/discord-white.svg",
@@ -47,16 +51,7 @@ const DISCORD_LOGO_PATHS = {
 type DiscordLogoChoice = keyof typeof DISCORD_LOGO_PATHS;
 type LogoChoice =
   "devdogs" | "acm" | DiscordLogoChoice | "icon" | "custom" | "none";
-type Brand = "devdogs" | "acm";
-type Theme = `${Brand}-${"light" | "dark"}` | "custom";
-const ACM_LOGO_CROP = {
-  x: 0,
-  y: 24,
-  width: 265,
-  height: 265,
-  sourceWidth: 384,
-  sourceHeight: 533,
-};
+type Theme = QrTheme | "custom";
 const ICON_WEIGHTS: IconWeight[] = [
   "thin",
   "light",
@@ -378,28 +373,42 @@ export default function QrGenerator() {
   const result = useMemo(() => {
     try {
       return {
-        svg: renderQrSvg(
-          text,
-          {
+        svg: (() => {
+          // The same schema `backstage qr` parses, so a request means the
+          // same thing here and there. The icon and custom-image logos are
+          // this page's own (the CLI takes presets), so they reach the
+          // renderer as `logo` and the schema is told there is no preset.
+          const { text: encoded, options } = resolveQrRequest({
+            text,
             size,
             margin,
             color,
-            background: background || undefined,
+            background,
             shape,
-            logoCrop: logoChoice === "acm" ? ACM_LOGO_CROP : undefined,
+            logo:
+              logoChoice === "devdogs" ||
+              logoChoice === "acm" ||
+              isDiscordLogoChoice(logoChoice)
+                ? logoChoice
+                : "none",
             logoSize,
             logoPadding,
             errorLevel,
             version,
-          },
-          logo,
-        ),
+          });
+          return renderQrSvg(encoded, options, logo);
+        })(),
         error: "",
       };
     } catch (error) {
       return {
         svg: "",
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          error instanceof ZodError
+            ? (error.issues[0]?.message ?? "Invalid QR options.")
+            : error instanceof Error
+              ? error.message
+              : String(error),
       };
     }
   }, [
@@ -543,13 +552,11 @@ export default function QrGenerator() {
     setTheme(next);
     setStatus("");
     if (next === "custom") return;
-    const separator = next.lastIndexOf("-");
-    const nextBrand = next.slice(0, separator) as Brand;
-    const colorTheme = next.slice(separator + 1) as "light" | "dark";
-    setShape(nextBrand === "acm" ? "square" : "rounded");
-    setColor(colorTheme === "dark" ? "#000000" : "#ffffff");
+    const preset = QR_THEMES[next];
+    setShape(preset.shape);
+    setColor(preset.color);
     setBackground("");
-    setLogoChoice(nextBrand);
+    setLogoChoice(preset.logo);
     setLogoSize(QR_DEFAULTS.logoSize);
     setLogoPadding(QR_DEFAULTS.logoPadding);
     setErrorLevel(QR_DEFAULTS.errorLevel);

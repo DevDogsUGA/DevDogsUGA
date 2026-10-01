@@ -195,8 +195,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       '@devdogsuga/brand':
-        specifier: ^0.1.2
-        version: 0.1.2
+        specifier: ^0.1.4
+        version: 0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.2(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0))
       '@devdogsuga/db':
         specifier: ^0.1.1
         version: 0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9)
@@ -218,9 +218,6 @@ importers:
       '@devdogsuga/newsletter':
         specifier: ^0.1.2
         version: 0.1.2
-      '@devdogsuga/open-graph':
-        specifier: workspace:*
-        version: link:../../packages/open-graph
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -377,9 +374,6 @@ importers:
       postgres:
         specifier: 'catalog:'
         version: 3.4.9
-      qrcode:
-        specifier: 1.5.4
-        version: 1.5.4
       radix-ui:
         specifier: 'catalog:'
         version: 1.6.7(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
@@ -477,6 +471,9 @@ importers:
       '@next/env':
         specifier: 16.3.2
         version: 16.3.2
+      '@resvg/resvg-js':
+        specifier: ^2.6.2
+        version: 2.6.2
       '@supabase/auth-js':
         specifier: ^2.112.3
         version: 2.112.3
@@ -507,9 +504,6 @@ importers:
       '@types/papaparse':
         specifier: 'catalog:'
         version: 5.5.2
-      '@types/qrcode':
-        specifier: ^1.5.6
-        version: 1.5.6
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.18
@@ -540,6 +534,9 @@ importers:
       postcss:
         specifier: 'catalog:'
         version: 8.5.26
+      satori:
+        specifier: ^0.33.4
+        version: 0.33.4
       shadcn:
         specifier: ^4.18.0
         version: 4.18.0(typescript@6.0.3)
@@ -604,18 +601,15 @@ importers:
 
   apps/schedule-builder:
     dependencies:
+      '@devdogsuga/brand':
+        specifier: ^0.1.4
+        version: 0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.2(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0))
       '@devdogsuga/db':
         specifier: ^0.1.1
         version: 0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9)
       '@devdogsuga/env':
         specifier: ^0.1.2
         version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
-      '@devdogsuga/headers':
-        specifier: 0.1.1
-        version: 0.1.1
-      '@devdogsuga/open-graph':
-        specifier: workspace:*
-        version: link:../../packages/open-graph
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -938,6 +932,9 @@ importers:
 
   packages/email:
     devDependencies:
+      '@devdogsuga/brand':
+        specifier: ^0.1.4
+        version: 0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.2(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0))
       '@devdogsuga/config':
         specifier: ^0.1.1
         version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
@@ -962,46 +959,6 @@ importers:
       react:
         specifier: 'catalog:'
         version: 19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
-      tsx:
-        specifier: 'catalog:'
-        version: 4.23.12
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
-
-  packages/open-graph:
-    dependencies:
-      '@devdogsuga/brand':
-        specifier: ^0.1.2
-        version: 0.1.2
-      react:
-        specifier: 'catalog:'
-        version: 19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)
-    devDependencies:
-      '@devdogsuga/config':
-        specifier: ^0.1.1
-        version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
-      '@phosphor-icons/react':
-        specifier: ^2.1.10
-        version: 2.1.10(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.2.0
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.2.18
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.2.4(@types/react@19.2.18)
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 4.1.11(vitest@4.1.11)
       react-dom:
         specifier: 'catalog:'
         version: 19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
@@ -1424,6 +1381,26 @@ packages:
 
   '@devdogsuga/brand@0.1.2':
     resolution: {integrity: sha512-GRAiNKf2pekVa870nJ4jSKB8bl75o0EAjMUbpPFRZ8Fe23mGxNOW8adRSQKtytJ+NX1dF+y6tn/UVC7B+T67Cw==}
+
+  '@devdogsuga/brand@0.1.4':
+    resolution: {integrity: sha512-R8elyIrHqZBsbLuO1J3wsH0gjKuqZpQMkkIn61FPhlLfTT7VcR+JcvjHWyuMRIRsKVtSIzVv1Z1QnsCp201LIw==}
+    peerDependencies:
+      '@resvg/resvg-js': ^2.6.2
+      next: '>=16'
+      react: ^19.0.0
+      satori: ^0.33.4
+      sharp: 0.35.3
+    peerDependenciesMeta:
+      '@resvg/resvg-js':
+        optional: true
+      next:
+        optional: true
+      react:
+        optional: true
+      satori:
+        optional: true
+      sharp:
+        optional: true
 
   '@devdogsuga/config@0.1.1':
     resolution: {integrity: sha512-y8qGFsSPKkkqTq6RQOXnuHEksXWltmaOrRORdq8z6w8mRLC8uTIvWrp8sAz6vp4QLWwVLWoBVZRYhZLuOBoYoQ==}
@@ -4585,9 +4562,6 @@ packages:
 
   '@types/papaparse@5.5.2':
     resolution: {integrity: sha512-gFnFp/JMzLHCwRf7tQHrNnfhN4eYBVYYI897CGX4MY1tzY9l2aLkVyx2IlKZ/SAqDbB3I1AOZW5gTMGGsqWliA==}
-
-  '@types/qrcode@1.5.6':
-    resolution: {integrity: sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==}
 
   '@types/react-dom@19.2.4':
     resolution: {integrity: sha512-Bsc+QHgp+P/F02XDzNCY9jnZNCUuLki36KT7VKrTXXLdHf+vHMNZnW1rVu5DNW/rCK+fya3DATySbLM4yhtKUw==}
@@ -9863,6 +9837,17 @@ snapshots:
 
   '@devdogsuga/brand@0.1.2': {}
 
+  '@devdogsuga/brand@0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.2(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0))':
+    dependencies:
+      qrcode: 1.5.4
+      zod: 4.4.3
+    optionalDependencies:
+      '@resvg/resvg-js': 2.6.2
+      next: 16.3.2(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
+      react: 19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)
+      satori: 0.33.4
+      sharp: 0.35.3(@types/node@26.2.0)
+
   '@devdogsuga/config@0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)':
     dependencies:
       '@testing-library/jest-dom': 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
@@ -12647,10 +12632,6 @@ snapshots:
       undici-types: 8.3.0
 
   '@types/papaparse@5.5.2':
-    dependencies:
-      '@types/node': 26.2.0
-
-  '@types/qrcode@1.5.6':
     dependencies:
       '@types/node': 26.2.0
 
@@ -16090,7 +16071,7 @@ snapshots:
       '@next/swc-win32-x64-msvc': 16.3.2
       '@opentelemetry/api': 1.9.1
       '@playwright/test': 1.62.1
-      sharp: 0.35.3(@types/node@26.2.0)
+      sharp: 0.35.4(@types/node@26.2.0)
     transitivePeerDependencies:
       - '@babel/core'
       - '@types/node'

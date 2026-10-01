@@ -1,3 +1,5 @@
+import { PALETTE } from "@devdogsuga/brand";
+
 /**
  * Email design tokens.
  *
@@ -9,17 +11,23 @@
  * partial and Outlook inverts colors on its own regardless, so a dark variant
  * would be honoured by only some clients while the rest invert the light one
  * into something nobody designed. These colors read correctly under both.
+ *
+ * The neutrals are `@devdogsuga/brand`'s flat-hex palette (`PALETTE`, the same
+ * values the OG cards and the site's `--brand-*` variables carry) rather than
+ * a second set of greys: ink is mauve-900, the lightest steps do the borders
+ * and canvas. Only the accent is the email's own, the club's UGA red, which
+ * the brand palette does not carry.
  */
 export const theme = {
   color: {
-    ink: "#1a1a1a",
-    muted: "#5c5c5c",
-    line: "#e4e4e4",
-    surface: "#ffffff",
-    canvas: "#f4f4f5",
+    ink: PALETTE["mauve-900"],
+    muted: PALETTE["mauve-600"],
+    line: PALETTE["mauve-200"],
+    surface: PALETTE.white,
+    canvas: PALETTE["mauve-100"],
     /** UGA arch black on red. The club's marks, not the university's. */
     accent: "#ba0c2f",
-    accentInk: "#ffffff",
+    accentInk: PALETTE.white,
   },
   font: {
     sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",

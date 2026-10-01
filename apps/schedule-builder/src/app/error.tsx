@@ -1,6 +1,6 @@
 "use client"; // Error boundaries must be Client Components
 
-import { DogDaysMark } from "@devdogsuga/open-graph";
+import { DogDaysMark } from "@devdogsuga/brand";
 import Link from "next/link";
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";

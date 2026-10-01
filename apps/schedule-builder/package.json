@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "codegen": "SKIP_ENV_VALIDATION=1 vinext typegen",
+    "codegen": "SKIP_ENV_VALIDATION=1 vinext typegen && tsx scripts/brand-assets.ts",
     "prebuild": "pnpm run codegen",
     "build": "vinext build",
     "predev": "pnpm run codegen",
@@ -35,8 +35,7 @@
   "dependencies": {
     "@devdogsuga/db": "^0.1.1",
     "@devdogsuga/env": "^0.1.2",
-    "@devdogsuga/headers": "0.1.1",
-    "@devdogsuga/open-graph": "workspace:*",
+    "@devdogsuga/brand": "^0.1.4",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "^0.1.1",
     "@phosphor-icons/react": "^2.1.10",

@@ -1,8 +1,8 @@
-import { EventCard } from "@devdogsuga/open-graph";
+import { EventCard } from "@devdogsuga/brand";
 import { meetingCardDetail, meetingLocation } from "@devdogsuga/brand/event";
 import { isCancelled } from "~/components/EventsSection/meetingView";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
-import { contentType, ogResponse, size } from "~/lib/ogImage";
+import { contentType, ogResponse, size } from "@devdogsuga/brand/next";
 import {
   getMeetingBySlug,
   getMeetingWorkshops,
@@ -18,7 +18,7 @@ import {
  * reason this file exists.
  *
  * The fields are built by `meetingCardDetail`, shared with
- * `pnpm devtools images`, which renders the same card to disk for the GDG on
+ * `backstage graphics`, which renders the same card to disk for the GDG on
  * Campus platform. Sharing it is not tidiness: "what time is the meeting" is
  * the one question this image exists to answer, and two implementations is two
  * answers. The app keeps the parts that are its own — which of `nameOverride`,
