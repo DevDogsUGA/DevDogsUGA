@@ -1,116 +1,130 @@
 ---
 name: devtools
-description: The contributor CLI, organized by the job you are trying to do.
+description: The contributor CLI — the real tools with your session's tier filled in, a menu over them, and the checks CI runs.
 order: 3
 section: guides
 ---
 
 # devtools
 
-`pnpm devtools` is the front door for repository tasks, local and hosted
-infrastructure, generated content, configuration, and platform checks.
+`pnpm devtools` is the front door for contributor tasks: starting the local
+stack, running the real tools against the right database, and the checks CI
+runs. It is a visual layer over those tools, not a reimplementation of them —
+the passthroughs hand your arguments to `supabase`, `wrangler`, `drizzle-kit`
+and `psql`, and a menu builds the same commands for you.
 `@devdogsuga/devtools` ships as a published package from the sibling
-**Backstage** repository — a root devDependency pinned to an exact version,
-installed like any other npm package, not a workspace member of this repo.
-CI runs the separate `devtools-ci`/`devtools-ci-bare` binaries from the same
-package.
+**Backstage** repository. The root `devtools` script runs it through `dlx` at
+the latest version, so there is nothing to install and no version to bump.
 
 Run it without arguments to open the interactive menu. The menu reads the same
 command registry as `--help` and shell completions, but leaves out commands that
-only make sense in a shell pipeline. In particular, `completions` is CLI-only.
+only make sense in a shell pipeline. In particular, `check` and `completions`
+are CLI-only.
 
 ```bash
 pnpm devtools                       # interactive menu
 pnpm devtools --help                # command map
-pnpm devtools db --help             # one level deeper
-pnpm devtools db reset --help       # one command's options
+pnpm devtools preset --help         # one level deeper
+pnpm devtools cron run --help       # one command's options
 ```
 
-When a command reached through the menu (or one that filled a missing flag from
-a prompt) finishes, the CLI prints the flag-complete form of what it just ran
-under **Run it directly next time** — so you can learn a command by walking the
-menu once, then paste the printed line to skip the prompts on every later run.
-A command you already typed in full prints nothing extra.
+After a run that went through the menu (or filled a missing flag from a
+prompt), the CLI prints the exact command it ran under **Run it directly next
+time**, so you can learn a command by walking the menu once and paste the
+printed line afterwards. `--dry-run` prints what would run and runs nothing;
+for the passthroughs put it before the tool name
+(`pnpm devtools --dry-run supabase db push`).
+
+When a run fails, devtools writes a log with the command, versions and its own
+output, secrets redacted, and prints the path. Attach it to a #tech-support
+message.
 
 ## Start here
 
 ```bash
 pnpm devtools setup
-pnpm devtools db start
-pnpm devtools oauth
-pnpm -F platform dev
+pnpm devtools supabase start
+pnpm devtools doctor
 ```
 
-`setup` checks the machine and creates `.env` when it is missing. After the
-local database starts, `oauth` configures "Sign in with DevDogs" for the
-project. Both commands also live together under **Workspace** in the menu.
+`setup` checks the machine, creates `.env` when it is missing, and prints the
+local database next steps in order: start Supabase, build the database from the
+migrations, regenerate the types, create the storage buckets, `oauth`, then the
+dev server for the app you picked. Every step is the real tool or a package
+script, so each can be re-run alone. [Running the database](/docs/toolkit/guides/devtools-db)
+covers that half.
 
 ## Command groups
 
 ### Workspace
 
-- `setup` — check prerequisites and initialize the workspace.
-- `oauth` — configure the local Supabase project for DevDogs OAuth.
-- `run` — run a pnpm workspace task after choosing the affected apps.
-- `gen` — refresh committed generated source.
-- `docs` — maintain the documentation search index.
+- `setup` — check prerequisites and seed `.env`.
+- `doctor` — check this machine against what the repo needs: Node, pnpm, Docker,
+  `.env`, the stack, types, buckets, seeded data. Read-only. Scope it to one app
+  with `--app <slug>`; pass `--report` for a redacted, paste-able block
+  (versions, OS, results — no secrets) to drop in Discord when asking for help.
+- `oauth` — configure "Sign in with DevDogs" for the local project.
+- `script` — pick a package, then one of its scripts, and run it. With both
+  named, `pnpm devtools script <package> <script>` skips the questions.
 
-### Runtime & infrastructure
+For one task, run the script itself: `pnpm -F <app> <task>` from the root, or
+`cd apps/<app> && pnpm <task>`, and `pnpm -r run <task>` for every package. The
+`run` command is a deprecated alias for the same thing.
 
-- `db` — local containers, migration files, database endpoints, and hosted
-  database infrastructure.
-- `cf` — preview, type-generate, build, or invoke Wrangler for an app.
+### The real tools
+
+- `supabase`, `wrangler`, `drizzle-kit`, `psql` — the tool itself, with the
+  session's env.
+
+`supabase` adds `--db-url` or `--project-ref` from the session's tier unless you
+pass `--local`, `--linked`, `--db-url` or `--project-ref` yourself. It never
+falls back to the linked project and never adds `--yes`. Against staging or
+production every command asks once before it runs.
+
+### Runtime
+
+- `preset` — common jobs that take a few tool calls in a row: `restart-stack`,
+  `new-migration`, `apply-migrations` (then asks about `types:db`) and
+  `push-config`.
 - `cron` — audit configured schedules or manually fire a route-backed job.
 - `workflows` — list or trigger Cloudflare Workflows declared by Wrangler.
 
-These commands are not restricted to local services. Their leaf help names the
-target explicitly: this machine, a selected database endpoint, a local Wrangler
-session, staging, or production.
+### Configuration and access
 
-### Content & communications
+- `env` — `init`, `example` and `reset` for the local env files. Syncing them
+  with Bitwarden and GitHub is `backstage env`; see [Env](/docs/toolkit/guides/env/commands).
+- `roles` — see who holds each role, and grant or revoke one:
 
-- `images` — render club, page, app, and event graphics.
-- `emails` — render populated transactional-email previews.
-- `newsletter` — export or deliver Changelog issues.
+  ```bash
+  pnpm devtools roles list
+  pnpm devtools roles grant <email> President
+  pnpm devtools roles revoke <email> President
+  ```
 
-See [Images](/docs/toolkit/guides/images) and
-[Transactional email](/docs/toolkit/guides/email) for selection and export
-examples.
+  It works on any tier, including staging and production, where it asks first
+  (`--yes` answers it).
 
-### Configuration & integrations
+### Checks
 
-- `env` — synchronize target env files with Bitwarden, GitHub, and Cloudflare.
-- `bw` — pass arguments through to the bundled Bitwarden CLI.
+`check migrations|env|workers|scripts` are what CI runs over the checkout:
+migrations are timestamped after the base branch's, every env variable is
+declared, `workers.json` agrees with `wrangler.jsonc` and `deploy-app.yaml`, and
+package scripts use the shared vocabulary. They read the checkout and nothing
+else — no tier, no env file.
 
-### GitHub
+```bash
+pnpm devtools check migrations
+pnpm devtools check scripts
+```
 
-- `github` — reconcile branch protection rulesets and repository settings
-  (secret scanning, push protection, Dependabot, SHA pinning, allowed
-  actions) against what the repo declares.
+### What lives elsewhere
 
-### Moderation
-
-- `moderation check` — with no argument, reports the moderatable content
-  types and the reasons an app can file against them; `moderation check --app
-<slug>` runs that app's conformance check.
-- `persona <member|moderator>` — create a sign-in-able persona against the
-  session's development tier, with a random, printed password.
-- `persona --clean` — remove personas this command created.
-- `grant-root [--user <email>] [--yes]` — grant an account the President role,
-  which holds every permission. It is named for the Root role President
-  replaced, and moves President from whoever it finds holding it.
-
-`moderation check` and `persona` act on whichever development tier the
-session points at — local or a hosted development project — not only this
-machine. `grant-root` works on every tier, including staging and production,
-where it needs `--yes` or an interactive confirmation.
-
-### Environment
-
-- `doctor` — check this machine's environment against what the repo needs:
-  Node, pnpm, Docker, `.env`, hosted Supabase, OAuth — read-only. Scope it to
-  one app with `--app <slug>`; pass `--report` for a redacted, paste-able block
-  (versions, OS, results — no secrets) to drop in Discord when asking for help.
+Anything that always needs production secrets, or only your own login, is in
+`@devdogsuga/backstage`: deploys, `env pull|push|audit`, GitHub rulesets, the
+newsletter, club images and QR codes. Inside this repo it is `pnpm backstage …`;
+see [Images](/docs/toolkit/guides/images) and [Environment commands](/docs/toolkit/guides/env/commands).
+Package scripts own the rest: `types:db`, `types:drizzle`, `types:cf`,
+`fetch:campus-map` and `preview`.
 
 ## Cron jobs and Workflows
 
@@ -187,13 +201,14 @@ successful Workflow run on its own.
 ## Interactive and scripted use
 
 Interactive commands ask only for information they can discover at runtime.
-Scripts should pass selectors explicitly and may request `--json` from list and
-audit commands. Destructive or deployed writes require `--yes` when no terminal
-is available.
+Pass selectors explicitly in scripts. With no terminal, or `CI=true`, there is
+no menu and no banner, the tier must be named (`--tier` or `DEPLOY_ENV`), and
+every confirmation needs `--yes`. `--no-env` skips loading env files, for a job
+that supplies its own.
 
-The deployment pipeline uses the separate `devtools-ci` binary. CI-only deploy
+The deployment pipeline uses `pnpm backstage`, not devtools, so CI-only deploy
 steps never appear in the contributor menu.
 
-See [`devtools db` commands](/docs/toolkit/guides/devtools-db) and
+See [Running the database](/docs/toolkit/guides/devtools-db) and
 [Environment commands](/docs/toolkit/guides/env/commands) for the two largest
 command families.
