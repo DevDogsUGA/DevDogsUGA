@@ -5,24 +5,23 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./types": {
-      "types": "./dist/database.types.d.ts",
-      "default": "./dist/database.types.js"
+      "types": "./src/database.types.ts",
+      "default": "./src/database.types.ts"
     },
     "./schemas": {
-      "types": "./dist/schemas.d.ts",
-      "default": "./dist/schemas.js"
+      "types": "./src/schemas.ts",
+      "default": "./src/schemas.ts"
     }
   },
   "files": [
-    "dist",
+    "src",
     "supabase"
   ],
   "scripts": {
-    "build": "tsc",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p ../../supabase",
     "test": "vitest run",
     "test:watch": "vitest",

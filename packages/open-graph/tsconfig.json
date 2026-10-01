@@ -1,8 +1,7 @@
 {
-  // Emits for production consumers. Repo tooling selects `devdogs-source` so
-  // image edits appear immediately; templates import React explicitly because
-  // that loader may select the classic JSX runtime. `scripts` is checked
-  // separately (tsconfig.typecheck.json) and never reaches `dist`.
+  // Consumers read `src` directly (see `exports`); templates import React
+  // explicitly because a loader may select the classic JSX runtime. `scripts`
+  // is checked separately (tsconfig.typecheck.json).
   "extends": "@devdogsuga/config/tsconfig/lib.json",
   "compilerOptions": {
     "lib": ["ES2025"],

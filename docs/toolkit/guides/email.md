@@ -65,8 +65,8 @@ which is scheme-checked rather than merely encoded: `encodeURI` leaves
 `javascript:alert(1)` completely intact, and these URLs are built from database
 values.
 
-Edit a template and run `pnpm --filter @devdogsuga/email compile` to regenerate
-`src/generated/templates.ts`; the package's `build` does it for you. That file
+Edit a template and run `pnpm --filter @devdogsuga/email codegen` to regenerate
+`src/generated/templates.ts`; the package's `typecheck` and `test` do it for you. That file
 carries a "do not edit" header and means it.
 
 ## Preview populated emails

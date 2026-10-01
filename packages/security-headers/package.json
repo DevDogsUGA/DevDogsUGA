@@ -6,17 +6,14 @@
   "description": "The security response headers every app in the workspace sends: HSTS, framing/MIME/referrer hardening, a locked-down Permissions-Policy, and an env-derived Content-Security-Policy-Report-Only. One builder so apps/platform and apps/schedule-builder can't drift on the allowlist.",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "devdogs-source": "./src/index.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "files": [
-    "dist",
     "src"
   ],
   "scripts": {
-    "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

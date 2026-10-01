@@ -18,6 +18,6 @@ missing prop is a build error rather than a placeholder in somebody's inbox.
 To see a populated template, run `pnpm devtools emails`; it interactively picks
 templates and writes browser-ready HTML. `pnpm devtools emails '*' --out
 ~/emails` is the non-interactive form. Compiler snapshots with sentinel props
-remain available from `pnpm --filter @devdogsuga/email compile`.
+remain available from `pnpm --filter @devdogsuga/email codegen`.
 
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/email)
