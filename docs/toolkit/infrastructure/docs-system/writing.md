@@ -80,7 +80,7 @@ Counted in **visible words** — prose outside every `<details>`, code not count
 | Concept        | 900    |
 | Anything, ever | 1500   |
 
-Only the last row is machine-enforced, along with a 400-word cap per collapsible. Past 1500 the page splits — folding half of it into a fold it did not need is not the fix. The lint runs on every build, so `pnpm dev` prints the warning count; `pnpm --filter @devdogsuga/docs exec docs-compiler check` prints the detail.
+Only the last row is machine-enforced, along with a 400-word cap per collapsible. Past 1500 the page splits — folding half of it into a fold it did not need is not the fix. The lint runs on every build, so `pnpm dev` prints the warning count; `pnpm --filter @devdogsuga/docs exec docs-kit check` prints the detail.
 
 Project state does not belong here: open questions, phase plans, spike results and rolling status live in notes, not `docs/`.
 
@@ -199,7 +199,7 @@ Anchor links work; heading ids are GitHub-style slugs of the heading text.
 <details>
 <summary>Why can Shiki load any language now?</summary>
 
-Rendering used to happen in the platform, per request, through `react-markdown` — and the Workers runtime forbids `WebAssembly.compile()`, so that renderer ran Shiki on its JavaScript regex engine with a hand-registered, hand-imported list of grammars. That constraint is gone now that rendering happens in `@devdogsuga/docs-compiler`, at build time, in Node: the stock `@shikijs/rehype` plugin runs on Shiki's Oniguruma engine and loads any grammar on demand (`lazy: true`), so an unregistered language tag is no longer a build-time list to edit — it's just a language Shiki hasn't loaded yet, and `fallbackLanguage: "text"` is what a genuinely unsupported tag falls back to silently.
+Rendering used to happen in the platform, per request, through `react-markdown` — and the Workers runtime forbids `WebAssembly.compile()`, so that renderer ran Shiki on its JavaScript regex engine with a hand-registered, hand-imported list of grammars. That constraint is gone now that rendering happens in `@devdogsuga/docs-kit`, at build time, in Node: the stock `@shikijs/rehype` plugin runs on Shiki's Oniguruma engine and loads any grammar on demand (`lazy: true`), so an unregistered language tag is no longer a build-time list to edit — it's just a language Shiki hasn't loaded yet, and `fallbackLanguage: "text"` is what a genuinely unsupported tag falls back to silently.
 
 </details>
 
@@ -214,7 +214,7 @@ Tabs and blocks that differ by project, platform or Supabase setup have their ow
 
 A docs lint that fails the build teaches exactly one lesson — how to get under the threshold — and most of the ways under a word budget are worse than the page that tripped it: detail deleted rather than moved, a paragraph folded into a `<details>` where nobody will look for it.
 
-So the prose check reports and stops there; nothing in it sets an exit code. The counterweight is where the count gets printed. A warning behind a command someone has to think to run is a warning nobody reads, so the bare `docs-compiler` — the one every `pnpm dev` and every `@devdogsuga/docs` build already runs — prints the number on its own summary line and points at `docs-compiler check` for the detail.
+So the prose check reports and stops there; nothing in it sets an exit code. The counterweight is where the count gets printed. A warning behind a command someone has to think to run is a warning nobody reads, so the bare `docs-kit` — the one every `pnpm dev` and every `@devdogsuga/docs` build already runs — prints the number on its own summary line and points at `docs-kit check` for the detail.
 
 The link and command checks are the opposite call, deliberately: a broken link or a renamed command is not a judgement call about how to phrase something, it is just wrong, so those fail the build rather than merely being reported.
 

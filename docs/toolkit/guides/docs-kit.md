@@ -1,24 +1,24 @@
 ---
-name: docs-compiler
-description: Three modes behind one binary — compile a folder of markdown, lint the hand-written pages, or regenerate the API reference from source.
+name: docs-kit
+description: One binary for the docs — compile a folder of markdown, lint the hand-written pages, regenerate the API reference from source, or write the search index.
 order: 9
 section: guides
 ---
 
-# docs-compiler
+# docs-kit
 
-`@devdogsuga/docs-compiler` is the compiler behind `docs/`. It is why that
-package holds markdown and a manifest and no code at all: its `build` script
-runs this binary. It ships as a published package from the sibling **Backstage**
-repository — like `@devdogsuga/devtools` and `@devdogsuga/events` — so a fix to
-the compiler itself is a Backstage change, not one here.
+`@devdogsuga/docs-kit` (`packages/docs-kit`) is the compiler behind `docs/`. It
+is why that package holds markdown and a manifest and no code at all: its
+`codegen` script runs this binary. It is a private workspace package used from
+source, so a change to the compiler is an ordinary change in this repository.
 
-Three modes, one binary:
+Four modes, one binary:
 
 ```
-docs-compiler                    # compile the markdown in this folder into dist/
-docs-compiler check              # lint the hand-written pages here
-docs-compiler gen [--dry-run]    # regenerate the API reference from source
+docs-kit                    # compile the markdown in this folder into dist/
+docs-kit check              # lint the hand-written pages here
+docs-kit gen [--dry-run]    # regenerate the API reference from source
+docs-kit index              # write dist/'s pages to the search index
 ```
 
 Those are the CLI's modes, not lines to paste. The bin is linked into
@@ -65,19 +65,19 @@ warns and carries on.
 
 ## Running it
 
-`docs`' own `codegen` script is `docs-compiler build`, which runs `gen` and then
+`docs`' own `codegen` script is `docs-kit build`, which runs `gen` and then
 the bare compile, and skips both when no markdown file, manifest, lockfile or
 generator source it would read has changed since the last successful build:
 
 ```bash
-pnpm --filter @devdogsuga/docs codegen        # cached: `docs-compiler gen && docs-compiler`
+pnpm --filter @devdogsuga/docs codegen        # cached: `docs-kit gen && docs-kit`
 pnpm --filter @devdogsuga/docs codegen --force  # bypass the cache
 ```
 
 To run the compiler directly instead, from `docs/`:
 
 ```bash
-cd docs && pnpm exec docs-compiler check
+cd docs && pnpm exec docs-kit check
 ```
 
 What the rules mean for a page you are writing is

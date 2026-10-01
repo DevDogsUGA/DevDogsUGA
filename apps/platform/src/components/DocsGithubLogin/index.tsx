@@ -10,7 +10,7 @@ import { applyGithubLogin } from "./applyGithubLogin";
  *
  * The compiler wraps every literal `<github-username>` in a code block, and in
  * a terminal prompt's branch label, in `<span data-github-username>`
- * (@devdogsuga/docs-compiler's codeblocks.ts). The page's HTML is cached and
+ * (@devdogsuga/docs-kit's codeblocks.ts). The page's HTML is cached and
  * shared, so the server render always has the literal; this swaps it after
  * hydration, from the `/me` answer `NavUserProvider` already fetches. Anyone
  * without a linked GitHub account keeps the literal, which the stylesheet

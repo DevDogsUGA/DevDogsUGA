@@ -11,7 +11,7 @@ Everything under `docs/` is compiled into the platform site at build time, so a 
 
 ## From markdown to page
 
-`docs/` is a workspace package — `@devdogsuga/docs` — holding markdown and a `package.json` and nothing else. Its `codegen` script is `docs-compiler build`, from `@devdogsuga/docs-compiler`, a package published from the sibling Backstage repository. It skips the whole build when none of its inputs changed since the last one. Otherwise `docs-compiler` treats its working directory as the content root, walks it for `*.md`, parses each file, and emits `dist/index.js` plus a hand-written `dist/index.d.ts`. Emitting the declarations by hand rather than running `tsc` is what keeps the content package free of a TypeScript toolchain.
+`docs/` is a workspace package — `@devdogsuga/docs` — holding markdown and a `package.json` and nothing else. Its `codegen` script is `docs-kit build`, from `@devdogsuga/docs-kit` (`packages/docs-kit`). It skips the whole build when none of its inputs changed since the last one. Otherwise `docs-kit` treats its working directory as the content root, walks it for `*.md`, parses each file, and emits `dist/index.js` plus a hand-written `dist/index.d.ts`. Emitting the declarations by hand rather than running `tsc` is what keeps the content package free of a TypeScript toolchain.
 
 Rendering happens **in the compiler, at build time** — Shiki for code, KaTeX for math, GitHub alerts, the whole markdown-to-HTML pass — not in the platform app at request time. Each page in the emitted module already carries its rendered `html` string alongside its headings and search text; `DocPageContent` drops that string in with `dangerouslySetInnerHTML`, safe only because nothing a visitor wrote ever reaches it. The platform holds no markdown renderer of its own.
 
@@ -37,13 +37,13 @@ Every page other than a project's own `index.md` carries a `section` in its fron
 
 ## Reference generation
 
-`docs-compiler gen` walks TypeScript sources and writes `docs/<project>/reference/`. Today that's `toolkit` only: the shared packages published from Backstage. App-level `reference/` directories (one per Next app, one Dart extractor for `study-group-finder`) have been removed — an app's own code is not a published package with a stable public surface the way `packages/*` is, so a generated enumeration of it aged badly relative to the guide pages that already cover it by hand.
+`docs-kit gen` walks TypeScript sources and writes `docs/<project>/reference/`. Today that's `toolkit` only: the shared packages published from Backstage. App-level `reference/` directories (one per Next app, one Dart extractor for `study-group-finder`) have been removed — an app's own code is not a published package with a stable public surface the way `packages/*` is, so a generated enumeration of it aged badly relative to the guide pages that already cover it by hand.
 
 ## Checks
 
-`docs-compiler check` runs two kinds of check over the hand-written pages, and they disagree on purpose about whether to fail the build.
+`docs-kit check` runs two kinds of check over the hand-written pages, and they disagree on purpose about whether to fail the build.
 
-Prose checks — page length, collapsible defects, missing descriptions — **warn and never fail**; see [Writing docs](/docs/toolkit/infrastructure/docs-system/writing#why-its-like-this) for why. The bare `docs-compiler` run prints the count on its summary line; `docs-compiler check` prints the detail.
+Prose checks — page length, collapsible defects, missing descriptions — **warn and never fail**; see [Writing docs](/docs/toolkit/infrastructure/docs-system/writing#why-its-like-this) for why. The bare `docs-kit` run prints the count on its summary line; `docs-kit check` prints the detail.
 
 Link and command checks are the opposite: they **fail the build**. Every link between docs pages is resolved against the pages that actually exist, and every `pnpm`/`devtools` command inside a fenced code block is checked against the real command tree, so a renamed page, a moved mount, or a renamed CLI subcommand breaks the build the same day it happens rather than going stale until someone notices. A code block that isn't a command to run — example output, a hypothetical invocation, a snippet from another tool — opts out with a `nocheck` fence-info-string suffix:
 
@@ -56,7 +56,7 @@ some-tool-this-repo-does-not-have do-a-thing
 <details>
 <summary>What <code>parseDocFile</code> extracts from each file</summary>
 
-Backstage's `packages/docs-compiler/src/parse.ts` is a `unified` + `remark-parse` pass producing, per file: `title`, `description`, `order`, `section`, `mount`, the raw `frontmatter`, `headings` (id, title, depth), `content` (markdown with front matter stripped), and `plainText` (the document flattened, for search).
+`packages/docs-kit/src/parse.ts` is a `unified` + `remark-parse` pass producing, per file: `title`, `description`, `order`, `section`, `mount`, the raw `frontmatter`, `headings` (id, title, depth), `content` (markdown with front matter stripped), and `plainText` (the document flattened, for search).
 
 Heading ids are slugged with `github-slugger` — the same slugger `rehype-slug` uses at render time, so an anchor written against a heading resolves to the id the page actually ships. There is no way to set an explicit id independent of the heading text; if you need a stable anchor, write the heading so it slugs to the id you want and say so in a comment, since editing the heading's wording later silently moves the anchor.
 
@@ -68,7 +68,7 @@ Heading ids are slugged with `github-slugger` — the same slugger `rehype-slug`
 
 Search is the one part that still uses Postgres, because it is the one part whose cost scales with how much documentation exists. `platform."docsPages"` holds `path`, `title`, `description` and `plainText` alongside a generated `tsvector` weighting title `A`, description `B` and body `C` — so page bodies are searchable, and a title match outranks a body match. `searchDocs` queries it with `websearch_to_tsquery`, ranks with `ts_rank`, and builds snippets with `ts_headline`.
 
-The build does not write that index. `pnpm devtools docs index` pushes the compiled artifact into the database, and both deploy scripts run it ahead of every release — see [Local preview](/docs/toolkit/infrastructure/docs-system/preview) for pointing it at your own stack.
+The build does not write that index. `pnpm -F @devdogsuga/docs populate:search` (`docs-kit index`) pushes the compiled artifact into the database through `platform.replace_docs_index`, and the dev server runs it after every docs change. The deploy scripts still run it ahead of every release — see [Local preview](/docs/toolkit/infrastructure/docs-system/preview) for pointing it at your own stack.
 
 <details>
 <summary>Why Postgres rather than an in-memory JS index?</summary>

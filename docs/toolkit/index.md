@@ -30,7 +30,7 @@ Schema-per-app is an organizational boundary, not a security one — see [Supaba
 | Reach Supabase, or write an RLS test | [**`@devdogsuga/db`** + `@devdogsuga/supabase`](/docs/toolkit/guides/stack/supabase) — client factories, types, RLS suite                                                                   |
 | Author a meeting or a workshop       | [**`@devdogsuga/events`**](/docs/platform/infrastructure/events) — a PR against Backstage's data                                                                                            |
 | Send an email                        | [**`@devdogsuga/email`**](/docs/toolkit/guides/email) — react-email, compiled to typed HTML                                                                                                 |
-| Change how docs are built            | [**`@devdogsuga/docs-compiler`**](/docs/toolkit/guides/docs-compiler) — compiles markdown, generates reference                                                                              |
+| Change how docs are built            | [**`@devdogsuga/docs-kit`**](/docs/toolkit/guides/docs-kit) — compiles markdown, generates reference                                                                                        |
 | Deploy, rotate a secret, add an app  | **Infrastructure**, below — [Cloudflare](/docs/toolkit/infrastructure/cloudflare), [Secrets](/docs/toolkit/infrastructure/secrets), [Docs system](/docs/toolkit/infrastructure/docs-system) |
 
 <details>

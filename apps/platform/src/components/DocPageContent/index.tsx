@@ -13,7 +13,7 @@ import { splitDocsDiffs } from "~/lib/docsDiffs";
 import type { DocHeading, TOCItem } from "~/lib/toc";
 
 interface Props {
-  /** Rendered at build time by @devdogsuga/docs-compiler. */
+  /** Rendered at build time by @devdogsuga/docs-kit. */
   html: string;
   /** Headings extracted at build time by @devdogsuga/docs. */
   headings: DocHeading[];

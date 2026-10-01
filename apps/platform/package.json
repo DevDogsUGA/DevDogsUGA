@@ -157,6 +157,7 @@
     "tsx": "catalog:",
     "unist-util-visit": "^5.1.0",
     "vite": "^8.3.0",
+    "vite-plugin-run": "^0.9.1",
     "vitest": "catalog:",
     "wrangler": "catalog:"
   }

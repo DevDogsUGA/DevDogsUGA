@@ -555,6 +555,9 @@ importers:
       vite:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0)
+      vite-plugin-run:
+        specifier: ^0.9.1
+        version: 0.9.1(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
@@ -798,9 +801,13 @@ importers:
 
   docs:
     dependencies:
-      '@devdogsuga/docs-compiler':
-        specifier: ^0.1.11
-        version: 0.1.11
+      '@devdogsuga/docs-kit':
+        specifier: workspace:*
+        version: link:../packages/docs-kit
+    devDependencies:
+      '@devdogsuga/env':
+        specifier: ^0.1.2
+        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
 
   packages/deploy-checks:
     devDependencies:
@@ -816,6 +823,115 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/docs-kit:
+    dependencies:
+      '@devdogsuga/supabase':
+        specifier: workspace:*
+        version: link:../supabase
+      '@shikijs/rehype':
+        specifier: ^4.4.3
+        version: 4.4.3
+      '@supabase/supabase-js':
+        specifier: 'catalog:'
+        version: 2.112.3(@opentelemetry/api@1.9.1)
+      github-slugger:
+        specifier: ^2.0.0
+        version: 2.0.0
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
+      hast-util-to-string:
+        specifier: ^3.0.1
+        version: 3.0.1
+      mdast-util-directive:
+        specifier: ^3.1.0
+        version: 3.1.0
+      mdast-util-to-string:
+        specifier: ^4.0.0
+        version: 4.0.0
+      rehype-autolink-headings:
+        specifier: ^7.1.0
+        version: 7.1.0
+      rehype-katex:
+        specifier: ^7.0.1
+        version: 7.0.1
+      rehype-raw:
+        specifier: ^7.0.0
+        version: 7.0.0
+      rehype-slug:
+        specifier: ^6.0.0
+        version: 6.0.0
+      rehype-stringify:
+        specifier: ^10.0.1
+        version: 10.0.1
+      rehype-unwrap-images:
+        specifier: ^1.0.0
+        version: 1.0.0
+      remark-directive:
+        specifier: ^4.0.0
+        version: 4.0.0
+      remark-emoji:
+        specifier: ^5.0.2
+        version: 5.0.2
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
+      remark-github-blockquote-alert:
+        specifier: ^2.1.0
+        version: 2.1.0
+      remark-math:
+        specifier: ^6.0.0
+        version: 6.0.0
+      remark-parse:
+        specifier: ^11.0.0
+        version: 11.0.0
+      remark-rehype:
+        specifier: ^11.1.2
+        version: 11.1.2
+      remark-smartypants:
+        specifier: ^3.0.3
+        version: 3.0.3
+      shiki:
+        specifier: ^4.4.3
+        version: 4.4.3
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.12
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
+      unist-util-visit:
+        specifier: ^5.1.0
+        version: 5.1.0
+      vfile:
+        specifier: ^6.0.3
+        version: 6.0.3
+    devDependencies:
+      '@devdogsuga/config':
+        specifier: ^0.1.1
+        version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
+      '@types/hast':
+        specifier: ^3.0.5
+        version: 3.0.5
+      '@types/mdast':
+        specifier: ^4.0.4
+        version: 4.0.4
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.2.0
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.11(vitest@4.1.11)
+      eslint:
+        specifier: 'catalog:'
+        version: 9.39.5(jiti@2.7.0)
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
@@ -988,6 +1104,9 @@ packages:
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
+
+  '@antfu/utils@9.3.0':
+    resolution: {integrity: sha512-9hFT4RauhcUzqOE4f1+frMKLZrgNog5b06I7VmZQV1BkvwvqrbC8EBZf3L1eEL2AKb6rNKjER0sEvJiSP1FXEA==}
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
@@ -1349,10 +1468,6 @@ packages:
         optional: true
       '@devdogsuga/events':
         optional: true
-
-  '@devdogsuga/docs-compiler@0.1.11':
-    resolution: {integrity: sha512-HUurvFKEv5ZxFdRDlX3GmglZ71jBylhqBQqpy/yqije7300n/dG5xRYoECVKq8CY3useGB14/PQKuAA4a9ZM6g==}
-    hasBin: true
 
   '@devdogsuga/env@0.1.2':
     resolution: {integrity: sha512-00qg0UM1FYaI9ofVNMbbQTP1vC99/uLa+SN6FUH9tQvw0s2TNJ/H5sYyX+7YeXrQ4GP3ATaeIYZfhlyBrSadXg==}
@@ -5864,6 +5979,9 @@ packages:
     resolution: {integrity: sha512-yPDz7wqpg1/mmHLmS3tcfTfbw5f1eryXvyghYBffGdERwe+mV7ZcWzTR8LR17Kvqt3qfPurjlonmnq3MKXIOXw==}
     engines: {node: '>= 0.4'}
 
+  es-toolkit@1.52.0:
+    resolution: {integrity: sha512-XTNEJQh1tY1ZJVcf6ayP/2n4ZPyaHlW2FWs7xvw5ddPuhUVjLD3olQVQS7kf58JbAB48iL0uL/jerTrjtV3lDA==}
+
   esbuild@0.25.12:
     resolution: {integrity: sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg==}
     engines: {node: '>=18'}
@@ -9040,6 +9158,11 @@ packages:
   vite-plugin-dynamic-import@1.6.0:
     resolution: {integrity: sha512-TM0sz70wfzTIo9YCxVFwS8OA9lNREsh+0vMHGSkWDTZ7bgd1Yjs5RV8EgB634l/91IsXJReg0xtmuQqP0mf+rg==}
 
+  vite-plugin-run@0.9.1:
+    resolution: {integrity: sha512-0WtCNNwJM2iBbYcNfmQjHdQGluZuyKRIXM62MY+x3B4TVuCgA6pChMUFjzD1dxrQwgEl5f6duhY4ewweV7vQJw==}
+    peerDependencies:
+      vite: ^8.0.8
+
   vite@8.3.0:
     resolution: {integrity: sha512-lhZBVvEHefgE+HQZC9O7EBJgCU/nVzFNl7vkS4RE0APtWLP02/8QVIkQtzBxPquh7lq5/78NHipTj7ODQ6XuyQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -9366,6 +9489,8 @@ snapshots:
   '@adobe/css-tools@4.5.0': {}
 
   '@alloc/quick-lru@5.2.0': {}
+
+  '@antfu/utils@9.3.0': {}
 
   '@asamuzakjp/css-color@3.2.0':
     dependencies:
@@ -9813,36 +9938,6 @@ snapshots:
       - kerberos
       - supports-color
       - utf-8-validate
-
-  '@devdogsuga/docs-compiler@0.1.11':
-    dependencies:
-      '@shikijs/rehype': 4.4.3
-      github-slugger: 2.0.0
-      gray-matter: 4.0.3
-      hast-util-to-string: 3.0.1
-      mdast-util-directive: 3.1.0
-      mdast-util-to-string: 4.0.0
-      rehype-autolink-headings: 7.1.0
-      rehype-katex: 7.0.1
-      rehype-raw: 7.0.0
-      rehype-slug: 6.0.0
-      rehype-stringify: 10.0.1
-      rehype-unwrap-images: 1.0.0
-      remark-directive: 4.0.0
-      remark-emoji: 5.0.2
-      remark-gfm: 4.0.1
-      remark-github-blockquote-alert: 2.1.0
-      remark-math: 6.0.0
-      remark-parse: 11.0.0
-      remark-rehype: 11.1.2
-      remark-smartypants: 3.0.3
-      shiki: 4.4.3
-      typescript: 6.0.3
-      unified: 11.0.5
-      unist-util-visit: 5.1.0
-      vfile: 6.0.3
-    transitivePeerDependencies:
-      - supports-color
 
   '@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3)':
     dependencies:
@@ -13855,6 +13950,8 @@ snapshots:
       is-date-object: 1.1.0
       is-symbol: 1.1.1
 
+  es-toolkit@1.52.0: {}
+
   esbuild@0.25.12:
     optionalDependencies:
       '@esbuild/aix-ppc64': 0.25.12
@@ -17853,6 +17950,18 @@ snapshots:
       es-module-lexer: 1.7.0
       fast-glob: 3.3.3
       magic-string: 0.30.21
+
+  vite-plugin-run@0.9.1(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0)):
+    dependencies:
+      '@antfu/utils': 9.3.0
+      debug: 4.4.3
+      es-toolkit: 1.52.0
+      minimatch: 10.2.6
+      picocolors: 1.1.1
+      tinyexec: 1.3.0
+      vite: 8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0)
+    transitivePeerDependencies:
+      - supports-color
 
   vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0):
     dependencies:

@@ -29,8 +29,8 @@ function toSnippetHtml(raw: string): string {
 /**
  * Full-text search over the docs index using Postgres websearch syntax (quoted
  * phrases, OR, -exclusions). The table is populated at deploy time by
- * `pnpm docs:index` from the same build-time artifact the pages render from.
- * See `devtools docs index`. ts_headline runs on the top N rows only; it's by
+ * `pnpm -F @devdogsuga/docs populate:search` from the same build-time artifact the pages render from.
+ * See `docs-kit index`. ts_headline runs on the top N rows only; it's by
  * far the most expensive part.
  */
 export async function searchDocs(
@@ -52,7 +52,7 @@ export async function searchDocs(
       where p."search" @@ websearch_to_tsquery('english', ${query})
         -- A page scheduled for later is not found until its time, to the
         -- second: now() is read per query, not per deploy. See
-        -- "publishAt" on the table, and devtools docs index.
+        -- "publishAt" on the table, and docs-kit index.
         and (p."publishAt" is null or p."publishAt" <= now())
       order by "rank" desc
       limit ${limit}
