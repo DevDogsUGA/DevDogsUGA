@@ -37,12 +37,12 @@ differently from `next dev` (it runs on `workerd`, the same runtime as
 production). Copy `.dev.vars.example` to `.dev.vars`, then:
 
 ```bash
-pnpm --filter schedule-builder cf:preview   # vinext build, served by workerd
-pnpm --filter schedule-builder cf:dev       # same, with Workflows served locally
+pnpm --filter schedule-builder preview   # vinext build, served by workerd
+pnpm devtools workflows serve --app schedule-builder   # Workflows served locally
 ```
 
 After editing a `wrangler.jsonc` binding, regenerate the Worker types
-(`pnpm --filter schedule-builder cf:typegen`) and commit the diff — CI fails
+(`pnpm --filter schedule-builder types:cf`) and commit the diff — CI fails
 on drift.
 
 ## What CI runs

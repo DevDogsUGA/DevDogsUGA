@@ -156,3 +156,6 @@ apps/platform/public/brand/icons/
 apps/platform/public/brand/og/
 apps/schedule-builder/public/brand/
 apps/schedule-builder/public/icons/
+
+# packages/email preview output
+email-previews/

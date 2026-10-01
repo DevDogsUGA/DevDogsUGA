@@ -12,7 +12,7 @@ the community [supadart](https://pub.dev/packages/supadart) generator rather
 than from the same path the web apps use.
 
 ```bash
-pnpm --filter study-group-finder generate-types
+pnpm --filter study-group-finder types:db
 ```
 
 That reads `supadart.yaml` (`output: lib/generated/`, `separated: true`) and
@@ -20,7 +20,7 @@ writes one Dart model per table into the gitignored `lib/generated/` directory.
 
 ## It needs the secret key
 
-The `generate-types` script maps the monorepo's `API_URL` and **`SECRET_KEY`**
+The `types:db` script maps the monorepo's `API_URL` and **`SECRET_KEY`**
 onto the `SUPABASE_URL` and `SUPABASE_API_KEY` supadart expects. The **secret**
 (service-role) key is required, not the publishable one: supadart fetches the
 OpenAPI spec and gets a `401` against the publishable key. That is why the
@@ -52,7 +52,7 @@ arbitrary, and the `config.toml` comment says so: **do not "tidy" the ordering.*
 The `study_group_finder` schema has no tables yet
 (`supabase/migrations/20260829000000_00_schemas_and_grants.sql` reserves the
 schema and applies the PostgREST role grants, nothing more), so
-`generate-types` currently produces nothing. Once the first tables land in a
+`types:db` currently produces nothing. Once the first tables land in a
 migration, running it will populate `lib/generated/`, and the models regenerate
 from the database the same way — the schema is always the source, the Dart is
 always output. See [Schema change loop](/docs/study-group-finder/guides/schema-change-loop)

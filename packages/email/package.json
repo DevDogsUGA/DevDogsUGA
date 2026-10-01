@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "preview": "tsx scripts/preview.ts"
   },
   "devDependencies": {
     "@devdogsuga/brand": "^0.1.4",

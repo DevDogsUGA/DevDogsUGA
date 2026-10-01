@@ -107,7 +107,7 @@ jobs:
           # `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc for why a
           # per-deploy git SHA doesn't fit `EnvScope`.
           NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
+        run: pnpm --filter ${{ matrix.app }} run build
       # ⚠️ GATING, PER AN EXPLICIT DECISION: SENTRY_AUTH_TOKEN absent means the
       # Sentry org is not onboarded yet, and that must be a visible skip, not
       # a silent one — hence the warning step below rather than folding the
@@ -134,7 +134,7 @@ jobs:
           # record and its source maps, not a changelog.
           set_commits: skip
           # Both Next.js apps build through vinext now (see each app's
-          # `cf:build:$DEPLOY_ENV`), which writes maps under BOTH
+          # `build`, tier from DEPLOY_ENV), which writes maps under BOTH
           # `dist/client` (browser bundle) and `dist/server` (the Worker
           # bundle, `dist/server/index.js.map`), so their path is the `dist`
           # parent rather than either half alone.

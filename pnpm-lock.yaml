@@ -163,10 +163,10 @@ importers:
         version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
       '@devdogsuga/devtools':
         specifier: 0.1.24
-        version: 0.1.24(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
+        version: 0.1.24(@devdogsuga/brand@0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.2(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0)))(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.4(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
       '@devdogsuga/env':
-        specifier: ^0.1.2
-        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+        specifier: ^0.1.4
+        version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
@@ -207,8 +207,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/email
       '@devdogsuga/env':
-        specifier: ^0.1.2
-        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+        specifier: ^0.1.4
+        version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
       '@devdogsuga/events':
         specifier: ^0.1.3
         version: 0.1.3
@@ -578,8 +578,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
       '@devdogsuga/env':
-        specifier: ^0.1.2
-        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+        specifier: ^0.1.4
+        version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
@@ -608,8 +608,11 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9)
       '@devdogsuga/env':
-        specifier: ^0.1.2
-        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+        specifier: ^0.1.4
+        version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
+      '@devdogsuga/headers':
+        specifier: 0.1.1
+        version: 0.1.1
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -777,8 +780,8 @@ importers:
   apps/study-group-finder:
     dependencies:
       '@devdogsuga/env':
-        specifier: ^0.1.2
-        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+        specifier: ^0.1.4
+        version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -800,8 +803,8 @@ importers:
         version: link:../packages/docs-kit
     devDependencies:
       '@devdogsuga/env':
-        specifier: ^0.1.2
-        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+        specifier: ^0.1.4
+        version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
 
   packages/deploy-checks:
     devDependencies:
@@ -979,10 +982,10 @@ importers:
         version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
       '@devdogsuga/devtools':
         specifier: 0.1.24
-        version: 0.1.24(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
+        version: 0.1.24(@devdogsuga/brand@0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.2(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0)))(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.4(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
       '@devdogsuga/env':
-        specifier: ^0.1.2
-        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+        specifier: ^0.1.4
+        version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
@@ -1011,8 +1014,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9)
       '@devdogsuga/env':
-        specifier: ^0.1.2
-        version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+        specifier: ^0.1.4
+        version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.112.3(@opentelemetry/api@1.9.1)
@@ -1431,8 +1434,8 @@ packages:
       '@devdogsuga/events':
         optional: true
 
-  '@devdogsuga/env@0.1.2':
-    resolution: {integrity: sha512-00qg0UM1FYaI9ofVNMbbQTP1vC99/uLa+SN6FUH9tQvw0s2TNJ/H5sYyX+7YeXrQ4GP3ATaeIYZfhlyBrSadXg==}
+  '@devdogsuga/env@0.1.4':
+    resolution: {integrity: sha512-eFV5dcOpT9UGz1wIivqS4ivHMOLQtT24VVIGQGH0HafYraOyFHRmFpOaQKOqbsSK/lVHuVpejC3QRGkklpOiNg==}
     hasBin: true
 
   '@devdogsuga/events@0.1.3':
@@ -9879,7 +9882,7 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@devdogsuga/devtools@0.1.24(@devdogsuga/brand@0.1.2)(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)':
+  '@devdogsuga/devtools@0.1.24(@devdogsuga/brand@0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.2(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0)))(@devdogsuga/db@0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9))(@devdogsuga/env@0.1.4(typanion@3.14.0)(typescript@6.0.3))(@devdogsuga/events@0.1.3)(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)':
     dependencies:
       '@bitwarden/cli': 2026.7.0
       '@bitwarden/sdk-napi': 1.0.0
@@ -9896,9 +9899,9 @@ snapshots:
       typescript: 6.0.3
       zod: 4.4.3
     optionalDependencies:
-      '@devdogsuga/brand': 0.1.2
+      '@devdogsuga/brand': 0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.2(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0))
       '@devdogsuga/db': 0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9)
-      '@devdogsuga/env': 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+      '@devdogsuga/env': 0.1.4(typanion@3.14.0)(typescript@6.0.3)
       '@devdogsuga/events': 0.1.3
     transitivePeerDependencies:
       - '@opentelemetry/api'
@@ -9912,7 +9915,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@devdogsuga/env@0.1.2(typanion@3.14.0)(typescript@6.0.3)':
+  '@devdogsuga/env@0.1.4(typanion@3.14.0)(typescript@6.0.3)':
     dependencies:
       '@dotenvx/dotenvx': 2.21.0
       '@t3-oss/env-core': 0.13.11(typescript@6.0.3)(zod@4.4.3)

@@ -173,8 +173,7 @@ pnpm devtools workflows serve --app schedule-builder --port 8787
 pnpm devtools workflows run --app schedule-builder --tier development --port 8787
 ```
 
-`pnpm --filter schedule-builder cf:dev` is the short form for the first
-command. Bare `wrangler dev` does not read the repo-root `.env`; using it
+Bare `wrangler dev` does not read the repo-root `.env`; using it
 directly still requires a populated app-local `.dev.vars` or an explicit
 `--env-file`.
 The devtools server is the supported path because it derives the correct key

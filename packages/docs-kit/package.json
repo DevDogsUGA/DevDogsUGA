@@ -21,7 +21,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src"
   },
