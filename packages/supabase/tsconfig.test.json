@@ -1,6 +1,6 @@
 {
-  // The RLS persona suite lives outside `src` so it is neither compiled into
-  // `dist` nor published, but it should still be typechecked. tsconfig.json
+  // The RLS persona suite lives outside `src` so it is not part of
+  // the library build nor published, but it should still be typechecked. tsconfig.json
   // covers the library; this covers the tests.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
