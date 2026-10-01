@@ -20,11 +20,7 @@
  * server-rendered `dangerouslySetInnerHTML` of anything a user wrote would
  * break that, so don't add one.
  */
-import {
-  buildContentSecurityPolicy,
-  CSP_HEADER,
-  generateNonce,
-} from "@devdogsuga/security-headers";
+import { CSP_HEADER, generateNonce, serializeCsp } from "@devdogsuga/headers";
 import { platformSecurityHeaders } from "~/lib/securityHeaders";
 
 function isHtml(response: Response): boolean {
@@ -60,10 +56,7 @@ export function withEdgeNonce(response: Response): Response {
     .transform(response);
 
   const headers = new Headers(rewritten.headers);
-  headers.set(
-    CSP_HEADER,
-    buildContentSecurityPolicy(platformSecurityHeaders(nonce)),
-  );
+  headers.set(CSP_HEADER, serializeCsp(platformSecurityHeaders(nonce).csp));
   // The rewrite changes the length.
   headers.delete("Content-Length");
   return new Response(rewritten.body, {

@@ -3,7 +3,7 @@
  * Docker builds need.
  */
 import type { NextConfig } from "next";
-import { buildSecurityHeaders } from "@devdogsuga/security-headers";
+import { buildSecurityHeaders } from "@devdogsuga/headers";
 import { env } from "~/env";
 import { platformSecurityHeaders } from "~/lib/securityHeaders";
 

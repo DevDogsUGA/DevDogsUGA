@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
-import { buildSecurityHeaders } from "@devdogsuga/security-headers";
+import { buildSecurityHeaders } from "@devdogsuga/headers";
+import { scheduleBuilderCsp } from "~/config/csp";
 import { env } from "~/env";
 
 /**
@@ -28,14 +29,17 @@ const nextConfig = (phase: string): NextConfig => ({
         // URL. A real build/dev run never takes the fallback.
         headers: buildSecurityHeaders({
           environment: env.DEPLOY_ENV,
-          supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
-          // No nonce: this static `headers()` declaration is evaluated once
-          // at build/dev-server start, not per request, so it can never mint
-          // one -- and never needs to: it is a fallback purely for routes
-          // middleware's matcher excludes (static assets, images), none of
-          // which carry an inline script to gate. See
-          // `applySecurityHeaders`'s doc comment.
-          sentryDsn: env.NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN,
+          csp: scheduleBuilderCsp({
+            environment: env.DEPLOY_ENV,
+            supabaseUrl:
+              env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
+            // No nonce: this static `headers()` declaration is evaluated once
+            // at build/dev-server start, not per request, so it can never
+            // mint one -- and never needs to: it is a fallback purely for
+            // routes middleware's matcher excludes (static assets, images),
+            // none of which carry an inline script to gate.
+            sentryDsn: env.NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN,
+          }),
         }),
       },
     ];

@@ -1,0 +1,156 @@
+{
+  "development": {
+    "sentry": [
+      {
+        "key": "X-Content-Type-Options",
+        "value": "nosniff"
+      },
+      {
+        "key": "Referrer-Policy",
+        "value": "strict-origin-when-cross-origin"
+      },
+      {
+        "key": "Permissions-Policy",
+        "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()"
+      },
+      {
+        "key": "X-Frame-Options",
+        "value": "DENY"
+      },
+      {
+        "key": "Content-Security-Policy-Report-Only",
+        "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: http://localhost:54321 https://avatars.githubusercontent.com; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-NONCE' 'strict-dynamic' 'unsafe-eval' 'sha256-Qv2trADESYMMlHTyypa8WNNGyjr7StGelJ5FhcqMd0w='; connect-src 'self' http://localhost:54321 https://o123.ingest.us.sentry.io; worker-src 'self' blob:; manifest-src 'self'"
+      }
+    ],
+    "noSentry": [
+      {
+        "key": "X-Content-Type-Options",
+        "value": "nosniff"
+      },
+      {
+        "key": "Referrer-Policy",
+        "value": "strict-origin-when-cross-origin"
+      },
+      {
+        "key": "Permissions-Policy",
+        "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()"
+      },
+      {
+        "key": "X-Frame-Options",
+        "value": "DENY"
+      },
+      {
+        "key": "Content-Security-Policy-Report-Only",
+        "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: http://localhost:54321 https://avatars.githubusercontent.com; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' 'sha256-Qv2trADESYMMlHTyypa8WNNGyjr7StGelJ5FhcqMd0w='; connect-src 'self' http://localhost:54321; worker-src 'self' blob:; manifest-src 'self'"
+      }
+    ]
+  },
+  "staging": {
+    "sentry": [
+      {
+        "key": "Strict-Transport-Security",
+        "value": "max-age=31536000; includeSubDomains"
+      },
+      {
+        "key": "X-Content-Type-Options",
+        "value": "nosniff"
+      },
+      {
+        "key": "Referrer-Policy",
+        "value": "strict-origin-when-cross-origin"
+      },
+      {
+        "key": "Permissions-Policy",
+        "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()"
+      },
+      {
+        "key": "X-Frame-Options",
+        "value": "DENY"
+      },
+      {
+        "key": "Content-Security-Policy-Report-Only",
+        "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://stg.example.supabase.co https://avatars.githubusercontent.com; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-NONCE' 'strict-dynamic' 'sha256-Qv2trADESYMMlHTyypa8WNNGyjr7StGelJ5FhcqMd0w='; connect-src 'self' https://stg.example.supabase.co https://o123.ingest.us.sentry.io; worker-src 'self' blob:; manifest-src 'self'"
+      }
+    ],
+    "noSentry": [
+      {
+        "key": "Strict-Transport-Security",
+        "value": "max-age=31536000; includeSubDomains"
+      },
+      {
+        "key": "X-Content-Type-Options",
+        "value": "nosniff"
+      },
+      {
+        "key": "Referrer-Policy",
+        "value": "strict-origin-when-cross-origin"
+      },
+      {
+        "key": "Permissions-Policy",
+        "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()"
+      },
+      {
+        "key": "X-Frame-Options",
+        "value": "DENY"
+      },
+      {
+        "key": "Content-Security-Policy-Report-Only",
+        "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://stg.example.supabase.co https://avatars.githubusercontent.com; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-Qv2trADESYMMlHTyypa8WNNGyjr7StGelJ5FhcqMd0w='; connect-src 'self' https://stg.example.supabase.co; worker-src 'self' blob:; manifest-src 'self'"
+      }
+    ]
+  },
+  "production": {
+    "sentry": [
+      {
+        "key": "Strict-Transport-Security",
+        "value": "max-age=31536000; includeSubDomains"
+      },
+      {
+        "key": "X-Content-Type-Options",
+        "value": "nosniff"
+      },
+      {
+        "key": "Referrer-Policy",
+        "value": "strict-origin-when-cross-origin"
+      },
+      {
+        "key": "Permissions-Policy",
+        "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()"
+      },
+      {
+        "key": "X-Frame-Options",
+        "value": "DENY"
+      },
+      {
+        "key": "Content-Security-Policy-Report-Only",
+        "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://api.devdogsuga.org https://avatars.githubusercontent.com; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-NONCE' 'strict-dynamic' 'sha256-Qv2trADESYMMlHTyypa8WNNGyjr7StGelJ5FhcqMd0w='; connect-src 'self' https://api.devdogsuga.org https://o123.ingest.us.sentry.io; worker-src 'self' blob:; manifest-src 'self'"
+      }
+    ],
+    "noSentry": [
+      {
+        "key": "Strict-Transport-Security",
+        "value": "max-age=31536000; includeSubDomains"
+      },
+      {
+        "key": "X-Content-Type-Options",
+        "value": "nosniff"
+      },
+      {
+        "key": "Referrer-Policy",
+        "value": "strict-origin-when-cross-origin"
+      },
+      {
+        "key": "Permissions-Policy",
+        "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()"
+      },
+      {
+        "key": "X-Frame-Options",
+        "value": "DENY"
+      },
+      {
+        "key": "Content-Security-Policy-Report-Only",
+        "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://api.devdogsuga.org https://avatars.githubusercontent.com; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-Qv2trADESYMMlHTyypa8WNNGyjr7StGelJ5FhcqMd0w='; connect-src 'self' https://api.devdogsuga.org; worker-src 'self' blob:; manifest-src 'self'"
+      }
+    ]
+  }
+}

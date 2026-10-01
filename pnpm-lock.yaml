@@ -212,15 +212,15 @@ importers:
       '@devdogsuga/events':
         specifier: ^0.1.3
         version: 0.1.3
+      '@devdogsuga/headers':
+        specifier: 0.1.1
+        version: 0.1.1
       '@devdogsuga/newsletter':
         specifier: ^0.1.2
         version: 0.1.2
       '@devdogsuga/open-graph':
         specifier: workspace:*
         version: link:../../packages/open-graph
-      '@devdogsuga/security-headers':
-        specifier: workspace:*
-        version: link:../../packages/security-headers
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -610,12 +610,12 @@ importers:
       '@devdogsuga/env':
         specifier: ^0.1.2
         version: 0.1.2(typanion@3.14.0)(typescript@6.0.3)
+      '@devdogsuga/headers':
+        specifier: 0.1.1
+        version: 0.1.1
       '@devdogsuga/open-graph':
         specifier: workspace:*
         version: link:../../packages/open-graph
-      '@devdogsuga/security-headers':
-        specifier: workspace:*
-        version: link:../../packages/security-headers
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -1045,21 +1045,6 @@ importers:
         specifier: 'catalog:'
         version: 4.4.3
 
-  packages/security-headers:
-    devDependencies:
-      '@devdogsuga/config':
-        specifier: ^0.1.1
-        version: 0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.2.0
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
-
   packages/supabase:
     devDependencies:
       '@devdogsuga/config':
@@ -1475,6 +1460,9 @@ packages:
 
   '@devdogsuga/events@0.1.3':
     resolution: {integrity: sha512-/pAVqj1NkjUfeC6kHORP4T2xhscR1krW0BcKox6MOWIMhkgvFyvw7s7gSRpozmH0Db/EmSvWK5+UC6WyQmQhaA==}
+
+  '@devdogsuga/headers@0.1.1':
+    resolution: {integrity: sha512-d+ikt6YHylyStw4pQpx0oOWU0jg0rjPeJKBkRhNBBDooyaEfllt3yT9Tb9BKQdvEtffF7Ykxgo66I8dJM6SzMQ==}
 
   '@devdogsuga/newsletter@0.1.2':
     resolution: {integrity: sha512-D8getVWoJMmJMrYNbQZAAQPyVsgRY9XdprvvxaeF8gq/4f0akfHrmSKwi0GSm1m9CZ9rzhHzl70FIwieC00kiw==}
@@ -9958,6 +9946,8 @@ snapshots:
   '@devdogsuga/events@0.1.3':
     dependencies:
       zod: 4.4.3
+
+  '@devdogsuga/headers@0.1.1': {}
 
   '@devdogsuga/newsletter@0.1.2':
     dependencies:

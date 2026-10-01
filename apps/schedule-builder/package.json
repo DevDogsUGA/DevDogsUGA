@@ -35,8 +35,8 @@
   "dependencies": {
     "@devdogsuga/db": "^0.1.1",
     "@devdogsuga/env": "^0.1.2",
+    "@devdogsuga/headers": "0.1.1",
     "@devdogsuga/open-graph": "workspace:*",
-    "@devdogsuga/security-headers": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "^0.1.1",
     "@phosphor-icons/react": "^2.1.10",
