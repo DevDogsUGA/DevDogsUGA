@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, varchar, boolean, text, integer, pgEnum, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, boolean, varchar, text, pgEnum, integer, timestamp, date, smallint, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -227,8 +227,8 @@ export const discordRoleMembershipsInPlatform = platform.table.withRLS("discordR
 	roleId: uuid().notNull().references(() => rolesInPlatform.id, { onDelete: "cascade" } ),
 	syncedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 }, (table) => [
-	index("discordRoleMemberships_roleId_idx").using("btree", table.roleId.asc().nullsLast()),
 	primaryKey({ columns: [table.userId, table.roleId], name: "discordRoleMemberships_pkey"}),
+	index("discordRoleMemberships_roleId_idx").using("btree", table.roleId.asc().nullsLast()),
 
 	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
 
@@ -238,6 +238,13 @@ export const discordRoleMembershipsInPlatform = platform.table.withRLS("discordR
 
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
+
+export const docsIndexStateInPlatform = platform.table.withRLS("docsIndexState", {
+	id: boolean().default(true).primaryKey(),
+	hash: text().notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+check("docsIndexState_id_check", sql`id`),]);
 
 export const docsPagesInPlatform = platform.table.withRLS("docsPages", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -975,6 +982,7 @@ export { credentialRolesInPlatform as credentialRoles };
 export { credentialTypeInPlatform as credentialType };
 export { credentialsInPlatform as credentials };
 export { discordRoleMembershipsInPlatform as discordRoleMemberships };
+export { docsIndexStateInPlatform as docsIndexState };
 export { docsPagesInPlatform as docsPages };
 export { exportAuditInPlatform as exportAudit };
 export { filerActionInPlatform as filerAction };
