@@ -90,8 +90,6 @@ jobs:
       # got a 404.
       - name: Export SENTRY_ORG from .env.${{ inputs.tier }}
         run: grep -m1 '^SENTRY_ORG=' ".env.$DEPLOY_ENV" | tr -d "\"'" >> "$GITHUB_ENV"
-      - name: Build the workspace packages this app depends on
-        run: pnpm -r --filter '${{ matrix.app }}^...' run build
       # `vinext build`, with the env schema ENFORCED.
       - name: Build ${{ matrix.app }}
         env:

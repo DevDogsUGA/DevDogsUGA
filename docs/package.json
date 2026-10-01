@@ -11,7 +11,7 @@
     }
   },
   "scripts": {
-    "build": "docs-compiler build"
+    "codegen": "docs-compiler build"
   },
   "dependencies": {
     "@devdogsuga/docs-compiler": "^0.1.11"

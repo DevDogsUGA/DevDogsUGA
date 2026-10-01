@@ -65,13 +65,13 @@ warns and carries on.
 
 ## Running it
 
-`docs`' own `build` script is `docs-compiler build`, which runs `gen` and then
+`docs`' own `codegen` script is `docs-compiler build`, which runs `gen` and then
 the bare compile, and skips both when no markdown file, manifest, lockfile or
 generator source it would read has changed since the last successful build:
 
 ```bash
-pnpm --filter @devdogsuga/docs build          # cached: `docs-compiler gen && docs-compiler`
-pnpm --filter @devdogsuga/docs build --force  # bypass the cache
+pnpm --filter @devdogsuga/docs codegen        # cached: `docs-compiler gen && docs-compiler`
+pnpm --filter @devdogsuga/docs codegen --force  # bypass the cache
 ```
 
 To run the compiler directly instead, from `docs/`:

@@ -30,10 +30,6 @@ pnpm devtools db start
 pnpm devtools db reset
 ```
 
-`test:db` also needs the app's own build (`@devdogsuga/db`'s `/server`
-subpath resolves from `dist/`), so a fresh checkout may need
-`pnpm --filter schedule-builder^... build` first — the same step CI takes.
-
 ## Cloudflare preview, not `next dev`
 
 The app deploys to Workers through vinext, and a preview build behaves

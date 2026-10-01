@@ -15,7 +15,7 @@ One terminal, and a re-run after each save — there is no file watcher wired in
 
 ```bash
 pnpm dev                                          # the app
-pnpm --filter @devdogsuga/docs run build          # re-parses docs/ after a save
+pnpm --filter @devdogsuga/docs run codegen        # re-parses docs/ after a save
 ```
 
 Re-running the docs package's build rewrites the module the routes import; the running dev server picks up the changed module and hot-reloads the page. No restart.
@@ -30,7 +30,7 @@ Then open <http://localhost:3000/docs>.
 Search reads a Postgres index rather than the compiled module, so it takes one extra step to see your working copy. With the local Supabase stack running:
 
 ```bash
-pnpm --filter @devdogsuga/docs build   # build the docs artifact first
+pnpm --filter @devdogsuga/docs codegen   # build the docs artifact first
 pnpm devtools docs index               # push it into the local search index
 ```
 

@@ -37,10 +37,6 @@ pnpm devtools db start
 pnpm devtools db reset
 ```
 
-`test:db` also needs the package's own build (`@devdogsuga/db`'s `/server`
-subpath resolves from `dist/`), so a fresh checkout may need
-`pnpm --filter platform^... build` first — the same step CI takes.
-
 ## The RLS persona suite
 
 `pnpm --filter @devdogsuga/supabase test:rls` is a separate Vitest config
