@@ -17,12 +17,10 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
           <TopNav />
           {/* In flow, directly under the nav, so it takes its own row rather
               than floating over content or fighting AnnouncementBanner and the
-              app switcher for the viewport's corners. It only renders during a
-              live meeting, and its own script hides it before paint when this
-              session already dismissed it. */}
-          <Suspense>
-            <AttendanceBanner />
-          </Suspense>
+              app switcher for the viewport's corners. A client component: it
+              fetches the live meeting after hydration so this layout, and the
+              cached pages in it, never read the database. */}
+          <AttendanceBanner />
           <main
             id="main-content"
             className="@container relative flex min-w-0 flex-1 flex-col"

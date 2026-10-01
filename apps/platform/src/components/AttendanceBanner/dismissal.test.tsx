@@ -1,28 +1,15 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import AttendanceBannerClient from "./AttendanceBannerClient";
-import {
-  DISMISSED_ATTRIBUTE,
-  dismiss,
-  dismissalKey,
-  dismissalScript,
-  isDismissed,
-} from "./dismissal";
+import AttendanceBanner from "./index";
+import { dismiss, dismissalKey, isDismissed } from "./dismissal";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
-
-/** Runs the script the way the browser does: as inline script in the document. */
-function runScript(source: string) {
-  const script = document.createElement("script");
-  script.textContent = source;
-  document.head.append(script);
-  script.remove();
-}
 
 afterEach(() => {
   cleanup();
   sessionStorage.clear();
-  document.documentElement.removeAttribute(DISMISSED_ATTRIBUTE);
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -52,57 +39,71 @@ describe("dismissal", () => {
   });
 });
 
-describe("dismissalScript", () => {
-  it("stamps <html> when this meeting was dismissed", () => {
-    sessionStorage.setItem(dismissalKey("m1"), "dismissed");
-    runScript(dismissalScript("m1"));
-    expect(document.documentElement.getAttribute(DISMISSED_ATTRIBUTE)).toBe(
-      "dismissed",
+describe("AttendanceBanner", () => {
+  function mountWith(meeting: { id: string; title: string } | null) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json({ meeting }))),
     );
-  });
-
-  it("leaves <html> alone for a different meeting", () => {
-    sessionStorage.setItem(dismissalKey("other"), "dismissed");
-    runScript(dismissalScript("m2"));
-    expect(document.documentElement.hasAttribute(DISMISSED_ATTRIBUTE)).toBe(
-      false,
-    );
-  });
-
-  it("swallows a storage failure", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("denied");
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
     });
-    expect(() => runScript(dismissalScript("m3"))).not.toThrow();
+    const ui = (
+      <QueryClientProvider client={client}>
+        <AttendanceBanner />
+      </QueryClientProvider>
+    );
+    const view = render(ui);
+    return view;
+  }
+
+  it("renders nothing until the meeting arrives, then shows it", async () => {
+    mountWith({ id: "live-1", title: "General body" });
+    expect(screen.queryByText("Check in now")).toBeNull();
+    expect(await screen.findByText("Check in now")).toBeTruthy();
+    expect(screen.getByText("General body")).toBeTruthy();
   });
-});
 
-describe("AttendanceBannerClient", () => {
-  it("renders on first paint when not dismissed, then goes away on dismiss", () => {
-    render(<AttendanceBannerClient meetingId="live-1" title="General body" />);
-    expect(screen.getByText("Check in now")).toBeTruthy();
+  it("renders nothing when no meeting is running", async () => {
+    mountWith(null);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByText("Check in now")).toBeNull();
+  });
 
+  it("goes away on dismiss", async () => {
+    mountWith({ id: "live-2", title: "General body" });
+    await screen.findByText("Check in now");
     act(() => {
       screen.getByRole("button", { name: /dismiss/i }).click();
     });
     expect(screen.queryByText("Check in now")).toBeNull();
   });
 
-  it("does not render for a meeting already dismissed this session", () => {
-    sessionStorage.setItem(dismissalKey("live-2"), "dismissed");
-    render(<AttendanceBannerClient meetingId="live-2" title="General body" />);
+  it("never paints a meeting already dismissed this session", async () => {
+    sessionStorage.setItem(dismissalKey("live-3"), "dismissed");
+    const { container } = mountWith({ id: "live-3", title: "General body" });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     expect(screen.queryByText("Check in now")).toBeNull();
+    expect(container.querySelector("aside")).toBeNull();
   });
 
-  it("stays dismissed after remounting, as on a client navigation", () => {
-    const first = render(
-      <AttendanceBannerClient meetingId="live-3" title="General body" />,
-    );
+  it("stays dismissed after remounting, as on a client navigation", async () => {
+    const first = mountWith({ id: "live-4", title: "General body" });
+    await screen.findByText("Check in now");
     act(() => {
       screen.getByRole("button", { name: /dismiss/i }).click();
     });
     first.unmount();
-    render(<AttendanceBannerClient meetingId="live-3" title="General body" />);
+    mountWith({ id: "live-4", title: "General body" });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     expect(screen.queryByText("Check in now")).toBeNull();
   });
 });

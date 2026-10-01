@@ -9,8 +9,6 @@
  * navigations without storage; only a reload forgets it there.
  */
 
-export const DISMISSED_ATTRIBUTE = "data-attendance-banner";
-
 const memory = new Set<string>();
 const listeners = new Set<() => void>();
 
@@ -42,23 +40,4 @@ export function subscribeToDismissal(onChange: () => void): () => void {
   return () => {
     listeners.delete(onChange);
   };
-}
-
-/**
- * Runs while the document is still parsing, ahead of the strip's markup, and
- * stamps `<html data-attendance-banner="dismissed">` when this session already
- * dismissed this meeting. `globals.css` hides the strip on that attribute, so
- * a reload never paints it. Reading storage from an effect would paint the
- * strip and rip it out a frame later.
- *
- * Rendered by the server island, not the client component: a `<script>` in a
- * client component is only real in the server HTML, and the island's HTML is
- * the only place this needs to run. See ~/config/announcement.
- */
-export function dismissalScript(meetingId: string): string {
-  return `try{if(sessionStorage.getItem(${JSON.stringify(
-    dismissalKey(meetingId),
-  )})==="dismissed")document.documentElement.setAttribute(${JSON.stringify(
-    DISMISSED_ATTRIBUTE,
-  )},"dismissed")}catch(e){}`;
 }

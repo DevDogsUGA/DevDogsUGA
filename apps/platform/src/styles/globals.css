@@ -299,14 +299,6 @@
   display: none;
 }
 
-/* ── Attendance banner ──────────────────────────────────────── */
-/* Same trick as the announcement: the script AttendanceBanner emits ahead of */
-/* the strip stamps this attribute when the session already dismissed this    */
-/* meeting's reminder, so the strip never paints on a reload.                 */
-[data-attendance-banner="dismissed"] [data-slot="attendance-banner"] {
-  display: none;
-}
-
 /* The search dialog's indeterminate bar: a third-width segment crossing a
    track it overflows, so -100%..300% of its own width spans edge to edge. */
 @keyframes search-progress {
