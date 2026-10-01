@@ -412,6 +412,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      docsIndexState: {
+        Row: {
+          hash: string;
+          id: boolean;
+          updatedAt: string;
+        };
+        Insert: {
+          hash: string;
+          id?: boolean;
+          updatedAt?: string;
+        };
+        Update: {
+          hash?: string;
+          id?: boolean;
+          updatedAt?: string;
+        };
+        Relationships: [];
+      };
       docsPages: {
         Row: {
           description: string | null;
@@ -1814,6 +1832,7 @@ export type Database = {
           status: Database["platform"]["Enums"]["reportStatus"];
         }[];
       };
+      replace_docs_index: { Args: { pages: Json }; Returns: boolean };
       require_uga_signup_email: { Args: { event: Json }; Returns: Json };
       resolve_content: {
         Args: { app_slug: string; content_ref: string; content_type: string };
