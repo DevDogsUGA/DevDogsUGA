@@ -263,7 +263,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isDirty) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+      if ((e.metaKey || e.ctrlKey) && e.key?.toLowerCase() === "s") {
         e.preventDefault();
         saveAllRef.current();
       }

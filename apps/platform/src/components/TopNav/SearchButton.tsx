@@ -14,7 +14,12 @@ export default function SearchButton() {
     if (/mac|iphone|ipad/i.test(navigator.platform)) setCtrl("⌘");
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
+      // Chrome's autofill dispatches a `keydown` with no `key` at all, despite
+      // the type; reading it bare threw on every autofilled form.
+      if (
+        event.key?.toLowerCase() === "k" &&
+        (event.metaKey || event.ctrlKey)
+      ) {
         event.preventDefault();
         setOpen((current) => !current);
       }
