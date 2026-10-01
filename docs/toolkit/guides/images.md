@@ -7,7 +7,7 @@ section: guides
 
 # Images
 
-`pnpm devtools images` renders the templates from `@devdogsuga/open-graph`.
+`pnpm devtools images` renders the templates from `@devdogsuga/brand`.
 Run it without arguments for searchable graphic, format, and output pickers.
 
 Graphics use `group/name` selectors:

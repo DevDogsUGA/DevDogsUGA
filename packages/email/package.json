@@ -24,6 +24,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
+    "@devdogsuga/brand": "^0.1.4",
     "@devdogsuga/config": "^0.1.1",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",

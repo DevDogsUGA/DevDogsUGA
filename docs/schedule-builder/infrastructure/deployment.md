@@ -16,5 +16,5 @@ cross-checks the two. A mismatch is not a build failure; it's an OAuth
 callback that silently goes to the wrong place.
 
 In-app branding is **DogDays** throughout (mark and copy from
-`@devdogsuga/open-graph`), with its own light/dark zinc-and-red design driven
+`@devdogsuga/brand`), with its own light/dark zinc-and-red design driven
 by system `prefers-color-scheme` — not the platform's design language.
