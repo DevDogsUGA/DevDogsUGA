@@ -6,7 +6,6 @@ import { GameControllerIcon, XIcon } from "@phosphor-icons/react/ssr";
 import FormButton from "~/components/FormButton";
 import type { RoleRow } from "~/hooks/useRoles";
 import {
-  countUsersWithoutLinkedDiscord,
   createDiscordRoleFromRole,
   linkRoleToDiscord,
   listImportableDiscordRoles,
@@ -39,7 +38,6 @@ export default function LinkDiscordRoleDialog({
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [discordRoles, setDiscordRoles] = useState<ImportableDiscordRole[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [memberCount, setMemberCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,17 +58,10 @@ export default function LinkDiscordRoleDialog({
 
     setMode("existing");
     setSelectedId("");
-    setMemberCount(null);
     setError(null);
     setLoading(true);
-    Promise.all([
-      listImportableDiscordRoles(),
-      countUsersWithoutLinkedDiscord(role.id),
-    ])
-      .then(([roles, count]) => {
-        setDiscordRoles(roles);
-        setMemberCount(count);
-      })
+    listImportableDiscordRoles()
+      .then(setDiscordRoles)
       .catch((err: unknown) =>
         setError(err instanceof Error ? err.message : String(err)),
       )
@@ -191,19 +182,10 @@ export default function LinkDiscordRoleDialog({
           </fieldset>
 
           <p className="text-xs text-white/60">
-            Name and color will sync with Discord going forward, and only
-            members with a linked Discord account can be assigned this role.
-            {memberCount !== null && memberCount > 0 && (
-              <>
-                {" "}
-                <strong className="text-amber-300">
-                  {memberCount} member{memberCount === 1 ? "" : "s"} without a
-                  linked Discord account currently{" "}
-                  {memberCount === 1 ? "has" : "have"} this role and will lose
-                  it.
-                </strong>
-              </>
-            )}
+            Name, color and membership will sync with Discord going forward.
+            Current holders keep the role; those with a known Discord account
+            are granted it on Discord, and anyone else is granted it once they
+            link.
           </p>
 
           {error && <p className="text-xs text-rose-400">{error}</p>}

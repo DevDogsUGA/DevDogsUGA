@@ -90,22 +90,22 @@ export const CRON_ROUTES: Record<
   // edit that lands with no accompanying deploy, and as the floor if the
   // deploy-time call itself fails partway.
   "*/15 * * * *": {
-    label: "Config reconcile (meetings, workshops), support forum index",
+    label:
+      "Config reconcile (meetings, workshops), support forum index, Discord role sync",
     monitorSlug: "platform-cron-config-reconcile",
-    monitor: { checkinMargin: 5, maxRuntime: 10 },
+    // Role sync pages through every guild member, so the runtime ceiling is
+    // looser than the config pass alone needs.
+    monitor: { checkinMargin: 5, maxRuntime: 15 },
     routes: [
       "/cron/config-reconcile",
       // Indexes native #tech-support posts for the docs widget's
       // suggestions, keeps its Discord commands registered, and expires
       // guests. Second, so a slow Discord never delays a config promotion.
       "/cron/support",
+      // Three-way merge of synced role membership between the platform and
+      // Discord. Last, so a slow guild member listing delays nothing above.
+      "/cron/sync-discord-roles",
     ],
-  },
-  "*/10 * * * *": {
-    label: "Discord role sync",
-    monitorSlug: "platform-cron-discord-role-sync",
-    monitor: { checkinMargin: 5, maxRuntime: 10 },
-    routes: ["/cron/sync-discord-roles"],
   },
 };
 

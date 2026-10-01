@@ -5,6 +5,8 @@ import { db } from "~/server/db";
 import {
   profiles,
   resolvedUserPermissions,
+  discordRoleMemberships,
+  officerDiscordIds,
   roles,
   userRoles,
 } from "~/server/db/schema";
@@ -445,13 +447,6 @@ export async function assignRoleToUser(
   requireRankGuard(requireCustomRole(target), ctx.minRank);
 
   if (target.discordRoleId !== null) {
-    const discordUserId = await getDiscordUserId(targetUserId);
-    if (!discordUserId) {
-      throw new Error(
-        "This role is synced with Discord — the user must link their Discord account first.",
-      );
-    }
-
     const guildRoles = await fetchGuildRoles();
     const discordRole = guildRoles.find((r) => r.id === target.discordRoleId);
     const targetPosition = discordRole?.position ?? Infinity;
@@ -462,13 +457,28 @@ export async function assignRoleToUser(
       );
     }
 
-    await db.transaction(async (tx) => {
-      await tx
-        .insert(userRoles)
-        .values({ userId: targetUserId, roleId })
-        .onConflictDoNothing();
-      await pushMemberRoleChange(discordUserId, target.discordRoleId!, "add");
-    });
+    // The grant is recorded either way. With no known Discord account it is
+    // pending: the membership cron pushes it once the user links (or an
+    // officer's Discord id is stored). A failed push is retried the same way.
+    await db
+      .insert(userRoles)
+      .values({ userId: targetUserId, roleId })
+      .onConflictDoNothing();
+    const discordUserId = await getDiscordUserId(targetUserId);
+    if (discordUserId) {
+      try {
+        await pushMemberRoleChange(discordUserId, target.discordRoleId, "add");
+        await db
+          .insert(discordRoleMemberships)
+          .values({ userId: targetUserId, roleId })
+          .onConflictDoNothing();
+      } catch (err) {
+        console.error(
+          `Failed to add Discord role ${target.discordRoleId} to member ${discordUserId}; the cron will retry:`,
+          err,
+        );
+      }
+    }
     revalidateOfficers();
     return;
   }
@@ -527,13 +537,70 @@ export async function removeRoleFromUser(
           target.discordRoleId,
           "remove",
         );
+        await db
+          .delete(discordRoleMemberships)
+          .where(
+            and(
+              eq(discordRoleMemberships.userId, targetUserId),
+              eq(discordRoleMemberships.roleId, roleId),
+            ),
+          );
       } catch (err) {
+        // The snapshot row stays, so the cron retries the Discord removal
+        // rather than pulling the role back onto the platform.
         throw new Error(
           `Role removed, but Discord sync failed: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }
   }
+}
+
+/**
+ * Stores (or clears, with `null`) a Discord user id for an officer who hasn't
+ * linked Discord yet, so the membership cron can sync their roles right away.
+ * The id is entered without OAuth proof, so it is only accepted for users who
+ * hold a leadership role, and a linked Discord account overrides it.
+ */
+export async function setOfficerDiscordId(
+  targetUserId: string,
+  discordUserId: string | null,
+): Promise<void> {
+  await requireManageRoles();
+
+  if (discordUserId === null) {
+    await db
+      .delete(officerDiscordIds)
+      .where(eq(officerDiscordIds.userId, targetUserId));
+    revalidateOfficers();
+    return;
+  }
+
+  const id = discordUserId.trim();
+  if (!/^[0-9]{15,25}$/.test(id)) {
+    throw new Error("A Discord user id is a string of 15 to 25 digits.");
+  }
+
+  const [leadership] = await db
+    .select({ roleId: userRoles.roleId })
+    .from(userRoles)
+    .innerJoin(roles, eq(roles.id, userRoles.roleId))
+    .where(
+      and(eq(userRoles.userId, targetUserId), eq(roles.isLeadership, true)),
+    )
+    .limit(1);
+  if (!leadership) {
+    throw new Error("Discord ids can only be stored for officers.");
+  }
+
+  await db
+    .insert(officerDiscordIds)
+    .values({ userId: targetUserId, discordUserId: id })
+    .onConflictDoUpdate({
+      target: officerDiscordIds.userId,
+      set: { discordUserId: id },
+    });
+  revalidateOfficers();
 }
 
 // ── User search ───────────────────────────────────────────────────────────────
@@ -601,16 +668,27 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     rolesByUser.set(row.userId, list);
   }
 
-  const discordLinkedRows = await db
-    .select({ userId: identitiesInAuth.userId })
-    .from(identitiesInAuth)
-    .where(
-      and(
-        eq(identitiesInAuth.provider, "discord"),
-        inArray(identitiesInAuth.userId, userIds),
+  // "Linked" here means a Discord id is known, from OAuth or an officer's
+  // stored id; grants of synced roles to anyone else wait for the link.
+  const [discordLinkedRows, officerIdRows] = await Promise.all([
+    db
+      .select({ userId: identitiesInAuth.userId })
+      .from(identitiesInAuth)
+      .where(
+        and(
+          eq(identitiesInAuth.provider, "discord"),
+          inArray(identitiesInAuth.userId, userIds),
+        ),
       ),
-    );
-  const discordLinkedSet = new Set(discordLinkedRows.map((r) => r.userId));
+    db
+      .select({ userId: officerDiscordIds.userId })
+      .from(officerDiscordIds)
+      .where(inArray(officerDiscordIds.userId, userIds)),
+  ]);
+  const discordLinkedSet = new Set([
+    ...discordLinkedRows.map((r) => r.userId),
+    ...officerIdRows.map((r) => r.userId),
+  ]);
 
   return profileRows.map((p) => ({
     id: p.userId,

@@ -157,11 +157,11 @@ export default function UserRoleManager({
               (r) => !assignedIds.has(r.id),
             );
             const disabledRoleReasons = new Map<string, string>();
+            const pendingLinkRoleIds = new Set<string>();
             for (const r of addableRoles) {
               if (r.discordRoleId === null) continue;
-              if (!user.hasDiscordLinked)
-                disabledRoleReasons.set(r.id, " (requires Discord)");
-              else if (
+              if (!user.hasDiscordLinked) pendingLinkRoleIds.add(r.id);
+              if (
                 !canManageDiscordRolePosition(
                   callerCapability,
                   r.discordRolePosition ?? Infinity,
@@ -241,6 +241,7 @@ export default function UserRoleManager({
                     <RoleDropdown
                       roles={addableRoles}
                       disabledRoleReasons={disabledRoleReasons}
+                      pendingLinkRoleIds={pendingLinkRoleIds}
                       onSelect={(roleId) => handleAssign(user.id, roleId)}
                       disabled={isPending}
                     />
@@ -267,11 +268,13 @@ export default function UserRoleManager({
 function RoleDropdown({
   roles,
   disabledRoleReasons,
+  pendingLinkRoleIds,
   onSelect,
   disabled,
 }: {
   roles: RoleRow[];
   disabledRoleReasons: Map<string, string>;
+  pendingLinkRoleIds: Set<string>;
   onSelect: (roleId: string) => void;
   disabled: boolean;
 }) {
@@ -299,7 +302,8 @@ function RoleDropdown({
           disabled={disabledRoleReasons.has(r.id)}
         >
           {r.title}
-          {disabledRoleReasons.get(r.id) ?? ""}
+          {disabledRoleReasons.get(r.id) ??
+            (pendingLinkRoleIds.has(r.id) ? " (pending Discord link)" : "")}
         </option>
       ))}
     </select>

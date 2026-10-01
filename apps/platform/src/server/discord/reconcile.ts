@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import {
   Routes,
   type APIGuildMember,
@@ -9,11 +9,16 @@ import {
 import { makeURLSearchParams } from "@discordjs/rest";
 import { asBot } from "./api";
 import { decimalToHex, hexToDecimal } from "./permissions";
+import {
+  applyMembershipPlan,
+  pairKey,
+  planMembershipSync,
+} from "./membershipSync";
+import { loadDiscordUserIds, pushMemberRoleChange } from "./memberSync";
 import { fetchGuildRoles } from "./roleSync";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { roles, userRoles } from "~/server/db/schema";
-import { identitiesInAuth } from "~/supabase/drizzle/schema";
+import { discordRoleMemberships, roles, userRoles } from "~/server/db/schema";
 
 type FieldSync<T> =
   | { action: "none"; snapshot: T }
@@ -134,42 +139,34 @@ export async function reconcileRoleDefinitions(
 
 /**
  * Expensive reconciliation of guild membership for synced roles, run only
- * by the cron backstop. Paginates `GET /guilds/{id}/members` and, for every
- * linked user, additively grants synced DevDogs roles they hold on Discord
- * but not in the DB, and removes synced DevDogs roles the DB has but Discord
- * doesn't.
+ * by the cron. Paginates `GET /guilds/{id}/members` and runs a three-way merge
+ * per (user, synced role) against the last-synced snapshot: a platform-only
+ * change is pushed to Discord, a Discord-only change is pulled, and a change
+ * on both sides leaves nothing to do but update the snapshot. See
+ * `planMembershipSync`.
+ *
+ * Users count as linked when they have a Discord OAuth identity or, for
+ * officers, a stored Discord id. Failed pushes leave the snapshot stale, so
+ * the next run retries them.
  */
 export async function reconcileMembership(): Promise<{
   changes: number;
   errors: string[];
 }> {
-  const errors: string[] = [];
-
   const syncedRoles = await db
     .select({ id: roles.id, discordRoleId: roles.discordRoleId })
     .from(roles)
     .where(isNotNull(roles.discordRoleId));
 
-  if (syncedRoles.length === 0) return { changes: 0, errors };
+  if (syncedRoles.length === 0) return { changes: 0, errors: [] };
 
-  const discordRoleIdToRoleId = new Map(
+  const roleIdByDiscordRoleId = new Map(
     syncedRoles.map((r) => [r.discordRoleId!, r.id]),
   );
   const syncedRoleIds = syncedRoles.map((r) => r.id);
 
-  const identityRows = await db
-    .select({
-      userId: identitiesInAuth.userId,
-      discordUserId: identitiesInAuth.providerId,
-    })
-    .from(identitiesInAuth)
-    .where(eq(identitiesInAuth.provider, "discord"));
-
-  if (identityRows.length === 0) return { changes: 0, errors };
-
-  const discordToUser = new Map(
-    identityRows.map((r) => [r.discordUserId, r.userId]),
-  );
+  const discordUserIds = await loadDiscordUserIds();
+  if (discordUserIds.size === 0) return { changes: 0, errors: [] };
 
   const members: APIGuildMember[] = [];
   let after: string | undefined;
@@ -186,40 +183,69 @@ export async function reconcileMembership(): Promise<{
     after = page[page.length - 1]!.user.id;
   }
 
-  const memberRolesByDiscordId = new Map<string, Set<string>>();
+  const memberRoles = new Map<string, Set<string>>();
   for (const member of members) {
-    memberRolesByDiscordId.set(member.user.id, new Set(member.roles));
+    memberRoles.set(member.user.id, new Set(member.roles));
   }
 
-  const existing = await db
-    .select({ userId: userRoles.userId, roleId: userRoles.roleId })
-    .from(userRoles)
-    .where(inArray(userRoles.roleId, syncedRoleIds));
-  const existingSet = new Set(existing.map((r) => `${r.userId}:${r.roleId}`));
+  const [platformRows, snapshotRows] = await Promise.all([
+    db
+      .select({ userId: userRoles.userId, roleId: userRoles.roleId })
+      .from(userRoles)
+      .where(inArray(userRoles.roleId, syncedRoleIds)),
+    db
+      .select({
+        userId: discordRoleMemberships.userId,
+        roleId: discordRoleMemberships.roleId,
+      })
+      .from(discordRoleMemberships)
+      .where(inArray(discordRoleMemberships.roleId, syncedRoleIds)),
+  ]);
 
-  const toInsert: { userId: string; roleId: string }[] = [];
-  const toDelete: { userId: string; roleId: string }[] = [];
+  const plan = planMembershipSync({
+    discordUserIds,
+    roleIdByDiscordRoleId,
+    memberRoles,
+    platform: new Set(platformRows.map((r) => pairKey(r.userId, r.roleId))),
+    snapshot: new Set(snapshotRows.map((r) => pairKey(r.userId, r.roleId))),
+  });
 
-  for (const [discordUserId, userId] of discordToUser) {
-    const memberRoleIds = memberRolesByDiscordId.get(discordUserId);
-    if (!memberRoleIds) continue;
-
-    for (const [discordRoleId, roleId] of discordRoleIdToRoleId) {
-      const hasOnDiscord = memberRoleIds.has(discordRoleId);
-      const hasInDb = existingSet.has(`${userId}:${roleId}`);
-      if (hasOnDiscord && !hasInDb) toInsert.push({ userId, roleId });
-      else if (!hasOnDiscord && hasInDb) toDelete.push({ userId, roleId });
-    }
-  }
-
-  if (toInsert.length > 0) {
-    await db.insert(userRoles).values(toInsert).onConflictDoNothing();
-  }
-  for (const { userId, roleId } of toDelete) {
-    await db
-      .delete(userRoles)
-      .where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)));
-  }
-
-  return { changes: toInsert.length + toDelete.length, errors };
+  return applyMembershipPlan(plan, {
+    pushMemberRoleChange,
+    async record({ userId, roleId }, change) {
+      if (change.platform === "add") {
+        await db
+          .insert(userRoles)
+          .values({ userId, roleId })
+          .onConflictDoNothing();
+      } else if (change.platform === "remove") {
+        await db
+          .delete(userRoles)
+          .where(
+            and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)),
+          );
+      }
+      if (change.snapshot) {
+        await db
+          .insert(discordRoleMemberships)
+          .values({ userId, roleId })
+          .onConflictDoUpdate({
+            target: [
+              discordRoleMemberships.userId,
+              discordRoleMemberships.roleId,
+            ],
+            set: { syncedAt: sql`now()` },
+          });
+      } else {
+        await db
+          .delete(discordRoleMemberships)
+          .where(
+            and(
+              eq(discordRoleMemberships.userId, userId),
+              eq(discordRoleMemberships.roleId, roleId),
+            ),
+          );
+      }
+    },
+  });
 }
