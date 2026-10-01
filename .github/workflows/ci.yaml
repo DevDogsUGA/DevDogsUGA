@@ -261,7 +261,7 @@ jobs:
           SKIP_ENV_VALIDATION: ""
         run: >-
           pnpm exec with-env
-          pnpm -r --if-present --filter '!study-group-finder' run build
+          pnpm -r --if-present --filter './apps/**' --filter '!study-group-finder' run build
 
   # Repo-wide formatting check — fast, no build needed.
   format:

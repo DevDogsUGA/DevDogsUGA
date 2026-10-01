@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "devtools": "pnpm --config.ignore-scripts=true dlx @devdogsuga/devtools",
-    "build": "pnpm -r -F '!study-group-finder' run build",
+    "build": "pnpm -r -F './apps/**' -F '!study-group-finder' run build",
     "dev": "echo 'Start one app: pnpm -F <app> dev, or cd apps/<app> && pnpm dev (apps: platform, schedule-builder)'",
     "typecheck": "pnpm -r -F '!study-group-finder' run typecheck",
     "lint": "pnpm -r -F '!study-group-finder' run lint",

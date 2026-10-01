@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "codegen": "tsx scripts/compile.tsx",
+    "compile": "pnpm run codegen",
     "pretypecheck": "pnpm run codegen",
     "pretest": "pnpm run codegen",
     "typecheck": "tsc --noEmit",
