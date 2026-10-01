@@ -8,7 +8,7 @@ owns the **`platform`** Postgres schema on the shared Supabase project
 ## Develop
 
 ```bash
-pnpm dev --filter platform   # local stack auto-detected, else the linked remote
+pnpm -F platform dev   # local stack auto-detected, else the linked remote
 ```
 
 Monorepo setup, env handling, and the contribution flow:

@@ -26,8 +26,9 @@ Postgres: `reconcileTerm.db-test.ts` (the ingestion pipeline's writes) and
 the generated schema's query validity. Start with a database first:
 
 ```bash
-pnpm devtools db start
-pnpm devtools db reset
+pnpm devtools supabase start
+pnpm devtools supabase db reset
+pnpm -F @devdogsuga/supabase types:db
 ```
 
 ## Cloudflare preview, not `next dev`

@@ -109,7 +109,7 @@ if (!cfg) {
 }
 if (!process.env["DB_URL"]) {
   console.error(
-    "types:drizzle: DB_URL is not set. Start the local database (pnpm devtools db start), or run it through with-env.",
+    "types:drizzle: DB_URL is not set. Start the local database (pnpm devtools supabase start), or run it through with-env.",
   );
   process.exit(1);
 }

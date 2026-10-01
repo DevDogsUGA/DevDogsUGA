@@ -53,10 +53,10 @@ One flat `supabase/migrations/` directory across every app. Name a new file
 yourself, or generate the name:
 
 ```bash
-pnpm devtools db migration new --app schedule-builder
+pnpm devtools preset new-migration --app schedule-builder
 ```
 
-It asks for the app if you don't pass `--app` — the app decides the schema
+It asks for the app and a description if you don't pass them — the app decides the schema
 prefix (`platform`, `schedule_builder`, or `study_group_finder`) in the
 filename `<timestamp>_<schema>_<desc>.sql`.
 
@@ -69,7 +69,7 @@ filename `<timestamp>_<schema>_<desc>.sql`.
   order they actually land in.
 - **Regenerate types, don't hand-edit them.** After any schema change:
   ```bash
-  pnpm devtools db types
+  pnpm -F @devdogsuga/supabase types:db
   ```
   Never hand-merge `packages/supabase/src/database.types.ts` — it's
   generated, and a hand merge is the kind of conflict that looks resolved and
@@ -84,6 +84,6 @@ the diff by hand:
 
 ```bash
 git pull --rebase origin main
-pnpm devtools db reset      # or: pnpm devtools db migrate, against your branch's migrations
-pnpm devtools db types
+pnpm devtools supabase db reset   # or: pnpm devtools preset apply-migrations, against your branch's migrations
+pnpm -F @devdogsuga/supabase types:db
 ```

@@ -26,9 +26,9 @@ Both packages are pinned to an exact version rather than a range, because the `l
 
 ## Introspected, never pushed
 
-Both apps follow the same workflow: SQL migrations own the schema, and `pnpm devtools db introspect --app <slug>` (`platform` or `schedule-builder`) pulls the live database back into Drizzle. No script here runs `drizzle-kit push`, and neither app hand-declares its own tables or policies in Drizzle — `src/server/db/schema/generated/schema.ts` is written entirely by that command and never edited by hand.
+Both apps follow the same workflow: SQL migrations own the schema, and `pnpm -F <app> types:drizzle` (`platform` or `schedule-builder`) pulls the live database back into Drizzle. No script here runs `drizzle-kit push`, and neither app hand-declares its own tables or policies in Drizzle — `src/server/db/schema/generated/schema.ts` is written entirely by that command and never edited by hand.
 
-`db introspect` runs two `drizzle-kit pull`s per app — `drizzle-introspection.config.ts` (every schema this app doesn't own, into `src/supabase/drizzle/`) and `drizzle.config.ts` (the app's own schema, into `src/server/db/schema/generated/`) — then applies the fixups covered below. See [Writing a migration](/docs/platform/guides/migrations) for the full change loop: writing the migration, replaying it, and re-introspecting.
+`types:drizzle` runs two `drizzle-kit pull`s per app — `drizzle-introspection.config.ts` (every schema this app doesn't own, into `src/supabase/drizzle/`) and `drizzle.config.ts` (the app's own schema, into `src/server/db/schema/generated/`) — then applies the fixups covered below. See [Writing a migration](/docs/platform/guides/migrations) for the full change loop: writing the migration, replaying it, and re-introspecting.
 
 `src/server/db/relations.ts` is the one hand-maintained file next to the generated schema — a `defineRelations` call over the generated tables. The two apps introspect different schemas, so neither app's generated module or relations file is interchangeable with the other's.
 
@@ -49,6 +49,6 @@ Both apps follow the same workflow: SQL migrations own the schema, and `pnpm dev
 
 Any other app's schema that adds a quarantine column **must be excluded from that second filter**. A foreign key to `platform."reportResolutions"` makes Drizzle emit a reference it has no import for, so the generated file does not compile, and importing across would make the two generated modules circular. Nothing is lost by excluding one: apps reach their own content over PostgREST.
 
-`devtools db introspect` (`packages/devtools/src/db/introspect.ts` in Backstage) then repairs what drizzle-kit cannot do itself — it deletes the emitted `relations.ts` (relations are hand-maintained in `src/server/db/relations.ts`), re-injects any cross-schema import the app's own schema needs (platform's does, for `auth.users`/`auth.oauth_clients`; schedule-builder's doesn't, since `schedule_builder` carries no foreign keys into another schema), and aliases the `In<Schema>` suffix drizzle-kit adds for non-public schemas so each app's existing imports stay stable.
+`scripts/drizzle-pull.ts` (the script behind `types:drizzle`) then repairs what drizzle-kit cannot do itself — it deletes the emitted `relations.ts` (relations are hand-maintained in `src/server/db/relations.ts`), re-injects any cross-schema import the app's own schema needs (platform's does, for `auth.users`/`auth.oauth_clients`; schedule-builder's doesn't, since `schedule_builder` carries no foreign keys into another schema), and aliases the `In<Schema>` suffix drizzle-kit adds for non-public schemas so each app's existing imports stay stable.
 
 </details>

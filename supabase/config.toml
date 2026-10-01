@@ -50,9 +50,8 @@ max_client_conn = 100
 #
 # There is deliberately no `development/` set. It used to hold password-login
 # personas, and because any reset runs this list, a reset of a hosted tier
-# would have planted logins whose password is in the repo. Test logins now
-# come from `pnpm devtools persona <member|moderator>`, which creates them on
-# a development tier with a random password and removes them with `--clean`.
+# would have planted logins whose password is in the repo. Sign in through the
+# app instead and give the account a role with `pnpm devtools roles grant`.
 [db.seed]
 enabled = true
 sql_paths = ["./seed/roles/*.sql", "./seed/officers/*.sql"]
@@ -116,8 +115,8 @@ enable_manual_linking = true
 # enable_signup = false` — gotrue has one flag per provider
 # (`EmailProviderConfiguration.Enabled`), and it gates password SIGN-IN too
 # (`internal/api/token.go`'s password grant checks the same flag
-# `internal/api/signup.go` does), which would lock every test login
-# (`pnpm devtools persona`) out of the only sign-in path the local Docker
+# `internal/api/signup.go` does), which would lock every password test
+# login out of the only sign-in path the local Docker
 # stack has (plain HTTP, so it cannot host OAuth). Password
 # signup is refused instead by `require_uga_signup_email` (the
 # before-user-created hook below), extended to reject the `email` provider
