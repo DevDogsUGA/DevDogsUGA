@@ -4,7 +4,7 @@
 -- every run. The seeds are insert-only now (`seed/roles/*.sql`), so the rule
 -- lives here, where it reaches a database nobody is allowed to reset. Both rows
 -- have fixed ids: Member is the default role every account holds, and President
--- is the id `devtools roles grant` writes to bootstrap the first President.
+-- is the id `devtools grant-root` writes to bootstrap the first President.
 --
 -- `on conflict do nothing` keeps this safe on a database that already has them,
 -- whatever edits they carry. A permission column added later is granted to

@@ -105,8 +105,8 @@ insert into "platform"."apps" ("slug", "schemaName", "displayName") values
 -- false, so on a brand new instance the console is simply invisible: no error,
 -- nothing to click. Somebody has to grant themselves the first role, and there
 -- is deliberately no RPC for it. President is granted by writing the row
--- directly, via `pnpm devtools roles grant <email> President`, the Supabase
--- dashboard, or psql, each of which needs the service
+-- directly, via `pnpm devtools grant-root` (named for the Root role President
+-- replaced), the Supabase dashboard, or psql, each of which needs the service
 -- key or the database password. That is a credential only somebody who already
 -- controls the instance holds, which makes the authorization structural rather
 -- than a self-assertion the database has to take on trust.
