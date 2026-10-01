@@ -87,26 +87,6 @@ jobs:
       # ref this job already resolved above rather than re-deriving it.
       - name: Migrations are added in timestamp order
         run: pnpm --filter @devdogsuga/repo-checks run check:migration-order "${{ steps.base.outputs.ref }}"
-      # Both apps' GENERATED route types (the `VinextRouteTypes` namespace,
-      # next-env.d.ts's `vinext/types/augmentations` reference) exist on
-      # every laptop that has ever run `vinext dev`/`vinext build` and on no
-      # fresh checkout — `tsc --noEmit` then fails on names the framework
-      # provides. `vinext typegen` (NOT `next typegen` — the two write
-      # mutually incompatible shapes to the same `.next/types/routes.d.ts`
-      # and `next-env.d.ts`; `next typegen` also strips next-env.d.ts's
-      # `vinext/types/augmentations` import, which then breaks `tsc
-      # --noEmit`) creates them without a build or a database;
-      # next.config.ts falls back to a placeholder URL under
-      # SKIP_ENV_VALIDATION so loading it here needs no credentials.
-      # `pnpm --filter ... exec` runs only in that one package, so nothing
-      # has compiled the workspace packages the Next configs import (`~/env`
-      # reaches into @devdogsuga/env's dist/) — build the apps' dependencies
-      # first, topologically, with pnpm's own `^...` (deps-of) selector.
-      - name: Generate the vinext type stubs
-        run: |
-          pnpm -r --if-present --filter 'platform^...' --filter 'schedule-builder^...' run build
-          pnpm --filter platform exec vinext typegen
-          pnpm --filter schedule-builder exec vinext typegen
       # Flutter isn't installed here — the study-group-finder app is validated
       # in the `flutter` job below.
       #
@@ -118,44 +98,26 @@ jobs:
       # remove the requirement. Building the apps needs a database, so it
       # happens in the `database` job, which has one.
       #
-      # pnpm has no single "run these tasks only against packages changed
-      # since a ref, and their dependents, but build every dependency they
-      # could reach so type-aware lint/typecheck have every .d.ts on disk"
-      # command the way turbo's task graph did. `--filter './packages/**'
-      # --filter './docs'` is deliberately a directory selector, not
-      # `!<app-name>` exclusions: it builds every package UNDER apps' own
-      # dependencies without ever running an app's OWN `build` script, which
-      # is exactly what turbo's `^build` did too (typechecking `platform`
-      # ran `platform`'s `typecheck` script and its DEPENDENCIES' `build`
-      # scripts, never `platform`'s own `build`). That distinction matters
-      # here specifically: this job sets SKIP_ENV_VALIDATION but has no .env
-      # and no database, so `pnpm --filter platform run build`'s own
-      # `_images` step reaching for `with-env` would fail outright, and a
-      # broader "build everything, apps included" pre-step would too. It
-      # also sidesteps the workspace-root recursion a `!`-exclusion-based
-      # filter would otherwise risk: a directory selector never matches the
-      # workspace root the way `!study-group-finder` alone would, so there is
-      # no need to separately exclude `devdogs-monorepo`, whose own
-      # `build`/`lint`/`typecheck`/`test` scripts are all `pnpm devtools run
-      # <task>` — the exact command this step is replacing.
+      # Each app's `pretypecheck`/`prelint`/`pretest` runs its own `codegen`
+      # (the email templates, the docs module, and the GENERATED route types:
+      # the `VinextRouteTypes` namespace and next-env.d.ts's
+      # `vinext/types/augmentations` reference, which exist on every laptop
+      # that has run `vinext dev` and on no fresh checkout). The workspace
+      # packages are consumed from source, so there is nothing to build first.
+      # `vinext typegen` (NOT `next typegen` -- the two write mutually
+      # incompatible shapes to the same `.next/types/routes.d.ts`) needs
+      # neither a build nor a database; next.config.ts falls back to a
+      # placeholder URL under SKIP_ENV_VALIDATION.
       #
-      # This still costs more than turbo's per-task `^build` scoping would
-      # have on a small-diff PR — every package under `packages/` and `docs`
-      # builds regardless of which ones are actually affected, since pnpm has
-      # no narrower "only the dependencies an affected app would reach"
-      # selector — accepted here because turbo's remote cache was never
-      # enabled and `.turbo` was never persisted across CI runs, so turbo was
-      # already rebuilding all of it from nothing on every run; this only
-      # makes that cost explicit. `--if-present` skips the packages with no
-      # `build` script (`@devdogsuga/repo-checks`, test-only, nothing else in
-      # the workspace imports it) instead of failing on them.
+      # `pnpm -r` never selects the workspace root, so the root's own scripts
+      # are never run here. `--if-present` skips the packages with no such
+      # script (`@devdogsuga/repo-checks` has no `lint`, for one).
       - name: Lint + typecheck + test (affected)
         run: |
-          pnpm -r --if-present --filter './packages/**' --filter './docs' run build
           status=0
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run lint || status=1
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run typecheck || status=1
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run test || status=1
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' run lint || status=1
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' run typecheck || status=1
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' run test || status=1
           exit $status
       # REMOVED: "Events config passes its publishability checks"
       # (`pnpm --filter @devdogsuga/events check`), the CLI that parses
@@ -272,52 +234,34 @@ jobs:
       # already composed above (every `devtools` command resolves a session
       # tier before dispatch), same reason the RLS suite lives here rather
       # than in the default `pnpm test` lane. `devtools emails` imports the
-      # email package's built runtime (dist/, untracked), which a fresh
-      # checkout doesn't have until `build` runs; `compile` alone only writes
-      # the templates.
+      # email package from source, but its compiled templates are generated
+      # and untracked, so a fresh checkout needs `codegen` first.
       - name: devtools / devtools-ci process contracts
         run: |
-          pnpm --filter @devdogsuga/email run build
+          pnpm --filter @devdogsuga/email run codegen
           pnpm --filter @devdogsuga/repo-checks run test:live
       # 124 tests, including the privilege-surface guards in
       # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
       # nothing else can see: a function reachable by every role in the cluster
       # typechecks perfectly.
-      # Vitest resolves @devdogsuga/db (/server) and friends from their dist/,
-      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
-      # invocation only runs in that one package, so build the app's
-      # dependencies first with pnpm's own deps-of selector.
+      # `test:db` runs its app's `codegen` first (`pretest:db`), so there is
+      # nothing to build beforehand.
       - name: Query validity + privilege surface
-        run: |
-          pnpm -r --if-present --filter 'platform^...' run build
-          pnpm --filter platform run test:db
-      # Vitest resolves @devdogsuga/db (/server) and friends from their dist/,
-      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
-      # invocation only runs in that one package, so build the app's
-      # dependencies first with pnpm's own deps-of selector.
+        run: pnpm --filter platform run test:db
       - name: Query validity + privilege surface (schedule-builder)
-        run: |
-          pnpm -r --if-present --filter 'schedule-builder^...' run build
-          pnpm --filter schedule-builder run test:db
+        run: pnpm --filter schedule-builder run test:db
       # Validation ENFORCED, unlike everywhere else in this file. That is what
       # makes this worth running: a newly added required variable with no
       # default fails here rather than at deploy time.
       #
       # Both Next apps. study-group-finder is Flutter and is covered by its own
       # job.
-      #
-      # `--filter '!devdogs-monorepo'` alongside `!study-group-finder`: an
-      # unqualified `!<name>` exclusion still matches the workspace root
-      # (unlike a bare, filter-less `-r`, or a dependency-direction selector
-      # like `^...`, both of which never do), and the root's own `build`
-      # script is `pnpm devtools run build` — precisely the picker this
-      # workflow bypasses everywhere else, so it must stay excluded here too.
       - name: Build both Next apps, with the env schema enforced
         env:
           SKIP_ENV_VALIDATION: ""
         run: >-
           pnpm exec with-env
-          pnpm -r --if-present --filter '!study-group-finder' --filter '!devdogs-monorepo' run build
+          pnpm -r --if-present --filter '!study-group-finder' run build
 
   # Repo-wide formatting check — fast, no build needed.
   format:
