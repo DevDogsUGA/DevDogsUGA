@@ -1,1 +1,48 @@
-["apps/platform", "apps/sandbox", "apps/schedule-builder"]
+[
+  {
+    "path": "apps/platform",
+    "smoke": {
+      "hosts": {
+        "staging": "staging.devdogsuga.org",
+        "production": "devdogsuga.org"
+      },
+      "publicPaths": [
+        "/",
+        "/events",
+        "/docs",
+        "/partners",
+        "/changelog",
+        "/attendance",
+        "/legal/privacy"
+      ],
+      "protectedPath": "/console/permissions",
+      "protectedRedirectPrefix": "/auth"
+    }
+  },
+  "apps/sandbox",
+  {
+    "path": "apps/schedule-builder",
+    "smoke": {
+      "hosts": {
+        "staging": "staging.dogdays.dev",
+        "production": "dogdays.dev"
+      },
+      "publicPaths": [
+        "/",
+        "/courses",
+        "/plans",
+        "/generate-schedule",
+        "/manual-entry",
+        "/questionnaire",
+        "/past-credits",
+        "/credit-data",
+        "/settings",
+        "/survey",
+        "/route-map",
+        "/distance-page"
+      ],
+      "protectedPath": "/dashboard",
+      "protectedRedirectPrefix": "/"
+    }
+  }
+]
