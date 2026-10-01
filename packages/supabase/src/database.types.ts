@@ -437,7 +437,7 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
-        };
+      };
       docsIndexState: {
         Row: {
           hash: string;
