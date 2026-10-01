@@ -24,7 +24,10 @@
  *   package's `package.json`, which `command-check.ts` checks scripts against;
  * - `pnpm-lock.yaml`, which moves whenever a dependency does, including the
  *   `@devdogsuga/config` presets a `tsconfig` extends;
- * - `@devdogsuga/devtools`' built command catalog (`devtools-catalog.ts`);
+ * - the CLI-override variables (`cli-catalog.ts`), so pointing the command
+ *   check at another build misses. The published CLIs' own command lists are
+ *   NOT inputs: they live on npm, so a hit can predate a publish, and CI,
+ *   which starts with no `dist/`, always runs the check;
  * - this compiler's own identity, so an upgrade or a local rebuild misses.
  *
  * Stats, not content hashes: `gen` builds a `ts.Program` over a few hundred
@@ -37,6 +40,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { cliOverrides } from "./cli-catalog.js";
 import { sourceFilesUnder } from "./gen/scope.js";
 import { discoverWorkspacePackages, findWorkspaceRoot } from "./workspace.js";
 
@@ -62,8 +66,6 @@ const CONTENT_SKIP = new Set(["dist", "node_modules"]);
 
 /** Where `gen` writes, one level below the content root. */
 const REFERENCE_SEGMENT = "reference";
-
-const DEVTOOLS_CATALOG = "node_modules/@devdogsuga/devtools/dist/commands.js";
 
 /**
  * Combines the input stats and the compiler's identity into one signature.
@@ -109,7 +111,6 @@ export function collectInputs(repoRoot: string, contentRoot: string): string[] {
     path.join(repoRoot, "pnpm-workspace.yaml"),
     path.join(repoRoot, "pnpm-lock.yaml"),
     path.join(repoRoot, "package.json"),
-    path.join(repoRoot, DEVTOOLS_CATALOG),
   );
   for (const pkg of discoverWorkspacePackages(repoRoot)) {
     files.push(path.join(repoRoot, pkg.dir, "package.json"));
@@ -131,7 +132,11 @@ export function openBuildCache(contentRoot: string): BuildCache {
   const cacheFile = path.join(outDir, ".build-cache.json");
 
   const entries = statEntries(repoRoot, collectInputs(repoRoot, contentRoot));
-  const signature = computeSignature(entries, compilerIdentity());
+  const { devtools, backstage } = cliOverrides();
+  const signature = computeSignature(
+    entries,
+    `${compilerIdentity()}|${devtools}|${backstage}`,
+  );
 
   const outputsExist =
     isFile(path.join(outDir, "index.js")) &&
@@ -186,7 +191,7 @@ function walkContent(root: string, dir: string, out: string[]): void {
 function statEntries(repoRoot: string, files: readonly string[]): FileEntry[] {
   const entries: FileEntry[] = [];
   for (const file of files) {
-    // A missing input (no lockfile yet, devtools not built) is simply absent
+    // A missing input (no lockfile yet) is simply absent
     // from the key; its later appearance changes the key.
     const stat = fs.statSync(file, { throwIfNoEntry: false });
     if (stat === undefined) continue;

@@ -63,7 +63,7 @@ declare({
       doc:
         "Which deployment this is: development, staging, or production. Never " +
         "written into an env file -- wrangler.jsonc's per-env blocks and the " +
-        "cf:build:* scripts are its two committed sources.",
+        "build step (`DEPLOY_ENV=<tier> pnpm build`) are its two committed sources.",
       scope: "default",
       secrecy: "public",
       commented: true,
@@ -161,7 +161,7 @@ declare({
  * The key that could mint the token, kept in a SEPARATE source, which is the
  * whole point.
  *
- * `devtools deploy secrets-file` sends a Worker every storable key its app
+ * `backstage deploy` sends a Worker every storable key its app
  * declares, and excludes `:tooling` sources because "a key the DEPLOY needs is
  * not automatically a key the WORKER needs". Declared as plain `sandbox`, this
  * key would ride that path onto the proxy Worker itself.
@@ -182,7 +182,7 @@ declare({
  *
  * Nothing in this repository mints a token from this key.
  *
- * Still declared here rather than in the devtools operator manifest, so a
+ * Still declared here rather than in the operator manifest, so a
  * reader of `.env.example` finds the whole rotation path in one place -- the
  * endpoint, the minted token, and the key that would sign it. `:tooling`
  * sources fold into their app's section when the example is rendered, so that

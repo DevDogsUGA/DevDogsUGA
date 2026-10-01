@@ -36,7 +36,7 @@ describe("runFailingChecks / printFailingChecks", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  it("reports the devtools catalog as missing when it could not be loaded", async () => {
+  it("fails when a command list cannot be loaded", async () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-failing-"));
     fs.writeFileSync(
       path.join(root, "pnpm-workspace.yaml"),
@@ -44,26 +44,73 @@ describe("runFailingChecks / printFailingChecks", () => {
     );
     const contentRoot = path.join(root, "docs");
     fs.mkdirSync(contentRoot, { recursive: true });
+    const script = path.join(root, "broken.mjs");
+    fs.writeFileSync(script, "process.exit(1);\n");
 
-    const result = await runFailingChecks(contentRoot, [
-      page({ content: "no devtools here" }),
-    ]);
+    const before = { ...process.env };
+    process.env["DOCS_KIT_DEVTOOLS_CMD"] = `node ${script}`;
+    process.env["DOCS_KIT_BACKSTAGE_CMD"] = `node ${script}`;
+    try {
+      const result = await runFailingChecks(contentRoot, [
+        page({ content: "no commands here" }),
+      ]);
 
-    expect(result.devtoolsCatalogMissing).toBe(true);
-    expect(result.linkErrors).toEqual([]);
-    expect(result.commandErrors).toEqual([]);
+      expect(result.catalogErrors).toHaveLength(2);
+      expect(result.catalogErrors[0]).toContain("DOCS_KIT_DEVTOOLS_CMD");
+      expect(result.catalogErrors[1]).toContain("DOCS_KIT_BACKSTAGE_CMD");
+      expect(result.linkErrors).toEqual([]);
+      expect(result.commandErrors).toEqual([]);
+    } finally {
+      process.env["DOCS_KIT_DEVTOOLS_CMD"] = before["DOCS_KIT_DEVTOOLS_CMD"];
+      process.env["DOCS_KIT_BACKSTAGE_CMD"] = before["DOCS_KIT_BACKSTAGE_CMD"];
+      for (const key of ["DOCS_KIT_DEVTOOLS_CMD", "DOCS_KIT_BACKSTAGE_CMD"]) {
+        if (process.env[key] === undefined) delete process.env[key];
+      }
+    }
   });
 
-  it("prints a one-line notice when the devtools catalog is missing, even with no errors", () => {
+  it("checks commands against the lists the CLIs print", async () => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-failing-"));
+    fs.writeFileSync(
+      path.join(root, "pnpm-workspace.yaml"),
+      'packages:\n  - "apps/*"\n',
+    );
+    const contentRoot = path.join(root, "docs");
+    fs.mkdirSync(contentRoot, { recursive: true });
+    const script = path.join(root, "cli.mjs");
+    fs.writeFileSync(
+      script,
+      `process.stdout.write(JSON.stringify({ commands: [{ path: "setup" }] }));\n`,
+    );
+
+    process.env["DOCS_KIT_DEVTOOLS_CMD"] = `node ${script}`;
+    process.env["DOCS_KIT_BACKSTAGE_CMD"] = `node ${script}`;
+    try {
+      const result = await runFailingChecks(contentRoot, [
+        page({
+          content: "```sh\npnpm devtools setup\npnpm devtools gone\n```\n",
+        }),
+      ]);
+
+      expect(result.catalogErrors).toEqual([]);
+      expect(result.commandErrors).toHaveLength(1);
+      expect(result.commandErrors[0]?.message).toContain("pnpm devtools gone");
+    } finally {
+      delete process.env["DOCS_KIT_DEVTOOLS_CMD"];
+      delete process.env["DOCS_KIT_BACKSTAGE_CMD"];
+    }
+  });
+
+  it("prints a load failure as an error", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
       printFailingChecks({
         linkErrors: [],
         commandErrors: [],
-        devtoolsCatalogMissing: true,
+        catalogErrors: ["Could not run `pnpm devtools --help --json`"],
       });
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy.mock.calls[0]?.[0]).toContain("devtools catalog not found");
+      expect(spy.mock.calls[0]?.[0]).toContain("1 error(s)");
+      expect(spy.mock.calls[1]?.[0]).toContain("Could not run");
     } finally {
       spy.mockRestore();
     }
@@ -75,7 +122,7 @@ describe("runFailingChecks / printFailingChecks", () => {
       printFailingChecks({
         linkErrors: [],
         commandErrors: [],
-        devtoolsCatalogMissing: false,
+        catalogErrors: [],
       });
       expect(spy).not.toHaveBeenCalled();
     } finally {

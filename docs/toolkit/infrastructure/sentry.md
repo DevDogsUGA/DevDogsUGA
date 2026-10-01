@@ -36,7 +36,7 @@ A DSN only lets someone send events to a project, so none of these is a secret.
 
 Each name carries its app because a deploy environment holds one value per name: a shared `SENTRY_DSN` would send every app's events to one project. Each `NEXT_PUBLIC_` variable is derived from its server-side partner (`NEXT_PUBLIC_PLATFORM_SENTRY_DSN="$PLATFORM_SENTRY_DSN"`), so you never set it by hand. It is inlined into the browser bundle at build time.
 
-They travel like any other per-environment variable. Fill in the three server-side DSNs in `.env.staging` and `.env.production`, then run `pnpm devtools env push --target <target>`, which stores them in Bitwarden and copies them to the GitHub environment's variables. The next deploy hands the server-side ones to the Worker, expands the two derived ones, and builds those into the bundle. [Secrets and environments](/docs/toolkit/infrastructure/secrets) covers the files.
+They travel like any other per-environment variable. Fill in the three server-side DSNs in `.env.staging` and `.env.production`, then run `pnpm backstage env push --target <target>`, which stores them in Bitwarden and copies them to the GitHub environment's variables. The next deploy hands the server-side ones to the Worker, expands the two derived ones, and builds those into the bundle. [Secrets and environments](/docs/toolkit/infrastructure/secrets) covers the files.
 
 Sandbox is not in the deploy pipeline. It deploys by hand with `wrangler deploy`, so its DSN only reaches the Worker if you set it there too, and its events carry no release.
 
@@ -44,14 +44,14 @@ Sandbox is not in the deploy pipeline. It deploys by hand with `wrangler deploy`
 
 `deploy-app.yaml` tags every event with the deploy's commit SHA as the release (`SENTRY_RELEASE` for the Worker, `NEXT_PUBLIC_SENTRY_RELEASE` for the browser), then creates that release in Sentry and uploads the app's source maps from `dist/`. `public/.assetsignore` keeps the browser maps out of the deployed assets.
 
-The release step needs two values. devtools' own manifest declares both, beside `CLOUDFLARE_API_TOKEN`, because no app reads them:
+The release step needs two values. The operator manifest that devtools and backstage ship declares both, beside `CLOUDFLARE_API_TOKEN`, because no app reads them:
 
 | Name                | Kind            | Value                                               |
 | ------------------- | --------------- | --------------------------------------------------- |
 | `SENTRY_ORG`        | committed       | `devdogsuga`, the same everywhere                   |
 | `SENTRY_AUTH_TOKEN` | per-environment | an organization auth token that can create releases |
 
-`SENTRY_ORG` needs no setting: the deploy reads it from `.env.example`. For the token, fill in `SENTRY_AUTH_TOKEN` in `.env.staging` and `.env.production` (one token serves both), then run `pnpm devtools env push --target <target>` for each. Create it under Sentry's **Settings → Developer Settings → Organization Tokens**.
+`SENTRY_ORG` needs no setting: the deploy reads it from `.env.example`. For the token, fill in `SENTRY_AUTH_TOKEN` in `.env.staging` and `.env.production` (one token serves both), then run `pnpm backstage env push --target <target>` for each. Create it under Sentry's **Settings → Developer Settings → Organization Tokens**.
 
 Without `SENTRY_AUTH_TOKEN` the step logs a warning and the deploy continues. With it, a failed release or upload fails the deploy. The deploy smoke test also uses both to confirm the release exists. It doesn't check cron monitors: the organization token can't read them, and Sentry already opens an issue when a monitored job misses a check-in.
 

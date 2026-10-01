@@ -25,7 +25,7 @@ by decision.
 Run through the workspace so Supabase config comes from the shared root `.env`:
 
 ```bash
-pnpm dev --filter study-group-finder   # local stack auto-detected, else remote
+pnpm -F study-group-finder dev   # local stack auto-detected, else remote
 ```
 
 These pass `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `AUTH_MODE` to Flutter
@@ -44,7 +44,7 @@ The app ID is `dev.dogpack` on both platforms. OAuth returns to
 [supadart](https://pub.dev/packages/supadart) generator (`supadart.yaml`):
 
 ```bash
-pnpm --filter study-group-finder generate-types   # local stack auto-detected, else remote
+pnpm -F study-group-finder types:db   # local stack auto-detected, else remote
 ```
 
 supadart can only read PostgREST's **default** schema (it reads `/rest/v1/`
@@ -54,7 +54,7 @@ without an `Accept-Profile` header and has no schema option). To make that work,
 this app's schema — no per-run config juggling. Nothing else depends on the
 default (every Supabase client sets its `db.schema` explicitly).
 
-`generate-types` maps the monorepo's `API_URL`/`SECRET_KEY` onto the
+`types:db` maps the monorepo's `API_URL`/`SECRET_KEY` onto the
 `SUPABASE_URL`/`SUPABASE_API_KEY` supadart expects (the **secret** key is
 required — supadart 401s on the publishable key when fetching the spec). The
 schema is currently empty, so this is a no-op until tables are added.
@@ -62,7 +62,7 @@ schema is currently empty, so this is a no-op until tables are added.
 ## pnpm workspace
 
 `package.json` is a thin task wrapper (`build`/`dev`/`test`/`lint`/
-`typecheck`/`generate-types`) so pnpm's workspace filters (`pnpm --filter
+`typecheck`/`types:db`) so pnpm's workspace filters (`pnpm -F
 study-group-finder run <task>`) can orchestrate the Flutter toolchain. There is
 no `web/` target in this app, so `build` produces a debug APK
 (`flutter build apk --debug`) for fast validation that the app compiles.

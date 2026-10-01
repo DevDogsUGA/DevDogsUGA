@@ -12,13 +12,14 @@ is why that package holds markdown and a manifest and no code at all: its
 `codegen` script runs this binary. It is a private workspace package used from
 source, so a change to the compiler is an ordinary change in this repository.
 
-Four modes, one binary:
+Five modes, one binary:
 
 ```
 docs-kit                    # compile the markdown in this folder into dist/
+docs-kit build [--force]    # gen, then compile, skipped when no input changed
 docs-kit check              # lint the hand-written pages here
 docs-kit gen [--dry-run]    # regenerate the API reference from source
-docs-kit index              # write dist/'s pages to the search index
+docs-kit index              # write dist/'s pages to the search index (needs a database)
 ```
 
 Those are the CLI's modes, not lines to paste. The bin is linked into
@@ -37,9 +38,10 @@ leave that mode exactly as it was.
 
 Bare mode also runs two checks that **fail the build**: every link between
 docs pages has to resolve against pages that actually exist (mounted `_shared`
-pages included), and every documented `pnpm devtools`, `pnpm --filter` or
+pages included), and every documented `pnpm devtools`, `pnpm -F` / `pnpm --filter` or
 `pnpm run` command inside a fenced code block has to name a real command or
-package script. A fence tagged with the extra word `nocheck` opts a block out
+package script. A command that no longer exists fails the build, so a green
+build means the docs are current. A fence tagged with the extra word `nocheck` opts a block out
 of the second check — see
 [Writing docs](/docs/toolkit/infrastructure/docs-system/writing#supported-syntax)
 for the exact syntax.
@@ -70,11 +72,24 @@ the bare compile, and skips both when no markdown file, manifest, lockfile or
 generator source it would read has changed since the last successful build:
 
 ```bash
-pnpm --filter @devdogsuga/docs codegen        # cached: `docs-kit gen && docs-kit`
-pnpm --filter @devdogsuga/docs codegen --force  # bypass the cache
+pnpm -F @devdogsuga/docs codegen          # cached: `docs-kit gen && docs-kit`
+pnpm -F @devdogsuga/docs codegen --force  # bypass the cache
 ```
 
-To run the compiler directly instead, from `docs/`:
+The platform's `codegen` runs it for you, so `pnpm -F platform dev`, `build`,
+`lint`, `typecheck` and `test` all start from a current artifact.
+
+The search index is a separate step because it writes to a database, not to
+files. `populate:search` runs `docs-kit index` under `with-env`, so it targets
+whichever database your session points at:
+
+```bash
+pnpm -F @devdogsuga/docs populate:search
+```
+
+The platform's dev server runs it after every docs change, and the deploy
+workflow runs it after the platform Worker deploys. To run the other modes
+directly instead, from `docs/`:
 
 ```bash
 cd docs && pnpm exec docs-kit check

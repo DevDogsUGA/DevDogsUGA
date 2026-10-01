@@ -122,7 +122,7 @@ on — there's no config fix.
 
 ### Docker not running
 
-**Symptom:** `docker info` hangs or errors, or `pnpm devtools db start` can't
+**Symptom:** `docker info` hangs or errors, or `pnpm devtools supabase start` can't
 reach the daemon. On macOS, Docker Desktop may show "Docker Desktop failed to
 initialize backend" instead of starting.
 
@@ -185,7 +185,7 @@ revisit [Running the project](./running#the-database).
 both the app and `pnpm devtools`.
 
 **Cause:** Usually one of: the local stack isn't running
-(`pnpm devtools db start`), the hosted project's URL in `.env` is wrong, or
+(`pnpm devtools supabase start`), the hosted project's URL in `.env` is wrong, or
 the project is paused — see [Supabase paused](#supabase-paused).
 
 **Fix:** `pnpm devtools doctor` checks reachability directly and names which
@@ -216,7 +216,7 @@ or fail once.
 
 ### DB URL: direct connection
 
-**Symptom:** `pnpm devtools db migrate`/`db types` (or anything using
+**Symptom:** `pnpm devtools preset apply-migrations`/`types:db` (or anything using
 `DB_URL`) can't connect, and the connection string doesn't mention "pooler."
 
 **Cause:** `DB_URL` is set to the project's **direct** connection string,
@@ -240,15 +240,15 @@ doesn't support the prepared statements `drizzle-kit` relies on.
 
 ### DB URL: connect failed
 
-**Symptom:** `pnpm devtools db connect <project-ref>` fails outright.
+**Symptom:** a `pnpm devtools supabase` command that targets your hosted project (it fills in `--project-ref` from `.env`) fails outright.
 
 **Cause:** Usually a wrong or missing project ref, or the Supabase CLI isn't
 authenticated (`supabase login`) yet.
 
 **Fix:** Confirm the ref from the dashboard's URL
 (`app.supabase.com/project/<this part>`), and that `supabase projects list`
-shows the project. This command is optional day to day — the wizard and
-`db migrate`/`db types` don't need it.
+shows the project. Only the project-ref commands need it — the wizard and
+`preset apply-migrations`/`types:db` don't.
 
 ## Sign-in
 

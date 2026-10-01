@@ -42,7 +42,7 @@ Backstage's `packages/env/src/targets.ts`:
 | `staging`     | `.env.staging`    | `staging`         | yes                 |
 | `production`  | `.env.production` | `production`      | yes                 |
 
-`pull`, `push` and `audit` all default their file from that row, so
+`pull`, `push` and `audit` (`pnpm backstage env …`) all default their file from that row, so
 `--target staging` reads and writes `.env.staging` and nothing else.
 
 Two rows are asymmetric, both deliberately:
@@ -86,11 +86,10 @@ touch the credentials behind the reviewers.
 
 `SUPABASE_ACCESS_TOKEN` carries full account privileges across both Supabase
 organizations; `supabase config push` needs it, and that is the one mutation
-with no dry run. It is declared `tier: "apply"` in `@devdogsuga/devtools`'s
-own `env.ts` (devtools ships its own operator manifest now, consumed as a
-package rather than a workspace member of this repo — see
-`packages/repo-checks/src/env-registry.ts`), not in anything under
-`apps/*`/`packages/*` here.
+with no dry run. It is declared `tier: "apply"` in the operator manifest that
+`@devdogsuga/backstage` ships as its own `env.ts` (consumed as a package rather
+than a workspace member of this repo; `pnpm devtools check env` keeps the registry in agreement), not
+in anything under `apps/*`/`packages/*` here.
 
 Both still live in the `production` Bitwarden project. That is a GitHub routing
 rule, not a Bitwarden one: only a person reads that project, one project per
@@ -142,7 +141,7 @@ with a bearer token returns encrypted blobs, so the client-side crypto has to
 come from Bitwarden.
 
 It comes from `@bitwarden/sdk-napi` — the same Rust core the `bws` binary wraps,
-loaded in-process as a devtools dependency. Nothing to install, and **values
+loaded in-process as a dependency of `@devdogsuga/backstage`. Nothing to install, and **values
 never appear in argv**: `bws secret create` took the secret as a positional
 argument, visible to `ps` for the length of the call. The SDK needs one thing
 the binary did not, `BWS_ORG_ID` — the organization's public UUID, set once in

@@ -16,8 +16,8 @@ this app.
 ## Where the schema lives
 
 `supabase/migrations/` is the source of truth. `src/server/db/schema/generated/schema.ts`
-is **introspected from the live database** by `pnpm devtools db introspect --app
-schedule-builder` and is never edited by hand; `schema/index.ts` re-exports it,
+is **introspected from the live database** by `pnpm -F schedule-builder
+types:drizzle` and is never edited by hand; `schema/index.ts` re-exports it,
 and `server/db/relations.ts` holds the hand-written Drizzle relations. See
 [Database (Drizzle)](/docs/schedule-builder/guides/stack/db) for how
 introspection works and why it needs two `drizzle-kit` configs.
@@ -43,7 +43,7 @@ refreshes it, that code is stale, not the schema.
 ## Making a schema change
 
 ```bash
-pnpm devtools db migration new --app schedule-builder <description>
+pnpm devtools preset new-migration --app schedule-builder <description>
 ```
 
 writes an empty `supabase/migrations/<timestamp>_schedule_builder_<description>.sql`.
@@ -53,8 +53,9 @@ table with its policies look like in one migration?"). Then replay it and
 re-introspect:
 
 ```bash
-pnpm devtools db reset                          # drop, replay every migration, run the seeds, regenerate types
-pnpm devtools db introspect --app schedule-builder   # re-introspect the Drizzle schema
+pnpm devtools supabase db reset              # drop, replay every migration, run the seeds
+pnpm -F @devdogsuga/supabase types:db        # regenerate the Database types
+pnpm -F schedule-builder types:drizzle       # re-introspect the Drizzle schema
 ```
 
 If you added tables or foreign keys, add the matching relations to

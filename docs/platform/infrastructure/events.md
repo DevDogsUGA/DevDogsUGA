@@ -13,7 +13,7 @@ data itself — `src/data/meetings.json` today, one file per term if that ever
 stops being enough. It is a published package, and its source lives in the
 sibling **Backstage** repository, not here: officers propose a change as a
 pull request against `packages/events/src/data/meetings.json` there, and
-Backstage's own CI (`pnpm --filter @devdogsuga/events check`) blocks the merge
+Backstage's own CI (`pnpm -F @devdogsuga/events check:events`) blocks the merge
 if it does not parse or fails a publishability rule. There is no runtime
 refusal path — Airtable's per-field sync-status refusals are gone along with
 the rest of that integration. Competitions never went through Airtable at
@@ -64,7 +64,7 @@ other cron route):
 
 - **The deploy pipeline**, immediately after each deploy of `platform`
   (`.github/workflows/deploy-app.yaml`'s "Reconcile meetings/workshops from
-  @devdogsuga/events" step, via `@devdogsuga/deploy-checks`' reconcile-cli).
+  @devdogsuga/events" step, via `backstage deploy reconcile`).
   This is the primary trigger: a promoted config lands the moment its own
   build goes live, because the `@devdogsuga/events` version reconciled
   against is whichever one that build bundled in — reconciling at migrate
@@ -80,16 +80,18 @@ other cron route):
 workshops are not part of it, because they come from `@devdogsuga/events` via
 the reconcile, and the reconcile is a platform route rather than a
 devtools-side function (it needs the app's Drizzle client, relations and
-Sentry wiring, none of which belong in devtools). So on a development
-database, `pnpm devtools db reset` calls that route itself once the reset
-finishes — the same unauthenticated request `cron run` would send, to
-`http://localhost:3000` by default. If the platform dev server happens to be
-up already, meetings and workshops come out of the reset seeded, no extra
-step needed. If nothing is listening yet (a first-time reset, before anyone
-has run `pnpm --filter platform dev`), `db reset` says so and names the fix:
-start the platform app,
-then either re-run `pnpm devtools db reset` or run `pnpm devtools cron run
---app platform --cron '*/15 * * * *' --yes` directly.
+Sentry wiring, none of which belong in devtools). `supabase db reset` no
+longer calls that route, so on a fresh development database, start the
+platform app (`pnpm -F platform dev`) and fire the cron once, the same
+unauthenticated request the schedule sends, to `http://localhost:3000` by
+default:
+
+```bash
+pnpm devtools cron run --app platform --cron '*/15 * * * *' --yes
+```
+
+`pnpm devtools setup` lists this as one of its next steps. Repeat it after
+you change the events config.
 
 ## Migrated ids
 

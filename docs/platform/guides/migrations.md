@@ -18,7 +18,7 @@ So a schema change is a SQL change, and the TypeScript follows it. RLS policies,
 ## Making a schema change
 
 ```bash
-pnpm devtools db migration new
+pnpm devtools preset new-migration
 ```
 
 asks which app/schema the migration belongs to (`platform`, `schedule_builder`, or `study_group_finder`) and writes an empty `supabase/migrations/<timestamp>_<schema>_<desc>.sql`. Put the DDL in it:
@@ -30,11 +30,12 @@ alter table "platform"."profile" add column "website" text;
 Then replay it, and regenerate the two type artifacts it can affect:
 
 ```bash
-pnpm devtools db reset                # drop, replay every migration, run the seeds, regenerate types
-pnpm devtools db introspect --app platform   # re-introspect the Drizzle schema
+pnpm devtools supabase db reset       # drop, replay every migration, run the seeds
+pnpm -F @devdogsuga/supabase types:db # regenerate the Database types
+pnpm -F platform types:drizzle        # re-introspect the Drizzle schema
 ```
 
-`pnpm devtools db reset` regenerates `packages/supabase/src/database.types.ts`, the `Database` types `supabase-js` uses — the same thing `pnpm devtools db types` does on its own against a database that is already up to date. Neither touches the Drizzle schema — that is `db introspect`, which runs both configs and then `scripts/post-pull.ts`. If you added tables or foreign keys, add the matching relations to `src/server/db/relations.ts` by hand.
+`types:db` rewrites `packages/supabase/src/database.types.ts`, the `Database` types `supabase-js` uses. It does not touch the Drizzle schema — that is `types:drizzle`, which runs both configs and then the fixups in `scripts/drizzle-pull.ts`. If you added tables or foreign keys, add the matching relations to `src/server/db/relations.ts` by hand.
 
 Commit the migration, the regenerated types, and the relations change together. CI regenerates `database.types.ts` against your migrations and fails on any diff.
 
@@ -61,40 +62,40 @@ Row-Level Security is the whole isolation boundary between app schemas — every
 
 ## Seeds
 
-Seeds live in two flat folders, listed in `config.toml`'s `[db.seed] sql_paths`: `supabase/seed/roles/<role>.sql` (one file per role) and `supabase/seed/officers/<officer>.sql` (one file per officer: account, profile, academic programs, links and role grants). `officers/avatars/` holds the headshots that `[storage.buckets.avatars] objects_path` loads. Patterns run in the listed order, so roles exist before officers are granted them, and files within a pattern run alphabetically. `**` does not search subfolders, so keep both folders flat. `pnpm devtools db reset` runs them against whichever tier the session points at, and `db push`/`db migrate` apply migrations without them.
+Seeds live in two flat folders, listed in `config.toml`'s `[db.seed] sql_paths`: `supabase/seed/roles/<role>.sql` (one file per role) and `supabase/seed/officers/<officer>.sql` (one file per officer: account, profile, academic programs, links and role grants). `officers/avatars/` holds the headshots that `[storage.buckets.avatars] objects_path` loads. Patterns run in the listed order, so roles exist before officers are granted them, and files within a pattern run alphabetically. `**` does not search subfolders, so keep both folders flat. `pnpm devtools supabase db reset` runs them against whichever tier the session points at, and `db push` applies migrations without them.
 
 Every seed statement is insert-only (`on conflict do nothing`), so a file is safe to run again and never overwrites an edit made in the console or in /account. Fix existing data through the console, the CLI or a one-off migration, not by editing a seed. Seeds also never write a role's `discordRoleId` after the role exists: linking a role to Discord goes through the console's link flow. The rule that Member and President exist, and that President holds every permission, is a migration (`20261001130000_42_platform_core_roles.sql`); a new permission column is granted to President by the migration that adds it. To store an officer's Discord user id before they link, insert into `platform."officerDiscordIds"` from their file.
 
-A staging or production target never runs `db reset` — that erases everything else on it. Seed it by hand with `devtools supabase db push --include-seed`; the deploy pipeline does not seed. Supabase records each file's hash in `supabase_migrations.seed_files`: a new file runs once, and an edited file only gets its hash updated, which matches insert-only. Because that table is empty on staging and production today, record the existing files' hashes there before the first `--include-seed` push, or it runs every file once and brings back anything officers deleted.
+A staging or production target never runs `db reset` — that erases everything else on it. Seed it by hand with `pnpm devtools supabase db push --include-seed`; the deploy pipeline does not seed. Supabase records each file's hash in `supabase_migrations.seed_files`: a new file runs once, and an edited file only gets its hash updated, which matches insert-only. Because that table is empty on staging and production today, record the existing files' hashes there before the first `--include-seed` push, or it runs every file once and brings back anything officers deleted.
 
-There is no seed data for sign-in-able test personas any more. Get one with `pnpm devtools persona <member|moderator>` instead — it creates the persona against whichever development tier the session points at (local or hosted) and prints a random password; `pnpm devtools persona --clean` removes personas it created. See [Integrating an app](/docs/platform/guides/reporting/integrating)'s "Testing it" for what each persona is for.
+There is no seed data for sign-in-able test accounts. Sign in with a second account of your own and give it the role you want to see through, with `pnpm devtools roles grant <email> <role>` (`roles revoke` takes it back). See [Integrating an app](/docs/platform/guides/reporting/integrating)'s "Testing it".
 
 Seeds are the right home for anything that must never exist in production, precisely because the reset they ride on is never pointed there. Migrations are the wrong home for the same reason.
 
 ## Sharing a migration history
 
-**Generate the file late.** Iterate with `pnpm devtools db reset` while you work the schema out, and create the migration once the branch is ready to merge — after rebasing — so it is written against the current baseline rather than a stale one:
+**Generate the file late.** Iterate with `pnpm devtools supabase db reset` while you work the schema out, and create the migration once the branch is ready to merge — after rebasing — so it is written against the current baseline rather than a stale one:
 
 ```bash
 git fetch && git rebase origin/main
-pnpm devtools db reset
+pnpm devtools supabase db reset
 ```
 
-**One migration per pull request**, covering every schema change in it. If two branches generate migrations from the same baseline and touch the same tables, whoever merges second reconciles by hand; a `pnpm devtools db reset` after the merge surfaces it immediately. CI's `database` job starts a stack on an empty volume for every pull request, so "every migration still applies from scratch" is checked whether or not you thought to.
+**One migration per pull request**, covering every schema change in it. If two branches generate migrations from the same baseline and touch the same tables, whoever merges second reconciles by hand; a `pnpm devtools supabase db reset` after the merge surfaces it immediately. CI's `database` job starts a stack on an empty volume for every pull request, so "every migration still applies from scratch" is checked whether or not you thought to.
 
-If `main` grew a newer migration while yours was open, recreate yours with a fresh timestamp rather than rebasing the old one in place — CI fails a pull request whose new migration timestamps older than `main`'s latest. Regenerate types with `pnpm devtools db types` afterward; never hand-merge `packages/supabase/src/database.types.ts`, it is generated and any manual edit is overwritten by the next reset anyway.
+If `main` grew a newer migration while yours was open, recreate yours with a fresh timestamp rather than rebasing the old one in place — CI fails a pull request whose new migration timestamps older than `main`'s latest. Regenerate types with `pnpm -F @devdogsuga/supabase types:db` afterward; never hand-merge `packages/supabase/src/database.types.ts`, it is generated and any manual edit is overwritten by the next reset anyway.
 
 ## Applying a migration
 
-| Target                 | How                                                     |
-| ---------------------- | ------------------------------------------------------- |
-| your own stack         | `pnpm devtools db reset`                                |
-| the shared dev project | `pnpm devtools --tier development:remote db migrate`    |
-| production             | `production-migrate` in `.github/workflows/deploy.yaml` |
+| Target                 | How                                                               |
+| ---------------------- | ----------------------------------------------------------------- |
+| your own stack         | `pnpm devtools supabase db reset`                                 |
+| the shared dev project | `pnpm devtools --tier development:remote preset apply-migrations` |
+| production             | `production-migrate` in `.github/workflows/deploy.yaml`           |
 
-`pnpm devtools --tier development:remote db migrate` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then regenerates the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the rest of the `devtools db` group that operates on a hosted project — covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases).
+`pnpm devtools --tier development:remote preset apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then offers to regenerate the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases).
 
 > [!WARNING]
 > Never run `drizzle-kit push` against a hosted database: it writes the schema with no migration record and no rollback path. No script in this repo runs it, and none should.
 
-For the rest of the `devtools db` group — `migration new`, `types`, `introspect`, `seed roles`, and what the session `--tier` flag means — see [`devtools db` commands](/docs/toolkit/guides/devtools-db).
+For what the session `--tier` flag means and the rest of the `devtools supabase` passthrough, see [devtools](/docs/toolkit/guides/devtools).

@@ -79,7 +79,8 @@ copy the Session pooler string, nothing else.
 By hand, if you'd rather not run the wizard or it fails partway:
 
 1. Copy the four values above into `.env` under the section for your app.
-2. Run migrations against your project: `pnpm devtools db migrate`.
+2. Run migrations against your project: `pnpm devtools preset apply-migrations`
+   (it runs `supabase db push`, then offers to regenerate the types).
 3. Configure sign-in — see the sign-in section below.
 4. Add your local dev URL to the project's allow list: Dashboard →
    Authentication → URL Configuration → Redirect URLs — see the sign-in
@@ -92,7 +93,7 @@ resumes it, but the first request after a pause can be slow or fail. See
 can't reach the database.
 
 > [!WARNING]
-> `pnpm devtools db reset` erases and replays whichever database it
+> `pnpm devtools supabase db reset` erases and replays whichever database it
 > targets, including a hosted project — it is not local-only. Point it at
 > the right one before you run it; there is no undo.
 
@@ -109,19 +110,23 @@ docker info   # confirms the daemon is actually reachable
 If that hangs or errors, see [Docker not running](./troubleshooting#docker-not-running).
 
 ```bash
-pnpm devtools db start     # boots the Docker containers
-pnpm devtools db reset     # migrations, then seeds, then generated types
+pnpm devtools supabase start             # boots the Docker containers, writes .env.generated
+pnpm devtools supabase db reset          # migrations, then seeds
+pnpm -F @devdogsuga/supabase types:db    # regenerate the committed database types
+pnpm devtools supabase seed buckets      # create the storage buckets
 ```
 
 `db reset` erases the database it targets before replaying everything —
 that's safe here because it's your own local stack, but the same command
 also works (and erases) against a hosted project, so double check which one
-you're pointed at before running it elsewhere.
+you're pointed at before running it elsewhere. `pnpm devtools setup` prints
+these steps in order, tailored to the apps you picked, once it has created
+your `.env`.
 
-Stop the stack with `pnpm devtools db stop`. `pnpm devtools db restart` is
-the stop/start pair, which is how a changed `supabase/config.toml` actually
-takes effect — `reset` alone replays migrations into containers still
-holding the old config.
+Stop the stack with `pnpm devtools supabase stop`. `pnpm devtools preset
+restart-stack` is the stop/start pair, which is how a changed
+`supabase/config.toml` actually takes effect — `db reset` alone replays
+migrations into containers still holding the old config.
 
 Nothing switches between a local stack and a hosted project by flag: the app
 probes for a running local stack on every start, and uses it when present,
@@ -208,7 +213,7 @@ agree:
 - `apps/study-group-finder/ios/Runner/Info.plist`, a `CFBundleURLTypes`
   entry for the scheme `dev.dogpack`.
 - `supabase/config.toml`, in `additional_redirect_urls`. A local stack picks
-  the change up on `pnpm devtools db restart`. Production receives it
+  the change up on `pnpm devtools preset restart-stack`. Production receives it
   through the deploy workflow's `supabase config push`.
 
 A hosted project of your own doesn't read `config.toml`, so add
@@ -258,13 +263,13 @@ production. Browsing signed out works fine without sign-in configured; a
 visitor's drafts live in `localStorage` until they sign in.
 
 A fresh database has no courses, so there is nothing for the generator to
-plan against yet. Trigger the registrar scrape through devtools — it starts
-a temporary local Wrangler session (the Workflow runtime the dev server doesn't
-provide on its own), runs the scrape against your database, and waits for it
-to finish:
+plan against yet. Trigger the registrar scrape with the app's `populate:courses`
+script — it starts a temporary local Wrangler session (the Workflow runtime the
+dev server doesn't provide on its own), runs the scrape against your database,
+and waits for it to finish:
 
 ```bash
-pnpm devtools workflows run --app schedule-builder --tier development
+pnpm -F schedule-builder populate:courses
 ```
 
 This can take a while on a first run — it pulls every available term.
@@ -291,24 +296,32 @@ You can also start an app from inside its folder (`cd apps/<app> && pnpm dev`).
 Either way, the app's `predev` step regenerates the email templates, the docs
 module and the route types first, so there is nothing to build beforehand.
 
-## Test logins
-
-To see the app as an ordinary member or moderator instead of as yourself:
-
-```bash
-pnpm devtools persona member
-pnpm devtools persona moderator
-```
-
-Each creates a login with a random password (printed once) against your
-current development project, local or hosted; `moderator` also optionally
-files a sample report so the moderation queue isn't empty. `pnpm devtools
-persona --clean` removes them again.
+## Roles and test data
 
 The seeds give the officers' roles, President included, to the officers' own
-accounts, not yours. `pnpm devtools grant-root` moves President to your
-account, and after that you hold every permission on your instance, which is
-why a persona is the only way to see what everyone else sees.
+accounts, not yours. Give your account President to hold every permission on
+your instance:
+
+```bash
+pnpm devtools roles grant you@uga.edu President
+```
+
+`pnpm devtools roles list` shows who holds each role, and `roles revoke`
+takes one back. To see the app as an ordinary member or moderator, sign in
+with a second account and grant it just that role. To inspect which content
+types the database defines, query it with `psql`:
+
+```bash
+pnpm devtools psql -c 'select * from platform.content_types()'
+```
+
+Platform also needs its config-driven rows (meetings and workshops) loaded
+from the repo's config. With the platform dev server running, fire the
+15-minute reconcile cron once:
+
+```bash
+pnpm devtools cron run --app platform --cron '*/15 * * * *'
+```
 
 ## Doctor
 

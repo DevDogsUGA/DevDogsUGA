@@ -38,7 +38,7 @@ Reasons are one global enum, `platform."reportReason"`, so `file_report` takes a
 <details>
 <summary>Which reasons ship, and how do I add one?</summary>
 
-The database is the source of truth; `pnpm devtools moderation check` with no argument prints what an instance actually has. As of `20260807000000_platform_report_reasons_enum.sql`, in display order:
+The database is the source of truth; `pnpm devtools psql -c 'select * from platform.content_types()'` prints the content types an instance actually has, and `select * from platform."reportReasons" order by position` prints its reasons. As of `20260807000000_platform_report_reasons_enum.sql`, in display order:
 
 | Label            | Title          |
 | ---------------- | -------------- |

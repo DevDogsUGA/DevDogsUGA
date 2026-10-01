@@ -9,11 +9,11 @@
  * `link-check.ts` parses links, so a command mentioned in prose or inside a
  * different language's fence is never mistaken for one to run):
  *
- *   - `pnpm devtools <path...>` is checked against `devtoolsCommands`, every
- *     path `@devdogsuga/devtools`'s own command tree declares. That set is a
- *     parameter rather than anything this file knows on its own — see the
- *     header of `devtools-catalog.ts` for why, and what loads it in practice.
- *     Flags (and, where obvious, their values) are stripped before matching,
+ *   - `pnpm devtools <path...>` and `pnpm backstage <path...>` are checked
+ *     against `devtoolsCommands` / `backstageCommands`, every path that CLI's
+ *     own command tree declares. Those sets are parameters rather than
+ *     anything this file knows on its own — see the header of `cli-catalog.ts`
+ *     for what loads them in practice. Flags (and, where obvious, their values) are stripped before matching,
  *     and the check takes the *longest* prefix of what is left that the
  *     catalog declares: a leaf command (nothing in the catalog starts with
  *     `"<path> "`) accepts any positional args after it
@@ -71,12 +71,11 @@ export interface CommandCheckOptions {
    * Every valid `devtools` command path, each one space-joined
    * (`"db migration new"`), intermediate group paths included (`"db"` is in
    * this set as well as `"db migration new"`, matching what
-   * `@devdogsuga/devtools`'s own `allPaths()` enumerates). Null means the
-   * catalog could not be loaded — an uninstalled or unbuilt `devtools` in
-   * this checkout — and every `pnpm devtools` line is left unchecked rather
-   * than failing a build that cannot possibly answer the question.
+   * `devtools --help --json` lists).
    */
-  devtoolsCommands: ReadonlySet<string> | null;
+  devtoolsCommands: ReadonlySet<string>;
+  /** The same for `backstage` (`"deploy smoke"`, `"deploy"`, …). */
+  backstageCommands: ReadonlySet<string>;
   /** Every workspace package, for `pnpm --filter`. */
   packages: readonly WorkspacePackage[];
   /** `apps/<slug>` packages keyed by slug, for a bare `pnpm run`. */
@@ -196,8 +195,16 @@ function checkSegment(
   if (tokens.length === 0 || tokens[0] !== "pnpm") return;
   if (tokens.some(hasPlaceholder)) return;
 
-  if (tokens[1] === "devtools") {
-    checkDevtoolsCommand(tokens.slice(2), line, file, options, errors);
+  if (tokens[1] === "devtools" || tokens[1] === "backstage") {
+    const cli = tokens[1];
+    checkCliCommand(
+      cli,
+      cli === "devtools" ? options.devtoolsCommands : options.backstageCommands,
+      tokens.slice(2),
+      line,
+      file,
+      errors,
+    );
     return;
   }
 
@@ -265,18 +272,16 @@ function isUnresolvableSelector(value: string): boolean {
   );
 }
 
-function checkDevtoolsCommand(
+function checkCliCommand(
+  cli: string,
+  catalog: ReadonlySet<string>,
   rest: readonly string[],
   line: number | null,
   file: string,
-  options: CommandCheckOptions,
   errors: CommandCheckError[],
 ): void {
-  if (options.devtoolsCommands === null) return;
-  const catalog = options.devtoolsCommands;
-
   const tokens = stripFlags(rest);
-  if (tokens.length === 0) return; // bare `pnpm devtools`: nothing to check.
+  if (tokens.length === 0) return; // bare `pnpm <cli>`: nothing to check.
 
   let matchLen = 0;
   for (let k = 1; k <= tokens.length; k++) {
@@ -287,7 +292,7 @@ function checkDevtoolsCommand(
     errors.push({
       file,
       line,
-      message: `"pnpm devtools ${tokens.join(" ")}" is not a devtools command`,
+      message: `"pnpm ${cli} ${tokens.join(" ")}" is not a ${cli} command`,
     });
     return;
   }
@@ -303,7 +308,7 @@ function checkDevtoolsCommand(
     errors.push({
       file,
       line,
-      message: `"pnpm devtools ${tokens.join(" ")}" is not a devtools command`,
+      message: `"pnpm ${cli} ${tokens.join(" ")}" is not a ${cli} command`,
     });
   }
 }

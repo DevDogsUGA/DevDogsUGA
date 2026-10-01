@@ -43,6 +43,7 @@ function options(
   const scheduleBuilder = pkg();
   return {
     devtoolsCommands: new Set(["db", "db migration", "db migration new"]),
+    backstageCommands: new Set(["deploy", "deploy smoke", "env", "env audit"]),
     packages: [scheduleBuilder],
     appBySlug: new Map([["schedule-builder", scheduleBuilder]]),
     rootPackage: pkg({
@@ -76,13 +77,35 @@ describe("checkCommands", () => {
     expect(errors[0]?.message).toContain("db reset");
   });
 
-  it("skips devtools validation when the catalog could not be loaded", () => {
+  it("passes a real backstage command", () => {
     const pages = [
-      page({ content: fence("sh", "pnpm devtools anything at all") }),
+      page({
+        content: fence("sh", "pnpm backstage deploy smoke --tier staging"),
+      }),
     ];
-    expect(checkCommands(pages, options({ devtoolsCommands: null }))).toEqual(
-      [],
-    );
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
+
+  it("fails a backstage command that does not exist, naming backstage", () => {
+    const pages = [
+      page({ content: fence("sh", "pnpm backstage deploy orphans --prune") }),
+    ];
+    const errors = checkCommands(pages, options());
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain("pnpm backstage deploy orphans");
+    expect(errors[0]?.message).toContain("is not a backstage command");
+  });
+
+  it("checks each CLI against its own commands only", () => {
+    const pages = [
+      page({
+        content: fence(
+          "sh",
+          "pnpm devtools deploy smoke\npnpm backstage db start",
+        ),
+      }),
+    ];
+    expect(checkCommands(pages, options())).toHaveLength(2);
   });
 
   it("passes a --filter command with a real script", () => {

@@ -40,13 +40,13 @@ import type { env as platformEnv } from "~/env";
 /**
  * The bindings this entry reads, borrowed by type from `~/env`. `PLATFORM_SENTRY_DSN`
  * is a Worker secret; `DEPLOY_ENV` is set by wrangler.jsonc's per-env `vars`
- * block and the cf:build:* scripts.
+ * block and the build step.
  *
  * `SENTRY_RELEASE` is NOT part of `~/env`'s schema -- it is the deploy's git
  * SHA, minted fresh by CI every run rather than a value Bitwarden holds, so
  * it does not fit `EnvScope`'s "environment"/"default"/"developer" options.
  * `deploy.yaml`'s `Deploy` step passes it to `wrangler deploy` as a `--var`
- * (see `devtools`' `ci.ts`), so it lands here as an ordinary (optional --
+ * (see `backstage deploy`), so it lands here as an ordinary (optional --
  * absent outside CI) binding rather than a secret.
  *
  * `@sentry/cloudflare`'s `withSentry` infers ONE `Env` type parameter shared

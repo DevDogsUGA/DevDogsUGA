@@ -8,13 +8,24 @@ section: guides
 # The commands
 
 ```bash
-pnpm devtools env pull  --target staging   # Bitwarden → .env.staging, in place
-pnpm devtools env push  --target staging   # .env.staging → Bitwarden → GitHub
-pnpm devtools env audit --target staging   # compare every store
+pnpm backstage env pull  --target staging   # Bitwarden → .env.staging, in place
+pnpm backstage env push  --target staging   # .env.staging → Bitwarden → GitHub
+pnpm backstage env audit --target staging   # compare every store
 ```
 
 `audit` reads only and is safe to run against anything. Read
 [Env](/docs/toolkit/guides/env) first for what the stores are.
+
+`pull`, `push` and `audit` belong to `@devdogsuga/backstage`, because they
+always need production secrets. Inside this repo they run as `pnpm backstage …`,
+which fetches the latest published version through `dlx` every time. Outside it:
+
+```bash nocheck
+pnpm --config.minimum-release-age=0 --config.dlx-cache-max-age=0 dlx @devdogsuga/backstage env audit --target staging
+```
+
+`audit --json` prints the findings for a script, and `audit --prune` deletes the
+Worker secrets no app declares (it asks first without `--yes`).
 
 Leave `--target` off and it asks. The picker is ordered least- to
 most-dangerous, so a reflexive Enter selects `preflight` and never `production`;
@@ -33,8 +44,8 @@ offers to save.
 
 Four places, in order, stopping at the first hit: `--access-token`;
 `BWS_ACCESS_TOKEN`, which includes your `.env`, since `with-env` loads it for
-every command; your Bitwarden Password Manager vault, through the `bw` CLI that
-ships as a devtools dependency (`pnpm devtools bw login` once); and finally asking you —
+every command; your Bitwarden Password Manager vault, which `env` signs in to
+and unlocks itself; and finally asking you —
 masked, with an offer to save it to `.env` or to the vault as _"DevDogs Secrets
 Manager access token (admin)"_.
 
@@ -135,7 +146,8 @@ reads any of it.
 
 </details>
 
-`env init` creates a file for a target. Re-running it on any existing target
+`env init` creates a file for a target, and is a devtools command, since it
+needs no credentials. Re-running it on any existing target
 file is **additive**, not destructive: it appends only newly declared keys that
 the target routes, under a dated header, and leaves every existing line
 byte-for-byte. An active line holds somebody's value and a commented one holds
@@ -151,9 +163,11 @@ The new secret lines are blank for you to fill; derivations such as `$API_URL`
 are preserved. If Bitwarden already holds the values, use `env pull` instead —
 it adds or updates those values in place. Neither command removes stale keys.
 
-`env example` regenerates `.env.example` from the manifests, as CI checks it;
-`env reset` blanks every value in `.env` while keeping each one commented out
-beside its blank line. `pnpm devtools env --help` lists all six.
+`pnpm devtools env example` regenerates `.env.example` from the manifests, as CI
+checks it (`--check` verifies without writing); `pnpm devtools env reset` blanks
+every value in `.env` while keeping each one commented out beside its blank
+line. `pnpm devtools env --help` lists those three, and
+`pnpm backstage env --help` the three that touch Bitwarden and GitHub.
 
 ## Rare paths
 
@@ -161,10 +175,10 @@ beside its blank line. `pnpm devtools env --help` lists all six.
 <summary>Rotating a secret</summary>
 
 ```bash
-pnpm devtools env pull  --target production   # start from what is live
+pnpm backstage env pull  --target production   # start from what is live
 $EDITOR .env.production                       # change the one value
-pnpm devtools env push  --target production   # → Bitwarden AND GitHub
-pnpm devtools env audit --target production   # must report no drift
+pnpm backstage env push  --target production   # → Bitwarden AND GitHub
+pnpm backstage env audit --target production   # must report no drift
 ```
 
 No `export` step: the access token is found for you. `push` does both stores in
