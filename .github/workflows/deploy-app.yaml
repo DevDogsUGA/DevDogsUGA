@@ -107,6 +107,13 @@ jobs:
           # `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc for why a
           # per-deploy git SHA doesn't fit `EnvScope`.
           NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
+          # The tier, set on the process so it wins over `.env.<tier>`. The
+          # GitHub environments store NEXT_PUBLIC_DEPLOY_ENV as the formula
+          # `$DEPLOY_ENV`, and write-env writes it into the file unexpanded, so
+          # the build saw the literal string. The old cf:build:* scripts set
+          # both of these, which is why nothing caught it until they went.
+          NEXT_PUBLIC_DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
+          CLOUDFLARE_ENV: ${{ env.DEPLOY_ENV }}
         run: pnpm --filter ${{ matrix.app }} run build
       # ⚠️ GATING, PER AN EXPLICIT DECISION: SENTRY_AUTH_TOKEN absent means the
       # Sentry org is not onboarded yet, and that must be a visible skip, not
