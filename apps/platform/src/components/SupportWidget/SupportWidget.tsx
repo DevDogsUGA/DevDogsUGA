@@ -52,6 +52,7 @@ import {
 } from "./api";
 import { gateStep, useGateHref } from "./DiscordGate";
 import { OPEN_SUPPORT_EVENT } from "./events";
+import DiscordChannel from "./DiscordChannel";
 import Message from "./Message";
 import { SuggestionsDialog, SuggestionsSummary } from "./SuggestionsDialog";
 import Turnstile from "./Turnstile";
@@ -126,7 +127,7 @@ export default function SupportWidget({
         <section
           id={panelId}
           role="dialog"
-          aria-label="Get help from DevDogs"
+          aria-label="DevDogs Tech Support"
           onKeyDown={(event: KeyboardEvent) => {
             // Keys from the suggestions dialog bubble here through React's
             // tree though it is portaled elsewhere; its Escape is its own.
@@ -219,10 +220,11 @@ function Panel({
         )}
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-semibold">
-            {view.name === "compose" ? "Ask a question" : "DevDogs help"}
+            DevDogs Tech Support
           </h2>
           <p className="text-muted-foreground text-xs">
-            Officers usually reply within a few hours.
+            <DiscordChannel name="tech-support" forum /> · Officers usually
+            reply within a few hours.
           </p>
         </div>
         <Button
@@ -295,8 +297,9 @@ function InboxView({
             <ChatCircleDotsIcon className="text-muted-foreground mx-auto size-10" />
             <p className="text-sm font-medium">Stuck on something?</p>
             <p className="text-muted-foreground text-sm">
-              Ask here and it goes to the officers in the DevDogs Discord&apos;s
-              #tech-support forum. Replies show up right here.
+              Ask here and it goes to the officers in the DevDogs Discord&apos;s{" "}
+              <DiscordChannel name="tech-support" forum /> forum. Replies show
+              up right here.
             </p>
           </div>
         )}
