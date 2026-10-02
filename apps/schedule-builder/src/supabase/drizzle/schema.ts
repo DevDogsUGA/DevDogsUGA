@@ -672,7 +672,6 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	location: text(),
 	startsAt: timestamp({ withTimezone: true }).notNull(),
 	endsAt: timestamp({ withTimezone: true }).notNull(),
-	configId: text(),
 	surveyUrl: text(),
 	deletedAt: timestamp({ withTimezone: true }),
 	summary: text(),
@@ -684,7 +683,6 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	countsForCredit: boolean().default(false).notNull(),
 	seasonId: uuid().references(() => seasonsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
 }, (table) => [
-	uniqueIndex("meetings_configId_live_key").using("btree", table.configId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	index("meetings_live_idx").using("btree", table.startsAt.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	unique("meetings_slug_key").on(table.slug),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
@@ -1279,12 +1277,10 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	id: uuid().defaultRandom().primaryKey(),
 	meetingId: uuid().notNull().references(() => meetingsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	project: text(),
-	configId: text(),
 	deletedAt: timestamp({ withTimezone: true }),
 	title: text(),
 	description: text(),
 }, (table) => [
-	uniqueIndex("workshops_configId_live_key").using("btree", table.configId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	index("workshops_live_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	unique("workshops_id_meetingId_key").on(table.id, table.meetingId),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),

@@ -485,7 +485,6 @@ export type Database = {
           building: string | null;
           cancellationReason: string | null;
           cancelledAt: string | null;
-          configId: string | null;
           countsForCredit: boolean;
           deletedAt: string | null;
           endsAt: string;
@@ -505,7 +504,6 @@ export type Database = {
           building?: string | null;
           cancellationReason?: string | null;
           cancelledAt?: string | null;
-          configId?: string | null;
           countsForCredit?: boolean;
           deletedAt?: string | null;
           endsAt: string;
@@ -525,7 +523,6 @@ export type Database = {
           building?: string | null;
           cancellationReason?: string | null;
           cancelledAt?: string | null;
-          configId?: string | null;
           countsForCredit?: boolean;
           deletedAt?: string | null;
           endsAt?: string;
@@ -1707,7 +1704,6 @@ export type Database = {
       };
       workshops: {
         Row: {
-          configId: string | null;
           deletedAt: string | null;
           description: string | null;
           id: string;
@@ -1716,7 +1712,6 @@ export type Database = {
           title: string | null;
         };
         Insert: {
-          configId?: string | null;
           deletedAt?: string | null;
           description?: string | null;
           id?: string;
@@ -1725,7 +1720,6 @@ export type Database = {
           title?: string | null;
         };
         Update: {
-          configId?: string | null;
           deletedAt?: string | null;
           description?: string | null;
           id?: string;
