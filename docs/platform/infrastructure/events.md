@@ -23,36 +23,33 @@ all; they are a GitHub Projects mirror — see
 ## The shape
 
 Backstage's `packages/events/src/schema.ts` is the Zod schema: a meeting has
-an authored, stable `id` (a slug, or a migrated Airtable record id — see
-[Migrated ids](#migrated-ids) below), a `slug` (its URL: the Eastern date,
-plus a descriptor such as `2026-10-05-judging` when the date is shared), a
-title, a summary, `kind` and
+a `slug` (its identity and its URL: the Eastern date, plus a descriptor such
+as `2026-10-05-judging` when the date is shared), a title, a summary, `kind`
+and
 `building` from the same closed lists the database checks, a location,
 start/end times, an RSVP link, a cancellation reason paired with a
 cancellation date, a single `countsForCredit` flag, an optional `surveyUrl`,
-and an `agenda` of workshops. A workshop is an authored `id`, a title, a
-description, and a **free-text** `project` recommendation — no foreign key,
+and an `agenda` of workshops. A workshop is a title (unique within its
+meeting, and its identity), a description, and a **free-text** `project` recommendation — no foreign key,
 no `projects` table. That table is gone; a workshop that used to link to
 "Platform" or "Scheduler" now just says so in a string, the way an officer
 would say it out loud at the meeting.
 
 `src/validator.ts` is the publishability half: name/summary/title/description
-lengths, the RSVP-host allowlist, cancellation reason↔date pairing, **every id
-is unique across the whole config**, **every id matches a slug-ish
-pattern**, and **every meeting slug is unique and dated on its own Eastern
-day**. `getClubConfig()` (the package's main export) runs both the schema
+lengths, the RSVP-host allowlist, cancellation reason↔date pairing, **every
+meeting slug is unique and dated on its own Eastern day**, and **no meeting
+lists two workshops with one title**. `getClubConfig()` (the package's main export) runs both the schema
 and the validator and throws a readable `ClubConfigError` if either fails;
 `check.ts` is the CLI wrapper Backstage's CI runs.
 
 ## The reconcile
 
 `apps/platform/src/server/config/reconcile.ts`, in this repo, is the consumer:
-upsert by `configId`, soft-archive a row whose `configId` drops out of the
-config (`deletedAt` is set; attendance survives), and un-archive one that
-reappears. A meeting's `slug` is copied from config on every run, so
-changing it in config changes the meeting's URL; a slug some meeting outside
-the config already holds aborts the run instead of re-addressing that
-meeting. Read its header for the one deliberate property — **there are no
+upsert a meeting by `slug` and a workshop by its title within its meeting,
+soft-archive a live row the config no longer lists (`deletedAt` is set;
+attendance survives), and un-archive one that reappears. Every meeting is the
+config's: nothing else creates one. So changing a meeting's slug is a new
+meeting, and the old one is archived with its attendance. Read its header for the one deliberate property — **there are no
 per-row refusals**. A config file either validates whole, or the reconcile
 aborts the ENTIRE run and reports to Sentry rather than applying part of it.
 There is no "officer is mid-edit" state to protect against here, because
@@ -117,14 +114,9 @@ pnpm devtools cron run --app platform --cron '*/15 * * * *' --yes
 `pnpm devtools setup` lists this as one of its next steps. Repeat it after
 you change the events config.
 
-## Migrated ids
+## Migrated meetings
 
 The data that seeded `src/data/meetings.json` came from the Airtable base this
-replaced. Every migrated meeting and workshop keeps its **old Airtable
-record id** (`"recXXXXXXXXXXXXXX"`) as its `configId`, so the reconcile's
-first pass matched the existing Postgres rows one-to-one instead of archiving
-everything and re-creating it under new ids — which would have looked, to a
-member, like every meeting's attendance history vanishing. New meetings and
-workshops authored from here on use ordinary slugs instead
-(`"cold-start-2027"`); the id format does not care which kind a given row is,
-only that it is unique and slug-shaped.
+replaced, and the first reconciles matched those rows on their old Airtable
+record ids. Once every meeting had an authored `slug` matching its production
+row, identity moved to the slug and the ids were removed from the config.

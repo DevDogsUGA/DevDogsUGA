@@ -18,15 +18,14 @@ import { postAlert } from "../alerts";
  * The reconcile-from-config: `@devdogsuga/events` in, `meetings` and
  * `workshops` up to date out.
  *
- *   * **Identity is the authored `configId`, never the name or slug.** A
- *     config item's id survives a title rewrite, so re-titling a meeting
- *     updates its row instead of orphaning the attendance already recorded
- *     against it.
+ *   * **A meeting is its `slug`; a workshop is its title within its
+ *     meeting.** Both are authored in config, so re-titling a meeting
+ *     updates its row instead of orphaning the attendance recorded against
+ *     it. Changing a slug is a different meeting: the old row is archived,
+ *     attendance and all, and the new one starts empty.
  *
- *   * **The slug is the config's too.** A meeting's URL is authored next to
- *     it (`slug`), so the platform no longer derives one. Changing a slug in
- *     config re-addresses the meeting; a slug held by a meeting outside the
- *     config aborts the run instead.
+ *   * **Every meeting is the config's.** Nothing else creates meetings or
+ *     workshops, so a live row the config no longer lists is archived.
  *
  *   * **A missing config item is an archive, never a delete.** Attendance is
  *     a record of who was in a room on a Tuesday, and removing a meeting
@@ -103,17 +102,6 @@ function emptyCounts(): ReconcileTableCounts {
 }
 
 /**
- * A config slug already held by a meeting the config doesn't own (one under
- * an id the config no longer lists, or one never from config). Taking it
- * would mean silently re-addressing that meeting, so the reconcile aborts.
- */
-class SlugConflict extends Error {
-  constructor(readonly conflicts: string[]) {
-    super("meeting slug held by a meeting outside the config");
-  }
-}
-
-/**
  * A question change that would orphan answers: thrown inside the transaction
  * so nothing commits, then reported like any other abort.
  */
@@ -171,53 +159,21 @@ export async function reconcileFromConfig(
       if (questions) counts.questions = await reconcileQuestions(tx, questions);
 
       // ── Meetings ───────────────────────────────────────────────────────────
+      // Archived rows too, so a meeting that reappears in config gets its old
+      // row (and its attendance) back rather than a new one; `meetings_slug_key`
+      // holds across every row, so there is at most one per slug.
       const existingMeetings = await tx
         .select({
           id: meetings.id,
-          configId: meetings.configId,
           slug: meetings.slug,
           deletedAt: meetings.deletedAt,
         })
-        .from(meetings)
-        .where(sql`${meetings.configId} is not null`);
-      const meetingByConfigId = new Map(
-        existingMeetings.map((m) => [m.configId!, m]),
-      );
+        .from(meetings);
+      const meetingBySlug = new Map(existingMeetings.map((m) => [m.slug, m]));
 
-      // Slugs are authored in config (its validator keeps them unique and on
-      // the meeting's own date), and `meetings_slug_key` holds across every
-      // row, archived ones included. So: refuse a slug some meeting outside
-      // the config already holds, then park every slug that is about to
-      // change on a placeholder, so two meetings can trade slugs in one run.
-      const configIds = new Set(config.meetings.map((m) => m.id));
-      const wantedSlugs = config.meetings.map((m) => m.slug);
-      const conflicts = (
-        await tx
-          .select({ slug: meetings.slug, configId: meetings.configId })
-          .from(meetings)
-          .where(inArray(meetings.slug, wantedSlugs))
-      ).filter((m) => m.configId === null || !configIds.has(m.configId));
-      if (conflicts.length > 0) {
-        throw new SlugConflict(
-          conflicts.map(
-            (m) =>
-              `"${m.slug}" belongs to ${m.configId ? `meeting "${m.configId}", which the config no longer lists` : "a meeting not from config"}`,
-          ),
-        );
-      }
-      for (const meeting of config.meetings) {
-        const existing = meetingByConfigId.get(meeting.id);
-        if (existing && existing.slug !== meeting.slug) {
-          await tx
-            .update(meetings)
-            .set({ slug: `reconcile-${existing.id}` })
-            .where(eq(meetings.id, existing.id));
-        }
-      }
-
-      // Meeting configId → its platform uuid, so the workshop pass below can
-      // resolve `meetingId` without a second round trip per meeting.
-      const meetingIdByConfigId = new Map<string, string>();
+      // Slug → platform uuid, so the workshop pass below can resolve
+      // `meetingId` without a second round trip per meeting.
+      const meetingIdBySlug = new Map<string, string>();
 
       for (const meeting of config.meetings) {
         const values = {
@@ -236,20 +192,20 @@ export async function reconcileFromConfig(
           countsForCredit: meeting.countsForCredit,
           surveyUrl: meeting.surveyUrl,
           surveyQuestionIds: meeting.questions ?? [],
-          // Un-archives unconditionally. `archiveMissing` below sets this the
-          // moment a config item stops being listed, so a meeting reappearing
-          // in a later config edit has to clear it here or it would stay
+          // Un-archives unconditionally. The archive pass below sets this the
+          // moment a meeting stops being listed, so a meeting reappearing in
+          // a later config edit has to clear it here or it would stay
           // invisible everywhere despite being live again in config.
           deletedAt: null,
         };
 
-        const existing = meetingByConfigId.get(meeting.id);
+        const existing = meetingBySlug.get(meeting.slug);
         if (existing) {
           await tx
             .update(meetings)
             .set(values)
             .where(eq(meetings.id, existing.id));
-          meetingIdByConfigId.set(meeting.id, existing.id);
+          meetingIdBySlug.set(meeting.slug, existing.id);
           if (existing.deletedAt !== null) counts.meetings.unarchived += 1;
           else counts.meetings.upserted += 1;
           continue;
@@ -257,42 +213,62 @@ export async function reconcileFromConfig(
 
         const [inserted] = await tx
           .insert(meetings)
-          .values({ ...values, configId: meeting.id })
+          .values(values)
           .returning({ id: meetings.id });
-        meetingIdByConfigId.set(meeting.id, inserted!.id);
+        meetingIdBySlug.set(meeting.slug, inserted!.id);
         counts.meetings.upserted += 1;
       }
 
-      const presentMeetingConfigIds = config.meetings.map((m) => m.id);
-      counts.meetings.archived = await archiveMissing(
-        tx,
-        meetings,
-        presentMeetingConfigIds,
-      );
+      counts.meetings.archived = (
+        await tx
+          .update(meetings)
+          .set({ deletedAt: sql`now()` })
+          .where(
+            and(
+              isNull(meetings.deletedAt),
+              notInArray(
+                meetings.slug,
+                config.meetings.map((m) => m.slug),
+              ),
+            ),
+          )
+          .returning({ id: meetings.id })
+      ).length;
 
       // ── Workshops ──────────────────────────────────────────────────────────
-      // Global, like meetings: `configId` is unique among live workshops across
-      // the WHOLE table, not merely within one meeting's agenda, mirroring the
-      // validator's cross-config uniqueness check.
+      // Matched on (meeting, title), case-insensitively, as the validator
+      // keeps titles unique within a meeting. A live row is preferred over an
+      // archived one with the same title, so a re-added workshop revives the
+      // row it had rather than a stale duplicate.
       const existingWorkshops = await tx
         .select({
           id: workshops.id,
-          configId: workshops.configId,
+          meetingId: workshops.meetingId,
+          title: workshops.title,
           deletedAt: workshops.deletedAt,
         })
         .from(workshops)
-        .where(sql`${workshops.configId} is not null`);
-      const workshopByConfigId = new Map(
-        existingWorkshops.map((w) => [w.configId!, w]),
-      );
+        .where(inArray(workshops.meetingId, [...meetingIdBySlug.values()]));
+      const workshopKey = (meetingId: string, title: string | null) =>
+        `${meetingId}\u0000${(title ?? "").toLowerCase()}`;
+      const workshopByKey = new Map<
+        string,
+        (typeof existingWorkshops)[number]
+      >();
+      for (const row of existingWorkshops) {
+        const key = workshopKey(row.meetingId, row.title);
+        const held = workshopByKey.get(key);
+        if (!held || (held.deletedAt !== null && row.deletedAt === null)) {
+          workshopByKey.set(key, row);
+        }
+      }
 
-      const presentWorkshopConfigIds: string[] = [];
+      const presentWorkshopIds: string[] = [];
 
       for (const meeting of config.meetings) {
-        const meetingId = meetingIdByConfigId.get(meeting.id)!;
+        const meetingId = meetingIdBySlug.get(meeting.slug)!;
 
         for (const item of meeting.agenda) {
-          presentWorkshopConfigIds.push(item.id);
           const values = {
             meetingId,
             title: item.title,
@@ -301,43 +277,47 @@ export async function reconcileFromConfig(
             deletedAt: null,
           };
 
-          const existing = workshopByConfigId.get(item.id);
+          const existing = workshopByKey.get(
+            workshopKey(meetingId, item.title),
+          );
           if (existing) {
             await tx
               .update(workshops)
               .set(values)
               .where(eq(workshops.id, existing.id));
+            presentWorkshopIds.push(existing.id);
             if (existing.deletedAt !== null) counts.workshops.unarchived += 1;
             else counts.workshops.upserted += 1;
             continue;
           }
 
-          await tx.insert(workshops).values({ ...values, configId: item.id });
+          const [inserted] = await tx
+            .insert(workshops)
+            .values(values)
+            .returning({ id: workshops.id });
+          presentWorkshopIds.push(inserted!.id);
           counts.workshops.upserted += 1;
         }
       }
 
-      counts.workshops.archived = await archiveMissing(
-        tx,
-        workshops,
-        presentWorkshopConfigIds,
-      );
+      // Every live workshop not just written: dropped from an agenda, or on a
+      // meeting the config no longer lists.
+      counts.workshops.archived = (
+        await tx
+          .update(workshops)
+          .set({ deletedAt: sql`now()` })
+          .where(
+            presentWorkshopIds.length === 0
+              ? isNull(workshops.deletedAt)
+              : and(
+                  isNull(workshops.deletedAt),
+                  notInArray(workshops.id, presentWorkshopIds),
+                ),
+          )
+          .returning({ id: workshops.id })
+      ).length;
     });
   } catch (error) {
-    if (error instanceof SlugConflict) {
-      await postAlert(
-        "Config reconcile aborted: a meeting slug is taken",
-        error.conflicts,
-        "These slugs are held by meetings the config no longer owns, and " +
-          "taking them would re-address those meetings. Pick a different " +
-          "descriptor in meetings.json, or rename the old meeting's slug in " +
-          "the database first. Nothing was written.",
-      );
-      return {
-        ok: false,
-        reason: `meeting slugs held outside the config (${error.conflicts.length})`,
-      };
-    }
     if (!(error instanceof QuestionConflict)) throw error;
     await postAlert(
       "Config reconcile aborted: survey question change would orphan answers",
@@ -437,31 +417,4 @@ async function reconcileQuestions(
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
 
-type ArchivableTable = typeof meetings | typeof workshops;
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-/**
- * Soft-archives every live row whose `configId` is set but absent from
- * `presentConfigIds`. The archive is scoped to rows that HAVE a `configId`,
- * so a row this reconcile does not own cannot be swept up by a pass that
- * never claimed it.
- */
-async function archiveMissing(
-  tx: Tx,
-  table: ArchivableTable,
-  presentConfigIds: string[],
-): Promise<number> {
-  const live = and(isNull(table.deletedAt), sql`${table.configId} is not null`);
-
-  const rows = await tx
-    .update(table)
-    .set({ deletedAt: sql`now()` })
-    .where(
-      presentConfigIds.length === 0
-        ? live
-        : and(live, notInArray(table.configId, presentConfigIds)),
-    )
-    .returning({ id: table.id });
-
-  return rows.length;
-}
