@@ -6,7 +6,6 @@ export type MemberCheckInMethod = "qr" | "manual_code";
 
 export type RecordAttendanceResult =
   | { status: "recorded" | "duplicate"; attendanceId: string; recordedAt: Date }
-  | { status: "not_counted" }
   | { status: "invalid_meeting" };
 
 /**
@@ -14,6 +13,12 @@ export type RecordAttendanceResult =
  *
  * The challenge's clock is deliberately absent here: once a rotating code has
  * been validated, meeting time does not decide whether attendance counts.
+ *
+ * Every meeting records attendance, including ones that don't count for
+ * credit (build sessions): `countsForCredit` decides stars, streaks and EL
+ * eligibility, each of which filters on it where it reads attendance
+ * (`memberStars`, the streak loader, reflections), not whether a member was
+ * in the room -- and the check-in survey follows that record.
  */
 export async function recordMemberAttendance(
   meetingId: string,
@@ -24,9 +29,8 @@ export async function recordMemberAttendance(
     const meetingRows = await tx.execute<{
       id: string;
       cancelledAt: Date | null;
-      countsForCredit: boolean;
     }>(
-      sql`select "id", "cancelledAt", "countsForCredit"
+      sql`select "id", "cancelledAt"
           from platform.meetings
           where "id" = ${meetingId}::uuid and "deletedAt" is null
           for share`,
@@ -34,13 +38,6 @@ export async function recordMemberAttendance(
     const meeting = meetingRows[0];
     if (meeting?.cancelledAt !== null) {
       return { status: "invalid_meeting" };
-    }
-    // The passport view derives stars only from meetings that count toward
-    // progress, so recording attendance for a non-counting meeting would leave
-    // the member with a "recorded" receipt and no visible star. Refuse here
-    // instead, keeping the confirmation honest.
-    if (!meeting.countsForCredit) {
-      return { status: "not_counted" };
     }
 
     const [created] = await tx

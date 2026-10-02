@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, isNull, lte, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { meetings } from "~/server/db/schema";
 
@@ -12,6 +12,8 @@ export type AttendanceMeeting = {
   /** Where to send a member after a successful check-in, or null when this
    *  meeting has nothing to redirect to. */
   surveyUrl: string | null;
+  /** Whether checking in earns a star, streak and EL credit. */
+  countsForCredit: boolean;
 };
 
 /** Past and currently running meetings, with the specified default first. */
@@ -31,15 +33,13 @@ export async function getAttendanceMeetings(
       endsAt: meetings.endsAt,
       ongoing,
       surveyUrl: meetings.surveyUrl,
+      countsForCredit: meetings.countsForCredit,
     })
     .from(meetings)
     .where(
       and(
         isNull(meetings.deletedAt),
         isNull(meetings.cancelledAt),
-        // Only meetings that count toward the passport are checkable: the
-        // record path refuses the rest, so offering them would dead-end.
-        eq(meetings.countsForCredit, true),
         lte(meetings.startsAt, now),
       ),
     )

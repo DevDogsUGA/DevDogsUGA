@@ -100,18 +100,21 @@ describe("recordMemberAttendance", () => {
     }
   });
 
-  it("refuses a meeting that does not count toward progress, recording nothing", async () => {
+  it("records a meeting that doesn't count for credit, earning no star", async () => {
     const result = await recordMemberAttendance(
       IDS.nonCountingMeeting,
       IDS.member,
       "qr",
     );
-    expect(result).toEqual({ status: "not_counted" });
+    expect(result.status).toBe("recorded");
 
-    const rows = await db.execute<{ count: number }>(sql`
-      select count(*)::int as count from platform.attendance
-      where "meetingId" = ${IDS.nonCountingMeeting}::uuid`);
-    expect(rows[0]!.count).toBe(0);
+    const rows = await db.execute<{ attended: number; stars: number }>(sql`
+      select
+        (select count(*)::int from platform.attendance
+          where "meetingId" = ${IDS.nonCountingMeeting}::uuid) as attended,
+        (select count(*)::int from platform."memberStars"
+          where "meetingId" = ${IDS.nonCountingMeeting}::uuid) as stars`);
+    expect(rows[0]).toEqual({ attended: 1, stars: 0 });
   });
 
   it("rejects cancelled and unknown meetings independent of clock time", async () => {

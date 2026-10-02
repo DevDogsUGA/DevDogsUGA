@@ -21,6 +21,12 @@ whenever it is scanned or entered, including when an officer re-displays one
 for a member who checked in late. There is no other correction path — a late
 check-in is the rotating code shown again, not a request to an officer.
 
+Every meeting records check-ins, including ones whose `countsForCredit` is
+off, such as build sessions. That flag decides stars, streaks and EL
+eligibility, which each filter on it; it doesn't decide whether a member was
+in the room, so those meetings still get the receipt (saying they don't
+count) and the survey.
+
 The page lists all meetings, with ongoing meetings first. Its deterministic
 default is earliest start, then earliest end, then platform UUID. A QR embeds
 the meeting explicitly. Public pages show the attendance CTA while a meeting
@@ -84,9 +90,6 @@ member answers never close. Every save writes only what changed, each change
 as an append-only row in `surveyAnswerRevisions` (null when an answer is
 cleared), under one `survey.saved` audit event. That history is what lets an
 export show a member answer as it stood at a past meeting.
-
-Because the survey follows a recorded check-in, a meeting that doesn't count
-for credit, where check-in records nothing, has no survey.
 
 ## Exports
 

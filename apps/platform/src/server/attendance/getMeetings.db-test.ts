@@ -54,8 +54,10 @@ describe("attendance meeting selection", () => {
     const meetings = await getAttendanceMeetings(
       new Date("2026-09-11T20:00:00Z"),
     );
-    const fixtures = meetings.filter((meeting) =>
-      Object.values(IDS).includes(meeting.id),
+    const fixtures = meetings.filter(
+      (meeting) =>
+        Object.values(IDS).includes(meeting.id) &&
+        meeting.id !== IDS.nonCounting,
     );
     expect(fixtures.map((meeting) => meeting.id)).toEqual([
       IDS.endsFirst,
@@ -65,10 +67,17 @@ describe("attendance meeting selection", () => {
     ]);
     expect(fixtures.slice(0, 3).every((meeting) => meeting.ongoing)).toBe(true);
     expect(fixtures.some((meeting) => meeting.id === IDS.future)).toBe(false);
-    // Ongoing at this instant, but it does not count toward progress, so it is
-    // not offered for check-in: recording it would dead-end with no star.
-    expect(fixtures.some((meeting) => meeting.id === IDS.nonCounting)).toBe(
-      false,
+  });
+
+  it("offers a meeting that doesn't count for credit, saying so", async () => {
+    // A build session: checked in like any other (the survey follows it),
+    // just without stars, streaks or EL credit.
+    const meetings = await getAttendanceMeetings(
+      new Date("2026-09-11T20:00:00Z"),
     );
+    expect(meetings.find((m) => m.id === IDS.nonCounting)).toMatchObject({
+      ongoing: true,
+      countsForCredit: false,
+    });
   });
 });

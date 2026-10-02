@@ -41,10 +41,6 @@ const STATUS_COPY: Record<
     body: "Your original attendance record is still on file.",
     good: true,
   },
-  not_counted: {
-    title: "This meeting isn’t eligible",
-    body: "That meeting doesn’t count toward your participation passport, so nothing was recorded. If that’s wrong, ask an officer to mark the meeting eligible.",
-  },
   invalid_meeting: {
     title: "Meeting unavailable",
     body: "That meeting was canceled, removed, or could not be found.",
@@ -89,6 +85,12 @@ export default async function AttendancePage({
   // whatever is selected in the form below -- `requestedMeeting` is that
   // meeting's id whenever `status` came back from a check-in at all.
   const checkedInMeeting = meetings.find((m) => m.id === requestedMeeting);
+  // Every meeting records a check-in; one that doesn't count for credit
+  // says so rather than promising progress it won't show.
+  const receiptBody =
+    receipt?.good && checkedInMeeting && !checkedInMeeting.countsForCredit
+      ? "You’re checked in. This meeting doesn’t count toward stars, streaks or EL credit."
+      : receipt?.body;
   const surveyUrl =
     receipt?.good && checkedInMeeting ? checkedInMeeting.surveyUrl : null;
   // The survey follows a check-in that stood (recorded or duplicate), for
@@ -127,7 +129,7 @@ export default async function AttendancePage({
           role="status"
         >
           <h2 className="font-semibold text-white">{receipt.title}</h2>
-          <p className="mt-1 text-sm text-mauve-200">{receipt.body}</p>
+          <p className="mt-1 text-sm text-mauve-200">{receiptBody}</p>
           {recordedAt && !Number.isNaN(recordedAt.getTime()) && (
             <p className="mt-2 text-sm font-medium text-white">
               Recorded {formatEventDateTime(recordedAt)}
