@@ -1,7 +1,7 @@
 -- Remove the roster-import permission.
 --
 -- The Involvement Network roster import moved from the console's Verification
--- page to `backstage involvement import`, which runs with the service role and
+-- page to `backstage import involvement`, which runs with the service role and
 -- needs no role grant. `canManageVerification`, which gated the page, has
 -- nothing left to gate. The profile columns the import writes
 -- (`involvementFirstName`, `involvementLastName`, `involvementImportedAt`,

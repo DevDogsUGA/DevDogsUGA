@@ -36,11 +36,13 @@ unique, so retries and duplicate scans return the existing receipt.
 `platform.attendance` stores one row per member and meeting. `method` records
 `qr` or `manual_code` for a member's own check-in, or `import` for a row an
 officer added with the CLI. Check-in is the only writer from the platform. The
-one other writer is `pnpm backstage attendance import --meeting <date> --file
+one other writer is `pnpm backstage import attendance --meeting <date> --file
 <csv>`, which an officer runs from a sign-in form or sheet for a meeting where
-members could not check in. Imported rows carry method `import` so they stay
-distinguishable and can be replaced by re-running the import, and an import
-never overwrites a member's own check-in. There is no revocation, and the
+members could not check in. Imported rows carry method `import`, stamped with
+the meeting's start, so they stay distinguishable: re-running the import with
+`--replace` makes a corrected sheet the meeting's whole imported set. An import
+never overwrites or removes a member's own check-in, and imported rows count
+for stars like any other. There is no revocation, and the
 platform has no officer-facing way to add or change a row. Client roles may read
 their own records and cannot write them.
 
@@ -78,9 +80,11 @@ pnpm backstage export <stars|attendance|reflections> [--from <date>] [--to <date
 ```
 
 `attendance` also takes `--meeting <date>` to export a single meeting.
-`--from`/`--to` filter attendance on the meeting's start and reflections on when
-the reflection was created. Each export is still recorded in the export audit
-log (an `exportAudit` row) before any rows are written, so a download that fails
-partway is still on record. One row per attendance record or per reflection --
+`--from`/`--to` are Eastern days (`--to` inclusive) and filter stars and
+attendance on the meeting's start and reflections on when the reflection was
+created. Each export is still recorded in the export audit log (an
+`exportAudit` row, attributed to the platform account linked to the officer's
+`gh` login) before any rows are written, so a download that fails partway is
+still on record. One row per attendance record or per reflection --
 the reflection export carries only the current text and a revision count, not
 the revision history itself, which stays behind `canViewAuditLog`.
