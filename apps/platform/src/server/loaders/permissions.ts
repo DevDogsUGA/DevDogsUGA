@@ -28,7 +28,6 @@ export type RoleRow = {
   canManageRoles: boolean | null;
   canManageSuspensions: boolean | null;
   canViewAuditLog: boolean | null;
-  canCreateCredentials: boolean | null;
   canManageVerification: boolean | null;
   canManageAttendance: boolean | null;
   canExportStars: boolean | null;
@@ -104,7 +103,6 @@ export const getPermissionsPageData = cache(
         canManageRoles: r.canManageRoles,
         canManageSuspensions: r.canManageSuspensions,
         canViewAuditLog: r.canViewAuditLog,
-        canCreateCredentials: r.canCreateCredentials,
         canManageVerification: r.canManageVerification,
         canManageAttendance: r.canManageAttendance,
         canExportStars: r.canExportStars,

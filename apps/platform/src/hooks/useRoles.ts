@@ -88,7 +88,6 @@ export function useRoles(
             canManageRoles: data.canManageRoles ?? null,
             canManageSuspensions: data.canManageSuspensions ?? null,
             canViewAuditLog: data.canViewAuditLog ?? null,
-            canCreateCredentials: data.canCreateCredentials ?? null,
             canManageVerification: data.canManageVerification ?? null,
             canManageAttendance: data.canManageAttendance ?? null,
             canExportStars: data.canExportStars ?? null,
@@ -143,9 +142,6 @@ export function useRoles(
                 }),
                 ...(data.canViewAuditLog !== undefined && {
                   canViewAuditLog: data.canViewAuditLog ?? null,
-                }),
-                ...(data.canCreateCredentials !== undefined && {
-                  canCreateCredentials: data.canCreateCredentials ?? null,
                 }),
                 ...(data.canManageVerification !== undefined && {
                   canManageVerification: data.canManageVerification ?? null,

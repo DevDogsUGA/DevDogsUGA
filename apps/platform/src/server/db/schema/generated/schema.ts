@@ -1,12 +1,11 @@
-import { pgSchema, pgTable, uuid, boolean, varchar, text, pgEnum, integer, timestamp, date, smallint, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, text, pgEnum, boolean, integer, timestamp, smallint, date, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
-// Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
+// Cross-schema FK targets — re-injected by types:drizzle after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
 
 export const platform = pgSchema("platform");
 export const graduationSemesterInPlatform = platform.enum("graduationSemester", ["spring", "summer", "fall"])
 export const academicProgramCategoryInPlatform = platform.enum("academicProgramCategory", ["undergraduate_major", "graduate_major", "undergraduate_minor", "undergraduate_certificate", "graduate_certificate", "professional_program"])
-export const credentialTypeInPlatform = platform.enum("credentialType", ["email_password", "totp", "email_password_totp"])
 export const roleTypeInPlatform = platform.enum("roleType", ["default", "custom"])
 export const oauthRegistrationTypeInPlatform = platform.enum("oauthRegistrationType", ["development", "production"])
 export const checkInMethodInPlatform = platform.enum("checkInMethod", ["qr", "manual_code"])
@@ -184,42 +183,6 @@ export const contentTypesInPlatform = platform.table.withRLS("contentTypes", {
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
 
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-]);
-
-export const credentialRolesInPlatform = platform.table.withRLS("credentialRoles", {
-	credentialId: uuid().notNull().references(() => credentialsInPlatform.id, { onDelete: "cascade" } ),
-	roleId: uuid().notNull().references(() => rolesInPlatform.id, { onDelete: "cascade" } ),
-}, (table) => [
-	primaryKey({ columns: [table.credentialId, table.roleId], name: "credentialRoles_pkey"}),
-
-	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
-
-	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
-
-	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
-
-	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
-]);
-
-export const credentialsInPlatform = platform.table.withRLS("credentials", {
-	id: uuid().defaultRandom().primaryKey(),
-	name: text().notNull(),
-	description: text(),
-	type: credentialTypeInPlatform().notNull(),
-	email: text(),
-	passwordSecretId: uuid(),
-	totpSecretId: uuid(),
-	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-	createdBy: uuid().references(() => users.id, { onDelete: "set null" } ),
-}, (table) => [
-
-	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
-
-	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
-
-	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
-
-	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
 
 export const discordRoleMembershipsInPlatform = platform.table.withRLS("discordRoleMemberships", {
@@ -686,7 +649,6 @@ export const rolesInPlatform = platform.table.withRLS("roles", {
 	canManageRoles: boolean(),
 	canManageSuspensions: boolean(),
 	canViewAuditLog: boolean(),
-	canCreateCredentials: boolean(),
 	canManageVerification: boolean(),
 	createdAt: timestamp().default(sql`now()`).notNull(),
 	roleType: roleTypeInPlatform().default("custom").notNull(),
@@ -956,16 +918,15 @@ export const resolvedUserPermissionsInPlatform = platform.materializedView("reso
 	canManageRoles: boolean(),
 	canManageSuspensions: boolean(),
 	canViewAuditLog: boolean(),
-	canCreateCredentials: boolean(),
 	canManageVerification: boolean(),
 	canManageAttendance: boolean(),
 	canExportStars: boolean(),
 	canPreviewDocs: boolean(),
 	isLeader: boolean(),
 	minRank: doublePrecision(),
-}).as(sql`WITH user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canCreateCredentials", r."canManageVerification", r."canManageAttendance", r."canExportStars", r."canPreviewDocs" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canCreateCredentials" ORDER BY ucr.rank) FILTER (WHERE ucr."canCreateCredentials" IS NOT NULL))[1] AS "canCreateCredentials", (array_agg(ucr."canManageVerification" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageVerification" IS NOT NULL))[1] AS "canManageVerification", (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageAttendance" IS NOT NULL))[1] AS "canManageAttendance", (array_agg(ucr."canExportStars" ORDER BY ucr.rank) FILTER (WHERE ucr."canExportStars" IS NOT NULL))[1] AS "canExportStars", (array_agg(ucr."canPreviewDocs" ORDER BY ucr.rank) FILTER (WHERE ucr."canPreviewDocs" IS NOT NULL))[1] AS "canPreviewDocs" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", COALESCE(fnn."canModerate", false) AS "canModerate", COALESCE(fnn."canManageRoles", false) AS "canManageRoles", COALESCE(fnn."canManageSuspensions", false) AS "canManageSuspensions", COALESCE(fnn."canViewAuditLog", false) AS "canViewAuditLog", COALESCE(fnn."canCreateCredentials", false) AS "canCreateCredentials", COALESCE(fnn."canManageVerification", false) AS "canManageVerification", COALESCE(fnn."canManageAttendance", false) AS "canManageAttendance", COALESCE(fnn."canExportStars", false) AS "canExportStars", COALESCE(fnn."canPreviewDocs", false) AS "canPreviewDocs", COALESCE(fnn."isLeader", false) AS "isLeader", COALESCE(fnn."minRank", 'Infinity'::double precision) AS "minRank" FROM all_users au LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`);
+}).as(sql`WITH user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canManageVerification", r."canManageAttendance", r."canExportStars", r."canPreviewDocs" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canManageVerification" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageVerification" IS NOT NULL))[1] AS "canManageVerification", (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageAttendance" IS NOT NULL))[1] AS "canManageAttendance", (array_agg(ucr."canExportStars" ORDER BY ucr.rank) FILTER (WHERE ucr."canExportStars" IS NOT NULL))[1] AS "canExportStars", (array_agg(ucr."canPreviewDocs" ORDER BY ucr.rank) FILTER (WHERE ucr."canPreviewDocs" IS NOT NULL))[1] AS "canPreviewDocs" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", COALESCE(fnn."canModerate", false) AS "canModerate", COALESCE(fnn."canManageRoles", false) AS "canManageRoles", COALESCE(fnn."canManageSuspensions", false) AS "canManageSuspensions", COALESCE(fnn."canViewAuditLog", false) AS "canViewAuditLog", COALESCE(fnn."canManageVerification", false) AS "canManageVerification", COALESCE(fnn."canManageAttendance", false) AS "canManageAttendance", COALESCE(fnn."canExportStars", false) AS "canExportStars", COALESCE(fnn."canPreviewDocs", false) AS "canPreviewDocs", COALESCE(fnn."isLeader", false) AS "isLeader", COALESCE(fnn."minRank", 'Infinity'::double precision) AS "minRank" FROM all_users au LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`);
 
-// Schema-suffix aliases — appended by devtools db introspect
+// Schema-suffix aliases — appended by types:drizzle
 export { academicProgramCategoryInPlatform as academicProgramCategory };
 export { academicProgramsInPlatform as academicPrograms };
 export { appsInPlatform as apps };
@@ -978,9 +939,6 @@ export { competitionsInPlatform as competitions };
 export { contentActionInPlatform as contentAction };
 export { contentTypesInPlatform as contentTypes };
 export { contentVisibilityInPlatform as contentVisibility };
-export { credentialRolesInPlatform as credentialRoles };
-export { credentialTypeInPlatform as credentialType };
-export { credentialsInPlatform as credentials };
 export { discordRoleMembershipsInPlatform as discordRoleMemberships };
 export { docsIndexStateInPlatform as docsIndexState };
 export { docsPagesInPlatform as docsPages };

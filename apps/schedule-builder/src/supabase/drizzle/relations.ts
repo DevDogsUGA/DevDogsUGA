@@ -24,7 +24,9 @@ export const relations = defineRelations(schema, (r) => ({
 		webauthnChallengesInAuths: r.many.webauthnChallengesInAuth(),
 		webauthnCredentialsInAuths: r.many.webauthnCredentialsInAuth(),
 		meetingsInPlatforms: r.many.meetingsInPlatform(),
-		credentialsInPlatforms: r.many.credentialsInPlatform(),
+		rolesInPlatformsViaDiscordRoleMembershipsInPlatform: r.many.rolesInPlatform({
+			alias: "rolesInPlatform_id_usersInAuth_id_via_discordRoleMembershipsInPlatform"
+		}),
 		exportAuditInPlatforms: r.many.exportAuditInPlatform(),
 		oauthClientsInAuthsViaOauthConnectCodesInPlatform: r.many.oauthClientsInAuth({
 			alias: "oauthClientsInAuth_id_usersInAuth_id_via_oauthConnectCodesInPlatform"
@@ -35,6 +37,7 @@ export const relations = defineRelations(schema, (r) => ({
 		oauthClientsInAuthsViaOauthRegistrationsInPlatform: r.many.oauthClientsInAuth({
 			alias: "oauthClientsInAuth_id_usersInAuth_id_via_oauthRegistrationsInPlatform"
 		}),
+		officerDiscordIdsInPlatforms: r.many.officerDiscordIdsInPlatform(),
 		reportResolutionsInPlatforms: r.many.reportResolutionsInPlatform(),
 		reflectionsInPlatforms: r.many.reflectionsInPlatform(),
 		reportsInPlatformsViaReportCorroborationsInPlatform: r.many.reportsInPlatform({
@@ -53,13 +56,21 @@ export const relations = defineRelations(schema, (r) => ({
 		reportsInPlatformsReporterUserId: r.many.reportsInPlatform({
 			alias: "reportsInPlatform_reporterUserId_usersInAuth_id"
 		}),
+		supportGuestsInPlatformsViaSupportConversationsInPlatform: r.many.supportGuestsInPlatform({
+			alias: "supportGuestsInPlatform_id_usersInAuth_id_via_supportConversationsInPlatform"
+		}),
+		supportGuestsInPlatformsViaSupportMessagesInPlatform: r.many.supportGuestsInPlatform({
+			alias: "supportGuestsInPlatform_id_usersInAuth_id_via_supportMessagesInPlatform"
+		}),
 		teamsInPlatformsViaTeamMembersInPlatform: r.many.teamsInPlatform({
 			alias: "teamsInPlatform_id_usersInAuth_id_via_teamMembersInPlatform"
 		}),
 		teamsInPlatformsViaTeamMembershipRequestsInPlatform: r.many.teamsInPlatform({
 			alias: "teamsInPlatform_id_usersInAuth_id_via_teamMembershipRequestsInPlatform"
 		}),
-		rolesInPlatforms: r.many.rolesInPlatform(),
+		rolesInPlatformsViaUserRolesInPlatform: r.many.rolesInPlatform({
+			alias: "rolesInPlatform_id_usersInAuth_id_via_userRolesInPlatform"
+		}),
 	},
 	mfaAmrClaimsInAuth: {
 		sessionsInAuth: r.one.sessionsInAuth({
@@ -205,21 +216,16 @@ export const relations = defineRelations(schema, (r) => ({
 		contentTypesInPlatforms: r.many.contentTypesInPlatform(),
 		reportsInPlatforms: r.many.reportsInPlatform(),
 	},
-	credentialsInPlatform: {
-		rolesInPlatforms: r.many.rolesInPlatform({
-			from: r.credentialsInPlatform.id.through(r.credentialRolesInPlatform.credentialId),
-			to: r.rolesInPlatform.id.through(r.credentialRolesInPlatform.roleId)
-		}),
-		usersInAuth: r.one.usersInAuth({
-			from: r.credentialsInPlatform.createdBy,
-			to: r.usersInAuth.id
-		}),
-	},
 	rolesInPlatform: {
-		credentialsInPlatforms: r.many.credentialsInPlatform(),
-		usersInAuths: r.many.usersInAuth({
+		usersInAuthsViaDiscordRoleMembershipsInPlatform: r.many.usersInAuth({
+			from: r.rolesInPlatform.id.through(r.discordRoleMembershipsInPlatform.roleId),
+			to: r.usersInAuth.id.through(r.discordRoleMembershipsInPlatform.userId),
+			alias: "rolesInPlatform_id_usersInAuth_id_via_discordRoleMembershipsInPlatform"
+		}),
+		usersInAuthsViaUserRolesInPlatform: r.many.usersInAuth({
 			from: r.rolesInPlatform.id.through(r.userRolesInPlatform.roleId),
-			to: r.usersInAuth.id.through(r.userRolesInPlatform.userId)
+			to: r.usersInAuth.id.through(r.userRolesInPlatform.userId),
+			alias: "rolesInPlatform_id_usersInAuth_id_via_userRolesInPlatform"
 		}),
 	},
 	exportAuditInPlatform: {
@@ -230,6 +236,12 @@ export const relations = defineRelations(schema, (r) => ({
 	},
 	seasonsInPlatform: {
 		meetingsInPlatforms: r.many.meetingsInPlatform(),
+	},
+	officerDiscordIdsInPlatform: {
+		usersInAuth: r.one.usersInAuth({
+			from: r.officerDiscordIdsInPlatform.userId,
+			to: r.usersInAuth.id
+		}),
 	},
 	pointsInPlatform: {
 		leaderboardProfilesInPlatform: r.one.leaderboardProfilesInPlatform({
@@ -303,6 +315,18 @@ export const relations = defineRelations(schema, (r) => ({
 			from: r.reportsInPlatform.reporterUserId,
 			to: r.usersInAuth.id,
 			alias: "reportsInPlatform_reporterUserId_usersInAuth_id"
+		}),
+	},
+	supportGuestsInPlatform: {
+		usersInAuthsViaSupportConversationsInPlatform: r.many.usersInAuth({
+			from: r.supportGuestsInPlatform.id.through(r.supportConversationsInPlatform.guestId),
+			to: r.usersInAuth.id.through(r.supportConversationsInPlatform.userId),
+			alias: "supportGuestsInPlatform_id_usersInAuth_id_via_supportConversationsInPlatform"
+		}),
+		usersInAuthsViaSupportMessagesInPlatform: r.many.usersInAuth({
+			from: r.supportGuestsInPlatform.id.through(r.supportMessagesInPlatform.guestId),
+			to: r.usersInAuth.id.through(r.supportMessagesInPlatform.userId),
+			alias: "supportGuestsInPlatform_id_usersInAuth_id_via_supportMessagesInPlatform"
 		}),
 	},
 	workshopsInPlatform: {

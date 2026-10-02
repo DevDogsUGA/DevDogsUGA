@@ -19,7 +19,7 @@ Search draws on both: `src/server/search/appEntries.ts` builds entries from the 
 
 ## Permission gating
 
-Each `ConsoleItem` carries one `permission` field — a key of `ResolvedPermissions`, or the string `"credentialsAccess"` for the credentials page, whose visibility goes beyond the flat flags and is resolved by `canSeeCredentialsPage`. `visibleConsoleItems(permissions, credentialsAccess)` in `nav.ts` filters the list, and it runs on the server, inside `GET /me`: the client only ever receives the items it may see. That one field is the whole visibility model, and search inherits it, because sub-entries are only generated for a page the caller could already open.
+Each `ConsoleItem` carries one `permission` field — a key of `ResolvedPermissions`. `visibleConsoleItems(permissions)` in `nav.ts` filters the list, and it runs on the server, inside `GET /me`: the client only ever receives the items it may see. That one field is the whole visibility model, and search inherits it, because sub-entries are only generated for a page the caller could already open.
 
 The items are not the enforcement. Each console page enforces its own permission server-side; `CONSOLE_ITEMS` decides what is offered, so the two are kept in step by hand.
 

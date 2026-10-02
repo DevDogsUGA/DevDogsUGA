@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, text, varchar, pgEnum, integer, boolean, bigserial, timestamp, bigint, smallint, json, date, jsonb, customType, doublePrecision, inet, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, numeric } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, text, bigserial, integer, pgEnum, boolean, timestamp, bigint, customType, jsonb, smallint, date, json, doublePrecision, inet, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, numeric } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const auth = pgSchema("auth");
@@ -25,7 +25,6 @@ export const oauthResponseTypeInAuth = auth.enum("oauth_response_type", ["code"]
 export const oauthClientTypeInAuth = auth.enum("oauth_client_type", ["public", "confidential"])
 export const graduationSemesterInPlatform = platform.enum("graduationSemester", ["spring", "summer", "fall"])
 export const academicProgramCategoryInPlatform = platform.enum("academicProgramCategory", ["undergraduate_major", "graduate_major", "undergraduate_minor", "undergraduate_certificate", "graduate_certificate", "professional_program"])
-export const credentialTypeInPlatform = platform.enum("credentialType", ["email_password", "totp", "email_password_totp"])
 export const roleTypeInPlatform = platform.enum("roleType", ["default", "custom"])
 export const oauthRegistrationTypeInPlatform = platform.enum("oauthRegistrationType", ["development", "production"])
 export const checkInMethodInPlatform = platform.enum("checkInMethod", ["qr", "manual_code"])
@@ -589,11 +588,13 @@ export const contentTypesInPlatform = platform.table.withRLS("contentTypes", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 ]);
 
-export const credentialRolesInPlatform = platform.table.withRLS("credentialRoles", {
-	credentialId: uuid().notNull().references(() => credentialsInPlatform.id, { onDelete: "cascade" } ),
+export const discordRoleMembershipsInPlatform = platform.table.withRLS("discordRoleMemberships", {
+	userId: uuid().notNull().references(() => usersInAuth.id, { onDelete: "cascade" } ),
 	roleId: uuid().notNull().references(() => rolesInPlatform.id, { onDelete: "cascade" } ),
+	syncedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 }, (table) => [
-	primaryKey({ columns: [table.credentialId, table.roleId], name: "credentialRoles_pkey"}),
+	primaryKey({ columns: [table.userId, table.roleId], name: "discordRoleMemberships_pkey"}),
+	index("discordRoleMemberships_roleId_idx").using("btree", table.roleId.asc().nullsLast()),
 
 	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
 
@@ -604,26 +605,12 @@ export const credentialRolesInPlatform = platform.table.withRLS("credentialRoles
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
 
-export const credentialsInPlatform = platform.table.withRLS("credentials", {
-	id: uuid().defaultRandom().primaryKey(),
-	name: text().notNull(),
-	description: text(),
-	type: credentialTypeInPlatform().notNull(),
-	email: text(),
-	passwordSecretId: uuid(),
-	totpSecretId: uuid(),
-	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-	createdBy: uuid().references(() => usersInAuth.id, { onDelete: "set null" } ),
+export const docsIndexStateInPlatform = platform.table.withRLS("docsIndexState", {
+	id: boolean().default(true).primaryKey(),
+	hash: text().notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 }, (table) => [
-
-	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
-
-	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
-
-	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
-
-	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
-]);
+check("docsIndexState_id_check", sql`id`),]);
 
 export const docsPagesInPlatform = platform.table.withRLS("docsPages", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -633,11 +620,12 @@ export const docsPagesInPlatform = platform.table.withRLS("docsPages", {
 	plainText: text().notNull(),
 	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 	search: customType({ dataType: () => 'tsvector' })().generatedAlwaysAs(sql`((setweight(to_tsvector('english'::regconfig, COALESCE(title, ''::text)), 'A'::"char") || setweight(to_tsvector('english'::regconfig, COALESCE(description, ''::text)), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, "plainText"), 'C'::"char"))`),
+	publishAt: timestamp({ withTimezone: true }),
 }, (table) => [
 	uniqueIndex("docsPages_path_idx").using("btree", table.path.asc().nullsLast()),
 	index("docsPages_search_idx").using("gin", table.search.asc().nullsLast()),
 
-	pgPolicy("docsPages_public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
+	pgPolicy("docsPages_public_read", { for: "select", to: ["anon", "authenticated"], using: sql`(("publishAt" IS NULL) OR ("publishAt" <= now()))` }),
 ]);
 
 export const exportAuditInPlatform = platform.table.withRLS("exportAudit", {
@@ -785,6 +773,22 @@ export const oauthTestAccountsInPlatform = platform.table.withRLS("oauthTestAcco
 
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
+
+export const officerDiscordIdsInPlatform = platform.table.withRLS("officerDiscordIds", {
+	userId: uuid().primaryKey().references(() => usersInAuth.id, { onDelete: "cascade" } ),
+	discordUserId: text().notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	uniqueIndex("officerDiscordIds_discordUserId_key").using("btree", table.discordUserId.asc().nullsLast()),
+
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+check("officerDiscordIds_discordUserId_snowflake_check", sql`("discordUserId" ~ '^[0-9]{15,25}$'::text)`),]);
 
 export const pointsInPlatform = platform.table.withRLS("points", {
 	leaderboardProfileId: varchar({ length: 255 }).notNull().references(() => leaderboardProfilesInPlatform.githubId, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -1048,7 +1052,6 @@ export const rolesInPlatform = platform.table.withRLS("roles", {
 	canManageRoles: boolean(),
 	canManageSuspensions: boolean(),
 	canViewAuditLog: boolean(),
-	canCreateCredentials: boolean(),
 	canManageVerification: boolean(),
 	createdAt: timestamp().default(sql`now()`).notNull(),
 	roleType: roleTypeInPlatform().default("custom").notNull(),
@@ -1059,6 +1062,7 @@ export const rolesInPlatform = platform.table.withRLS("roles", {
 	discordSyncedColor: integer(),
 	canManageAttendance: boolean(),
 	canExportStars: boolean(),
+	canPreviewDocs: boolean(),
 }, (table) => [
 	index("roles_isLeadership_rank_idx").using("btree", table.rank.asc().nullsLast()).where(sql`"isLeadership"`),
 	unique("roles_discordRoleId_key").on(table.discordRoleId),	unique("roles_rank_key").on(table.rank),	unique("roles_title_key").on(table.title),
@@ -1089,6 +1093,85 @@ export const seasonsInPlatform = platform.table.withRLS("seasons", {
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("seasons_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),]);
+
+export const supportConversationsInPlatform = platform.table.withRLS("supportConversations", {
+	id: uuid().defaultRandom().primaryKey(),
+	threadId: text().notNull(),
+	userId: uuid().references(() => usersInAuth.id, { onDelete: "cascade" } ),
+	guestId: uuid().references(() => supportGuestsInPlatform.id, { onDelete: "cascade" } ),
+	role: text().default("asker").notNull(),
+	lastReadMessageId: text(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	followedInDiscordAt: timestamp({ withTimezone: true }),
+}, (table) => [
+	index("supportConversations_guestId_idx").using("btree", table.guestId.asc().nullsLast()),
+	uniqueIndex("supportConversations_thread_guest_idx").using("btree", table.threadId.asc().nullsLast(), table.guestId.asc().nullsLast()).where(sql`("guestId" IS NOT NULL)`),
+	uniqueIndex("supportConversations_thread_user_idx").using("btree", table.threadId.asc().nullsLast(), table.userId.asc().nullsLast()).where(sql`("userId" IS NOT NULL)`),
+	index("supportConversations_userId_idx").using("btree", table.userId.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+check("supportConversations_owner_check", sql`(("userId" IS NULL) <> ("guestId" IS NULL))`),check("supportConversations_role_check", sql`(role = ANY (ARRAY['asker'::text, 'follower'::text]))`),]);
+
+export const supportForumPostsInPlatform = platform.table.withRLS("supportForumPosts", {
+	threadId: text().primaryKey(),
+	title: text().notNull(),
+	question: text().notNull(),
+	answerMessageId: text(),
+	answer: text(),
+	tags: text().array().default([]).notNull(),
+	isResolved: boolean().default(false).notNull(),
+	isFaq: boolean().default(false).notNull(),
+	lastMessageId: text(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	search: customType({ dataType: () => 'tsvector' })().generatedAlwaysAs(sql`((setweight(to_tsvector('english'::regconfig, COALESCE(title, ''::text)), 'A'::"char") || setweight(to_tsvector('english'::regconfig, COALESCE(question, ''::text)), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, COALESCE(answer, ''::text)), 'C'::"char"))`),
+}, (table) => [
+	index("supportForumPosts_search_idx").using("gin", table.search.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const supportGuestsInPlatform = platform.table.withRLS("supportGuests", {
+	id: uuid().defaultRandom().primaryKey(),
+	tokenHash: text().notNull(),
+	label: text().notNull(),
+	blockedAt: timestamp({ withTimezone: true }),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	lastSeenAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("supportGuests_lastSeenAt_idx").using("btree", table.lastSeenAt.asc().nullsLast()),
+	uniqueIndex("supportGuests_tokenHash_idx").using("btree", table.tokenHash.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const supportMessagesInPlatform = platform.table.withRLS("supportMessages", {
+	messageId: text().primaryKey(),
+	threadId: text().notNull(),
+	userId: uuid().references(() => usersInAuth.id, { onDelete: "set null" } ),
+	guestId: uuid().references(() => supportGuestsInPlatform.id, { onDelete: "set null" } ),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("supportMessages_threadId_idx").using("btree", table.threadId.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
 
 export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -1480,13 +1563,13 @@ export const resolvedUserPermissionsInPlatform = platform.materializedView("reso
 	canManageRoles: boolean(),
 	canManageSuspensions: boolean(),
 	canViewAuditLog: boolean(),
-	canCreateCredentials: boolean(),
 	canManageVerification: boolean(),
 	canManageAttendance: boolean(),
 	canExportStars: boolean(),
+	canPreviewDocs: boolean(),
 	isLeader: boolean(),
 	minRank: doublePrecision(),
-}).as(sql`WITH user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canCreateCredentials", r."canManageVerification", r."canManageAttendance", r."canExportStars" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canCreateCredentials" ORDER BY ucr.rank) FILTER (WHERE ucr."canCreateCredentials" IS NOT NULL))[1] AS "canCreateCredentials", (array_agg(ucr."canManageVerification" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageVerification" IS NOT NULL))[1] AS "canManageVerification", (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageAttendance" IS NOT NULL))[1] AS "canManageAttendance", (array_agg(ucr."canExportStars" ORDER BY ucr.rank) FILTER (WHERE ucr."canExportStars" IS NOT NULL))[1] AS "canExportStars" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", COALESCE(fnn."canModerate", false) AS "canModerate", COALESCE(fnn."canManageRoles", false) AS "canManageRoles", COALESCE(fnn."canManageSuspensions", false) AS "canManageSuspensions", COALESCE(fnn."canViewAuditLog", false) AS "canViewAuditLog", COALESCE(fnn."canCreateCredentials", false) AS "canCreateCredentials", COALESCE(fnn."canManageVerification", false) AS "canManageVerification", COALESCE(fnn."canManageAttendance", false) AS "canManageAttendance", COALESCE(fnn."canExportStars", false) AS "canExportStars", COALESCE(fnn."isLeader", false) AS "isLeader", COALESCE(fnn."minRank", 'Infinity'::double precision) AS "minRank" FROM all_users au LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`);
+}).as(sql`WITH user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canManageVerification", r."canManageAttendance", r."canExportStars", r."canPreviewDocs" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canManageVerification" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageVerification" IS NOT NULL))[1] AS "canManageVerification", (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageAttendance" IS NOT NULL))[1] AS "canManageAttendance", (array_agg(ucr."canExportStars" ORDER BY ucr.rank) FILTER (WHERE ucr."canExportStars" IS NOT NULL))[1] AS "canExportStars", (array_agg(ucr."canPreviewDocs" ORDER BY ucr.rank) FILTER (WHERE ucr."canPreviewDocs" IS NOT NULL))[1] AS "canPreviewDocs" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", COALESCE(fnn."canModerate", false) AS "canModerate", COALESCE(fnn."canManageRoles", false) AS "canManageRoles", COALESCE(fnn."canManageSuspensions", false) AS "canManageSuspensions", COALESCE(fnn."canViewAuditLog", false) AS "canViewAuditLog", COALESCE(fnn."canManageVerification", false) AS "canManageVerification", COALESCE(fnn."canManageAttendance", false) AS "canManageAttendance", COALESCE(fnn."canExportStars", false) AS "canExportStars", COALESCE(fnn."canPreviewDocs", false) AS "canPreviewDocs", COALESCE(fnn."isLeader", false) AS "isLeader", COALESCE(fnn."minRank", 'Infinity'::double precision) AS "minRank" FROM all_users au LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`);
 
 export const decryptedSecretsInVault = vault.view("decrypted_secrets", {	id: uuid(),
 	name: text(),

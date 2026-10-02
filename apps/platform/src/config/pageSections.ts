@@ -9,7 +9,7 @@
  * `pageSections.test.ts` parses the page sources and fails if the two drift.
  *
  * Only pages built from `ConsoleCard` + `Field` appear here. The console's
- * table-driven pages (moderation, feedback, audit log, credentials) have no
+ * table-driven pages (moderation, feedback, audit log) have no
  * stable in-page anchors to point at.
  */
 

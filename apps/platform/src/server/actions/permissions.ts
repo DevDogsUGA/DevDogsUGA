@@ -47,7 +47,6 @@ const PERMISSION_KEYS = [
   "canManageRoles",
   "canManageSuspensions",
   "canViewAuditLog",
-  "canCreateCredentials",
   "canManageVerification",
   "canManageAttendance",
   "canExportStars",
@@ -96,7 +95,6 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canManageRoles: false,
   canManageSuspensions: false,
   canViewAuditLog: false,
-  canCreateCredentials: false,
   canManageVerification: false,
   canManageAttendance: false,
   canExportStars: false,
@@ -118,7 +116,6 @@ export async function resolveUserPermissions(
       canManageRoles: resolvedUserPermissions.canManageRoles,
       canManageSuspensions: resolvedUserPermissions.canManageSuspensions,
       canViewAuditLog: resolvedUserPermissions.canViewAuditLog,
-      canCreateCredentials: resolvedUserPermissions.canCreateCredentials,
       canManageVerification: resolvedUserPermissions.canManageVerification,
       canManageAttendance: resolvedUserPermissions.canManageAttendance,
       canExportStars: resolvedUserPermissions.canExportStars,
@@ -161,7 +158,6 @@ export async function getCallerContext(userId: string): Promise<{
       canManageRoles: row.canManageRoles,
       canManageSuspensions: row.canManageSuspensions,
       canViewAuditLog: row.canViewAuditLog,
-      canCreateCredentials: row.canCreateCredentials,
       canManageVerification: row.canManageVerification,
       canManageAttendance: row.canManageAttendance,
       canExportStars: row.canExportStars,
@@ -187,11 +183,6 @@ export async function canUserManageSuspensions(
 }
 export async function canUserViewAuditLog(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canViewAuditLog);
-}
-export async function canUserCreateCredentials(
-  userId: string,
-): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canCreateCredentials);
 }
 export async function canUserManageVerification(
   userId: string,
@@ -257,7 +248,6 @@ export type CreateRoleInput = {
   canManageRoles?: boolean | null;
   canManageSuspensions?: boolean | null;
   canViewAuditLog?: boolean | null;
-  canCreateCredentials?: boolean | null;
   canManageVerification?: boolean | null;
   canManageAttendance?: boolean | null;
   canExportStars?: boolean | null;
@@ -288,7 +278,6 @@ export async function createRole(
       canManageRoles: data.canManageRoles ?? null,
       canManageSuspensions: data.canManageSuspensions ?? null,
       canViewAuditLog: data.canViewAuditLog ?? null,
-      canCreateCredentials: data.canCreateCredentials ?? null,
       canManageVerification: data.canManageVerification ?? null,
       canManageAttendance: data.canManageAttendance ?? null,
       canExportStars: data.canExportStars ?? null,
@@ -347,9 +336,6 @@ export async function updateRole(
       }),
       ...(data.canViewAuditLog !== undefined && {
         canViewAuditLog: data.canViewAuditLog,
-      }),
-      ...(data.canCreateCredentials !== undefined && {
-        canCreateCredentials: data.canCreateCredentials,
       }),
       ...(data.canManageVerification !== undefined && {
         canManageVerification: data.canManageVerification,

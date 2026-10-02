@@ -346,72 +346,6 @@ export type Database = {
           },
         ];
       };
-      credentialRoles: {
-        Row: {
-          credentialId: string;
-          roleId: string;
-        };
-        Insert: {
-          credentialId: string;
-          roleId: string;
-        };
-        Update: {
-          credentialId?: string;
-          roleId?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "credentialRoles_credentialId_credentials_id_fkey";
-            columns: ["credentialId"];
-            isOneToOne: false;
-            referencedRelation: "credentials";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "credentialRoles_roleId_roles_id_fkey";
-            columns: ["roleId"];
-            isOneToOne: false;
-            referencedRelation: "roles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      credentials: {
-        Row: {
-          createdAt: string;
-          createdBy: string | null;
-          description: string | null;
-          email: string | null;
-          id: string;
-          name: string;
-          passwordSecretId: string | null;
-          totpSecretId: string | null;
-          type: Database["platform"]["Enums"]["credentialType"];
-        };
-        Insert: {
-          createdAt?: string;
-          createdBy?: string | null;
-          description?: string | null;
-          email?: string | null;
-          id?: string;
-          name: string;
-          passwordSecretId?: string | null;
-          totpSecretId?: string | null;
-          type: Database["platform"]["Enums"]["credentialType"];
-        };
-        Update: {
-          createdAt?: string;
-          createdBy?: string | null;
-          description?: string | null;
-          email?: string | null;
-          id?: string;
-          name?: string;
-          passwordSecretId?: string | null;
-          totpSecretId?: string | null;
-          type?: Database["platform"]["Enums"]["credentialType"];
-        };
-        Relationships: [];
-      };
       discordRoleMemberships: {
         Row: {
           roleId: string;
@@ -1256,7 +1190,6 @@ export type Database = {
       };
       roles: {
         Row: {
-          canCreateCredentials: boolean | null;
           canExportStars: boolean | null;
           canManageAttendance: boolean | null;
           canManageRoles: boolean | null;
@@ -1279,7 +1212,6 @@ export type Database = {
           title: string;
         };
         Insert: {
-          canCreateCredentials?: boolean | null;
           canExportStars?: boolean | null;
           canManageAttendance?: boolean | null;
           canManageRoles?: boolean | null;
@@ -1302,7 +1234,6 @@ export type Database = {
           title: string;
         };
         Update: {
-          canCreateCredentials?: boolean | null;
           canExportStars?: boolean | null;
           canManageAttendance?: boolean | null;
           canManageRoles?: boolean | null;
@@ -1745,7 +1676,6 @@ export type Database = {
       };
       resolvedUserPermissions: {
         Row: {
-          canCreateCredentials: boolean | null;
           canExportStars: boolean | null;
           canManageAttendance: boolean | null;
           canManageRoles: boolean | null;
@@ -1921,7 +1851,6 @@ export type Database = {
       checkInMethod: "qr" | "manual_code";
       contentAction: "quarantine" | "no_action";
       contentVisibility: "public" | "restricted";
-      credentialType: "email_password" | "totp" | "email_password_totp";
       filerAction: "warn" | "suspend" | "no_action";
       graduationSemester: "spring" | "summer" | "fall";
       membershipDirection: "invite" | "request";
@@ -3301,7 +3230,6 @@ export const Constants = {
       checkInMethod: ["qr", "manual_code"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],
-      credentialType: ["email_password", "totp", "email_password_totp"],
       filerAction: ["warn", "suspend", "no_action"],
       graduationSemester: ["spring", "summer", "fall"],
       membershipDirection: ["invite", "request"],

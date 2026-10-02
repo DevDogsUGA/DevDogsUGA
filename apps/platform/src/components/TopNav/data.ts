@@ -1,6 +1,5 @@
 import { cache } from "react";
 import { visibleConsoleItems } from "~/config/nav";
-import { canSeeCredentialsPage } from "~/server/actions/credentials";
 import {
   getCallerContext,
   getHighestRankingRole,
@@ -19,7 +18,6 @@ import type { MeResponse, VerificationData } from "./NavUserProvider";
 export interface NavUser {
   profile: typeof profiles.$inferSelect;
   permissions: ResolvedPermissions | null;
-  credentialsAccess: boolean;
   highestRole: HighestRankingRole;
   verification: VerificationData | null;
   /** The linked GitHub account's login, or null when none is linked. */
@@ -37,24 +35,17 @@ export const getNavUser = cache(async (): Promise<NavUser | null> => {
   const user = await expectUserWith({ profile: true }).catch(() => null);
   if (!user?.profile) return null;
 
-  const [
-    callerContext,
-    credentialsAccess,
-    highestRole,
-    verificationStatus,
-    githubLogin,
-  ] = await Promise.all([
-    getCallerContext(user.id).catch(() => null),
-    canSeeCredentialsPage(user.id).catch(() => false),
-    getHighestRankingRole(user.id),
-    getVerificationStatus(user.id).catch(() => null),
-    githubLoginFor(user.id).catch(() => null),
-  ]);
+  const [callerContext, highestRole, verificationStatus, githubLogin] =
+    await Promise.all([
+      getCallerContext(user.id).catch(() => null),
+      getHighestRankingRole(user.id),
+      getVerificationStatus(user.id).catch(() => null),
+      githubLoginFor(user.id).catch(() => null),
+    ]);
 
   return {
     profile: user.profile,
     permissions: callerContext?.resolvedPermissions ?? null,
-    credentialsAccess,
     highestRole: highestRole ?? { title: "Member", color: null },
     verification: verificationStatus
       ? {
@@ -85,6 +76,6 @@ export function toMeResponse(user: NavUser | null): MeResponse {
     },
     verification: user.verification,
     githubLogin: user.githubLogin,
-    consoleItems: visibleConsoleItems(user.permissions, user.credentialsAccess),
+    consoleItems: visibleConsoleItems(user.permissions),
   };
 }

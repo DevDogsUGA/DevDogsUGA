@@ -34,12 +34,8 @@ export interface NavItem {
 }
 
 export interface ConsoleItem extends NavItem {
-  /**
-   * The permission flag that reveals this item, or "credentialsAccess" for the
-   * Credentials page, which is visible to anyone with role-granted credentials
-   * (resolved server-side via `canSeeCredentialsPage`).
-   */
-  permission: keyof ResolvedPermissions | "credentialsAccess";
+  /** The permission flag that reveals this item. */
+  permission: keyof ResolvedPermissions;
 }
 
 export interface SwitcherEntry {
@@ -132,14 +128,6 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
     permission: "canModerate",
     description:
       "Review content reports filed against community profiles and resolve them with the appropriate action.",
-  },
-  {
-    label: "Credentials",
-    href: "/console/credentials",
-    icon: "KeyIcon",
-    permission: "credentialsAccess",
-    description:
-      "Shared accounts and secrets used for testing integrations, visible only to roles you grant access to.",
   },
   {
     label: "Audit Log",
@@ -335,19 +323,10 @@ export const SOCIAL_LINKS: SwitcherEntry[] = [
   },
 ];
 
-/**
- * Filters CONSOLE_ITEMS down to what the caller may see. `credentialsAccess`
- * must be resolved by the caller (via `canSeeCredentialsPage`) since it goes
- * beyond the flat permission flags.
- */
+/** Filters CONSOLE_ITEMS down to what the caller may see. */
 export function visibleConsoleItems(
   permissions: ResolvedPermissions | null,
-  credentialsAccess = false,
 ): ConsoleItem[] {
   if (!permissions) return [];
-  return CONSOLE_ITEMS.filter((item) =>
-    item.permission === "credentialsAccess"
-      ? credentialsAccess
-      : permissions[item.permission],
-  );
+  return CONSOLE_ITEMS.filter((item) => permissions[item.permission]);
 }

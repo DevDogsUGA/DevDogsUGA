@@ -21,7 +21,7 @@ insert into "platform"."roles" (
   "showOnProfile", "isLeadership",
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
-  "canViewAuditLog", "canCreateCredentials", "canManageVerification",
+  "canViewAuditLog", "canManageVerification",
   "canManageAttendance", "canExportStars", "canPreviewDocs"
 
 )
@@ -32,6 +32,6 @@ values
     'Leads delivery of a DevDogs project.',
     'custom', 700, true, true,
     '#1abc9c', '1390065004287627264', 'Project Manager', 1752220,
-    null, null, null, null, null, null, true, null, true
+    null, null, null, null, null, true, null, true
   )
 on conflict do nothing;

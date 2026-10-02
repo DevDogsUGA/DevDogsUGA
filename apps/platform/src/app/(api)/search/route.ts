@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { canSeeCredentialsPage } from "~/server/actions/credentials";
 import { getCallerContext } from "~/server/actions/permissions";
 import { expectSession } from "~/server/auth";
 import { buildAppSearchEntries } from "~/server/search/appEntries";
@@ -30,20 +29,13 @@ export async function GET(request: Request) {
   if (!query) return NextResponse.json([]);
 
   const userId = await expectSession().catch(() => null);
-  const [permissions, credentialsAccess] = userId
-    ? await Promise.all([
-        getCallerContext(userId)
-          .then((ctx) => ctx.resolvedPermissions)
-          .catch(() => null),
-        canSeeCredentialsPage(userId).catch(() => false),
-      ])
-    : [null, false];
+  const permissions = userId
+    ? await getCallerContext(userId)
+        .then((ctx) => ctx.resolvedPermissions)
+        .catch(() => null)
+    : null;
 
-  const appEntries = buildAppSearchEntries(
-    permissions,
-    credentialsAccess,
-    userId !== null,
-  );
+  const appEntries = buildAppSearchEntries(permissions, userId !== null);
 
   const pages = matchEntries(appEntries, query, 8);
   const [docs, forum] = await Promise.all([

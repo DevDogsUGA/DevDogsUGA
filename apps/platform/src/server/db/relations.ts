@@ -239,28 +239,6 @@ export const relations = defineRelations(
         from: r.roles.id,
         to: r.userRoles.roleId,
       }),
-      credentialRoles: r.many.credentialRoles({
-        from: r.roles.id,
-        to: r.credentialRoles.roleId,
-      }),
-    },
-    credentialRoles: {
-      role: r.one.roles({
-        from: r.credentialRoles.roleId,
-        to: r.roles.id,
-        optional: false,
-      }),
-      credential: r.one.credentials({
-        from: r.credentialRoles.credentialId,
-        to: r.credentials.id,
-        optional: false,
-      }),
-    },
-    credentials: {
-      credentialRoles: r.many.credentialRoles({
-        from: r.credentials.id,
-        to: r.credentialRoles.credentialId,
-      }),
     },
     userSuspensions: {
       user: r.one.usersInAuth({
