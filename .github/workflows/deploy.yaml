@@ -4,8 +4,7 @@ name: Deploy
 # production candidate. Production mutation is gated by the protected
 # `production` environment and deploys this commit's prebuilt artifacts.
 on:
-  push:
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
     inputs:
       prune_orphans:
@@ -32,7 +31,7 @@ jobs:
           CURRENT_RUN: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          gh run list --repo "$GITHUB_REPOSITORY" --workflow Deploy --status in_progress --limit 50 --json databaseId,headSha \
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow "$GITHUB_WORKFLOW" --limit 50 --json databaseId,headSha \
             --jq ".[] | select(.databaseId != ($CURRENT_RUN | tonumber)) | .databaseId" |
           while read -r run_id; do
             [ -n "$run_id" ] || continue

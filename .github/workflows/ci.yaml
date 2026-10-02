@@ -1,6 +1,7 @@
 name: CI
 
-# Validation only. No deploys, and — deliberately — no secrets of any kind.
+# Pull requests run validation only. A push to `main` invokes the reusable
+# deploy workflow after every validation job succeeds.
 #
 # That is the invariant this file exists to hold: on `pull_request`, GitHub runs
 # the workflow definition FROM THE PULL REQUEST, not from the protected branch.
@@ -17,8 +18,11 @@ on:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # PR updates supersede their older validation runs. Main pushes cannot share
+  # a group: once validation hands a commit to the protected production gate,
+  # a later push must not cancel a deployment that is already running.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Least privilege for GITHUB_TOKEN. The repository default is already `read`,
 # but that is an org-level setting somebody can change without touching this
@@ -324,6 +328,19 @@ jobs:
           flutter pub get
           flutter analyze
           flutter test
+
+  # A main commit becomes a staging/production candidate only after all four
+  # required checks pass. Keeping this as a reusable workflow preserves the
+  # credential boundary: PR runs never call it, and only this job receives the
+  # Actions write permission needed to supersede older waiting candidates.
+  deploy:
+    needs: [validate, database, format, flutter]
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/deploy.yaml
+    secrets: inherit
 
 # Removed from this workflow, and not yet replaced:
 #
