@@ -134,9 +134,8 @@ export default function SupportWidget({
             if (event.key === "Escape") close();
           }}
           // Lifted off the page on purpose: the page is mauve-950, so the
-          // panel is a step lighter with a lit border and a cyan block
-          // shadow, the launcher's colors.
-          className="text-popover-foreground shadow-block-lg fixed inset-x-2 bottom-2 z-50 flex max-h-[min(40rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-xl border-2 border-mauve-500 bg-mauve-900 shadow-cyan-400/70 sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[26rem]"
+          // panel is a step lighter with a lit border.
+          className="text-popover-foreground fixed inset-x-2 bottom-2 z-50 flex max-h-[min(40rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-xl border-2 border-mauve-500 bg-mauve-900 sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[26rem]"
         >
           <Panel
             view={view}
@@ -164,9 +163,9 @@ export default function SupportWidget({
           }
           onClick={() => (open ? close() : setOpen(true))}
           className={cn(
-            // The site's call-to-action colors (cyan, amber shadow): the
-            // one thing in the corner that should catch the eye.
-            "shadow-block-md transition-lift fixed right-4 bottom-4 z-50 flex size-14 items-center justify-center rounded-full border-2 border-black bg-cyan-400 text-black shadow-amber-400 hover:-translate-x-0.5 hover:-translate-y-0.5 sm:right-6 sm:bottom-6",
+            // The site's call-to-action cyan: the one thing in the corner
+            // that should catch the eye.
+            "fixed right-4 bottom-4 z-50 flex size-14 items-center justify-center rounded-full border-2 border-black bg-cyan-400 text-black transition-transform hover:-translate-y-0.5 sm:right-6 sm:bottom-6",
             open && "max-sm:hidden",
           )}
         >
