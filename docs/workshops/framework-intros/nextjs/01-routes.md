@@ -47,19 +47,17 @@ React is a library for building user interfaces out of components. Next.js is a 
 
 ## App Router, Not Pages Router
 
-**App Router**, what we use:
+This workshop uses the **App Router**, which lives in an `app/` directory.
 
-- Lives in an `app/` directory
-- The current default, and where the framework is heading
-- Unlocks Server Components (step 5)
+> [!WARNING]
+> Tutorials online also use the older **Pages Router**. If a guide talks about a `pages/` directory, it's the old router, and its code won't fit here.
 
-**Pages Router: the traditional way**
+<details>
+<summary>How do the two routers differ?</summary>
 
-- Lives in a `pages/` directory
-- Still supported, no longer the default
-- Doesn't get the latest features
+The App Router is the current default and where the framework is heading, and it unlocks Server Components (step 5). The Pages Router is still supported, but no longer the default, and doesn't get the latest features.
 
-You'll see both in tutorials online. If a guide talks about `pages/`, it's the old router.
+</details>
 
 ## Your Folder Is the URL
 
@@ -81,11 +79,19 @@ A few file names mean something to Next.js wherever they appear in `app`:
 | --------------- | ------------------------------------------------- |
 | `page.tsx`      | The page itself.                                  |
 | `layout.tsx`    | A shared wrapper around pages: a nav, a sidebar.  |
-| `loading.tsx`   | Shown as a placeholder while the page loads.      |
-| `error.tsx`     | Shown when something went wrong.                  |
-| `not-found.tsx` | Shown when nothing matches the URL.               |
 
-This workshop uses the first two.
+This workshop uses those two.
+
+<details>
+<summary>The other special files</summary>
+
+| File            | What it is                                   |
+| --------------- | -------------------------------------------- |
+| `loading.tsx`   | Shown as a placeholder while the page loads. |
+| `error.tsx`     | Shown when something went wrong.             |
+| `not-found.tsx` | Shown when nothing matches the URL.          |
+
+</details>
 
 ## Add an About Page
 

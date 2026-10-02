@@ -22,11 +22,20 @@ git switch -c <github-username>/02-supabase origin/01-flutter-intro
 flutter pub get
 ```
 
+> [!NOTE]
+> Skipped [Intro to Flutter](/docs/workshops/framework-intros/flutter/setup)? That's fine: this branch already has its code, guestbook included.
+
 ## Project Setup
 
 - Create a Supabase project at **supabase.com/dashboard** (it takes about a minute)
 - Copy the **Project URL** and the **publishable key** from Project Settings → API
 - Copy `.env.example` to `.env.local` and paste them in
+
+> [!WARNING]
+> The publishable key is safe in your app. The **secret** key never is: keep it out of `.env.local`, and out of git.
+
+> [!IMPORTANT]
+> From now on, run the app with `flutter run --dart-define-from-file=.env.local`. Flutter doesn't read `.env.local` on its own: that flag bakes its values in.
 
 ```dotenv file=.env.example lines=1-7 href=https://github.com/DevDogsUGA/Mobile-Workshops/blob/df569b9c73159f3c90ff663a51ec3aa28a6326fa/.env.example vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FMobile-Workshops&ref=02-supabase%2F05-delete&file=.env.example
 # Copy this file to .env.local and fill in your own Supabase project's values.

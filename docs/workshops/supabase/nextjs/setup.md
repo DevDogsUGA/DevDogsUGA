@@ -22,11 +22,17 @@ git switch -c <github-username>/02-supabase origin/01-nextjs-intro
 pnpm install
 ```
 
+> [!NOTE]
+> Skipped [Intro to Next.js](/docs/workshops/framework-intros/nextjs/setup)? That's fine: this branch already has its code, guestbook included.
+
 ## Project Setup
 
 - Create a Supabase project at **supabase.com/dashboard** (it takes about a minute)
 - Copy the **Project URL** and the **publishable key** from Project Settings → API
 - Copy `.env.example` to `.env.local` and paste them in
+
+> [!WARNING]
+> The publishable key is safe in your app. The **secret** key never is: keep it out of `.env.local`, and out of git.
 
 ```dotenv file=.env.example lines=1-4 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/.env.example vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F05-delete&file=.env.example
 # Copy this file to .env.local and fill in your own Supabase project's values.

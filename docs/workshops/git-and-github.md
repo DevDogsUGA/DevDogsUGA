@@ -6,7 +6,13 @@ order: 1
 
 # Git & GitHub
 
-Every workshop, and every contribution to a DevDogs project, runs through Git and GitHub. This page is the Git and GitHub workshop from Cold Start, Sep 14, 2026. You need Git installed and a GitHub account: see the [Prerequisites](./getting-started/prerequisites#for-everyone).
+> [!NOTE]
+> Adapted from the Git and GitHub workshop at Cold Start, Sep 14, 2026.
+
+Every workshop, and every contribution to a DevDogs project, runs through Git and GitHub.
+
+> [!IMPORTANT]
+> You need Git installed and a GitHub account: see the [Prerequisites](./getting-started/prerequisites#for-everyone).
 
 ## Git in Four Ideas
 
@@ -37,7 +43,9 @@ Your machine holds a full copy of the repository, and GitHub holds the one you s
 
 - A **remote** is a copy of the repository that lives somewhere else. The one you cloned from is called `origin`.
 - `git clone` copies it down once. `git push` sends your commits up, and `git pull` brings everyone else's down.
-- Commits stay on your machine until you push, so nothing is shared by accident.
+
+> [!NOTE]
+> Commits stay on your machine until you push, so nothing is shared by accident.
 
 ## Git Across a Team
 
@@ -71,7 +79,12 @@ The difference between a pull request that's merged and one that's closed:
 - **Tells its story.** A clear title and description, screenshots where they help, and a linked issue.
 - **Proven.** It runs locally, passes its checks, and touches nothing it doesn't need to.
 
-The tells of a low-quality one are the reverse: one giant unfocused diff, no description or issue, and changes nobody tested or explained.
+<details>
+<summary>What does a low-quality one look like?</summary>
+
+The reverse: one giant unfocused diff, no description or issue, and changes nobody tested or explained.
+
+</details>
 
 ## Syncing With Origin
 
@@ -81,7 +94,8 @@ The tells of a low-quality one are the reverse: one giant unfocused diff, no des
 - **The database schema moves.** New migrations need applying before the app runs.
 - **Config changes.** New settings may need adding to your environment files.
 
-Then restart your dev server. Each project's docs give its exact commands.
+> [!TIP]
+> Then restart your dev server. Each project's docs give its exact commands.
 
 ## Practice: Oh My Git!
 

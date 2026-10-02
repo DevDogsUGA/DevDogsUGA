@@ -420,4 +420,7 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 [The whole `components/Guestbook.tsx` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/components/Guestbook.tsx)
 
+> [!IMPORTANT]
+> Hiding the button isn't what protects other people's messages: the delete policy is. Postgres refuses to delete someone else's message, whatever the app shows.
+
 <!-- prettier-ignore-end -->

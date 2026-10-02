@@ -47,7 +47,10 @@ A guestbook uses everything so far: a Stateful widget, a `Scaffold`, and the tab
 
 ## The Guestbook Screen
 
-Make `lib/guestbook.dart`. It's long, so it comes in five parts: put them one after another, in order, or copy the whole file from the link after the last part. `GuestbookEntry` is plain Dart: one entry's name, message and time. `required` means every entry has all three.
+> [!TIP]
+> The file is long, so it comes in five parts: put them one after another, in order, or copy the whole file from the link after the last part.
+
+Make `lib/guestbook.dart`. `GuestbookEntry` is plain Dart: one entry's name, message and time. `required` means every entry has all three.
 
 ```dart file=lib/guestbook.dart lines=1-10 href=https://github.com/DevDogsUGA/Mobile-Workshops/blob/e0c3c4d79c64d4b46da8c6402727a1fd1b907ec1/lib/guestbook.dart#L1-L10 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FMobile-Workshops&ref=01-flutter-intro%2F03-guestbook&file=lib%2Fguestbook.dart&lines=1-10
 import 'package:flutter/material.dart';
@@ -219,7 +222,8 @@ The placeholder becomes the real `Guestbook`, imported at the top.
 
 Hot reload, open the Guestbook tab, and sign it a few times. Then press `R` for a hot restart. The entries are gone: they only ever lived in the screen's state, in memory.
 
-Giving them somewhere to live is what the [Supabase workshop](/docs/workshops/supabase/flutter/setup) does next, starting from exactly this code.
+> [!NOTE]
+> The [Supabase workshop](/docs/workshops/supabase/flutter/setup) gives them somewhere to live, starting from exactly this code.
 
 ## Keep Going
 

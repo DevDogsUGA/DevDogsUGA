@@ -99,7 +99,10 @@ export default function GuestbookPage() {
 
 ## The Guestbook Component
 
-The file is long, so it comes in four parts: put them one after another, in order (the line numbers show where each goes), or copy the whole file from the link after the last part. `Guestbook` is a Client Component: it holds state, and its form reacts to typing. `Entry` describes one message. The component keeps three pieces of state: the list of entries, and what's typed in each field so far.
+> [!TIP]
+> The file is long, so it comes in four parts: put them one after another, in order (the line numbers show where each goes), or copy the whole file from the link after the last part.
+
+`Guestbook` is a Client Component: it holds state, and its form reacts to typing. `Entry` describes one message. The component keeps three pieces of state: the list of entries, and what's typed in each field so far.
 
 ```tsx file=components/Guestbook.tsx lines=1-14 href=https://github.com/DevDogsUGA/Web-Workshops/blob/062a77d02cc1fc92d4dde9f138aba594bada96ba/components/Guestbook.tsx#L1-L14 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=01-nextjs-intro%2F06-guestbook&file=components%2FGuestbook.tsx&lines=1-14
 "use client";
@@ -201,7 +204,8 @@ The list renders with `.map`, like the projects did, with the time each entry wa
 
 Sign the guestbook a few times, then refresh the page. The entries are gone: they only ever lived in the component's state, in that one browser tab.
 
-Giving them somewhere to live is what the [Supabase workshop](/docs/workshops/supabase/nextjs/setup) does next, starting from exactly this code.
+> [!NOTE]
+> The [Supabase workshop](/docs/workshops/supabase/nextjs/setup) gives them somewhere to live, starting from exactly this code.
 
 ## Keep Going
 

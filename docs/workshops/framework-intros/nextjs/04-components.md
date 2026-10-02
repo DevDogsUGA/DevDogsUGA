@@ -47,14 +47,17 @@ A component is a reusable building block of a user interface: you write it once 
 
 ## Where Components Live
 
-- Make a `components` folder beside `app`, not inside it
-- Inside `app`, folders are routes. Outside it, a file is just code you import.
+> [!IMPORTANT]
+> Make a `components` folder beside `app`, not inside it. Inside `app`, folders are routes. Outside it, a file is just code you import.
 
-**Built in to Next.js**
+<details>
+<summary>Which components come built in to Next.js?</summary>
 
 - **`Link`** (`next/link`) moves between pages without a full reload
 - **`Image`** (`next/image`) resizes images and serves smaller formats, so pages load faster
 - **`Script`** (`next/script`) controls when a script loads, so it doesn't slow the page down
+
+</details>
 
 ## A Navigation Bar
 

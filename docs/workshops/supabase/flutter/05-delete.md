@@ -462,4 +462,7 @@ Deleting takes a handler and a button, shown only on your own messages.
 
 [The whole `lib/guestbook.dart` at this point](https://github.com/DevDogsUGA/Mobile-Workshops/blob/df569b9c73159f3c90ff663a51ec3aa28a6326fa/lib/guestbook.dart)
 
+> [!IMPORTANT]
+> Hiding the button isn't what protects other people's messages: the delete policy is. Postgres refuses to delete someone else's message, whatever the app shows.
+
 <!-- prettier-ignore-end -->

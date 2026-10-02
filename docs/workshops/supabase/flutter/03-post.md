@@ -989,6 +989,15 @@ Signed-out visitors get a hint instead of the form.
 
 ## What's Wrong with This?
 
+Think about it before you open the answer.
+
+<details>
+<summary>Show the answer</summary>
+
 The **app** decides whose name goes on each message: type any name you like, and the database stores it. Nothing ties the name to the person who's signed in.
+
+A client is just a program anyone can change: they can edit the request, or call the API directly. Row-level security checks who you are (`auth.uid() = user_id`), but nothing checks the name.
+
+</details>
 
 <!-- prettier-ignore-end -->

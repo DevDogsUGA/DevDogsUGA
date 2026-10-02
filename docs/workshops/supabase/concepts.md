@@ -6,7 +6,10 @@ order: 1
 
 # Supabase Concepts
 
-The ideas behind the Supabase workshop, before either track writes any code. Adapted by Sloan Finger from Shruti Mishra's presentation at the Supabase workshop, Sep 28, 2026.
+> [!NOTE]
+> Adapted by Sloan Finger from Shruti Mishra's presentation, Sep 28, 2026.
+
+The ideas behind the Supabase workshop, before either track writes any code.
 
 ## What Is Supabase?
 
@@ -88,9 +91,15 @@ An **API key** tells Supabase which app is calling (a web page, a mobile app, a 
 | **Publishable** | A key taped to the front door: it opens the lobby | The browser, the mobile app, any code you ship | Only what row-level security allows. Safe to expose.                    |
 | **Secret**      | The master key in your pocket                     | Your backend, Edge Functions                   | Everything, bypassing row-level security. Never in a browser or in git. |
 
-## Edge Functions
+> [!WARNING]
+> The secret key bypasses every security rule. Never put it in a browser, a mobile app, or git.
 
-Edge Functions run backend code on Supabase's servers instead of in the user's browser. They keep sensitive information out of the frontend. For example: a user clicks "Send email", the app calls an Edge Function, the function uses secret credentials to send it, and the browser never sees them.
+<details>
+<summary>Where does code that needs the secret key run?</summary>
+
+In **Edge Functions**, which run backend code on Supabase's servers instead of in the user's browser. For example: a user clicks "Send email", the app calls an Edge Function, the function uses secret credentials to send it, and the browser never sees them. The workshop doesn't need one.
+
+</details>
 
 ## Authentication
 
@@ -100,7 +109,10 @@ Authentication verifies who a user is. Supabase Auth handles sign-up, sign-in, a
 
 ## Row-Level Security
 
-Row-level security (RLS) controls which rows of a table each user can reach. It's the most important idea here: with the publishable key in every copy of your app, RLS is what keeps one user out of another's data.
+Row-level security (RLS) controls which rows of a table each user can reach.
+
+> [!IMPORTANT]
+> This is the most important idea here: with the publishable key in every copy of your app, RLS is what keeps one user out of another's data.
 
 **Policies** are the rules. Each says which rows a user may `select`, `insert`, `update` or `delete`, and PostgreSQL enforces them in the database itself:
 
@@ -113,11 +125,16 @@ using (auth.uid() = user_id);
 
 This policy, named in quotes, applies to the `profiles` table when reading. `auth.uid()` is the signed-in user's id, so a row comes back only when its owner, `user_id`, is the current user.
 
-## Storage and Realtime
+<details>
+<summary>What else does Supabase do? Storage and Realtime</summary>
+
+The workshop doesn't use either, but your project might.
 
 **Storage** keeps files (images, videos, PDFs, documents) separately from your database, organized into buckets, with access controlled by RLS.
 
 **Realtime** lets your app react when data changes: it can subscribe to a table's inserts, updates and deletes, and hear about them as they happen.
+
+</details>
 
 ## Putting It All Together
 
@@ -127,4 +144,4 @@ This policy, named in quotes, applies to the `profiles` table when reading. `aut
 4. **RLS policies** check what they can reach.
 5. The **PostgreSQL database** stores the data, and sends back what they're allowed to see.
 
-Storage holds the files and Realtime sends live updates, beside that flow. Ready to build it? Start the [Next.js track](./nextjs/setup) or the [Flutter track](./flutter/setup).
+Ready to build it? Start the [Next.js track](./nextjs/setup) or the [Flutter track](./flutter/setup).

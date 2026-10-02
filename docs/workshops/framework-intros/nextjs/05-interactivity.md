@@ -108,7 +108,7 @@ mark the file (or its parent) with the "use client" directive.
 
 ## Make It a Client Component
 
-`"use client"` on the first line makes `Counter` a Client Component, and the button counts. Keep the server the default: mark the smallest piece that needs to be interactive, like this button, not the page around it.
+`"use client"` on the first line makes `Counter` a Client Component, and the button counts.
 
 ```tsx file=components/Counter.tsx lines=1-11 href=https://github.com/DevDogsUGA/Web-Workshops/blob/a379b7772784062d9dc60af6ed1af41007893c16/components/Counter.tsx vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=01-nextjs-intro%2F05-interactivity&file=components%2FCounter.tsx
 "use client";
@@ -125,6 +125,9 @@ export default function Counter() {
 ```
 
 ## Try It
+
+> [!TIP]
+> Keep the server the default: mark the smallest piece that needs to be interactive, like this button, not the page around it.
 
 Open [localhost:3000](http://localhost:3000). The home page is just the button for now, under the navbar. Click it: the count goes up with each click. Refresh, and it starts from zero again.
 

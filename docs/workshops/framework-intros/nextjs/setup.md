@@ -10,17 +10,17 @@ order: 0
 
 <!-- prettier-ignore-start -->
 
+> [!NOTE]
+> Adapted by Sloan Finger from Kyle Quach's Next.js workshop, Sep 21, 2026.
+
 ## What You'll Build
 
 - A small personal site: a home page, an About section, and a Projects page
 - A navigation bar shared by every page
 - A guestbook visitors can sign
 
-**Before you start**
-
-Install Git, VS Code, Node and pnpm first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-nextjs-track) cover all of them.
-
-This course is adapted by Sloan Finger from Kyle Quach's Next.js workshop at Framework Intros, Sep 21, 2026.
+> [!IMPORTANT]
+> Install Git, VS Code, Node and pnpm first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-nextjs-track) cover all of them.
 
 ## Get the Workshop Code
 
@@ -34,7 +34,14 @@ git switch -c <github-username>/01-nextjs-intro 01-nextjs-intro/00-start
 pnpm install
 ```
 
-Open the `Web-Workshops` folder in VS Code (`code .` from that terminal works too). The workshop started from `pnpm create next-app@latest my-app --yes`, which makes a fresh Next.js app. `01-nextjs-intro/00-start` is that same starter, trimmed down, and every step below ends at a checkpoint like it, so you can catch up if you fall behind.
+Open the `Web-Workshops` folder in VS Code (`code .` from that terminal works too). Every step below ends at a checkpoint, so you can catch up if you fall behind.
+
+<details>
+<summary>Where does the starter come from?</summary>
+
+`01-nextjs-intro/00-start` is a fresh app from `pnpm create next-app@latest my-app --yes`, trimmed down to one page.
+
+</details>
 
 ## Run It
 
@@ -43,6 +50,9 @@ Open the `Web-Workshops` folder in VS Code (`code .` from that terminal works to
 pnpm dev
 ```
 
-Open [localhost:3000](http://localhost:3000): a page with one heading. Leave the server running while you work; the page reloads every time you save a file. If something else already uses port 3000, run `pnpm dev --port 3001` and use that port instead.
+Open [localhost:3000](http://localhost:3000): a page with one heading. Leave the server running while you work; the page reloads every time you save a file.
+
+> [!TIP]
+> If something else already uses port 3000, run `pnpm dev --port 3001` and use that port instead.
 
 <!-- prettier-ignore-end -->

@@ -52,6 +52,9 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/01-rea
    - For example, `https://abcdefghij.supabase.co/auth/v1/callback`
 1. Copy the **client ID** and **client secret**
 
+> [!WARNING]
+> The client secret is shown once. Keep the tab open until you've pasted it into Supabase, next.
+
 ## Add the Provider in Supabase
 
 1. Authentication → **Sign In / Providers** → Add a Custom **OIDC** Provider
@@ -69,6 +72,15 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/01-rea
    | Scopes        | `openid email profile`                                                      |
 
    :::
+
+<details>
+<summary>Why <code>custom:</code>, and why a <code>supabase.co</code> issuer?</summary>
+
+Supabase requires a custom provider's identifier to start with `custom:`, which is why the app signs in with `custom:devdogsuga`.
+
+The issuer is the DevDogs Supabase project's own host, not `api.devdogsuga.org`: Supabase's OAuth server reports that host in its discovery document and ID tokens, so a provider set to the custom domain fails the issuer check. Your OAuth page shows the current issuer with a copy button.
+
+</details>
 
 ## Sign In / Sign Out
 

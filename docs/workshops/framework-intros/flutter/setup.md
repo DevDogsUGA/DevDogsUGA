@@ -10,16 +10,16 @@ order: 0
 
 <!-- prettier-ignore-start -->
 
+> [!NOTE]
+> Adapted by Sloan Finger from Nandan Praveen's Flutter workshop with GDGC, Sep 21, 2026.
+
 ## What You'll Build
 
 - A two-tab app: a home screen, and a guestbook visitors can sign
 - A bar along the bottom to switch between them
 
-**Before you start**
-
-Install Git, VS Code, the Flutter SDK and an Android emulator first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-flutter-track) cover all of them.
-
-This course is adapted by Sloan Finger from Nandan Praveen's Flutter workshop with GDGC at Framework Intros, Sep 21, 2026.
+> [!IMPORTANT]
+> Install Git, VS Code, the Flutter SDK and an Android emulator first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-flutter-track) cover all of them.
 
 ## What Is Flutter?
 
@@ -44,7 +44,17 @@ git switch -c <github-username>/01-flutter-intro 01-flutter-intro/00-start
 flutter pub get
 ```
 
-Open the `Mobile-Workshops` folder in VS Code (`code .` from that terminal works too). If `flutter pub get` says your Dart SDK is too old, run `flutter upgrade`. The workshop started from `flutter create workshop_demo`, which makes a fresh Flutter app. `01-flutter-intro/00-start` is that same starter, trimmed down, and every step below ends at a checkpoint like it, so you can catch up if you fall behind.
+Open the `Mobile-Workshops` folder in VS Code (`code .` from that terminal works too). Every step below ends at a checkpoint, so you can catch up if you fall behind.
+
+> [!TIP]
+> If `flutter pub get` says your Dart SDK is too old, run `flutter upgrade`.
+
+<details>
+<summary>Where does the starter come from?</summary>
+
+`01-flutter-intro/00-start` is a fresh app from `flutter create workshop_demo`, trimmed down to one screen.
+
+</details>
 
 ## Run It
 
@@ -55,6 +65,9 @@ Start your emulator first: in Android Studio, **More Actions → Virtual Device 
 flutter run
 ```
 
-The emulator shows "Hello, World!" in teal. Leave `flutter run` going while you work: after you save a file, press `r` in its terminal to **hot reload**, which swaps in your change in about a second, keeping the app where it was. `R` is a **hot restart**, which starts the app over.
+The emulator shows "Hello, World!" in teal. Leave `flutter run` going while you work.
+
+> [!IMPORTANT]
+> After you save a file, press `r` in the `flutter run` terminal to **hot reload**, which swaps in your change in about a second, keeping the app where it was. `R` is a **hot restart**, which starts the app over.
 
 <!-- prettier-ignore-end -->

@@ -87,6 +87,13 @@ create policy "messages are readable by everyone"
 flutter pub add supabase_flutter gotrue
 ```
 
+<details>
+<summary>Why add <code>gotrue</code> too?</summary>
+
+`supabase_flutter` already depends on it, but custom OIDC providers like DevDogs need `gotrue` 2.20 or newer. Adding it directly makes sure you get one.
+
+</details>
+
 ## Connect to Supabase
 
 `main.dart` starts the app. Supabase has to be ready before the first screen draws.

@@ -47,13 +47,14 @@ Make a Projects page at `/projects` that lists a few projects, each with a name 
 
 ## Hints
 
+<details>
+<summary>Stuck? Show the hints</summary>
+
 - It's a new folder under `app`, with a `page.tsx` in it
 - Keep the projects in an array, and turn each into a list item with `.map`
-- Give each list item a `key`
+- Give each list item a `key`: it's how React tells list items apart. Use something unique to each item, like its name.
 
-**Stuck?**
-
-`key` is how React tells list items apart. Use something unique to each item, like its name.
+</details>
 
 ## Our Version
 

@@ -93,7 +93,10 @@ class _HomePageState extends State<HomePage> {
 
 ## Import It in main.dart
 
-`main()` runs the app. `MyApp` sets its title and theme, and `home` is the first screen. Delete the old `HomePage` class from the bottom of this file, and add the import of the new one as the first line. `package:flutter_workshop/` is this app's own `lib` folder: `flutter_workshop` is the name in `pubspec.yaml`.
+`main()` runs the app. `MyApp` sets its title and theme, and `home` is the first screen. Delete the old `HomePage` class from the bottom of this file, and add the import of the new one as the first line. <details>
+<summary>What is <code>package:flutter_workshop/</code>?</summary>
+
+This app's own `lib` folder: `flutter_workshop` is the name in `pubspec.yaml`. </details>
 
 ```diff file=lib/main.dart lang=dart context=6 href=https://github.com/DevDogsUGA/Mobile-Workshops/compare/899d081e2d2b529508b3e74c0432cf081690590e...87abfe6b0226d13d96e4635e24579181396ce47f#diff-e61eb31d013d12616f5532636a88cfa63631dda8f7829e5424e68542214d1608 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FMobile-Workshops&to=01-flutter-intro%2F01-widgets&from=01-flutter-intro%2F00-start&file=lib%2Fmain.dart
 --- a/lib/main.dart
@@ -157,6 +160,7 @@ class _HomePageState extends State<HomePage> {
 
 In `homepage.dart`, wrap the `Text` in a `Column`, add a second `Text` under it, and put the whole thing in a `Card`. Save, and press `r` in the terminal running the app: the change appears without restarting.
 
-This one's for practice, with no checkpoint. Undo it before step 2 (**Ctrl+Z**, or **Cmd+Z** on macOS, in the editor), so your code matches ours.
+> [!WARNING]
+> This one's for practice, with no checkpoint. Undo it before step 2 (**Ctrl+Z**, or **Cmd+Z** on macOS, in the editor), so your code matches ours.
 
 <!-- prettier-ignore-end -->

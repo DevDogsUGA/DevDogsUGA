@@ -147,6 +147,13 @@ alter table public.messages drop column author_name;
 
 [The whole `supabase/migrations/20260928000100_profiles.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql)
 
+<details>
+<summary>Why <code>security definer</code> and an empty <code>search_path</code>?</summary>
+
+`security definer` runs the function as the table's owner, so it can write to `profiles` even though signed-in users have no write policy there. `set search_path = ''` stops it from being tricked by a same-named function or table planted earlier in a caller's search path.
+
+</details>
+
 ## One Name per Account
 
 No more name field: its controller, its `dispose` call, and the `TextField` go.

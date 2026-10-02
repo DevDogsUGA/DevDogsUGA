@@ -36,6 +36,11 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/05-del
 
 </details>
 
+Everything so far ran in your Supabase project's Dashboard. This page turns the same SQL into migration files in the repo, and runs the whole stack on your machine.
+
+> [!IMPORTANT]
+> This page is optional, and needs [Docker](https://docs.docker.com/get-started/get-docker/) running.
+
 ## Start Supabase Locally
 
 ```bash
@@ -44,6 +49,9 @@ pnpm dlx supabase start
 # Print the local API URL, Studio URL, and publishable key
 pnpm dlx supabase status
 ```
+
+> [!TIP]
+> The first `supabase start` downloads Docker images, which takes a few minutes. If another local Supabase stack is running, stop it first with `pnpm dlx supabase stop` in its folder: they use the same ports.
 
 ## Turn the SQL into Migrations
 
@@ -151,6 +159,11 @@ alter table public.messages drop column author_name;
 
 ## Configure OAuth Sign-In
 
+Built-in providers like Apple, GitHub or Google are config: a block in `supabase/config.toml`, with the secret in an environment variable. DevDogs is a custom provider, so it isn't in `config.toml`, and `db reset` wipes one you set up by hand.
+
+<details>
+<summary>What a built-in provider's config looks like</summary>
+
 ```toml file=supabase/config.toml lines=321-334 href=https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/config.toml#L321-L334 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F05-delete&file=supabase%2Fconfig.toml&lines=321-334
 [auth.external.apple]
 enabled = false
@@ -168,11 +181,18 @@ skip_nonce_check = false
 email_optional = false
 ```
 
+</details>
+
 ```bash
 # Register "Sign in with DevDogs" on the local stack
 # (a custom provider, so it isn't in config.toml)
 pnpm dlx @devdogsuga/devtools oauth
 ```
+
+Then point `.env.local` at the local API URL and publishable key from `supabase status`, restart the app, and sign in against your own machine.
+
+> [!NOTE]
+> Run `devtools oauth` again after every `db reset`.
 
 The monorepo works exactly like this: every schema change is a migration under `supabase/migrations`.
 
