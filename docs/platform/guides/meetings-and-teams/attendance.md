@@ -70,6 +70,24 @@ approval, or status page for reflection content, and nothing outside the
 platform ever receives it. Reflections are export-only, and the university,
 not DevDogs, determines whether that evidence earns credit.
 
+## Check-in survey
+
+After a check-in that stands, `/attendance` asks the meeting's survey: every
+member question the person hasn't answered, then the meeting's own questions,
+with their saved member answers folded away underneath to edit. Questions
+are config, authored in `@devdogsuga/events` (see
+[Events](/docs/platform/infrastructure/events#survey-questions)). Nothing in
+the survey affects attendance or credit.
+
+Meeting questions take answers until the meeting's reflection window closes;
+member answers never close. Every save writes only what changed, each change
+as an append-only row in `surveyAnswerRevisions` (null when an answer is
+cleared), under one `survey.saved` audit event. That history is what lets an
+export show a member answer as it stood at a past meeting.
+
+Because the survey follows a recorded check-in, a meeting that doesn't count
+for credit, where check-in records nothing, has no survey.
+
 ## Exports
 
 Officers download a CSV snapshot of stars, attendance, or reflections with the
@@ -82,7 +100,10 @@ pnpm backstage export reflections --from 2026-08-17
 ```
 
 Each takes `--from`/`--to`; `attendance` also takes `--meeting <date>` to
-export a single meeting. Run at a terminal, each export asks where to save
+export a single meeting. Survey answers export the same way as `responses`:
+one row per answer, or for one meeting its answers and its attendees' member
+answers as they stood when it ended, and the Bevy attendee file carries a
+column for each question mapped to one of Bevy's. Run at a terminal, each export asks where to save
 its file, with path completion.
 
 For one meeting, attendance can also be written in the shapes DevDogs reports

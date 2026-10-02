@@ -56,6 +56,24 @@ it, and a validation failure this late means that package shipped a bug, not
 something this repo caused. The same is true of an empty config — zero
 meetings aborts rather than archiving the entire schedule.
 
+## Survey questions
+
+The check-in survey's questions live beside the meetings, in
+`packages/events/src/data/questions.json` (schema in `src/questions.ts`).
+A `member` question has one answer per person, asked at every check-in until
+answered and editable after; a `meeting` question is asked only at the
+meetings whose `questions` list names it. Both data files point `$schema` at a
+generated JSON Schema, so an editor completes and checks them as they are
+typed.
+
+The reconcile copies them into `platform."surveyQuestions"` in the same
+transaction as the meetings, and each meeting's list into
+`meetings."surveyQuestionIds"`. A question config drops is deleted while
+nobody has answered it. One that has answers can't be removed, retyped or
+moved to the other scope: the reconcile refuses the whole run and alerts,
+the one check Backstage's CI can't make without the database. Retire it
+(`"retired": true`) instead, or add a new question under a new id.
+
 ## Trigger
 
 Two paths reach the reconcile, both through
