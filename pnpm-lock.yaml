@@ -207,8 +207,8 @@ importers:
         specifier: ^0.1.4
         version: 0.1.4(typanion@3.14.0)(typescript@6.0.3)
       '@devdogsuga/events':
-        specifier: ^0.1.6
-        version: 0.1.6
+        specifier: ^0.1.7
+        version: 0.1.7
       '@devdogsuga/headers':
         specifier: 0.1.1
         version: 0.1.1
@@ -1253,8 +1253,8 @@ packages:
   '@devdogsuga/events@0.1.3':
     resolution: {integrity: sha512-/pAVqj1NkjUfeC6kHORP4T2xhscR1krW0BcKox6MOWIMhkgvFyvw7s7gSRpozmH0Db/EmSvWK5+UC6WyQmQhaA==}
 
-  '@devdogsuga/events@0.1.6':
-    resolution: {integrity: sha512-hDKpj46E/zZ1/4ge92YH98mPKYghTamxSZQDUEH9163Cd8EbGF8cO5ybKbF158wwEn3eLdZVsHaQoamDrYmHWw==}
+  '@devdogsuga/events@0.1.7':
+    resolution: {integrity: sha512-k2C77f4dvFDpJf/Cd6v3g02UQn355vnvWvG/l+s4CoEQvj3IFt6zbx9xo+KbQL3ap9l5Pc0gatRrDzR30cdj0g==}
 
   '@devdogsuga/headers@0.1.1':
     resolution: {integrity: sha512-d+ikt6YHylyStw4pQpx0oOWU0jg0rjPeJKBkRhNBBDooyaEfllt3yT9Tb9BKQdvEtffF7Ykxgo66I8dJM6SzMQ==}
@@ -9182,7 +9182,7 @@ snapshots:
     dependencies:
       zod: 4.4.3
 
-  '@devdogsuga/events@0.1.6':
+  '@devdogsuga/events@0.1.7':
     dependencies:
       zod: 4.4.3
 

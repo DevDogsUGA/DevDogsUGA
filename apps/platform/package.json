@@ -35,7 +35,7 @@
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/email": "workspace:*",
     "@devdogsuga/env": "^0.1.4",
-    "@devdogsuga/events": "^0.1.6",
+    "@devdogsuga/events": "^0.1.7",
     "@devdogsuga/headers": "0.1.1",
     "@devdogsuga/newsletter": "^0.1.2",
     "@devdogsuga/supabase": "workspace:*",
