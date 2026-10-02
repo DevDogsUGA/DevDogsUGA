@@ -167,7 +167,7 @@ jobs:
           fi
       - name: Hash the exact candidate
         run: |
-          find apps/platform/dist apps/platform/.wrangler/deploy apps/schedule-builder/dist apps/schedule-builder/.wrangler/deploy \
+          find apps/platform/dist apps/platform/.wrangler/deploy apps/schedule-builder/dist apps/schedule-builder/.wrangler/deploy docs/dist \
             -type f -print0 | sort -z | xargs -0 sha256sum > RELEASE_SHA256SUMS
           {
             echo '### Production artifacts'
@@ -178,6 +178,9 @@ jobs:
             cat RELEASE_SHA256SUMS
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      # docs/dist is the docs build platform's prebuild generated; the
+      # production job's `populate:search` indexes it, so the search index
+      # matches the docs that shipped.
       - name: Upload immutable production candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -187,6 +190,7 @@ jobs:
             apps/platform/.wrangler/deploy
             apps/schedule-builder/dist
             apps/schedule-builder/.wrangler/deploy
+            docs/dist
             RELEASE_SHA256SUMS
           if-no-files-found: error
           include-hidden-files: true
