@@ -1287,7 +1287,7 @@ describe("platform.conformance_check", () => {
       );
       expect(protectedCheck?.ok).toBe(false);
     } finally {
-      // Restore exactly what 20260803000000 grants, or every later test in this
+      // Restore exactly what files 01 and 48 grant, or every later test in this
       // file runs against a profile table a client can rewrite wholesale.
       await sql().unsafe(
         `revoke update on "platform"."profile" from authenticated`,
@@ -1296,7 +1296,9 @@ describe("platform.conformance_check", () => {
         grant update (
           "preferredName", "bio", "pronouns", "graduationSemester",
           "graduationYear", "showGithub", "showDiscord", "showEmail",
-          "showLinkedin", "viewedConsole", "roleDescription"
+          "showLinkedin", "viewedConsole", "roleDescription",
+          "publicProfile", "showName", "showAvatar", "showBio", "showLinks",
+          "showCompetitions", "showContributions", "showStars"
         ) on "platform"."profile" to authenticated
       `);
     }

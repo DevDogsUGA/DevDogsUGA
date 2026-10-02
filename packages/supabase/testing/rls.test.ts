@@ -313,6 +313,134 @@ describe("platform.profile durable identity", () => {
   });
 });
 
+describe("platform public profiles", () => {
+  // The public read model is server-only and the handle is writable through one
+  // validated function. Each deny below has an allow beside it, because a
+  // missing grant and a broken one look identical from the deny side alone.
+  beforeAll(async () => {
+    await admin().from("profile").upsert(
+      {
+        userId: member.userId,
+        preferredName: "Member Persona",
+        ugaEmail: "member-persona@uga.edu",
+        legalFirstName: "Member",
+        legalLastName: "Persona",
+      },
+      { onConflict: "userId" },
+    );
+    await admin()
+      .from("profile")
+      .upsert(
+        { userId: moderator.userId, preferredName: "Moderator Persona" },
+        { onConflict: "userId" },
+      );
+  }, 30_000);
+
+  afterAll(async () => {
+    await admin()
+      .from("profile")
+      .update({ handle: null })
+      .eq("userId", member.userId);
+  });
+
+  it("lets a member flip their own visibility switches", async () => {
+    const { error } = await member.client
+      .from("profile")
+      .update({
+        publicProfile: false,
+        showName: false,
+        showAvatar: false,
+        showBio: false,
+        showLinks: false,
+        showCompetitions: false,
+        showContributions: false,
+        showStars: false,
+      })
+      .eq("userId", member.userId);
+    expect(error).toBeNull();
+    await member.client
+      .from("profile")
+      .update({ publicProfile: true, showName: true })
+      .eq("userId", member.userId);
+  });
+
+  it("refuses a member writing their own handle directly", async () => {
+    const { error } = await member.client
+      .from("profile")
+      .update({ handle: "sneaky-direct-write" })
+      .eq("userId", member.userId);
+    expect(error?.code).toBe("42501");
+  });
+
+  it("keeps the public view away from every API role", async () => {
+    const asMember = await member.client.from("publicProfiles").select("*");
+    expect(asMember.error?.code).toBe("42501");
+    const asAnon = await anon().from("publicProfiles").select("*");
+    expect(asAnon.error?.code).toBe("42501");
+  });
+
+  it("lets a member read their own handle options, and nobody else's", async () => {
+    const own = await member.client.rpc("handle_options", {
+      uid: member.userId,
+    });
+    expect(own.error).toBeNull();
+    expect((own.data as { handle: string }[]).map((o) => o.handle)).toContain(
+      "member-persona",
+    );
+
+    const other = await member.client.rpc("handle_options", {
+      uid: moderator.userId,
+    });
+    expect(other.error?.code).toBe("42501");
+
+    const asAnon = await anon().rpc("handle_options", { uid: member.userId });
+    expect(asAnon.error?.code).toBe("42501");
+  });
+
+  it("keeps the internal handle helpers away from the API roles", async () => {
+    for (const [fn, args] of [
+      ["handle_candidates", { uid: member.userId }],
+      ["handle_suffixed", { uid: member.userId, base: "x" }],
+      ["handle_slug", { input: "x" }],
+    ] as const) {
+      const { error } = await member.client.rpc(fn, args);
+      expect(error?.code, fn).toBe("42501");
+    }
+  });
+
+  it("sets a handle only through set_handle, for oneself, from the options", async () => {
+    const forged = await member.client.rpc("set_handle", {
+      uid: moderator.userId,
+      new_handle: "member-persona",
+    });
+    expect(forged.error?.code).toBe("42501");
+
+    const anonCall = await anon().rpc("set_handle", {
+      uid: member.userId,
+      new_handle: "member-persona",
+    });
+    expect(anonCall.error?.code).toBe("42501");
+
+    const notOffered = await member.client.rpc("set_handle", {
+      uid: member.userId,
+      new_handle: "not-an-option",
+    });
+    expect(notOffered.data).toBe("not_offered");
+
+    const ok = await member.client.rpc("set_handle", {
+      uid: member.userId,
+      new_handle: "Member-Persona",
+    });
+    expect(ok.data).toBe("set");
+    const { data } = await admin()
+      .from("profile")
+      .select("handle")
+      .eq("userId", member.userId)
+      .single();
+    expect(data?.handle).toBe("member-persona");
+  });
+});
+
 describe("platform meetings, teams and attendance", () => {
   const meetingId = "bbbbbbbb-0000-4000-a000-000000000001";
   const workshopId = "cccccccc-0000-4000-a000-000000000001";
