@@ -1,155 +1,65 @@
 name: Deploy
 
-# The only workflow in this repository that holds credentials.
-#
-# `ci.yaml` is validation and deliberately has none: on `pull_request` GitHub
-# runs the workflow definition FROM THE PULL REQUEST, so any secret in scope
-# there is readable by whoever opened it. This file is the other side of that
-# line — everything needing a real credential lives here, after the merge gate.
-#
-#   feature ──PR──▶ main ──────────────────────▶ deploy STAGING
-#                    │
-#                    └──promotion PR──▶ production ──▶ deploy PRODUCTION
-#
-# ⚠️ THERE IS NO `pull_request` TRIGGER HERE, AND THERE CANNOT BE ONE. This is
-# structural rather than stylistic: environment secrets are reachable only when
-# `github.ref` matches the environment's deployment-branch policy, and a pull
-# request's ref is `refs/pull/N/merge`, which matches no policy pattern. Adding
-# a PR trigger would not "run the deploy on PRs"; it would run a deploy with
-# every credential silently empty, against whatever the branch happened to say.
-#
-# Staging deploys from `main` rather than from a `staging` branch. A workflow
-# pushing to a protected branch needs a GitHub App in the bypass list —
-# complexity with no matching benefit when the branch would only ever mirror
-# `main`.
-
+# Every main commit is validated and staged immediately, then becomes a
+# production candidate. Production mutation is gated by the protected
+# `production` environment and deploys this commit's prebuilt artifacts.
 on:
   push:
-    branches: [main, production]
+    branches: [main]
   workflow_dispatch:
     inputs:
       prune_orphans:
-        description: >-
-          Delete Worker secrets nothing declares any more. Production only,
-          and it SKIPS the deploy — see the prune job for why.
+        description: Delete undeclared production Worker secrets instead of deploying.
         type: boolean
         default: false
 
-# No `cancel-in-progress`, unlike ci.yaml. A cancelled validation run wastes a
-# minute; a cancelled deploy leaves a Worker half-published or a migration
-# half-applied, and the queue is one deploy deep in practice anyway.
-concurrency:
-  group: deploy-${{ github.ref }}
-
-# Least privilege for GITHUB_TOKEN. Nothing here writes to the repository —
-# the deploy targets are Cloudflare and Supabase, reached with their own
-# credentials.
 permissions:
   contents: read
+  actions: write
 
 env:
-  # The one place the branch becomes an environment name. Everything downstream
-  # reads DEPLOY_ENV, which `@devdogsuga/env` ALLOWLISTS to three names — so a
-  # typo here fails loudly at the first `with-env` rather than loading a file
-  # nobody meant.
-  DEPLOY_ENV: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
-
-# ⚠️ SKIP_ENV_VALIDATION IS DELIBERATELY ABSENT, and this is the difference
-# that matters between this file and ci.yaml. CI sets it because it has no
-# .env; here the whole env schema is exactly what should be enforced, and a
-# newly required variable with no value must fail the build rather than reach
-# production undefined (security plan §A.6.3).
-#
-# ── how the steps run `backstage` ────────────────────────────────────────────
-#
-# Every step below is a `pnpm backstage …` command: the root script, which is
-# `pnpm dlx @devdogsuga/backstage`, always the latest publish and never a
-# pinned version (the repository carries no devDependency on it).
-#
-# Every step also passes `--yes`. backstage asks before acting on staging or
-# production, and with no terminal it refuses rather than ask; here the
-# workflow, its triggers and the environments' reviewers are the confirmation.
-#
-# Whether a step passes `--no-env` is NOT a style choice:
-#
-#   --no-env     No tier resolution, no env file: the environment the step
-#                names is the environment the command gets. Used by every step
-#                that runs in a job holding one narrow credential in its own
-#                `env:` block (`deploy preflight`, `plan`, `migrate`,
-#                `planner status`, `env audit`), where a tier-resolving run
-#                would exit reporting a missing FILE rather than the missing
-#                TOKEN or the paused project, which is the one thing those jobs
-#                exist to say. Also `deploy write-env`, which CREATES
-#                .env.$DEPLOY_ENV, so routing it through tier resolution would
-#                die on the missing file it was about to write.
-#   (no flag)    Loads the tier's env file first. Everything downstream of
-#                write-env in deploy-app.yaml, because reading those values is
-#                the entire point.
-#
-# ⚠️ NOTHING here may run a deploy command through a wrapper that writes to
-# stdout. A deploy command's stdout is a channel something downstream may
-# PARSE — a GitHub workflow command recognised only on a line of its own, or a
-# credential its caller takes whole, either of which a decorative banner would
-# corrupt. `pnpm backstage` prints nothing of its own to stdout, and `pnpm run`'s
-# own `$ <command>` banner goes to stderr.
+  DEPLOY_ENV: staging
 
 jobs:
-  # ── staging ─────────────────────────────────────────────────────────────────
-
-  # Is staging's Supabase project awake? See the command for the whole argument;
-  # in short, staging is free-tier, free-tier projects pause after a week
-  # without activity, and staging deploys roughly weekly — so paused is the
-  # EXPECTED state and must not surface as a Postgres connection error that
-  # reads like a broken migration.
-  #
-  # A separate job rather than a first step, so the skip shows up in the run
-  # graph as a skipped deploy instead of a green one that quietly did nothing.
-  staging-preflight:
-    if: github.ref_name == 'main' && !inputs.prune_orphans
+  supersede:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # For `vars` only. PROJECT_REF and PUBLISHABLE_KEY are both public (§A.4)
-    # and no secret is read here — one unauthenticated request classifies the
-    # project before any credential is in scope.
+    steps:
+      - name: Cancel only older candidates still waiting for approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow Deploy --status in_progress --limit 50 --json databaseId,headSha \
+            --jq ".[] | select(.databaseId != ($CURRENT_RUN | tonumber)) | .databaseId" |
+          while read -r run_id; do
+            [ -n "$run_id" ] || continue
+            waiting=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" \
+              --jq '[.jobs[] | select(.name == "production" and .status == "waiting")] | length')
+            if [ "$waiting" -gt 0 ]; then
+              gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/cancel"
+            fi
+          done
+
+  staging-preflight:
+    if: github.event_name == 'push' && !inputs.prune_orphans
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     environment: staging
     outputs:
       paused: ${{ steps.probe.outputs.paused }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      # This job used to skip `pnpm install` entirely — the probe was a
-      # standalone script importing nothing outside node: builtins, and that
-      # kept the job to a few seconds. It is a backstage command now, so the
-      # install (part of setup-workspace, and what provides `pnpm`'s config for
-      # the dlx run) is back. The trade is deliberate: a cached install is a few
-      # tens of seconds against a probe that shares the CLI's error reporting
-      # and is covered by the same suite as everything else here, rather than
-      # being the one step in the pipeline nothing tests.
       - uses: ./.github/actions/setup-workspace
-      # --no-env — there is no env file in this job, and there must not be:
-      # it holds `vars` only, so that one unauthenticated request classifies
-      # the project before any credential is in scope.
-      - name: Classify the Supabase project
+      - name: Classify the staging Supabase project
         id: probe
         env:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
         run: pnpm backstage deploy preflight --no-env --yes
 
-  # Staging had no migrate job at all, which meant staging ran whatever schema
-  # it happened to be left with. A migration that added a function some
-  # deployed Worker called made that visible: without this job, staging's
-  # first request after such a deploy fails against a function that is not
-  # there yet. Production has had this job since the beginning; staging
-  # deploying code against an unmigrated database is the asymmetry, not this.
-  #
-  # Before staging-deploy for the usual reason: a Worker that expects a column
-  # is easier to reason about than a column that expects a Worker.
-  #
-  # No `staging-config` counterpart. `production-config` pushes config.toml
-  # behind a reviewer, is gated on `production-plan`'s config-changed output,
-  # and staging has no plan job to gate on — inventing one is a larger change
-  # than this fix, and config.toml governs auth providers and site URLs, which
-  # this job's migrations do not touch.
   staging-migrate:
     needs: staging-preflight
     if: needs.staging-preflight.outputs.paused != 'true'
@@ -159,17 +69,11 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
-      # --no-env — one credential (DB_URL) in the step's env:, no composed env
-      # file. `deploy migrate` is the bare `supabase db push --yes`; it does NOT
-      # regenerate types, so nothing is written back into the checkout.
-      - name: Apply migrations
+      - name: Apply staging migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: pnpm backstage deploy migrate --no-env --yes
 
-  # The per-tier deploy recipe lives in the reusable `deploy-app.yaml`; this
-  # caller is the gating in front of it. `secrets: inherit` is load-bearing —
-  # see that file's header for why the compose step needs it.
   staging-deploy:
     needs: [staging-preflight, staging-migrate]
     if: needs.staging-preflight.outputs.paused != 'true'
@@ -178,257 +82,240 @@ jobs:
       tier: staging
     secrets: inherit
 
-  # ── plan against production, on merge to main (§3.5 stage 1) ────────────────
-
-  # Runs BEFORE the promotion PR is opened, so "what would this do to
-  # production" is answered on the commit that will be promoted rather than
-  # discovered during the promotion.
-  #
-  # `preflight` is a read-only credential tier by construction: a Postgres role
-  # granted SELECT on `supabase_migrations.schema_migrations` and nothing else.
-  # A general read-only role would NOT be acceptable — it would put every row of
-  # production data behind a `main`-tier trust boundary.
-  #
-  # This is reachable from `main` only because environment policies match
-  # `github.ref`; the same job could never be run from a pull request.
-  main-plan:
-    if: github.ref_name == 'main' && !inputs.prune_orphans
+  production-plan:
+    if: github.event_name == 'push' && !inputs.prune_orphans
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: preflight
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
-      # ⚠️ Before the dry run, because the dry run cannot tell the difference.
-      # This environment's DB_URL must be the migration_planner role — SELECT
-      # on supabase_migrations.schema_migrations and nothing else — and a full
-      # connection string pasted there is invisible to everything at rest: the
-      # plan succeeds, `env push` uploads it, `env audit` sees no drift. A live
-      # connection is the only place the difference shows, so this step opens
-      # one: it must authenticate as the planner, FAIL to read
-      # platform.profile, and succeed on the migrations table. `--no-env`
-      # like the other one-credential guards.
-      - name: The credential is the planner role, and no more
+      - name: Verify the migration planner credential is read-only
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: pnpm backstage planner status --no-env --yes
-      # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
-      # push` exits 1 on a connection failure, and a pipeline without it reports
-      # the exit code of `tee` — so a dry run that never connected reads as a
-      # clean plan.
-      # --no-env — one credential (the planner-role DB_URL) in the step's env:,
-      # no composed env file. `deploy plan` captures `supabase db push
-      # --dry-run` and writes the labelled, fenced plan to the job summary
-      # itself; its throw on a failed connection is what the old `set -o
-      # pipefail` protected — a dead connection fails the step rather than
-      # reading as a clean plan.
-      - name: What would these migrations do to production?
+      - name: Plan production migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
           pnpm backstage deploy plan --no-env --yes
-          --label 'Migration plan — production (from `main`)'
+          --label 'Migration plan — production candidate'
+      - name: Summarize candidate source
+        run: |
+          {
+            echo '### Candidate source'
+            echo
+            echo "Commit: \`$GITHUB_SHA\`"
+            echo "Compare: https://github.com/$GITHUB_REPOSITORY/compare/${{ github.event.before }}...$GITHUB_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-  # ── production ──────────────────────────────────────────────────────────────
-
-  # Stage 2 of the dry runs. Stage 1 above goes stale the moment another
-  # promotion lands first; this one is computed seconds before the mutation.
-  production-plan:
-    if: github.ref_name == 'production' && !inputs.prune_orphans
+  production-artifacts:
+    if: github.event_name == 'push' && !inputs.prune_orphans
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    outputs:
-      config-changed: ${{ steps.config.outputs.changed }}
+    timeout-minutes: 30
+    environment: production-build
+    env:
+      DEPLOY_ENV: production
+      CLOUDFLARE_ENV: production
+      SKIP_ENV_VALIDATION: "1"
+      API_URL: ${{ vars.API_URL }}
+      BASE_URL: ${{ vars.BASE_URL }}
+      PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
+      PLATFORM_SENTRY_DSN: ${{ vars.PLATFORM_SENTRY_DSN }}
+      SCHEDULE_BUILDER_SENTRY_DSN: ${{ vars.SCHEDULE_BUILDER_SENTRY_DSN }}
+      NEXT_PUBLIC_DEPLOY_ENV: production
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.API_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_PLATFORM_SENTRY_DSN: ${{ vars.PLATFORM_SENTRY_DSN }}
+      NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN: ${{ vars.SCHEDULE_BUILDER_SENTRY_DSN }}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+      NEXT_PUBLIC_AVATARS_BUCKET: avatars
+      NEXT_PUBLIC_AUTH_MODE: google
+      NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          # Both ends of the push, so the config diff below can be taken.
-          fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
-      # See main-plan's note: `deploy plan` owns the summary framing and fails
-      # the step on a dead connection rather than logging a clean plan.
-      - name: What will these migrations do to production?
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-        run: >-
-          pnpm backstage deploy plan --no-env --yes
-          --label 'Migration plan — production'
-      # `supabase config` has exactly one subcommand — `push`. No pull, no diff,
-      # no --dry-run. So config.toml is the highest blast radius (site_url and
-      # every OAuth provider) with the least visibility, and its COMMITTED DIFF
-      # is the only plan there is. Printing it here is that plan; the reviewer
-      # gate on the apply job is what makes printing it worth anything.
-      #
-      # `github.event.before` is absent on a dispatch and all-zeros on a new
-      # branch. Either way this falls through to "changed", which asks for an
-      # approval that may be unnecessary — the safe direction.
-      - name: Did config.toml change?
-        id: config
-        env:
-          BEFORE: ${{ github.event.before }}
+      - name: Compose public build configuration
+        run: |
+          umask 077
+          {
+            printf 'API_URL="%s"\n' "$API_URL"
+            printf 'BASE_URL="%s"\n' "$BASE_URL"
+            printf 'PUBLISHABLE_KEY="%s"\n' "$PUBLISHABLE_KEY"
+            printf 'PLATFORM_SENTRY_DSN="%s"\n' "$PLATFORM_SENTRY_DSN"
+            printf 'SCHEDULE_BUILDER_SENTRY_DSN="%s"\n' "$SCHEDULE_BUILDER_SENTRY_DSN"
+            printf 'NEXT_PUBLIC_DEPLOY_ENV="production"\n'
+            printf 'NEXT_PUBLIC_SUPABASE_URL="%s"\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="%s"\n' "$PUBLISHABLE_KEY"
+            printf 'NEXT_PUBLIC_PLATFORM_SENTRY_DSN="%s"\n' "$PLATFORM_SENTRY_DSN"
+            printf 'NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN="%s"\n' "$SCHEDULE_BUILDER_SENTRY_DSN"
+            printf 'NEXT_PUBLIC_TURNSTILE_SITE_KEY="%s"\n' "$NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+            printf 'NEXT_PUBLIC_AVATARS_BUCKET="avatars"\n'
+            printf 'NEXT_PUBLIC_AUTH_MODE="google"\n'
+          } > .env.production
+      - name: Build production artifacts without production credentials
+        run: |
+          pnpm --filter platform run build
+          BASE_URL=https://dogdays.dev pnpm --filter schedule-builder run build
+      - name: Reject accidental placeholder or credential-shaped values
         run: |
           set -euo pipefail
-          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "No usable base commit; assuming config.toml changed." >&2
-            exit 0
+          if rg -uuu -l 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|SUPABASE_DB_PASSWORD|CLOUDFLARE_API_TOKEN' apps/*/dist; then
+            echo 'A production artifact contains credential-shaped material.' >&2
+            exit 1
           fi
-          if git diff --quiet "$BEFORE" "$GITHUB_SHA" -- supabase/config.toml; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            { echo; echo '### config.toml diff — this IS the plan'; echo; echo '```diff'; } >> "$GITHUB_STEP_SUMMARY"
-            git diff "$BEFORE" "$GITHUB_SHA" -- supabase/config.toml >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
+      - name: Hash the exact candidate
+        run: |
+          find apps/platform/dist apps/platform/.wrangler/deploy apps/schedule-builder/dist apps/schedule-builder/.wrangler/deploy \
+            -type f -print0 | sort -z | xargs -0 sha256sum > RELEASE_SHA256SUMS
+          {
+            echo '### Production artifacts'
+            echo
+            echo "Commit: \`$GITHUB_SHA\`"
+            echo
+            echo '```'
+            cat RELEASE_SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload immutable production candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-${{ github.sha }}
+          path: |
+            apps/platform/dist
+            apps/platform/.wrangler/deploy
+            apps/schedule-builder/dist
+            apps/schedule-builder/.wrangler/deploy
+            RELEASE_SHA256SUMS
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
 
-  # Applying the migrations. In `production` rather than `production-apply`,
-  # and that placement follows the tiering rather than working around it:
-  # apply-tier is for credentials that can reshape production AND HAVE NO DRY
-  # RUN. Migrations have one — it ran seconds ago, in the job this needs — so
-  # the Postgres credential is deploy-tier and lives here. The gate in front of
-  # it is the promotion PR (maintainers only, two approvals).
-  #
-  # `--db-url` rather than `--linked`: linking needs a Supabase access token,
-  # which is the account-wide credential this tier deliberately does not hold.
-  production-migrate:
-    needs: production-plan
+  production:
+    needs: [supersede, staging-deploy, production-plan, production-artifacts]
+    if: >-
+      github.event_name == 'push'
+      && !cancelled()
+      && needs.staging-deploy.result == 'success'
+      && needs.production-plan.result == 'success'
+      && needs.production-artifacts.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
+    concurrency:
+      group: production
+      cancel-in-progress: false
     environment: production
+    env:
+      DEPLOY_ENV: production
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_RELEASE: ${{ github.sha }}
     steps:
+      - name: Refuse an approved candidate that is no longer main
+        id: freshness
+        run: |
+          set -euo pipefail
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" refs/heads/main | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::notice::Candidate $GITHUB_SHA was superseded by $latest; nothing was changed."
+            echo 'fresh=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'fresh=true' >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: steps.freshness.outputs.fresh == 'true'
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
-      - name: Apply migrations
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm backstage deploy migrate --no-env --yes
-
-  # The one mutation with no dry run gets its own approval step, which is what
-  # `production-apply` is: the same Bitwarden project as `production`, split
-  # across two GitHub environments, with required reviewers on this half. That
-  # split IS the gate — see Backstage's packages/backstage/src/bws/environments.ts.
-  #
-  # Skipped when config.toml did not change, so the approval is asked for when
-  # there is something to approve rather than on every promotion.
-  production-config:
-    needs: [production-plan, production-migrate]
-    if: needs.production-plan.outputs.config-changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: production-apply
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: ./.github/actions/setup-workspace
-      # `--source supabase` composes exactly what config.toml reads — the four
-      # OAuth provider pairs, the two site URLs and their callbacks — and
-      # demands every secret among them rather than only the schema-required
-      # ones. They are all `.optional()`, because no APP boots on them; only
-      # this file does. So without that stricter rule a provider could be
-      # reconfigured with its secret quietly unset, which is the single highest
-      # blast radius change in the repository (`site_url` and every sign-in
-      # route) arriving through the step with no dry run.
-      #
-      # Those secrets are deploy-tier, and `production-apply` receives them
-      # because it receives everything `production` does plus the apply-tier
-      # pair. That is not the gate leaking: the gate is what the UNREVIEWED
-      # `production` may not hold, and this environment is the reviewed half of
-      # the same Bitwarden project. Until 2026-08-17 the routing withheld them
-      # here and this step could not have run at all.
-      #
-      # SUPABASE_DB_PASSWORD arrives the same way, from the same push.
-      - name: Compose the config-push environment
+        if: steps.freshness.outputs.fresh == 'true'
+      - name: Download approved production candidate
+        if: steps.freshness.outputs.fresh == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-${{ github.sha }}
+          path: .
+      - name: Verify exact artifact hashes
+        if: steps.freshness.outputs.fresh == 'true'
+        run: sha256sum --check RELEASE_SHA256SUMS
+      - name: Compose the production runtime environment
+        if: steps.freshness.outputs.fresh == 'true'
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # --no-env for the same bootstrap reason as the other write-env
-        # steps: this composes .env.production, which nothing has written yet.
-        run: >-
-          pnpm backstage deploy write-env --no-env --yes
-          --source supabase
-      # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
-      # the operator manifest, not to supabase's, and `with-env` leaves a value
-      # already in the environment alone.
-      - name: Push config.toml
+        run: pnpm backstage deploy write-env --no-env --yes
+      - name: Revalidate and apply migrations
+        if: steps.freshness.outputs.fresh == 'true'
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          pnpm backstage deploy plan --no-env --yes --label 'Approved migration plan — production'
+          pnpm backstage deploy migrate --no-env --yes
+      - name: Apply Supabase configuration
+        if: steps.freshness.outputs.fresh == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: pnpm exec with-env -c 'supabase config push --project-ref $PROJECT_REF'
+      - name: Create Sentry release and upload platform source maps
+        if: steps.freshness.outputs.fresh == 'true' && env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        env:
+          SENTRY_PROJECT: platform
+        with:
+          environment: production
+          release: ${{ github.sha }}
+          set_commits: skip
+          sourcemaps: apps/platform/dist
+      - name: Deploy and verify platform
+        if: steps.freshness.outputs.fresh == 'true'
         run: |
-          set -euo pipefail
-          pnpm exec with-env -c 'supabase config push --project-ref $PROJECT_REF'
-
-  # Same reusable recipe as staging-deploy; the gate here is the promotion PR's
-  # reviewers plus the `production` environment. See deploy-app.yaml.
-  production-deploy:
-    needs:
-      - production-plan
-      - production-migrate
-      - production-config
-    # A dependency that was SKIPPED normally skips its dependents, and the
-    # config job is skipped on most promotions — config.toml rarely changes.
-    # So the condition is spelled out: migrations must have succeeded, and the
-    # gated job may not have FAILED (skipped is fine). `!cancelled()` rather
-    # than `always()`, so cancelling the run still cancels the deploy.
-    if: >-
-      !cancelled()
-      && needs.production-migrate.result == 'success'
-      && needs.production-config.result != 'failure'
-    uses: ./.github/workflows/deploy-app.yaml
-    with:
-      tier: production
-    secrets: inherit
-
-  # ── orphaned Worker secrets (§3.6) ──────────────────────────────────────────
-
-  # `--secrets-file` preserves what it omits, so a renamed or dropped variable
-  # leaves its secret on the Worker indefinitely and nothing else in the system
-  # can see it. Reported on every production deploy; NEVER fatal, because a
-  # stale name is not a defect in the change that was just shipped.
-  production-orphans:
-    needs: production-deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: ./.github/actions/setup-workspace
-      # --no-env: no env file. This reads secret NAMES from Cloudflare and
-      # needs exactly one credential to do it. `env audit` checks for the token
-      # itself, so a missing one says who to ask instead of dropping into
-      # wrangler's browser OAuth.
+          pnpm backstage deploy platform --tier production --yes
+          pnpm -F @devdogsuga/docs populate:search
+      - name: Reconcile production configuration
+        if: steps.freshness.outputs.fresh == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: pnpm backstage deploy reconcile --tier production --no-env --yes
+      - name: Smoke test platform
+        if: steps.freshness.outputs.fresh == 'true'
+        env:
+          SENTRY_ORG: devdogsuga
+          SENTRY_PROJECT: platform
+        run: pnpm backstage deploy smoke --tier production --yes --app platform --no-env
+      - name: Create Sentry release and upload schedule-builder source maps
+        if: steps.freshness.outputs.fresh == 'true' && env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        env:
+          SENTRY_PROJECT: schedule-builder
+        with:
+          environment: production
+          release: ${{ github.sha }}
+          set_commits: skip
+          sourcemaps: apps/schedule-builder/dist
+      - name: Deploy and verify schedule-builder
+        if: steps.freshness.outputs.fresh == 'true'
+        run: pnpm backstage deploy schedule-builder --tier production --yes
+      - name: Smoke test schedule-builder
+        if: steps.freshness.outputs.fresh == 'true'
+        env:
+          SENTRY_ORG: devdogsuga
+          SENTRY_PROJECT: schedule-builder
+        run: pnpm backstage deploy smoke --tier production --yes --app schedule-builder --no-env
       - name: Report orphaned Worker secrets
+        if: steps.freshness.outputs.fresh == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: pnpm backstage env audit --target production --no-env --yes
 
-  # Deleting them is a separate, deliberate, human-triggered run — never
-  # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
-  # already deployed (there is no way to change a Worker secret without
-  # publishing), so auto-pruning would turn every deploy carrying an orphan
-  # into two publishes, the second of which went through neither the promotion
-  # PR nor this environment's reviewers.
-  #
-  # It skips the deploy entirely: a dispatch that ticked this box is a
-  # maintenance run, not a release.
-  #
-  # `CLOUDFLARE_API_TOKEN` is deploy-tier, and it reaches this environment
-  # because `production-apply` receives everything `production` does plus the
-  # apply-tier pair. The token being deploy-tier is right — pruning has a dry run,
-  # `env audit` without `--prune`, and it is the job above — so what puts a
-  # human in front of the deletion is this environment's reviewers rather than
-  # the tier. Until 2026-08-17 the routing withheld it and this job could not
-  # have run.
   prune-orphans:
-    if: github.event_name == 'workflow_dispatch' && inputs.prune_orphans && github.ref_name == 'production'
+    if: github.event_name == 'workflow_dispatch' && inputs.prune_orphans
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production-apply
+    environment: production
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
       - name: Prune orphaned Worker secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        # --yes: there is no terminal to confirm at. The confirmation is this
-        # environment's reviewers.
         run: pnpm backstage env audit --target production --prune --yes --no-env
