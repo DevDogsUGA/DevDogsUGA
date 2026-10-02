@@ -93,7 +93,7 @@ describe("officer seeds account matching", () => {
     const { count } = (
       await sql()`select count(*)::int as count from platform.profile`
     )[0] as { count: number };
-    expect(count).toBe(11); // one per officer file
+    expect(count).toBe(14); // one per officer file
   });
 
   describe("a real account later matching an officer's altEmail", () => {
@@ -148,7 +148,7 @@ describe("officer seeds account matching", () => {
       const { count } = (
         await sql()`select count(*)::int as count from platform.profile`
       )[0] as { count: number };
-      expect(count).toBe(11); // one per officer file
+      expect(count).toBe(14); // one per officer file
     });
   });
 
