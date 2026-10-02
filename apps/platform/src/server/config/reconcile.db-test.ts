@@ -37,6 +37,8 @@ async function cleanup() {
 
 function meeting(overrides: Partial<Meeting> & { id: string }): Meeting {
   return {
+    // On `startsAt`'s Eastern date, and unique per id, as the validator wants.
+    slug: `2027-01-01-${overrides.id}`,
     title: "Reconcile Test",
     summary: "A reconcile test meeting.",
     kind: null,
@@ -116,8 +118,9 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
     countsForCredit: boolean;
     surveyUrl: string | null;
     surveyQuestionIds: string[];
+    slug: string;
   }>(sql`
-    select "configId", "nameOverride", summary, kind, building, location,
+    select "configId", slug, "nameOverride", summary, kind, building, location,
       "startsAt", "endsAt", "rsvpUrl", "cancelledAt", "cancellationReason",
       "countsForCredit", "surveyUrl", "surveyQuestionIds"
     from platform.meetings
@@ -131,6 +134,7 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
         ...meetingsToKeepAlive,
         ...otherMeetings.map((row): Meeting => ({
           id: row.configId,
+          slug: row.slug,
           title: row.nameOverride,
           summary: row.summary,
           kind: row.kind,
@@ -172,10 +176,11 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
 async function liveMeetingByConfigId(configId: string) {
   const rows = await db.execute<{
     id: string;
+    slug: string;
     deletedAt: Date | null;
     nameOverride: string | null;
   }>(sql`
-    select id, "deletedAt", "nameOverride" from platform.meetings
+    select id, slug, "deletedAt", "nameOverride" from platform.meetings
     where "configId" = ${configId}
   `);
   return rows[0] ?? null;
@@ -264,6 +269,87 @@ describe("reconcileFromConfig", () => {
       select count(*)::int as n from platform.meetings where "configId" = ${configId}
     `);
     expect(count[0]!.n).toBe(1);
+  });
+
+  it("takes the slug from config, and re-addresses the meeting when it changes", async () => {
+    const configId = "reconcile-test-slug";
+    await reconcileFromConfig(
+      db,
+      (await liveConfig([meeting({ id: configId, slug: "2027-01-01-first" })]))
+        .config,
+    );
+    const before = await liveMeetingByConfigId(configId);
+    expect(before!.slug).toBe("2027-01-01-first");
+
+    const result = await reconcileFromConfig(
+      db,
+      (await liveConfig([meeting({ id: configId, slug: "2027-01-01-second" })]))
+        .config,
+    );
+    expect(result.ok).toBe(true);
+    const after = await liveMeetingByConfigId(configId);
+    expect(after!.id).toBe(before!.id);
+    expect(after!.slug).toBe("2027-01-01-second");
+  });
+
+  it("lets two meetings trade slugs in one run", async () => {
+    // `meetings_slug_key` is not deferrable, so a naive update order would
+    // collide on the first write.
+    const a = "reconcile-test-swap-a";
+    const b = "reconcile-test-swap-b";
+    await reconcileFromConfig(
+      db,
+      (
+        await liveConfig([
+          meeting({ id: a, slug: "2027-01-01-judging" }),
+          meeting({ id: b, slug: "2027-01-01-workshop" }),
+        ])
+      ).config,
+    );
+
+    const result = await reconcileFromConfig(
+      db,
+      (
+        await liveConfig([
+          meeting({ id: a, slug: "2027-01-01-workshop" }),
+          meeting({ id: b, slug: "2027-01-01-judging" }),
+        ])
+      ).config,
+    );
+    expect(result.ok).toBe(true);
+    expect((await liveMeetingByConfigId(a))!.slug).toBe("2027-01-01-workshop");
+    expect((await liveMeetingByConfigId(b))!.slug).toBe("2027-01-01-judging");
+  });
+
+  it("aborts, writing nothing, when a slug belongs to a meeting outside the config", async () => {
+    const keepAlive = meeting({ id: "reconcile-test-taken-keepalive" });
+    const slug = "2027-01-01-taken";
+    await reconcileFromConfig(
+      db,
+      (
+        await liveConfig([
+          meeting({ id: "reconcile-test-taken-old", slug }),
+          keepAlive,
+        ])
+      ).config,
+    );
+    // Drops out of the config, so it is archived still holding the slug.
+    await reconcileFromConfig(db, (await liveConfig([keepAlive])).config);
+
+    const result = await reconcileFromConfig(
+      db,
+      (
+        await liveConfig([
+          meeting({ id: "reconcile-test-taken-new", slug }),
+          keepAlive,
+        ])
+      ).config,
+    );
+    expect(result.ok).toBe(false);
+    expect(await liveMeetingByConfigId("reconcile-test-taken-new")).toBeNull();
+    expect(
+      (await liveMeetingByConfigId("reconcile-test-taken-old"))!.slug,
+    ).toBe(slug);
   });
 
   it("archives a meeting and its workshops once they drop out of the config", async () => {

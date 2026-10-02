@@ -24,7 +24,9 @@ all; they are a GitHub Projects mirror — see
 
 Backstage's `packages/events/src/schema.ts` is the Zod schema: a meeting has
 an authored, stable `id` (a slug, or a migrated Airtable record id — see
-[Migrated ids](#migrated-ids) below), a title, a summary, `kind` and
+[Migrated ids](#migrated-ids) below), a `slug` (its URL: the Eastern date,
+plus a descriptor such as `2026-10-05-judging` when the date is shared), a
+title, a summary, `kind` and
 `building` from the same closed lists the database checks, a location,
 start/end times, an RSVP link, a cancellation reason paired with a
 cancellation date, a single `countsForCredit` flag, an optional `surveyUrl`,
@@ -36,8 +38,9 @@ would say it out loud at the meeting.
 
 `src/validator.ts` is the publishability half: name/summary/title/description
 lengths, the RSVP-host allowlist, cancellation reason↔date pairing, **every id
-is unique across the whole config**, and **every id matches a slug-ish
-pattern**. `getClubConfig()` (the package's main export) runs both the schema
+is unique across the whole config**, **every id matches a slug-ish
+pattern**, and **every meeting slug is unique and dated on its own Eastern
+day**. `getClubConfig()` (the package's main export) runs both the schema
 and the validator and throws a readable `ClubConfigError` if either fails;
 `check.ts` is the CLI wrapper Backstage's CI runs.
 
@@ -46,7 +49,10 @@ and the validator and throws a readable `ClubConfigError` if either fails;
 `apps/platform/src/server/config/reconcile.ts`, in this repo, is the consumer:
 upsert by `configId`, soft-archive a row whose `configId` drops out of the
 config (`deletedAt` is set; attendance survives), and un-archive one that
-reappears. Read its header for the one deliberate property — **there are no
+reappears. A meeting's `slug` is copied from config on every run, so
+changing it in config changes the meeting's URL; a slug some meeting outside
+the config already holds aborts the run instead of re-addressing that
+meeting. Read its header for the one deliberate property — **there are no
 per-row refusals**. A config file either validates whole, or the reconcile
 aborts the ENTIRE run and reports to Sentry rather than applying part of it.
 There is no "officer is mid-edit" state to protect against here, because

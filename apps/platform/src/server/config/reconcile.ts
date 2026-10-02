@@ -4,7 +4,6 @@ import {
   type QuestionsConfig,
 } from "@devdogsuga/events";
 import { and, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
-import { clubDateKey } from "~/lib/eventTime";
 import type { db } from "~/server/db";
 import {
   meetings,
@@ -23,6 +22,11 @@ import { postAlert } from "../alerts";
  *     config item's id survives a title rewrite, so re-titling a meeting
  *     updates its row instead of orphaning the attendance already recorded
  *     against it.
+ *
+ *   * **The slug is the config's too.** A meeting's URL is authored next to
+ *     it (`slug`), so the platform no longer derives one. Changing a slug in
+ *     config re-addresses the meeting; a slug held by a meeting outside the
+ *     config aborts the run instead.
  *
  *   * **A missing config item is an archive, never a delete.** Attendance is
  *     a record of who was in a room on a Tuesday, and removing a meeting
@@ -99,11 +103,15 @@ function emptyCounts(): ReconcileTableCounts {
 }
 
 /**
- * Slugs a meeting may not take, because a static route already answers them.
- * `directions` is reserved because `/events/directions` is a static route,
- * and a meeting slugged the same would be unreachable behind it.
+ * A config slug already held by a meeting the config doesn't own (one under
+ * an id the config no longer lists, or one never from config). Taking it
+ * would mean silently re-addressing that meeting, so the reconcile aborts.
  */
-const RESERVED_MEETING_SLUGS = ["directions"] as const;
+class SlugConflict extends Error {
+  constructor(readonly conflicts: string[]) {
+    super("meeting slug held by a meeting outside the config");
+  }
+}
 
 /**
  * A question change that would orphan answers: thrown inside the transaction
@@ -167,6 +175,7 @@ export async function reconcileFromConfig(
         .select({
           id: meetings.id,
           configId: meetings.configId,
+          slug: meetings.slug,
           deletedAt: meetings.deletedAt,
         })
         .from(meetings)
@@ -174,12 +183,37 @@ export async function reconcileFromConfig(
       const meetingByConfigId = new Map(
         existingMeetings.map((m) => [m.configId!, m]),
       );
-      const usedSlugs = new Set<string>([
-        ...(await tx.select({ slug: meetings.slug }).from(meetings)).map(
-          (m) => m.slug,
-        ),
-        ...RESERVED_MEETING_SLUGS,
-      ]);
+
+      // Slugs are authored in config (its validator keeps them unique and on
+      // the meeting's own date), and `meetings_slug_key` holds across every
+      // row, archived ones included. So: refuse a slug some meeting outside
+      // the config already holds, then park every slug that is about to
+      // change on a placeholder, so two meetings can trade slugs in one run.
+      const configIds = new Set(config.meetings.map((m) => m.id));
+      const wantedSlugs = config.meetings.map((m) => m.slug);
+      const conflicts = (
+        await tx
+          .select({ slug: meetings.slug, configId: meetings.configId })
+          .from(meetings)
+          .where(inArray(meetings.slug, wantedSlugs))
+      ).filter((m) => m.configId === null || !configIds.has(m.configId));
+      if (conflicts.length > 0) {
+        throw new SlugConflict(
+          conflicts.map(
+            (m) =>
+              `"${m.slug}" belongs to ${m.configId ? `meeting "${m.configId}", which the config no longer lists` : "a meeting not from config"}`,
+          ),
+        );
+      }
+      for (const meeting of config.meetings) {
+        const existing = meetingByConfigId.get(meeting.id);
+        if (existing && existing.slug !== meeting.slug) {
+          await tx
+            .update(meetings)
+            .set({ slug: `reconcile-${existing.id}` })
+            .where(eq(meetings.id, existing.id));
+        }
+      }
 
       // Meeting configId → its platform uuid, so the workshop pass below can
       // resolve `meetingId` without a second round trip per meeting.
@@ -187,6 +221,7 @@ export async function reconcileFromConfig(
 
       for (const meeting of config.meetings) {
         const values = {
+          slug: meeting.slug,
           nameOverride: meeting.title,
           summary: meeting.summary,
           kind: meeting.kind,
@@ -220,20 +255,9 @@ export async function reconcileFromConfig(
           continue;
         }
 
-        // New meeting. The slug is derived once, on insert, and never
-        // recomputed: it is in URLs the moment the meeting is published, and
-        // regenerating it on every retitle would break every link anyone
-        // shared. Derived from the DATE rather than the title because the
-        // title is optional and most nights have none.
-        const slug = uniqueSlug(
-          clubDateKey(new Date(meeting.startsAt)),
-          usedSlugs,
-        );
-        usedSlugs.add(slug);
-
         const [inserted] = await tx
           .insert(meetings)
-          .values({ ...values, slug, configId: meeting.id })
+          .values({ ...values, configId: meeting.id })
           .returning({ id: meetings.id });
         meetingIdByConfigId.set(meeting.id, inserted!.id);
         counts.meetings.upserted += 1;
@@ -300,6 +324,20 @@ export async function reconcileFromConfig(
       );
     });
   } catch (error) {
+    if (error instanceof SlugConflict) {
+      await postAlert(
+        "Config reconcile aborted: a meeting slug is taken",
+        error.conflicts,
+        "These slugs are held by meetings the config no longer owns, and " +
+          "taking them would re-address those meetings. Pick a different " +
+          "descriptor in meetings.json, or rename the old meeting's slug in " +
+          "the database first. Nothing was written.",
+      );
+      return {
+        ok: false,
+        reason: `meeting slugs held outside the config (${error.conflicts.length})`,
+      };
+    }
     if (!(error instanceof QuestionConflict)) throw error;
     await postAlert(
       "Config reconcile aborted: survey question change would orphan answers",
@@ -426,20 +464,4 @@ async function archiveMissing(
     .returning({ id: table.id });
 
   return rows.length;
-}
-
-function uniqueSlug(name: string, taken: Set<string>): string {
-  const base =
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "meeting";
-
-  if (!taken.has(base)) return base;
-
-  for (let n = 2; ; n += 1) {
-    const candidate = `${base}-${n}`;
-    if (!taken.has(candidate)) return candidate;
-  }
 }
