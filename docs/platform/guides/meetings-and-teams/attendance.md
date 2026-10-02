@@ -34,9 +34,15 @@ unique, so retries and duplicate scans return the existing receipt.
 ## Authoritative row
 
 `platform.attendance` stores one row per member and meeting. `method` records
-`qr` or `manual_code`. The check-in that creates a row is its only writer —
-there is no revocation and nothing an officer records on a member's behalf.
-Client roles may read their own records and cannot write them.
+`qr` or `manual_code` for a member's own check-in, or `import` for a row an
+officer added with the CLI. Check-in is the only writer from the platform. The
+one other writer is `pnpm backstage attendance import --meeting <date> --file
+<csv>`, which an officer runs from a sign-in form or sheet for a meeting where
+members could not check in. Imported rows carry method `import` so they stay
+distinguishable and can be replaced by re-running the import, and an import
+never overwrites a member's own check-in. There is no revocation, and the
+platform has no officer-facing way to add or change a row. Client roles may read
+their own records and cannot write them.
 
 ## EL reflections
 

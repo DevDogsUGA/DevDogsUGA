@@ -1840,7 +1840,7 @@ export type Database = {
         | "graduate_certificate"
         | "professional_program";
       auditEventSource: "platform" | "qr" | "manual_code" | "system";
-      checkInMethod: "qr" | "manual_code";
+      checkInMethod: "qr" | "manual_code" | "import";
       contentAction: "quarantine" | "no_action";
       contentVisibility: "public" | "restricted";
       filerAction: "warn" | "suspend" | "no_action";
@@ -3219,7 +3219,7 @@ export const Constants = {
         "professional_program",
       ],
       auditEventSource: ["platform", "qr", "manual_code", "system"],
-      checkInMethod: ["qr", "manual_code"],
+      checkInMethod: ["qr", "manual_code", "import"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],
       filerAction: ["warn", "suspend", "no_action"],
