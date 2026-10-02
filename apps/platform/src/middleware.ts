@@ -1,12 +1,8 @@
 import { type NextRequest } from "next/server";
-import { applySecurityHeaders } from "@devdogsuga/security-headers";
+import { applySecurityHeaders } from "@devdogsuga/headers";
 import { platformSecurityHeaders } from "~/lib/securityHeaders";
 import { updateSession } from "~/supabase/proxy";
 
-// Uses the legacy `middleware.ts` convention rather than Next 16's `proxy.ts`
-// because proxy.ts runs only on the Node.js runtime, which the OpenNext
-// Cloudflare adapter does not support. middleware.ts runs on the Edge runtime,
-// and the session refresh only uses edge-safe APIs (@supabase/ssr).
 export async function middleware(request: NextRequest) {
   // Middleware leaves the request alone wherever it can, because vinext serves
   // a page from the shared cache only when middleware changed no request
@@ -33,7 +29,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const response = await updateSession(request, { forwardRequest: isTools });
-  // Authoritative header application -- see @devdogsuga/security-headers'
+  // Authoritative header application -- see @devdogsuga/headers'
   // `applySecurityHeaders` doc comment for why this, not just next.config.ts's
   // `headers()`: that mechanism drops these headers on `/` specifically
   // (reproduced against a real `vinext build` + `wrangler dev` serve),

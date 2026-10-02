@@ -43,6 +43,10 @@ export const maxCreditHoursRule: ScheduleRule = {
   allowPartialSchedule(partial: Section[], ctx: GenerationConstraints) {
     return creditHourFloor(partial) <= ctx.maxCreditHours;
   },
+
+  describe: (ctx: GenerationConstraints) => ({
+    setting: `your maximum of ${ctx.maxCreditHours} credit hours`,
+  }),
 };
 
 /**
@@ -63,4 +67,8 @@ export const minCreditHoursRule: ScheduleRule = {
   allowSchedule(complete: Section[], ctx: GenerationConstraints) {
     return creditHourCeiling(complete) >= ctx.minCreditHours;
   },
+
+  describe: (ctx: GenerationConstraints) => ({
+    setting: `your minimum of ${ctx.minCreditHours} credit hours`,
+  }),
 };

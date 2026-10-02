@@ -51,7 +51,7 @@ const server = {
     doc:
       "Which deployment this is: development, staging, or production. Never " +
       "written into an env file -- wrangler.jsonc's per-env blocks and the " +
-      "cf:build:* scripts are its two committed sources.",
+      "build step (`DEPLOY_ENV=<tier> pnpm build`) are its two committed sources.",
     scope: "default",
     secrecy: "public",
     commented: true,
@@ -280,16 +280,16 @@ const client = {
   // would throw), and Sentry's `environment` tag needs to distinguish
   // staging from production on the client too. Not derived automatically the
   // way NEXT_PUBLIC_SUPABASE_URL is from API_URL: DEPLOY_ENV itself is set by
-  // wrangler.jsonc's per-env `vars` block and the cf:build:* scripts rather
+  // wrangler.jsonc's per-env `vars` block and the build step rather
   // than an `.env` file, so there is nothing for a `.env` assignment to
-  // mirror. The cf:build:* scripts set this alongside DEPLOY_ENV instead.
+  // mirror. The build step sets this alongside DEPLOY_ENV instead.
   NEXT_PUBLIC_DEPLOY_ENV: define(
     z.enum(DEPLOY_ENVIRONMENTS).default("development"),
     {
       doc:
         "Browser-side copy of DEPLOY_ENV, for the Sentry `environment` tag " +
         "on client-captured errors. Set alongside DEPLOY_ENV by the " +
-        "cf:build:* scripts; defaults to development because that is what " +
+        "build step; defaults to development because that is what " +
         "an unset value means everywhere else in this schema.",
       scope: "environment",
       secrecy: "public",

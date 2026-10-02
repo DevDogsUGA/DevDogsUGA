@@ -25,12 +25,12 @@ Schema-per-app is an organizational boundary, not a security one — see [Supaba
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Read a variable, or add a new one    | [**`@devdogsuga/env`**](/docs/toolkit/guides/env) — one declaration per variable                                                                                                            |
 | Find the command for a chore         | [**`@devdogsuga/devtools`**](/docs/toolkit/guides/devtools) — the contributor CLI                                                                                                           |
-| Boot, migrate or reset a database    | [**`devtools db` commands**](/docs/toolkit/guides/devtools-db) — `devtools db …`                                                                                                            |
+| Boot, migrate or reset a database    | [**Running the database**](/docs/toolkit/guides/devtools-db) — `devtools supabase …`, `preset …`                                                                                            |
 | Talk to Postgres from an app         | [**`@devdogsuga/db`**](/docs/toolkit/guides/stack/db) — the shared postgres-js + Drizzle client factory                                                                                     |
 | Reach Supabase, or write an RLS test | [**`@devdogsuga/db`** + `@devdogsuga/supabase`](/docs/toolkit/guides/stack/supabase) — client factories, types, RLS suite                                                                   |
 | Author a meeting or a workshop       | [**`@devdogsuga/events`**](/docs/platform/infrastructure/events) — a PR against Backstage's data                                                                                            |
 | Send an email                        | [**`@devdogsuga/email`**](/docs/toolkit/guides/email) — react-email, compiled to typed HTML                                                                                                 |
-| Change how docs are built            | [**`@devdogsuga/docs-compiler`**](/docs/toolkit/guides/docs-compiler) — compiles markdown, generates reference                                                                              |
+| Change how docs are built            | [**`@devdogsuga/docs-kit`**](/docs/toolkit/guides/docs-kit) — compiles markdown, generates reference                                                                                        |
 | Deploy, rotate a secret, add an app  | **Infrastructure**, below — [Cloudflare](/docs/toolkit/infrastructure/cloudflare), [Secrets](/docs/toolkit/infrastructure/secrets), [Docs system](/docs/toolkit/infrastructure/docs-system) |
 
 <details>
@@ -62,9 +62,12 @@ Four of the catalog's ranges are held back deliberately: ESLint stays on 9.x (`e
 ## Reference
 
 An [API reference](/docs/toolkit/reference/api/supabase) page exists for each
-`packages/*` published with a public surface — `deploy-checks`, `email`,
-`open-graph`, `repo-checks`, `security-headers`, and `supabase` today —
+`packages/*` published with a public surface — `email` and `supabase` today —
 generated from that package's source on every build, so it never drifts from
 what the code exports. `@devdogsuga/env` is Backstage-published tooling
 rather than a `packages/*` workspace member, so it is documented by hand in
-[Env](/docs/toolkit/guides/env) instead.
+[Env](/docs/toolkit/guides/env) instead. The same goes for the two CLIs:
+[devtools](/docs/toolkit/guides/devtools) is the contributor CLI, and
+`@devdogsuga/backstage` (`pnpm backstage …`) is the officer and production CLI
+whose commands are described where you need them — [Env](/docs/toolkit/guides/env/commands),
+[Images](/docs/toolkit/guides/images), and [Cloudflare](/docs/toolkit/infrastructure/cloudflare).

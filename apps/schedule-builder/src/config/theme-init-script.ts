@@ -7,7 +7,7 @@
  * the two inline `<script>` tags stay byte-identical -- that identity is
  * exactly what lets `global-error.tsx` earn CSP trust through
  * `THEME_INIT_SCRIPT_HASH` instead of a nonce it cannot obtain. See
- * `@devdogsuga/security-headers`'s `CspInput.extraScriptSources` doc comment.
+ * `scheduleBuilderCsp` in `~/config/csp.ts`.
  */
 export const THEME_INIT_SCRIPT = `(()=>{try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`;
 

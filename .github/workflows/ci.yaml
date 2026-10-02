@@ -50,26 +50,15 @@ jobs:
           # on a push.
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
-      # Turbo used to auto-detect this; pnpm's `[<since>]` filter needs the
-      # ref named explicitly. A pull request diffs against the branch it
-      # targets (its head may be several commits ahead of where it forked,
-      # so the base branch's current tip is the right comparison point); a
-      # push compares against the commit that `HEAD` pointed to before the
-      # push landed, falling back to the previous commit if that value is
-      # unset or unreachable (a repository's first push, or history pnpm
-      # cannot see for another reason).
+      # pnpm's `[<since>]` filter needs the ref named explicitly (turbo used to
+      # auto-detect it); the composite action owns how it is computed.
       - name: Determine base ref for affected-package detection
         id: base
+        uses: ./.github/actions/base-ref
+      - name: Select affected packages
+        id: since
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            REF="${{ github.event.pull_request.base.sha }}"
-          else
-            REF="${{ github.event.before }}"
-            if [ -z "$REF" ] || [ "$REF" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$REF" 2>/dev/null; then
-              REF="HEAD~1"
-            fi
-          fi
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          REF="${{ steps.base.outputs.ref }}"
           # These are turbo's globalDependencies equivalents, but pnpm
           # attributes root-level files to the workspace root package, which
           # the filters below exclude -- a root-only change would otherwise
@@ -79,6 +68,10 @@ jobs:
           else
             echo "since=" >> "$GITHUB_OUTPUT"
           fi
+      # The structural checks are `devtools check`, through the root script
+      # (`pnpm dlx @devdogsuga/devtools`, always the latest publish). They read
+      # the checkout and nothing else, so they need no env and no credential.
+      #
       # `supabase/migrations/` is one flat directory; a new file timestamped
       # before the newest one already on the base branch would apply out of
       # the order its author tested it in the next time someone runs
@@ -86,27 +79,20 @@ jobs:
       # it runs here rather than in the `database` job, and needs the base
       # ref this job already resolved above rather than re-deriving it.
       - name: Migrations are added in timestamp order
-        run: pnpm --filter @devdogsuga/repo-checks run check:migration-order "${{ steps.base.outputs.ref }}"
-      # Both apps' GENERATED route types (the `VinextRouteTypes` namespace,
-      # next-env.d.ts's `vinext/types/augmentations` reference) exist on
-      # every laptop that has ever run `vinext dev`/`vinext build` and on no
-      # fresh checkout — `tsc --noEmit` then fails on names the framework
-      # provides. `vinext typegen` (NOT `next typegen` — the two write
-      # mutually incompatible shapes to the same `.next/types/routes.d.ts`
-      # and `next-env.d.ts`; `next typegen` also strips next-env.d.ts's
-      # `vinext/types/augmentations` import, which then breaks `tsc
-      # --noEmit`) creates them without a build or a database;
-      # next.config.ts falls back to a placeholder URL under
-      # SKIP_ENV_VALIDATION so loading it here needs no credentials.
-      # `pnpm --filter ... exec` runs only in that one package, so nothing
-      # has compiled the workspace packages the Next configs import (`~/env`
-      # reaches into @devdogsuga/env's dist/) — build the apps' dependencies
-      # first, topologically, with pnpm's own `^...` (deps-of) selector.
-      - name: Generate the vinext type stubs
-        run: |
-          pnpm -r --if-present --filter 'platform^...' --filter 'schedule-builder^...' run build
-          pnpm --filter platform exec vinext typegen
-          pnpm --filter schedule-builder exec vinext typegen
+        run: pnpm devtools check migrations --base "${{ steps.base.outputs.ref }}"
+      # Every env variable is declared in a manifest, and the registry agrees.
+      - name: Every env variable is declared
+        run: pnpm devtools check env
+      # workers.json against the wrangler.jsonc files and deploy-app.yaml's
+      # matrix: a Worker added to one and forgotten in the other fails here
+      # rather than deploying half of itself.
+      - name: workers.json agrees with the Workers and the deploy matrix
+        run: pnpm devtools check workers
+      # One script vocabulary across the workspace (dev, build, test:<kind>,
+      # types:<source>, ...), so `pnpm -F <app> <task>` means the same thing
+      # everywhere.
+      - name: Package scripts use the shared vocabulary
+        run: pnpm devtools check scripts
       # Flutter isn't installed here — the study-group-finder app is validated
       # in the `flutter` job below.
       #
@@ -118,47 +104,29 @@ jobs:
       # remove the requirement. Building the apps needs a database, so it
       # happens in the `database` job, which has one.
       #
-      # pnpm has no single "run these tasks only against packages changed
-      # since a ref, and their dependents, but build every dependency they
-      # could reach so type-aware lint/typecheck have every .d.ts on disk"
-      # command the way turbo's task graph did. `--filter './packages/**'
-      # --filter './docs'` is deliberately a directory selector, not
-      # `!<app-name>` exclusions: it builds every package UNDER apps' own
-      # dependencies without ever running an app's OWN `build` script, which
-      # is exactly what turbo's `^build` did too (typechecking `platform`
-      # ran `platform`'s `typecheck` script and its DEPENDENCIES' `build`
-      # scripts, never `platform`'s own `build`). That distinction matters
-      # here specifically: this job sets SKIP_ENV_VALIDATION but has no .env
-      # and no database, so `pnpm --filter platform run build`'s own
-      # `_images` step reaching for `with-env` would fail outright, and a
-      # broader "build everything, apps included" pre-step would too. It
-      # also sidesteps the workspace-root recursion a `!`-exclusion-based
-      # filter would otherwise risk: a directory selector never matches the
-      # workspace root the way `!study-group-finder` alone would, so there is
-      # no need to separately exclude `devdogs-monorepo`, whose own
-      # `build`/`lint`/`typecheck`/`test` scripts are all `pnpm devtools run
-      # <task>` — the exact command this step is replacing.
+      # Each app's `pretypecheck`/`prelint`/`pretest` runs its own `codegen`
+      # (the email templates, the docs module, and the GENERATED route types:
+      # the `VinextRouteTypes` namespace and next-env.d.ts's
+      # `vinext/types/augmentations` reference, which exist on every laptop
+      # that has run `vinext dev` and on no fresh checkout). The workspace
+      # packages are consumed from source, so there is nothing to build first.
+      # `vinext typegen` (NOT `next typegen` -- the two write mutually
+      # incompatible shapes to the same `.next/types/routes.d.ts`) needs
+      # neither a build nor a database; next.config.ts falls back to a
+      # placeholder URL under SKIP_ENV_VALIDATION.
       #
-      # This still costs more than turbo's per-task `^build` scoping would
-      # have on a small-diff PR — every package under `packages/` and `docs`
-      # builds regardless of which ones are actually affected, since pnpm has
-      # no narrower "only the dependencies an affected app would reach"
-      # selector — accepted here because turbo's remote cache was never
-      # enabled and `.turbo` was never persisted across CI runs, so turbo was
-      # already rebuilding all of it from nothing on every run; this only
-      # makes that cost explicit. `--if-present` skips the packages with no
-      # `build` script (`@devdogsuga/repo-checks`, test-only, nothing else in
-      # the workspace imports it) instead of failing on them.
+      # `pnpm -r` never selects the workspace root, so the root's own scripts
+      # are never run here. `--if-present` skips the packages with no such
+      # script (`@devdogsuga/supabase` has no `lint`, for one).
       - name: Lint + typecheck + test (affected)
         run: |
-          pnpm -r --if-present --filter './packages/**' --filter './docs' run build
           status=0
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run lint || status=1
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run typecheck || status=1
-          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run test || status=1
+          pnpm -r --if-present ${{ steps.since.outputs.since }} --filter '!study-group-finder' run lint || status=1
+          pnpm -r --if-present ${{ steps.since.outputs.since }} --filter '!study-group-finder' run typecheck || status=1
+          pnpm -r --if-present ${{ steps.since.outputs.since }} --filter '!study-group-finder' run test || status=1
           exit $status
       # REMOVED: "Events config passes its publishability checks"
-      # (`pnpm --filter @devdogsuga/events check`), the CLI that parses
+      # (`pnpm -F @devdogsuga/events check:events`), the CLI that parses
       # data/meetings.json against the Zod schema and runs the validator
       # (lengths, the RSVP-host allowlist, cancellation pairing, id
       # uniqueness and shape).
@@ -184,23 +152,20 @@ jobs:
       #
       # Unconditional rather than --affected: any manifest edit anywhere can
       # change the output, and it costs about a second.
-      # `pnpm exec devtools`, not `pnpm devtools`: the root script is
-      # `pnpm dlx @devdogsuga/devtools` (always the newest publish), and CI
-      # runs the exact version package.json pins, like deploys do.
+      # `--no-env`: nothing here may read an env file, and the generator would
+      # otherwise pick up whatever the machine has.
       - name: .env.example agrees with the env manifests
-        run: pnpm exec devtools env example --check
+        run: pnpm devtools env example --check --no-env
       - name: Cloudflare binding types match the Worker configuration
-        run: pnpm --filter platform cf:typegen:check && pnpm --filter schedule-builder cf:typegen:check
+        run: pnpm --filter platform types:cf:check && pnpm --filter schedule-builder types:cf:check
       # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
       #
       # It existed because `scripts/` was not a workspace package, so the
       # lint/typecheck/test step could not see it — while the files in it
       # were the ones that composed production credentials and wrote Worker
-      # secrets. All six are `devtools deploy` commands now, so they are
-      # typechecked, linted and TESTED by the "Lint + typecheck + test
-      # (affected)" step above, along with everything else in that package.
-      # `scripts/` is gone with them; a step
-      # pointed at an empty directory does not fail loudly, it fails as
+      # secrets. All six are `backstage deploy` commands now, typechecked,
+      # linted and tested in Backstage, and `scripts/` is gone with them; a
+      # step pointed at an empty directory does not fail loudly, it fails as
       # TS18003 "no inputs were found", which reads like a broken config
       # rather than like a job with nothing to do.
 
@@ -225,19 +190,30 @@ jobs:
       # The runner's volume is always empty, so this applies every migration to
       # a fresh database and fails if any of them does not apply -- which is the
       # "migrations apply cleanly from scratch" check, with no separate reset
-      # needed. Also writes .env.generated, which the suites below read.
+      # needed. The step after it writes .env.generated, which the suites below
+      # read.
       #
-      # ⚠️ The devtools entrypoint and RLS suite run through `with-env`, which
-      # REFUSES a missing .env by design. Seed it before the stack writes the
-      # local connection overlay; the synthetic-environment step right after
-      # the stack starts replaces this file and appends the generated values.
+      # ⚠️ The RLS suite and the builds run through `with-env`, which REFUSES a
+      # missing .env by design. Seed it before the stack writes the local
+      # connection overlay; the synthetic-environment step right after the
+      # stack starts replaces this file and appends the generated values.
       - name: Seed the env file for wrapped checks
         run: cp .github/ci.env .env
       # config.toml enables four OAuth providers with `env()` credentials that
       # CI does not have. Verified: unset resolves to a WARN and exit 0, not an
       # error.
+      #
+      # `devtools supabase` is the Supabase CLI against the session's tier.
+      # With no terminal the tier is never guessed, so it is named: the local
+      # stack, whatever the runner's .env says.
       - name: Start the local Supabase stack
-        run: pnpm exec devtools db start
+        run: pnpm devtools supabase start --tier development:local
+      # `devtools supabase start` is the bare Supabase CLI, so unlike the old
+      # `devtools db start` it writes no .env.generated. Write it here; with-env
+      # only generates it for a session that finds the file missing, and the
+      # next step sources it directly.
+      - name: Write .env.generated from the running stack
+        run: pnpm exec supabase status -o env > .env.generated
       # The Supabase half comes from .env.generated, so the suites and the
       # build run against a real Postgres and a real PostgREST rather than a
       # mock. The NEXT_PUBLIC pair is derived rather than hardcoded: it has to
@@ -257,67 +233,34 @@ jobs:
       # being regenerated -- which typechecks fine everywhere until something
       # reads a column the types still claim exists.
       - name: Generated Database types match the migrations
-        run: |
-          pnpm exec devtools db types
-          git diff --exit-code -- packages/supabase/src/database.types.ts
+        run: pnpm --filter @devdogsuga/supabase run types:db:check
       # 59 tests. All app schemas share one PostgREST endpoint and one anon key,
       # so RLS -- not the schema boundary -- is what isolates one app's data from
       # another's. This is the only thing that checks it.
       - name: Row-Level Security
         run: pnpm --filter @devdogsuga/supabase run test:rls
-      # Black-box devtools/devtools-ci process contracts (cron contract
-      # conformance, deploy-cli stdout purity, real email-template
-      # generation) — the "live" lane devtools' own MOVED-TESTS.md left for
-      # stage B to re-home. Needs the `.env`/`.env.generated` this job
-      # already composed above (every `devtools` command resolves a session
-      # tier before dispatch), same reason the RLS suite lives here rather
-      # than in the default `pnpm test` lane. `devtools emails` imports the
-      # email package's built runtime (dist/, untracked), which a fresh
-      # checkout doesn't have until `build` runs; `compile` alone only writes
-      # the templates.
-      - name: devtools / devtools-ci process contracts
-        run: |
-          pnpm --filter @devdogsuga/email run build
-          pnpm --filter @devdogsuga/repo-checks run test:live
       # 124 tests, including the privilege-surface guards in
       # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
       # nothing else can see: a function reachable by every role in the cluster
       # typechecks perfectly.
-      # Vitest resolves @devdogsuga/db (/server) and friends from their dist/,
-      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
-      # invocation only runs in that one package, so build the app's
-      # dependencies first with pnpm's own deps-of selector.
+      # `test:db` runs its app's `codegen` first (`pretest:db`), so there is
+      # nothing to build beforehand.
       - name: Query validity + privilege surface
-        run: |
-          pnpm -r --if-present --filter 'platform^...' run build
-          pnpm --filter platform run test:db
-      # Vitest resolves @devdogsuga/db (/server) and friends from their dist/,
-      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
-      # invocation only runs in that one package, so build the app's
-      # dependencies first with pnpm's own deps-of selector.
+        run: pnpm --filter platform run test:db
       - name: Query validity + privilege surface (schedule-builder)
-        run: |
-          pnpm -r --if-present --filter 'schedule-builder^...' run build
-          pnpm --filter schedule-builder run test:db
+        run: pnpm --filter schedule-builder run test:db
       # Validation ENFORCED, unlike everywhere else in this file. That is what
       # makes this worth running: a newly added required variable with no
       # default fails here rather than at deploy time.
       #
       # Both Next apps. study-group-finder is Flutter and is covered by its own
       # job.
-      #
-      # `--filter '!devdogs-monorepo'` alongside `!study-group-finder`: an
-      # unqualified `!<name>` exclusion still matches the workspace root
-      # (unlike a bare, filter-less `-r`, or a dependency-direction selector
-      # like `^...`, both of which never do), and the root's own `build`
-      # script is `pnpm devtools run build` — precisely the picker this
-      # workflow bypasses everywhere else, so it must stay excluded here too.
       - name: Build both Next apps, with the env schema enforced
         env:
           SKIP_ENV_VALIDATION: ""
         run: >-
           pnpm exec with-env
-          pnpm -r --if-present --filter '!study-group-finder' --filter '!devdogs-monorepo' run build
+          pnpm -r --if-present --filter './apps/**' --filter '!study-group-finder' run build
 
   # Repo-wide formatting check — fast, no build needed.
   format:
@@ -342,9 +285,7 @@ jobs:
       # answered one question: does study-group-finder, or anything it
       # depends on, appear in the changed set since the merge base? pnpm has
       # no single flag for that, so this rebuilds it from two pieces: the
-      # same base-ref logic as the `validate` job's "Determine base ref" step
-      # (duplicated rather than shared — jobs don't share step outputs, and
-      # it's five lines), and `study-group-finder...` (pnpm's "package and
+      # shared base-ref action, and `study-group-finder...` (pnpm's "package and
       # its dependencies" selector) to list exactly the directories whose
       # content decides this — the app itself, plus @devdogsuga/config,
       # @devdogsuga/env and @devdogsuga/supabase's actual resolved graph,
@@ -352,17 +293,12 @@ jobs:
       # drift. A plain `git diff --quiet` over those directories since the
       # base ref is then exactly turbo's "changed or a dependency changed"
       # check.
+      - id: base
+        uses: ./.github/actions/base-ref
       - name: Is study-group-finder affected?
         id: affected
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE="${{ github.event.before }}"
-            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
-              BASE="HEAD~1"
-            fi
-          fi
+          BASE="${{ steps.base.outputs.ref }}"
           PATHS=$(pnpm -r --filter 'study-group-finder...' list --depth -1 --json 2>/dev/null \
             | node -e '
                 let d = "";

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@source "../../../../packages/open-graph/src";
+@import "@devdogsuga/brand/palette.css";
 @import "../components/moderation/styles.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -44,6 +44,29 @@
      Only names with no counterpart in the @theme inline block belong here. */
   --color-destructive-foreground: var(--color-white);
   --color-overlay: oklch(0% 0 0 / 65%);
+
+  /* The club palette. The values live in `@devdogsuga/brand` (imported above as
+     `--brand-*`), the one place the OG cards, the email signatures and this
+     stylesheet all read them from; these re-point Tailwind's own ramp names at
+     them so `bg-mauve-950` and the generated images cannot disagree. */
+  --color-mauve-50: var(--brand-mauve-50);
+  --color-mauve-100: var(--brand-mauve-100);
+  --color-mauve-200: var(--brand-mauve-200);
+  --color-mauve-300: var(--brand-mauve-300);
+  --color-mauve-400: var(--brand-mauve-400);
+  --color-mauve-500: var(--brand-mauve-500);
+  --color-mauve-600: var(--brand-mauve-600);
+  --color-mauve-700: var(--brand-mauve-700);
+  --color-mauve-800: var(--brand-mauve-800);
+  --color-mauve-900: var(--brand-mauve-900);
+  --color-mauve-950: var(--brand-mauve-950);
+  --color-red-400: var(--brand-red-400);
+  --color-red-700: var(--brand-red-700);
+  --color-purple-400: var(--brand-purple-400);
+  --color-purple-700: var(--brand-purple-700);
+  --color-cyan-400: var(--brand-cyan-400);
+  --color-amber-400: var(--brand-amber-400);
+  --color-emerald-400: var(--brand-emerald-400);
 
   --block-shadow-sm: 2px;
   --block-shadow-md: 4px;
@@ -1140,7 +1163,7 @@
   --alert-accent: var(--destructive);
 }
 
-/* Variants (`:::tabs`, `:::only{os=…}`), rendered by @devdogsuga/docs-compiler.
+/* Variants (`:::tabs`, `:::only{os=…}`), rendered by @devdogsuga/docs-kit.
    Every variant ships in the HTML; the docs layout's wrapper carries the
    reader's choice as `data-os`/`data-supabase` (set by an inline script before
    first paint, see DocsVariants), and these rules hide whatever does not match.
@@ -1586,7 +1609,7 @@
 }
 
 /* ── Code blocks in the docs ───────────────────────────────────────────────
-   @devdogsuga/docs-compiler frames every highlighted block (codeblocks.ts):
+   @devdogsuga/docs-kit frames every highlighted block (codeblocks.ts):
    `figure.docs-code` > `.docs-code-bar` (a file tab and a copy button) + the
    Shiki `pre`. File diffs (components/DocsDiff) reuse the bar and tab, so a
    diff and a plain block read as the same kind of thing. The bar is the

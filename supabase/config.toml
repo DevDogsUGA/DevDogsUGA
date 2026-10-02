@@ -36,22 +36,25 @@ pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
 
-# Seeds run on `supabase db reset` only, never on `db push`. There is one set,
-# `production/` (the role catalogue and the officer board): content every
-# tier needs, applied in filename order because `03_officers.sql` assigns
-# roles `01_roles.sql` defines. `devtools db seed production` (Backstage
-# `packages/devtools`) applies the same files to a staging or production
-# target, and `devtools db reset` on those tiers passes `--no-seed` and
-# applies them itself, so nothing listed here decides what a hosted tier gets.
+# Seeds run on `supabase db reset` only, never on `db push` (a hosted tier is
+# seeded by hand with `supabase db push --include-seed`, and Supabase records
+# each file's hash in `supabase_migrations.seed_files` so an edited file is not
+# run again). `roles/` is the role catalogue, one file per role, and `officers/`
+# is the officer board, one file per officer. Patterns run in the listed order,
+# so roles exist before officers are granted them; within a pattern files run
+# alphabetically. `**` does not search subfolders, so keep both folders flat
+# (`officers/avatars/` is storage objects, not SQL).
+#
+# Every file is insert-only (`on conflict do nothing`): a rerun never
+# overwrites what an officer or an admin has since edited.
 #
 # There is deliberately no `development/` set. It used to hold password-login
 # personas, and because any reset runs this list, a reset of a hosted tier
-# would have planted logins whose password is in the repo. Test logins now
-# come from `pnpm devtools persona <member|moderator>`, which creates them on
-# a development tier with a random password and removes them with `--clean`.
+# would have planted logins whose password is in the repo. Sign in through the
+# app instead and give the account a role with `pnpm devtools roles grant`.
 [db.seed]
 enabled = true
-sql_paths = ["./seed/production/*.sql"]
+sql_paths = ["./seed/roles/*.sql", "./seed/officers/*.sql"]
 
 [realtime]
 enabled = false
@@ -83,7 +86,7 @@ allowed_mime_types = ["image/webp"]
 # the object key the app reads: `useAvatarSrc` and the officers loader both
 # build `/object/public/avatars/<userId>`. Without this path the bucket is
 # created empty and every officer card falls back to initials.
-objects_path = "./seed/production/avatars"
+objects_path = "./seed/officers/avatars"
 
 [auth]
 enabled = true
@@ -112,8 +115,8 @@ enable_manual_linking = true
 # enable_signup = false` — gotrue has one flag per provider
 # (`EmailProviderConfiguration.Enabled`), and it gates password SIGN-IN too
 # (`internal/api/token.go`'s password grant checks the same flag
-# `internal/api/signup.go` does), which would lock every test login
-# (`pnpm devtools persona`) out of the only sign-in path the local Docker
+# `internal/api/signup.go` does), which would lock every password test
+# login out of the only sign-in path the local Docker
 # stack has (plain HTTP, so it cannot host OAuth). Password
 # signup is refused instead by `require_uga_signup_email` (the
 # before-user-created hook below), extended to reject the `email` provider

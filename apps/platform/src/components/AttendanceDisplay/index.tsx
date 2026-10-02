@@ -6,7 +6,7 @@ import {
   CheckCircleIcon,
   WarningIcon,
 } from "@phosphor-icons/react/ssr";
-import { QR_DEFAULTS, renderQrSvg } from "~/lib/qr";
+import { QR_DEFAULTS, renderQrSvg } from "@devdogsuga/brand/qr";
 import TitleCard, { type TitleCardMeeting } from "./TitleCard";
 import { useAttendanceCodes } from "./useAttendanceCodes";
 

@@ -1,0 +1,37 @@
+name: Resolve the base ref
+description: >-
+  The commit to diff against when finding what a run affected. A pull request
+  diffs against the current tip of the branch it targets (its head may be
+  several commits ahead of where it forked); a push compares against the commit
+  HEAD pointed to before the push landed, falling back to the previous commit
+  when that value is unset or unreachable (a repository's first push, or
+  history git cannot see for another reason).
+
+# Needs the full history, so the job's `actions/checkout` must use
+# `fetch-depth: 0`. Checkout stays in the job: a local composite action only
+# resolves after the repository is on disk.
+outputs:
+  ref:
+    description: The commit to diff against.
+    value: ${{ steps.resolve.outputs.ref }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the base ref
+      id: resolve
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        PR_BASE: ${{ github.event.pull_request.base.sha }}
+        PUSH_BEFORE: ${{ github.event.before }}
+      run: |
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          REF="$PR_BASE"
+        else
+          REF="$PUSH_BEFORE"
+          if [ -z "$REF" ] || [ "$REF" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$REF" 2>/dev/null; then
+            REF="HEAD~1"
+          fi
+        fi
+        echo "ref=$REF" >> "$GITHUB_OUTPUT"

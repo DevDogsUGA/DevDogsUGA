@@ -31,7 +31,7 @@ adding to it.
 
 ## Where the pnpm scripts point
 
-`package.json`'s `dev`/`build`/`generate-types` scripts all shell out to
+`package.json`'s `dev`/`build`/`types:db` scripts all shell out to
 Flutter or Dart through the root `with-env` helper; `lint`, `test` and
 `typecheck` call `flutter analyze`, `flutter test` and `tsc --noEmit`
 directly. None of them run JavaScript — the manifest exists so this app shows

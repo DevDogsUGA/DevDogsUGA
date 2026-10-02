@@ -15,7 +15,7 @@ There is one env file per **target**, not one file with modes. This page is the 
 
 Creating it is the one thing `with-env` cannot do, so `pnpm devtools setup` deliberately runs outside the wrapper — it is the one command that works with no `.env` present.
 
-When the local Docker stack is up, `with-env` layers `.env.generated` — the stack's own connection block, written by `pnpm devtools db start` — on top of `.env`, first file wins. There is no flag for this: `with-env` probes port 54321 every run, so starting the stack switches you onto it and stopping it switches you back.
+When the local Docker stack is up, `with-env` layers `.env.generated` — the stack's own connection block, written by `pnpm devtools supabase start` — on top of `.env`, first file wins. There is no flag for this: `with-env` probes port 54321 every run, so starting the stack switches you onto it and stopping it switches you back.
 
 ## The four targets
 
@@ -30,7 +30,7 @@ These are standalone files, not layers over a shared base. A variable present in
 
 `preflight` is the odd row. It is a staging area for pushing credentials, and `DEPLOY_ENV=preflight` is refused outright, because nothing is meant to boot from it.
 
-`production` carries one extra guard, about writing rather than booting: `env pull` and `env push` warn first, their confirmation defaults to no, and `env push --target production --yes` is refused rather than run unattended.
+`production` carries one extra guard, about writing rather than booting: `backstage env pull` and `env push` warn first, their confirmation defaults to no, and `env push --target production --yes` is refused rather than run unattended.
 
 The order above — least dangerous to most — is the order the interactive picker lists, so a reflexive Enter never lands on production.
 
@@ -39,11 +39,11 @@ The order above — least dangerous to most — is the order the interactive pic
 `with-env` refuses and names the command that materialises it:
 
 - `.env` → `pnpm devtools setup`
-- any other target → `pnpm devtools env pull --target <target>`
+- any other target → `pnpm backstage env pull --target <target>`
 
 ## Where the detail lives
 
-`pnpm devtools env --help` lists the six subcommands (`pull`, `push`, `audit`, `init`, `example`, `reset`) and the options each takes; `pnpm devtools` with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](/docs/toolkit/guides/env) is the reference for how the two are kept in step, and [the commands](/docs/toolkit/guides/env/commands) is what `audit` compares.
+`pnpm backstage env --help` lists the three that touch Bitwarden and GitHub (`pull`, `push`, `audit`) and `pnpm devtools env --help` the three local ones (`init`, `example`, `reset`), with the options each takes; either command with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](/docs/toolkit/guides/env) is the reference for how the two are kept in step, and [the commands](/docs/toolkit/guides/env/commands) is what `audit` compares.
 
 After a manifest declares a new variable, run `pnpm devtools env init --target
 staging` and then `--target production`. Re-running `init` appends only missing

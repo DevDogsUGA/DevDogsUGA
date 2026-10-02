@@ -1,6 +1,6 @@
 /**
  * The reader's setup choices for docs variants: which platform they are on,
- * and whether their Supabase is hosted or local. `@devdogsuga/docs-compiler`
+ * and whether their Supabase is hosted or local. `@devdogsuga/docs-kit`
  * ships every variant of a page (a tab per platform, a block per database);
  * this picks which one shows.
  *

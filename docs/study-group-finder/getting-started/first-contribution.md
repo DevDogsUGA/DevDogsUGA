@@ -23,7 +23,7 @@ centred `Text`. Change the label text, or try a different `colorSchemeSeed`
 ## Run it
 
 ```bash
-pnpm dev --filter study-group-finder
+pnpm -F study-group-finder dev
 ```
 
 Confirm your change shows up on the emulator (or device) Flutter picks.

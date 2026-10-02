@@ -5,7 +5,7 @@ import { useEffect } from "react";
 /**
  * The copy buttons on a docs page's code blocks and table cells. The compiler
  * writes each button into the page's HTML (`[data-copy]` in `figure.docs-code`,
- * see @devdogsuga/docs-compiler's codeblocks.ts; `[data-copy-inline]` in a
+ * see @devdogsuga/docs-kit's codeblocks.ts; `[data-copy-inline]` in a
  * table cell's `.docs-copyable`, see its tables.ts), so one listener here
  * serves them all. A cell copies its code span's text.
  *

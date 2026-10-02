@@ -10,6 +10,7 @@ import {
   MAX_INPUT_COURSES,
   type GenerationOutcome,
 } from "~/lib/generation/engine";
+import { diagnoseNoSchedules } from "~/lib/generation/diagnose";
 import {
   filterUsableSections,
   groupSectionsByCourse,
@@ -116,6 +117,13 @@ export async function getRecommendedSchedules(
         schedule.map((section) => section.crn),
       ),
     };
+  }
+
+  if (outcome.reason === "no-schedules") {
+    // The generic message is only the fallback: name the course and the
+    // constraint that eliminated it so the user knows what to relax.
+    const reasons = diagnoseNoSchedules(courses, ctx);
+    if (reasons.length > 0) return { data: [], error: reasons.join(" ") };
   }
 
   return { data: [], error: FAILURE_MESSAGES[outcome.reason] };

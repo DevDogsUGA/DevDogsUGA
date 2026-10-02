@@ -133,25 +133,29 @@ apps/study-group-finder/tool/*.docs.json
 .ds-sync/
 **/.design-sync/
 
-# `pnpm devtools images` writes event posters here. They are exports headed for
-# the GDG platform — one per meeting, made once — rather than the committed
-# brand assets the rest of that command renders, so they stay out of the tree.
+# Event posters from `backstage graphics` land here. They are exports headed for
+# the GDG platform (one per meeting, made once) rather than anything the repo
+# serves, so they stay out of the tree.
 .images/
 
-# The rest of what `pnpm devtools images` renders. Nothing here is a source
-# file: every one is a deterministic render of the SVGs in public/brand and the
-# templates in @devdogsuga/open-graph, so committing them stored a second copy of
-# artwork the repo already had, and one that went stale silently.
+# Brand images derived from `@devdogsuga/brand` by each app's `codegen`. Nothing
+# here is a source file, so committing them stored a second copy of artwork the
+# package already has, and one that went stale silently.
 #
-# Two kinds live here now. The email signatures and platform-192 are DEPLOYED
-# assets whose URLs are load-bearing -- a signature is hotlinked by every mail
-# client that ever received one, and manifest.ts names the icon -- so
-# `images:build` regenerates them into public/ before `next build` and they
-# ship in the bundle. Everything else is an export a human uploads somewhere
-# (the GDG on Campus platform, SavvyCal, a store console); run the CLI when you
-# need one.
+# The email signatures and platform-192 are DEPLOYED assets whose URLs are
+# load-bearing -- a signature is hotlinked by every mail client that ever
+# received one, and manifest.ts names the icon -- so platform's
+# `scripts/brand-images.ts` regenerates them into public/ before `vinext build`
+# and they ship in the bundle. schedule-builder's logos are copied by its
+# `scripts/brand-assets.ts`. Everything else is an export a human uploads
+# somewhere (the GDG on Campus platform, SavvyCal, a store console); run
+# `backstage graphics` when you need one.
 apps/platform/public/brand/banners/
 apps/platform/public/brand/email/
 apps/platform/public/brand/icons/
 apps/platform/public/brand/og/
+apps/schedule-builder/public/brand/
 apps/schedule-builder/public/icons/
+
+# packages/email preview output
+email-previews/

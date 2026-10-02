@@ -14,7 +14,7 @@ actually building.
 ## 1. Draft the migration
 
 ```bash
-pnpm devtools db migration new
+pnpm devtools preset new-migration
 ```
 
 It asks which app/schema the migration is for when you don't pass one
@@ -50,11 +50,11 @@ it and the table is wide open.
 ## 3. Apply it and regenerate types
 
 ```bash
-pnpm devtools db migrate
-pnpm --filter study-group-finder generate-types
+pnpm devtools preset apply-migrations   # db push; then offers the Database types
+pnpm --filter study-group-finder types:db
 ```
 
-`generate-types` reads whatever tables exist through supadart, so a new
+`types:db` reads whatever tables exist through supadart, so a new
 table is picked up automatically — nothing to register. Regenerate rather
 than hand-editing `lib/generated/`; it is gitignored output, not source.
 
@@ -143,7 +143,7 @@ an allow and a deny. A policy test that only checks the allow side still
 passes when the policy is missing entirely, so always assert the deny too:
 
 ```bash
-pnpm devtools db start && pnpm devtools db reset
+pnpm devtools supabase start && pnpm devtools supabase db reset
 pnpm --filter @devdogsuga/supabase test:rls
 ```
 

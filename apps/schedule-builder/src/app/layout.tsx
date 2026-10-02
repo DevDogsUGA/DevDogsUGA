@@ -4,7 +4,7 @@ import { SessionProvider } from "~/components/providers/SessionProvider";
 import { TermProvider } from "~/components/providers/TermProvider";
 import { ToastProvider } from "~/hooks/useToast";
 import "~/styles/globals.css";
-import { APPS } from "@devdogsuga/open-graph";
+import { APPS } from "@devdogsuga/brand";
 import { type Metadata } from "next";
 import { headers } from "next/headers";
 import { Hanken_Grotesk, Alan_Sans, Cascadia_Code } from "next/font/google";
@@ -64,7 +64,7 @@ export default async function RootLayout({
             tiny; the ThemeSwitcher owns it after hydration. Nonced so it
             still runs under the enforcing `script-src 'nonce-…'
             'strict-dynamic'` policy -- see `middleware.ts` and
-            `@devdogsuga/security-headers`'s `csp.ts`. Byte-identical to
+            `scheduleBuilderCsp` (`~/config/csp.ts`). Byte-identical to
             `global-error.tsx`'s copy (shared via `THEME_INIT_SCRIPT`), which
             earns CSP trust through a content hash instead, since it has no
             `headers()` access to a nonce. */}

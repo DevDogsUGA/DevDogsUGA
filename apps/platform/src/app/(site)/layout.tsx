@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import AnnouncementBanner from "~/components/AnnouncementBanner";
+import AttendanceBanner from "~/components/AttendanceBanner";
 import AppSwitcher from "~/components/AppSwitcher";
 import AutoOpen from "~/components/AppSwitcher/AutoOpen";
 import { AppSwitcherProvider } from "~/components/AppSwitcher/provider";
@@ -14,6 +15,12 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
       <AppSwitcherProvider>
         <div className="flex min-h-screen flex-col">
           <TopNav />
+          {/* In flow, directly under the nav, so it takes its own row rather
+              than floating over content or fighting AnnouncementBanner and the
+              app switcher for the viewport's corners. A client component: it
+              fetches the live meeting after hydration so this layout, and the
+              cached pages in it, never read the database. */}
+          <AttendanceBanner />
           <main
             id="main-content"
             className="@container relative flex min-w-0 flex-1 flex-col"
@@ -62,10 +69,6 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
             cannot live in this client component. Outside the flex column
             because a fixed element contributes nothing to that layout. */}
         <AnnouncementBanner />
-
-        {/* The "Check in now" AttendanceBanner is off until it stops covering
-            page content and its dismissal sticks without a flash (TASK-364).
-            Put `<Suspense><AttendanceBanner /></Suspense>` back here then. */}
 
         <AppSwitcher />
         <Suspense>

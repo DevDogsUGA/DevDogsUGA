@@ -41,10 +41,10 @@ export default function manifest(): MetadataRoute.Manifest {
      * This used to be one 299x299 rendering, and this comment used to say that
      * Chrome wants 192 and 512 before it offers to install, that there was no
      * second rendering of the logo to point at, and that making one was a
-     * design task. That task is done: `pnpm devtools images icons` renders the
-     * mark at every size a platform asks for, from one template in
-     * `@devdogsuga/open-graph`. So the two Chrome wants are declared here, and the app
-     * is installable.
+     * design task. That task is done: the 192 is rendered by `codegen`
+     * (`scripts/brand-images.ts`) from `@devdogsuga/brand`'s app icon into
+     * `public/brand/icons/`, and the 512 is `icon.tsx`. So the two Chrome wants
+     * are declared here, and the app is installable.
      *
      * `purpose` stays `any` and does NOT claim `maskable`. A maskable icon has
      * to keep its content inside the middle 80% so a launcher can crop it to

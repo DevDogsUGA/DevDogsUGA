@@ -412,6 +412,50 @@ export type Database = {
         };
         Relationships: [];
       };
+      discordRoleMemberships: {
+        Row: {
+          roleId: string;
+          syncedAt: string;
+          userId: string;
+        };
+        Insert: {
+          roleId: string;
+          syncedAt?: string;
+          userId: string;
+        };
+        Update: {
+          roleId?: string;
+          syncedAt?: string;
+          userId?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "discordRoleMemberships_roleId_roles_id_fkey";
+            columns: ["roleId"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      docsIndexState: {
+        Row: {
+          hash: string;
+          id: boolean;
+          updatedAt: string;
+        };
+        Insert: {
+          hash: string;
+          id?: boolean;
+          updatedAt?: string;
+        };
+        Update: {
+          hash?: string;
+          id?: boolean;
+          updatedAt?: string;
+        };
+        Relationships: [];
+      };
       docsPages: {
         Row: {
           description: string | null;
@@ -690,6 +734,24 @@ export type Database = {
           createdAt?: string;
           ownerUserId?: string;
           testUserId?: string;
+        };
+        Relationships: [];
+      };
+      officerDiscordIds: {
+        Row: {
+          createdAt: string;
+          discordUserId: string;
+          userId: string;
+        };
+        Insert: {
+          createdAt?: string;
+          discordUserId: string;
+          userId: string;
+        };
+        Update: {
+          createdAt?: string;
+          discordUserId?: string;
+          userId?: string;
         };
         Relationships: [];
       };
@@ -1814,6 +1876,7 @@ export type Database = {
           status: Database["platform"]["Enums"]["reportStatus"];
         }[];
       };
+      replace_docs_index: { Args: { pages: Json }; Returns: boolean };
       require_uga_signup_email: { Args: { event: Json }; Returns: Json };
       resolve_content: {
         Args: { app_slug: string; content_ref: string; content_type: string };

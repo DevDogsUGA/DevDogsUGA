@@ -1,14 +1,12 @@
 /**
- * `supabase/seed/production/03_officers.sql`'s account-matching logic.
+ * The account-matching logic in `supabase/seed/officers/*.sql`.
  *
- * The seed matches officers to `auth.users` by primary email or any
+ * Each seed matches its officer to `auth.users` by primary email or any
  * altEmail, case-insensitively, and that match has to survive being replayed
- * against a target that already has state on it -- `devtools db seed
- * production` runs this file directly against staging/production, not only
- * through a `db reset` that starts from an empty `auth.users`. These cases
- * exercise the file itself (`sql().file(...)`), the same way `devtools db
- * seed roles`/`devtools db seed production` invoke it, rather than
- * reimplementing its SQL in TypeScript.
+ * against a target that already has state on it, not only through a `db
+ * reset` that starts from an empty `auth.users`. These cases exercise the
+ * files themselves (`sql().file(...)`) rather than reimplementing their SQL
+ * in TypeScript.
  *
  * Requires the local stack, already reset (`pnpm devtools db reset`) so the
  * officers are seeded once before any of these run -- that first pass is what
@@ -17,25 +15,30 @@
  *
  * Run via `pnpm --filter @devdogsuga/supabase test:rls`.
  */
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { sql } from "./personas";
 
-const SEED_FILE = join(
+const OFFICERS_DIR = join(
   import.meta.dirname,
   "..",
   "..",
   "..",
   "supabase",
   "seed",
-  "production",
-  "03_officers.sql",
+  "officers",
 );
 
+const SEED_FILES = readdirSync(OFFICERS_DIR)
+  .filter((name) => name.endsWith(".sql"))
+  .sort()
+  .map((name) => join(OFFICERS_DIR, name));
+
 /**
- * Runs the seed file exactly the way `devtools db seed`/`db reset` do.
+ * Runs every officer seed file in order, the way `supabase db reset` does.
  *
- * The file itself opens with `begin;` and closes with `commit;` -- required
+ * Each file itself opens with `begin;` and closes with `commit;` -- required
  * so a RAISE partway through rolls back everything, per its own header. Sent
  * over the shared pool (`sql()`, `max: 2`), postgres.js refuses that as
  * `UNSAFE_TRANSACTION`: a connection returned to the pool mid-transaction
@@ -47,7 +50,7 @@ const SEED_FILE = join(
 async function runSeed(): Promise<void> {
   const reserved = await sql().reserve();
   try {
-    await reserved.file(SEED_FILE);
+    for (const file of SEED_FILES) await reserved.file(file);
   } catch (error) {
     // A RAISE aborts the file's `begin;` without ever reaching its trailing
     // `commit;` (multi-statement batches stop dead on the first error), so
@@ -79,7 +82,7 @@ async function profileSnapshot() {
   `;
 }
 
-describe("03_officers.sql account matching", () => {
+describe("officer seeds account matching", () => {
   it("replaying an already-seeded database is a no-op", async () => {
     const before = await profileSnapshot();
     await runSeed();
@@ -90,12 +93,12 @@ describe("03_officers.sql account matching", () => {
     const { count } = (
       await sql()`select count(*)::int as count from platform.profile`
     )[0] as { count: number };
-    expect(count).toBe(11); // one per officer in 03_officers.sql
+    expect(count).toBe(11); // one per officer file
   });
 
   describe("a real account later matching an officer's altEmail", () => {
     // Jack Harrington's seeded container id and the altEmail his real row
-    // gets matched under, per supabase/seed/production/03_officers.sql.
+    // gets matched under, per supabase/seed/officers/jack-harrington.sql.
     const CONTAINER_ID = "00000000-0000-4000-b000-000000000001";
     const PRIMARY_EMAIL = "jbh36784@uga.edu";
     const ALT_EMAIL = "jackharrington290@gmail.com";
@@ -145,7 +148,7 @@ describe("03_officers.sql account matching", () => {
       const { count } = (
         await sql()`select count(*)::int as count from platform.profile`
       )[0] as { count: number };
-      expect(count).toBe(11); // one per officer in 03_officers.sql
+      expect(count).toBe(11); // one per officer file
     });
   });
 
@@ -225,9 +228,8 @@ describe("03_officers.sql account matching", () => {
       expect(raised?.message).not.toContain(scratchIds[0]);
       expect(raised?.message).not.toContain(scratchIds[1]!);
 
-      // The whole file runs in one transaction: the RAISE rolls back every
-      // write this replay made, including the containers it created for
-      // every OTHER officer before it ever reached Shruti.
+      // Her file runs in one transaction: the RAISE rolls back every write it
+      // made. Other officers' files are no-ops on a replay, so nothing moves.
       const after = await profileSnapshot();
       expect(after).toEqual(before);
     });

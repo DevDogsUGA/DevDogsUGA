@@ -1,0 +1,81 @@
+/**
+ * `order` is the one frontmatter key read as a number, and the only one whose
+ * bad values are invisible: a title typo shows up on the page, while a NaN
+ * reaching a comparator leaves the sidebar in an arbitrary order nobody can
+ * trace back to the file that caused it. So these test the rejections as
+ * carefully as the acceptance.
+ */
+import { describe, expect, it } from "vitest";
+import { parseDocFile } from "./parse.js";
+
+function withFrontmatter(body: string): string {
+  return `---\n${body}\n---\n\n# Env\n`;
+}
+
+describe("parseDocFile order", () => {
+  it("reads a finite number, including zero and negatives", () => {
+    expect(parseDocFile(withFrontmatter("order: 200"), "env.md").order).toBe(
+      200,
+    );
+    expect(parseDocFile(withFrontmatter("order: 0"), "env.md").order).toBe(0);
+    expect(parseDocFile(withFrontmatter("order: -5"), "env.md").order).toBe(-5);
+  });
+
+  it("is null on a page that declares none", () => {
+    expect(parseDocFile("# Env\n", "env.md").order).toBeNull();
+    expect(
+      parseDocFile(withFrontmatter("name: Env"), "env.md").order,
+    ).toBeNull();
+  });
+
+  it("rejects anything that is not a finite number", () => {
+    // `.nan` and `.inf` are YAML literals, so these are values a real file can
+    // hold rather than hypotheticals, and both pass `typeof x === "number"`.
+    for (const value of ['"3"', "first", "true", ".nan", ".inf", "-.inf"]) {
+      expect(
+        parseDocFile(withFrontmatter(`order: ${value}`), "env.md").order,
+      ).toBeNull();
+    }
+  });
+
+  it("leaves the raw value on `frontmatter` whatever it made of it", () => {
+    // The parsed key is a convenience over the frontmatter, never a filter on
+    // it: the generator round-trips its own keys through that record.
+    const parsed = parseDocFile(withFrontmatter("order: first"), "env.md");
+    expect(parsed.frontmatter.order).toBe("first");
+  });
+});
+
+/**
+ * `plainText` is what the search index is built from and what `ts_headline`
+ * cuts snippets out of, so anything reaching it unrendered surfaces in search
+ * results as literal markup. Every generated reference page opens with an
+ * alert, which made this the first thing a reader would see in those results.
+ */
+describe("parseDocFile plainText", () => {
+  it("drops the alert marker and keeps the alert's prose", () => {
+    const source =
+      "---\nname: Env\n---\n\n# Env\n\n> [!NOTE]\n> Generated from source.\n";
+    const { plainText } = parseDocFile(source, "env.md");
+
+    expect(plainText).not.toContain("[!NOTE]");
+    expect(plainText).toContain("Generated from source.");
+  });
+
+  it("drops every marker the renderer understands", () => {
+    for (const kind of ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"]) {
+      const source = `---\nname: Env\n---\n\n# Env\n\n> [!${kind}]\n> Body.\n`;
+      const { plainText } = parseDocFile(source, "env.md");
+
+      expect(plainText).not.toContain("[!");
+      expect(plainText).toContain("Body.");
+    }
+  });
+
+  it("leaves a bracketed phrase that is not a marker alone", () => {
+    const source = "---\nname: Env\n---\n\n# Env\n\n> [!MAYBE] a quote.\n";
+    const { plainText } = parseDocFile(source, "env.md");
+
+    expect(plainText).toContain("[!MAYBE]");
+  });
+});

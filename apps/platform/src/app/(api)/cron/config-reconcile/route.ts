@@ -13,16 +13,13 @@ import { reconcileFromConfig } from "~/server/config/reconcile";
  * Fired on the shared fifteen-minute cron slot (see
  * `cloudflare/scheduled.ts`), and also by
  * `.github/workflows/deploy-app.yaml`'s "Reconcile meetings/workshops from
- * @devdogsuga/events" step (via `@devdogsuga/deploy-checks`' `reconcile-cli`,
+ * @devdogsuga/events" step (via `backstage deploy reconcile`,
  * an authenticated GET reading the JSON body rather than just the status --
- * `pnpm devtools cron run` alone would not have been enough; see that CLI's
- * header) right after each deploy of THIS app -- deliberately not at
+ * `pnpm devtools cron run` alone would not have been enough) right after each deploy of THIS app -- deliberately not at
  * migrate time: `@devdogsuga/events`' config is bundled into the Worker at
  * build time, so a call before this deploy would reconcile the PREVIOUS
- * release's config, and the pre-redesign production Worker this pipeline
- * first promotes onto has no route here at all to call yet. So a promoted
- * config lands the moment THIS deploy finishes, rather than waiting on the
- * next fifteen-minute tick.
+ * release's config. A promoted config therefore lands the moment THIS deploy
+ * finishes, rather than waiting on the next fifteen-minute tick.
  *
  * `getClubConfig()` parses and validates the committed data file; a failure
  * there means the file itself is broken (wrong shape, or its content fails
@@ -59,9 +56,9 @@ export async function GET(request: Request) {
     await postAlert(
       "Config reconcile aborted: committed config does not parse",
       [e instanceof Error ? e.message : String(e)],
-      "`getClubConfig()` threw before reconcile ever ran. Run " +
-        "`pnpm --filter @devdogsuga/events check` to see the same " +
-        "failure locally.",
+      "`getClubConfig()` threw before reconcile ever ran. In the Backstage " +
+        "repo, run `pnpm -F @devdogsuga/events check:events` to see " +
+        "the same failure locally.",
     );
     return NextResponse.json({ success: false, reason: "invalid_config_file" });
   }

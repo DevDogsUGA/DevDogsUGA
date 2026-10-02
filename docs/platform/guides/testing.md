@@ -26,20 +26,17 @@ the parts that only make sense against Postgres — query validity against the
 real schema, and the privilege-surface guards in
 `resolveCredential.db-test.ts` that assert the shape of the GRANTS a
 `security definer` function relies on, which nothing else can see. These
-commands follow the session the same way every `devtools db` command does:
+commands follow the session the same way every `devtools supabase` command does:
 whichever development tier — local or hosted — is currently active, not only
 your own machine.
 
 Before running it locally:
 
 ```bash
-pnpm devtools db start
-pnpm devtools db reset
+pnpm devtools supabase start
+pnpm devtools supabase db reset
+pnpm -F @devdogsuga/supabase types:db
 ```
-
-`test:db` also needs the package's own build (`@devdogsuga/db`'s `/server`
-subpath resolves from `dist/`), so a fresh checkout may need
-`pnpm --filter platform^... build` first — the same step CI takes.
 
 ## The RLS persona suite
 
@@ -64,9 +61,7 @@ for why it's the step that actually proves a moderation integration works.
   starts a local Supabase stack on an empty runner volume (which doubles as
   the "every migration still applies from scratch" check), checks the
   committed `database.types.ts` against a fresh regeneration, then runs the
-  RLS suite, the devtools/devtools-ci process-contract tests
-  (`@devdogsuga/repo-checks test:live`), and `test:db` for both `platform`
-  and `schedule-builder`.
+  RLS suite and `test:db` for both `platform` and `schedule-builder`.
 
 Every credential CI test suite uses is the well-known local-stack constant
 Supabase publishes in its own docs — nothing in CI can reach a real project,

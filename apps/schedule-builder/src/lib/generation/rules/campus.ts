@@ -13,4 +13,8 @@ export const campus: ScheduleRule = {
     // If a campus filter is set, only accept sections on that campus
     return section.campus.id === ctx.campusId;
   },
+  describe: () => ({
+    setting: "your campus filter",
+    requirement: "is on the selected campus",
+  }),
 };

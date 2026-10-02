@@ -6,23 +6,24 @@
   "description": "react-email sources compiled to typed, React-free HTML templates",
   "exports": {
     ".": {
-      "devdogs-source": "./src/runtime/index.ts",
-      "types": "./dist/runtime/index.d.ts",
-      "default": "./dist/runtime/index.js"
+      "types": "./src/runtime/index.ts",
+      "default": "./src/runtime/index.ts"
     }
   },
   "files": [
-    "dist"
+    "src"
   ],
   "scripts": {
-    "build": "tsx scripts/compile.tsx && tsc -p tsconfig.build.json",
-    "compile": "tsx scripts/compile.tsx",
+    "codegen": "tsx scripts/compile.tsx",
+    "pretypecheck": "pnpm run codegen",
+    "pretest": "pnpm run codegen",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "preview": "tsx scripts/preview.ts"
   },
   "devDependencies": {
+    "@devdogsuga/brand": "^0.1.4",
     "@devdogsuga/config": "^0.1.1",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",

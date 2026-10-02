@@ -12,13 +12,14 @@ import hypno from "~/assets/hypno.webp";
  * so Skia re-blurs roughly 12.5 megapixels sixty times a second. Shrinking the
  * blurred area sixfold bought 3 FPS; removing the blur at full size bought 25.
  *
- * So the blur is baked in instead. `scripts/generate-hypno.mjs` renders the
- * same paths, blurs them once, and writes `hypno.webp`; the browser now
- * rotates a finished texture, which is a compositor transform and costs
- * nothing. The look and the motion are unchanged.
+ * So the blur is baked in instead. The original paths were rendered and
+ * blurred once into the committed `hypno.webp` (the generator that did it is
+ * gone; the file is the source now); the browser rotates a finished
+ * texture, which is a compositor transform and costs nothing. The look and
+ * the motion are unchanged.
  *
  * The source is deliberately small, 512px for 58 KB, upscaled ~7x here. That
- * is invisible because the image is blurred: the sweep in the generator found
+ * is invisible because the image is blurred: the sweep when it was made found
  * 1024px cost twice the bytes for no visible gain. It is a plain `<img>`
  * rather than `next/image` on purpose, so the optimizer does not re-encode a
  * blurred texture back up to a larger candidate.

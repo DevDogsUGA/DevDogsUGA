@@ -1,5 +1,5 @@
-import { APPS, OG_SIZE, PageCard } from "@devdogsuga/open-graph";
-import { imageResponse } from "~/lib/ogImage";
+import { APPS, OG_SIZE, PageCard } from "@devdogsuga/brand";
+import { imageResponse } from "@devdogsuga/brand/next";
 
 /**
  * The card a DogDays link unfurls as.

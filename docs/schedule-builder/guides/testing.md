@@ -26,13 +26,10 @@ Postgres: `reconcileTerm.db-test.ts` (the ingestion pipeline's writes) and
 the generated schema's query validity. Start with a database first:
 
 ```bash
-pnpm devtools db start
-pnpm devtools db reset
+pnpm devtools supabase start
+pnpm devtools supabase db reset
+pnpm -F @devdogsuga/supabase types:db
 ```
-
-`test:db` also needs the app's own build (`@devdogsuga/db`'s `/server`
-subpath resolves from `dist/`), so a fresh checkout may need
-`pnpm --filter schedule-builder^... build` first — the same step CI takes.
 
 ## Cloudflare preview, not `next dev`
 
@@ -41,12 +38,12 @@ differently from `next dev` (it runs on `workerd`, the same runtime as
 production). Copy `.dev.vars.example` to `.dev.vars`, then:
 
 ```bash
-pnpm --filter schedule-builder cf:preview   # vinext build, served by workerd
-pnpm --filter schedule-builder cf:dev       # same, with Workflows served locally
+pnpm --filter schedule-builder preview   # vinext build, served by workerd
+pnpm devtools workflows serve --app schedule-builder   # Workflows served locally
 ```
 
 After editing a `wrangler.jsonc` binding, regenerate the Worker types
-(`pnpm --filter schedule-builder cf:typegen`) and commit the diff — CI fails
+(`pnpm --filter schedule-builder types:cf`) and commit the diff — CI fails
 on drift.
 
 ## What CI runs

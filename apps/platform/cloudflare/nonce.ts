@@ -14,17 +14,13 @@
  *
  * Stamping every script is safe only because nothing else can put a
  * `<script>` in the server HTML. React escapes text; the docs compiler fails
- * the build on script in a page (Backstage `packages/docs-compiler`,
+ * the build on script in a page (`packages/docs-kit`,
  * `sanitize.ts`); and the handful of server-rendered `dangerouslySetInnerHTML`
  * sites carry fixed scripts, escaped JSON-LD, or generated markup. A new
  * server-rendered `dangerouslySetInnerHTML` of anything a user wrote would
  * break that, so don't add one.
  */
-import {
-  buildContentSecurityPolicy,
-  CSP_HEADER,
-  generateNonce,
-} from "@devdogsuga/security-headers";
+import { CSP_HEADER, generateNonce, serializeCsp } from "@devdogsuga/headers";
 import { platformSecurityHeaders } from "~/lib/securityHeaders";
 
 function isHtml(response: Response): boolean {
@@ -60,10 +56,7 @@ export function withEdgeNonce(response: Response): Response {
     .transform(response);
 
   const headers = new Headers(rewritten.headers);
-  headers.set(
-    CSP_HEADER,
-    buildContentSecurityPolicy(platformSecurityHeaders(nonce)),
-  );
+  headers.set(CSP_HEADER, serializeCsp(platformSecurityHeaders(nonce).csp));
   // The rewrite changes the length.
   headers.delete("Content-Length");
   return new Response(rewritten.body, {

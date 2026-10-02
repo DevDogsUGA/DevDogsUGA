@@ -1,4 +1,5 @@
 import { getNavUser, toMeResponse } from "~/components/TopNav/data";
+import { isOwnScript } from "~/lib/isOwnScript";
 
 /**
  * The signed-in viewer, for the navbar. Pages render with no user so their
@@ -13,16 +14,6 @@ import { getNavUser, toMeResponse } from "~/components/TopNav/data";
  * session cookie alone decides what it returns.
  */
 export const dynamic = "force-dynamic";
-
-function isOwnScript(request: Request): boolean {
-  const headers = request.headers;
-  if (headers.get("Sec-Fetch-Mode") === "navigate") return false;
-  if (headers.get("Sec-Fetch-Dest") === "document") return false;
-  // Absent in old browsers and non-browser clients; only a present,
-  // cross-site value is refused.
-  const site = headers.get("Sec-Fetch-Site");
-  return site === null || site === "same-origin";
-}
 
 export async function GET(request: Request) {
   if (!isOwnScript(request)) {

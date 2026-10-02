@@ -10,7 +10,7 @@ It owns **no Postgres schema** in the shared database.
 ## Develop
 
 ```bash
-pnpm dev --filter sandbox   # wrangler dev
+pnpm -F sandbox dev   # wrangler dev
 ```
 
 ## Docs

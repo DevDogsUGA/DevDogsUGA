@@ -24,7 +24,7 @@ nothing to break.
 ## Run it
 
 ```bash
-pnpm dev --filter platform
+pnpm -F platform dev
 ```
 
 Confirm your change shows up in the top nav at `localhost:3000`. You don't

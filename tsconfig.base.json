@@ -5,7 +5,7 @@
   // packages/*/tsconfig.json still extend it by this historical repo-relative
   // path: apps/*/cloudflare/tsconfig.json, apps/sandbox/tsconfig.json,
   // apps/study-group-finder/tsconfig.json (env.ts only), packages/supabase,
-  // packages/repo-checks, and supabase/tsconfig.json (env.ts only, invoked
+  // and supabase/tsconfig.json (env.ts only, invoked
   // from packages/supabase's typecheck script). `packages/devtools` used to
   // be in this list; it moved to Backstage in the devtools cutover and no
   // longer lives in this repo at all. None of those is itself a

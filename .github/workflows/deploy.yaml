@@ -60,64 +60,38 @@ env:
 # newly required variable with no value must fail the build rather than reach
 # production undefined (security plan §A.6.3).
 #
-# ── the two devtools entry points, and why every step names one ──────────────
+# ── how the steps run `backstage` ────────────────────────────────────────────
 #
-# Every step below runs a `devtools-ci deploy <step>` command against
-# `@devdogsuga/devtools`, consumed from npm at the exact version the root
-# `package.json` pins (published from Backstage), not a workspace package. Which entry point a step uses is still NOT a style
-# choice, but the shapes changed in the Backstage cutover (Wave 2, stage B):
+# Every step below is a `pnpm backstage …` command: the root script, which is
+# `pnpm dlx @devdogsuga/backstage`, always the latest publish and never a
+# pinned version (the repository carries no devDependency on it).
 #
-#   pnpm exec devtools-ci-bare   the installed `devtools-ci-bare` bin
-#                                (`@devdogsuga/devtools`'s own third bin,
-#                                `bin/devtools-ci-bare.mjs` -> `dist/ci.js`'s
-#                                `main()` directly) — no tier resolution, no
-#                                env file. The real, published counterpart of
-#                                the old in-repo bare `run ci` package script
-#                                (`node dist/ci.js`, unwrapped). Until
-#                                Backstage's Wave 2 gaps pass, the published
-#                                package shipped only two `bin`s (`devtools`,
-#                                `devtools-ci`), and `devtools-ci`
-#                                unconditionally resolves a tier and loads its
-#                                env file before dispatching — so this repo
-#                                carried an interim `scripts/
-#                                devtools-ci-bare.mjs` workaround that
-#                                imported `dist/ci.js` directly. Deleted now
-#                                that devtools ships the real bin.
-#   pnpm exec devtools-ci       the installed `devtools-ci` bin — resolves the
-#                                tier and loads its env file FIRST
-#                                (`bin/devtools-ci.mjs` -> `src/launch-ci.ts`)
-#                                before dispatching into `ci.ts`.
+# Every step also passes `--yes`. backstage asks before acting on staging or
+# production, and with no terminal it refuses rather than ask; here the
+# workflow, its triggers and the environments' reviewers are the confirmation.
 #
-# ⚠️ `deploy write-env` is the step that CREATES .env.$DEPLOY_ENV, so routing
-# it through tier resolution is a bootstrap cycle: it would die on
-# MissingEnvFileError for the file it was about to write. It uses
-# `devtools-ci-bare`.
+# Whether a step passes `--no-env` is NOT a style choice:
 #
-# `deploy orphans`, `deploy preflight`, `deploy require-token`,
-# `deploy require-planner`, `deploy plan` and `deploy migrate` use
-# `devtools-ci-bare` for a different reason — they run in jobs that hold one
-# narrow credential and compose no env file at all, so a tier-resolving entry
-# point would exit reporting a missing FILE rather than the missing TOKEN or
-# the paused project, which is the one thing those jobs exist to say. This is
-# NOT about the two nested cases: inside `with-env -c '…'` a resolving wrapper
-# would be value-neutral anyway, because dotenvx leaves an already-set value
-# alone. It is about the BARE runs in the orphan-audit and prune jobs, and the
-# same entry point is used in both places so there is one answer rather than
-# two.
-#
-# Everything downstream of write-env uses `pnpm exec devtools-ci`: the quiet
-# CI entry point that resolves the tier and loads the env file write-env
-# composed before `ci.ts` runs. Reading those values is the entire point,
-# while keeping clack banners away from credential-bearing stdout.
+#   --no-env     No tier resolution, no env file: the environment the step
+#                names is the environment the command gets. Used by every step
+#                that runs in a job holding one narrow credential in its own
+#                `env:` block (`deploy preflight`, `plan`, `migrate`,
+#                `planner status`, `env audit`), where a tier-resolving run
+#                would exit reporting a missing FILE rather than the missing
+#                TOKEN or the paused project, which is the one thing those jobs
+#                exist to say. Also `deploy write-env`, which CREATES
+#                .env.$DEPLOY_ENV, so routing it through tier resolution would
+#                die on the missing file it was about to write.
+#   (no flag)    Loads the tier's env file first. Everything downstream of
+#                write-env in deploy-app.yaml, because reading those values is
+#                the entire point.
 #
 # ⚠️ NOTHING here may run a deploy command through a wrapper that writes to
 # stdout. A deploy command's stdout is a channel something downstream may
 # PARSE — a GitHub workflow command recognised only on a line of its own, or a
 # credential its caller takes whole, either of which a decorative banner would
-# corrupt. Measured empirically for both entry points used here: `pnpm exec
-# <bin>` prints nothing of its own to stdout, and `pnpm run <script>`'s own
-# `$ <command>` banner goes to stderr — `intro()` does not, which is why
-# ci.ts suppresses it for this group.
+# corrupt. `pnpm backstage` prints nothing of its own to stdout, and `pnpm run`'s
+# own `$ <command>` banner goes to stderr.
 
 jobs:
   # ── staging ─────────────────────────────────────────────────────────────────
@@ -144,13 +118,14 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # This job used to skip `pnpm install` entirely — the probe was a
       # standalone script importing nothing outside node: builtins, and that
-      # kept the job to a few seconds. It is a devtools command now, so the
-      # install (part of setup-workspace) is back. The trade is deliberate: a
-      # cached install is a few tens of seconds against a probe that shares the
-      # CLI's error reporting and is covered by the same suite as everything
-      # else here, rather than being the one step in the pipeline nothing tests.
+      # kept the job to a few seconds. It is a backstage command now, so the
+      # install (part of setup-workspace, and what provides `pnpm`'s config for
+      # the dlx run) is back. The trade is deliberate: a cached install is a few
+      # tens of seconds against a probe that shares the CLI's error reporting
+      # and is covered by the same suite as everything else here, rather than
+      # being the one step in the pipeline nothing tests.
       - uses: ./.github/actions/setup-workspace
-      # run ci — there is no env file in this job, and there must not be:
+      # --no-env — there is no env file in this job, and there must not be:
       # it holds `vars` only, so that one unauthenticated request classifies
       # the project before any credential is in scope.
       - name: Classify the Supabase project
@@ -158,8 +133,7 @@ jobs:
         env:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
-        run: >-
-          pnpm exec devtools-ci-bare deploy preflight
+        run: pnpm backstage deploy preflight --no-env --yes
 
   # Staging had no migrate job at all, which meant staging ran whatever schema
   # it happened to be left with. A migration that added a function some
@@ -185,13 +159,13 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
-      # run ci — one credential (DB_URL) in the step's env:, no composed env
+      # --no-env — one credential (DB_URL) in the step's env:, no composed env
       # file. `deploy migrate` is the bare `supabase db push --yes`; it does NOT
       # regenerate types, so nothing is written back into the checkout.
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm exec devtools-ci-bare deploy migrate
+        run: pnpm backstage deploy migrate --no-env --yes
 
   # The per-tier deploy recipe lives in the reusable `deploy-app.yaml`; this
   # caller is the gating in front of it. `secrets: inherit` is load-bearing —
@@ -232,18 +206,17 @@ jobs:
       # plan succeeds, `env push` uploads it, `env audit` sees no drift. A live
       # connection is the only place the difference shows, so this step opens
       # one: it must authenticate as the planner, FAIL to read
-      # platform.profile, and succeed on the migrations table. `run ci`
+      # platform.profile, and succeed on the migrations table. `--no-env`
       # like the other one-credential guards.
       - name: The credential is the planner role, and no more
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: >-
-          pnpm exec devtools-ci-bare deploy require-planner
+        run: pnpm backstage planner status --no-env --yes
       # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
       # push` exits 1 on a connection failure, and a pipeline without it reports
       # the exit code of `tee` — so a dry run that never connected reads as a
       # clean plan.
-      # run ci — one credential (the planner-role DB_URL) in the step's env:,
+      # --no-env — one credential (the planner-role DB_URL) in the step's env:,
       # no composed env file. `deploy plan` captures `supabase db push
       # --dry-run` and writes the labelled, fenced plan to the job summary
       # itself; its throw on a failed connection is what the old `set -o
@@ -253,7 +226,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm exec devtools-ci-bare deploy plan
+          pnpm backstage deploy plan --no-env --yes
           --label 'Migration plan — production (from `main`)'
 
   # ── production ──────────────────────────────────────────────────────────────
@@ -279,7 +252,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm exec devtools-ci-bare deploy plan
+          pnpm backstage deploy plan --no-env --yes
           --label 'Migration plan — production'
       # `supabase config` has exactly one subcommand — `push`. No pull, no diff,
       # no --dry-run. So config.toml is the highest blast radius (site_url and
@@ -330,12 +303,12 @@ jobs:
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm exec devtools-ci-bare deploy migrate
+        run: pnpm backstage deploy migrate --no-env --yes
 
   # The one mutation with no dry run gets its own approval step, which is what
   # `production-apply` is: the same Bitwarden project as `production`, split
   # across two GitHub environments, with required reviewers on this half. That
-  # split IS the gate — see Backstage's packages/devtools/src/gh/environments.ts.
+  # split IS the gate — see Backstage's packages/backstage/src/bws/environments.ts.
   #
   # Skipped when config.toml did not change, so the approval is asked for when
   # there is something to approve rather than on every promotion.
@@ -369,10 +342,10 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # run ci for the same bootstrap reason as the other write-env
+        # --no-env for the same bootstrap reason as the other write-env
         # steps: this composes .env.production, which nothing has written yet.
         run: >-
-          pnpm exec devtools-ci-bare deploy write-env
+          pnpm backstage deploy write-env --no-env --yes
           --source supabase
       # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
       # the operator manifest, not to supabase's, and `with-env` leaves a value
@@ -419,17 +392,14 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
-      # No env file; run ci on both lines: this reads secret NAMES
-      # from Cloudflare and needs exactly one credential to do it. The existing
-      # guard is invoked rather than reimplemented, so a missing token says who
-      # to ask instead of dropping into wrangler's browser OAuth.
+      # --no-env: no env file. This reads secret NAMES from Cloudflare and
+      # needs exactly one credential to do it. `env audit` checks for the token
+      # itself, so a missing one says who to ask instead of dropping into
+      # wrangler's browser OAuth.
       - name: Report orphaned Worker secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          pnpm exec devtools-ci-bare deploy require-token
-          pnpm exec devtools-ci-bare deploy orphans
+        run: pnpm backstage env audit --target production --no-env --yes
 
   # Deleting them is a separate, deliberate, human-triggered run — never
   # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
@@ -444,7 +414,7 @@ jobs:
   # `CLOUDFLARE_API_TOKEN` is deploy-tier, and it reaches this environment
   # because `production-apply` receives everything `production` does plus the
   # apply-tier pair. The token being deploy-tier is right — pruning has a dry run,
-  # `deploy orphans` without `--prune`, and it is the job above — so what puts a
+  # `env audit` without `--prune`, and it is the job above — so what puts a
   # human in front of the deletion is this environment's reviewers rather than
   # the tier. Until 2026-08-17 the routing withheld it and this job could not
   # have run.
@@ -459,7 +429,6 @@ jobs:
       - name: Prune orphaned Worker secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          pnpm exec devtools-ci-bare deploy require-token
-          pnpm exec devtools-ci-bare deploy orphans --prune
+        # --yes: there is no terminal to confirm at. The confirmation is this
+        # environment's reviewers.
+        run: pnpm backstage env audit --target production --prune --yes --no-env

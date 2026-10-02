@@ -9,8 +9,9 @@
  * just as deliberately, no `sentry.server.config.ts` / `instrumentation.ts`
  * server-side `Sentry.init()` call anywhere in this app: server capture is
  * wired in `cloudflare/worker.ts` via `@sentry/cloudflare`'s `withSentry`
- * instead, because the `@sentry/nextjs` server pattern crashes under
- * OpenNext-on-Workers (see the comment in `cloudflare/worker.ts` for why).
+ * instead, because it must wrap vinext's request context from the outside
+ * (see the historical failure and current constraint in
+ * `cloudflare/worker.ts`).
  *
  * Minimal by design, per the workspace's settled Sentry scope: error capture
  * only. No browser tracing (`tracesSampleRate: 0` here, unconditionally --

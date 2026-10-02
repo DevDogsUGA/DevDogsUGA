@@ -12,14 +12,14 @@ For monorepo setup, env handling, and the contribution workflow, see
 ## Develop
 
 ```bash
-pnpm dev --filter schedule-builder   # local stack auto-detected, else remote
+pnpm -F schedule-builder dev   # local stack auto-detected, else remote
 ```
 
 Schema changes follow the shared workflow in
 [Database](../../docs/platform/guides/database.md): write SQL under
-`supabase/migrations/` by hand (`pnpm devtools db migration new --app
-schedule-builder`), replay it, then run `pnpm devtools db introspect --app
-schedule-builder` to regenerate the Drizzle schema from the live DB. See
+`supabase/migrations/` by hand (`pnpm devtools preset new-migration --app
+schedule-builder`), replay it, then run `pnpm -F schedule-builder
+types:drizzle` to regenerate the Drizzle schema from the live DB. See
 [Database](../../docs/schedule-builder/guides/database.md) for what's
 specific to this app's schema.
 
@@ -33,10 +33,10 @@ Cloudflare Workflow (`cloudflare/ScrapeWorkflow.ts`), with parsing in
 
 ## Deploy
 
-Deploys to Cloudflare Workers via vinext like the platform app: `cf:preview`
-locally; CI runs `cf:build:*` through `.github/workflows/deploy-app.yaml`. Branded **DogDays**, on its own zone:
+Deploys to Cloudflare Workers via vinext like the platform app: `pnpm -F schedule-builder preview`
+locally; CI runs `DEPLOY_ENV=<tier> pnpm build` through `.github/workflows/deploy-app.yaml`. Branded **DogDays**, on its own zone:
 `dogdays.dev` (production) and `staging.dogdays.dev` (staging), as custom
 domains in `wrangler.jsonc` — keep `SCHEDULE_BUILDER_URL` in step, since
 nothing cross-checks them. In-app branding is DogDays throughout, drawing the
-mark and app copy from `@devdogsuga/open-graph`, with its own light/dark zinc-and-red
+mark and app copy from `@devdogsuga/brand`, with its own light/dark zinc-and-red
 design (system `prefers-color-scheme`; not the platform's design language).

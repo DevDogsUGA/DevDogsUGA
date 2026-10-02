@@ -1,5 +1,5 @@
 /**
- * File diffs in a compiled docs page. `@devdogsuga/docs-compiler` turns a
+ * File diffs in a compiled docs page. `@devdogsuga/docs-kit` turns a
  * top-level ```` ```diff file=… ```` block into an empty
  * `<div data-docs-diff="…">` whose attribute is `{ file, lang, patch }` as
  * base64 JSON (see the compiler's `diffs.ts`), plus both versions of the file

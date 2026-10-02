@@ -1,17 +1,48 @@
 ---
 name: Prerequisites
-description: Everything to install before you clone the repo — OS setup, Git and GitHub, the Node toolchain, Docker, and Flutter for study-group-finder.
+description: Everything to install before you start — OS setup, Git and GitHub, an editor, the Node toolchain, Docker, and Flutter.
 order: 1
 section: getting-started
-mount: [platform, schedule-builder, study-group-finder]
+mount: [platform, schedule-builder, study-group-finder, workshops]
 ---
 
 # Prerequisites
 
+:::only{project="platform schedule-builder study-group-finder"}
 Everything here happens before you clone the repo. [Running the project](./running)
 picks up from the clone.
+:::
+
+:::only{project="workshops"}
+Install these before your first workshop. Everyone needs the first section;
+after that, you only need the section for your track.
+
+- [For everyone](#for-everyone): OS setup, Git and GitHub, and VS Code
+- [For the Next.js track](#for-the-nextjs-track): Node and pnpm
+- [For the Flutter track](#for-the-flutter-track): the Flutter SDK and an emulator
+
+> [!NOTE]
+> This is the workshop subset. Contributing to the monorepo's projects (DogDays,
+> DogPack, the platform) also needs Docker for the local database, Git
+> line-ending settings, and a few other things: follow the full
+> [Prerequisites](/docs/schedule-builder/getting-started/prerequisites) in that
+> project's docs instead.
+
+## For everyone
+
+:::
+
+:::only{project="workshops"}
+
+### OS setup
+
+:::
+
+:::only{project="platform schedule-builder study-group-finder"}
 
 ## OS setup
+
+:::
 
 :::tabs{group="os"}
 ::tab{value="macos"}
@@ -90,13 +121,33 @@ winget install --id Git.Git -e --source winget
 
 :::
 
+:::only{project="workshops"}
+
+### Git and a GitHub account
+
+:::
+
+:::only{project="platform schedule-builder study-group-finder"}
+
 ## Git and a GitHub account
+
+:::
 
 You need Git (installed above) and a [GitHub account](https://github.com/join).
 Fork the repository if you don't have push access, and set up how you
 authenticate to GitHub over the command line — SSH keys or
 [`gh auth login`](https://cli.github.com/) both work; pick whichever you
 already use.
+
+Tell Git who you are, once per machine. Every commit records it, and
+`git commit` refuses to run without it:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+Use the email on your GitHub account, so GitHub links your commits to you.
 
 <details>
 <summary>Why?</summary>
@@ -106,10 +157,56 @@ GitHub — nothing about this repo's workflow is unusual there.
 
 </details>
 
+:::only{project="workshops"}
+
+### Editor
+
+:::
+
+:::only{project="platform schedule-builder study-group-finder"}
+
+## Editor
+
+:::
+
+:::only{project="workshops"}
+Install [VS Code](https://code.visualstudio.com/). The workshops use it
+throughout: the Flutter track installs its SDK through VS Code's Flutter
+extension, and each step's **Review in VS Code** button opens that step's
+changes in it.
+:::
+
+:::only{project="platform schedule-builder study-group-finder"}
+Nothing here is required, but VS Code is what the docs assume.
+:::
+
+If you use VS Code on WSL2, install the
+[WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl)
+and open the repo with `code .` from inside the Ubuntu terminal, not from
+Windows. This runs the editor's server inside WSL, next to your files, which
+is what makes IntelliSense and the terminal agree with each other.
+
+:::only{project="workshops"}
+
+## For the Next.js track
+
+Node runs Next.js, and pnpm installs its packages.
+:::
+
+:::only{project="workshops"}
+
+### Node, through fnm
+
+:::
+
+:::only{project="platform schedule-builder study-group-finder"}
+
 ## Node, through fnm
 
+:::
+
 We use [fnm](https://github.com/Schniz/fnm) rather than nvm or a system
-package: it reads `.nvmrc` and switches automatically when you `cd` into the
+package: it reads `.nvmrc` and switches automatically when you `cd` into a
 repo, and it's a single native binary with no shell-startup cost worth
 noticing.
 
@@ -145,34 +242,56 @@ The PowerShell profile is the file at `$PROFILE`. Create it if
 **Open a new terminal after adding this line** — it does nothing
 retroactively in the one you edited it from. Without it, a fresh terminal
 falls back to whatever Node your system has (or none), and `pnpm` fails with
-a confusing error instead of a clear "Node not found." See
-[fnm not found](./troubleshooting#fnm-not-found) if that still isn't
+a confusing error instead of a clear "Node not found."
+:::only{project="platform schedule-builder study-group-finder"}
+See [fnm not found](./troubleshooting#fnm-not-found) if that still isn't
 happening.
+:::
 
+:::only{project="platform schedule-builder study-group-finder"}
 For now, install any recent Node so `npm` can install pnpm below:
+:::
+
+:::only{project="workshops"}
+Install the current long-term-support Node:
+:::
 
 ```bash
 fnm install --lts
 ```
 
+:::only{project="platform schedule-builder study-group-finder"}
 After cloning, [Running the project](./running) switches you to the exact
 version the repo pins; fnm reads it from `.nvmrc`, so there's nothing to pick.
 
 `.nvmrc` pins **24**. The repo's actual floor is **22.12** — pnpm 11 needs
 `node:sqlite`, stable there — so 24 is the version everyone should be on, not
 the minimum that happens to work.
+:::
+
+:::only{project="workshops"}
+
+### pnpm
+
+:::
+
+:::only{project="platform schedule-builder study-group-finder"}
 
 ## pnpm
+
+:::
 
 ```bash
 npm install -g pnpm
 ```
 
-Don't run `corepack enable`. The repo pins an exact version
-(`packageManager` in the root `package.json`), and a globally-installed pnpm
+Don't run `corepack enable`. Each repo pins an exact version
+(`packageManager` in its root `package.json`), and a globally-installed pnpm
 reads that pin and re-execs itself as the pinned version the first time it
 runs in the repo — no separate activation step, nothing to remember to re-run
 after a pin bump.
+
+::::only{project="platform schedule-builder study-group-finder"}
 
 ## Git line endings
 
@@ -225,14 +344,15 @@ take effect.
 Not available. There's no local Docker path documented for native Windows —
 use hosted Supabase.
 :::
+::::
 
-## Editor
+::::only{project="study-group-finder workshops"}
 
-Nothing here is required, but if you use VS Code on WSL2, install the
-[WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl)
-and open the repo with `code .` from inside the Ubuntu terminal, not from
-Windows. This runs the editor's server inside WSL, next to your files, which
-is what makes IntelliSense and the terminal agree with each other.
+:::only{project="workshops"}
+
+## For the Flutter track
+
+:::
 
 :::only{project="study-group-finder"}
 
@@ -240,33 +360,52 @@ is what makes IntelliSense and the terminal agree with each other.
 
 study-group-finder targets **Android and iOS only** — there is no `web/`
 runner directory, and no `flutter build web` path is documented for it. You
-need the [Flutter SDK](https://docs.flutter.dev/get-started/install) on
-`PATH` (`pubspec.yaml` pins the Dart SDK to `^3.5.0`) plus an emulator to run
-against. Nothing else in the monorepo needs Flutter, so a contributor without
-it is never blocked on the rest of the repo.
+need the Flutter SDK on `PATH` (`pubspec.yaml` pins the Dart SDK to
+`^3.5.0`) plus an emulator to run against. Nothing else in the monorepo needs
+Flutter, so a contributor without it is never blocked on the rest of the repo.
+:::
+
+:::only{project="workshops"}
+The Flutter track needs the Flutter SDK on `PATH` and an emulator to run the
+app on. You don't need Node or pnpm for it.
+:::
 
 :::tabs{group="os"}
-::tab{value="windows"}
+::tab{value="windows macos"}
 
-1. Install the [Flutter SDK for Windows](https://docs.flutter.dev/get-started/install/windows)
-   and add it to `PATH` (the installer, or the VS Code Flutter extension,
-   offers to do this for you).
-2. Install [Android Studio](https://developer.android.com/studio), then open
-   **More Actions → Virtual Device Manager** and create an Android emulator.
-3. Run `flutter doctor` in a fresh terminal and resolve anything it flags
-   (missing Android licenses are the usual one:
-   `flutter doctor --android-licenses`).
+The VS Code Flutter extension downloads the SDK and puts it on `PATH` for you.
 
-::tab{value="macos"}
+1. In VS Code, open the **Extensions** view, then search for and install
+   **Flutter** (it installs the Dart extension too).
+2. Open the Command Palette (**Ctrl+Shift+P** on Windows, **Cmd+Shift+P** on
+   macOS), type `flutter`, and choose **Flutter: New Project**.
+3. When it says it can't find a Flutter SDK, choose **Download SDK** and pick
+   your user folder (`C:\Users\<you>` on Windows, your home folder on
+   macOS). Avoid folders that need admin rights, like Program Files.
+4. When it offers to **Add SDK to PATH**, accept. Once the download finishes
+   you can cancel the new project (**Esc**): the SDK is what you wanted.
+5. Open the Command Palette again and run **Developer: Reload Window**, so VS
+   Code picks up the new `PATH`.
+6. Install [Android Studio](https://developer.android.com/studio) and run its
+   setup wizard, which installs the Android SDK. Then open **More Actions →
+   Virtual Device Manager**, create a device (any recent Pixel works), and
+   start it.
+7. In a new terminal, run `flutter doctor` and resolve anything it flags.
+   Missing Android licenses are the usual one: `flutter doctor --android-licenses`.
 
-1. Install the SDK with Homebrew: `brew install --cask flutter` (or follow
-   [Flutter's macOS install guide](https://docs.flutter.dev/get-started/install/macos)).
-2. For Android, install Android Studio and create a virtual device the same
-   way as native Windows.
-3. For iOS, install Xcode from the App Store, then `xcode-select --install`
-   for the command-line tools. `open -a Simulator` boots the iOS Simulator;
-   `flutter devices` should list it once Xcode is set up.
-4. Run `flutter doctor` and resolve anything it flags.
+On macOS, to build for iOS as well, install Xcode from the App Store, then
+`xcode-select --install` for the command-line tools. `open -a Simulator` boots
+the iOS Simulator; `flutter devices` should list it once Xcode is set up.
+
+<details>
+<summary>Installing the SDK without VS Code</summary>
+
+On macOS, `brew install --cask flutter`. On either system, Flutter's own
+[install guide](https://docs.flutter.dev/get-started/install) walks through
+the manual download and adding it to `PATH`. Android Studio and the emulator
+are the same as step 6 above.
+
+</details>
 
 ::tab{value="linux wsl"}
 Flutter on Linux builds for Android only (no iOS toolchain). Follow
@@ -277,7 +416,7 @@ install Android Studio for the SDK and an emulator, and run `flutter doctor`.
 ### Running the SDK inside WSL2 against an emulator on Windows
 
 <details>
-<summary>study-group-finder under WSL2, instead of native Windows</summary>
+<summary>Flutter under WSL2, instead of native Windows</summary>
 
 The repo itself lives happily in WSL2. Flutter and the Dart SDK run inside
 the distro; Android Studio and the emulator itself still run on Windows,
@@ -318,10 +457,14 @@ Supabase containers — and the local stack isn't documented for native
 Windows at all, so this only comes up if you're also on WSL2 for the
 database.
 
+:::only{project="study-group-finder"}
 See [adb no devices](./troubleshooting#adb-no-devices) if `flutter run`
 reports no connected devices.
+:::
 
 </details>
+
+:::only{project="study-group-finder"}
 
 ### Verify
 
@@ -335,7 +478,21 @@ not replace `flutter doctor` — Flutter's own prerequisites are Flutter's to
 check.
 :::
 
+::::
+
+:::only{project="workshops"}
+
+## Next
+
+Head back to the workshop you came from, or start at the beginning:
+[Intro to Next.js](/docs/workshops/framework-intros/nextjs/setup) or
+[Intro to Flutter](/docs/workshops/framework-intros/flutter/setup).
+:::
+
+:::only{project="platform schedule-builder study-group-finder"}
+
 ## Next
 
 [Running the project](./running) — clone, install, database, sign-in, and
 starting the app.
+:::

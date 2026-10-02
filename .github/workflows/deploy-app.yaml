@@ -74,13 +74,11 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # ⚠️ devtools-ci-bare — this step CREATES the file tier resolution
-        # would insist on reading, so routing it through `devtools-ci` would
-        # fail on MissingEnvFileError for its own output. See deploy.yaml's
-        # header for the full explanation of `devtools-ci` vs
-        # `devtools-ci-bare` (`@devdogsuga/devtools`'s own third bin).
-        run: >-
-          pnpm exec devtools-ci-bare deploy write-env
+        # ⚠️ --no-env — this step CREATES the file tier resolution would
+        # insist on reading, so routing it through tier resolution would fail
+        # on a missing env file for its own output. See deploy.yaml's header
+        # for what `--no-env` means.
+        run: pnpm backstage deploy write-env --no-env --yes
       # The Sentry release action runs in its own container and never sees the
       # file above, so the org slug (a committed value in devtools' manifest,
       # not a GitHub variable) is lifted into the job environment for it and
@@ -90,12 +88,10 @@ jobs:
       # got a 404.
       - name: Export SENTRY_ORG from .env.${{ inputs.tier }}
         run: grep -m1 '^SENTRY_ORG=' ".env.$DEPLOY_ENV" | tr -d "\"'" >> "$GITHUB_ENV"
-      - name: Build the workspace packages this app depends on
-        run: pnpm -r --filter '${{ matrix.app }}^...' run build
       # `vinext build`, with the env schema ENFORCED.
       - name: Build ${{ matrix.app }}
         env:
-          # SENTRY_RELEASE: read by `devtools`' `ci.ts` at deploy time (a step
+          # SENTRY_RELEASE: read by `backstage deploy` at deploy time (a step
           # below), not by this build — kept here too so a build run outside
           # that deploy step still carries it, harmlessly, since nothing in
           # THIS step's output reads it.
@@ -109,7 +105,14 @@ jobs:
           # `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc for why a
           # per-deploy git SHA doesn't fit `EnvScope`.
           NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
+          # The tier, set on the process so it wins over `.env.<tier>`. The
+          # GitHub environments store NEXT_PUBLIC_DEPLOY_ENV as the formula
+          # `$DEPLOY_ENV`, and write-env writes it into the file unexpanded, so
+          # the build saw the literal string. The per-tier build scripts used to set
+          # both of these, which is why nothing caught it until they went.
+          NEXT_PUBLIC_DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
+          CLOUDFLARE_ENV: ${{ env.DEPLOY_ENV }}
+        run: pnpm --filter ${{ matrix.app }} run build
       # ⚠️ GATING, PER AN EXPLICIT DECISION: SENTRY_AUTH_TOKEN absent means the
       # Sentry org is not onboarded yet, and that must be a visible skip, not
       # a silent one — hence the warning step below rather than folding the
@@ -136,36 +139,37 @@ jobs:
           # record and its source maps, not a changelog.
           set_commits: skip
           # Both Next.js apps build through vinext now (see each app's
-          # `cf:build:$DEPLOY_ENV`), which writes maps under BOTH
+          # `build`, tier from DEPLOY_ENV), which writes maps under BOTH
           # `dist/client` (browser bundle) and `dist/server` (the Worker
           # bundle, `dist/server/index.js.map`), so their path is the `dist`
           # parent rather than either half alone.
           sourcemaps: apps/${{ matrix.app }}/dist
-      # Written to a mkdtemp 0700 directory and removed below whatever happens.
-      - name: Compose the Worker secrets file
-        id: secrets
-        # `pnpm exec devtools-ci` — the quiet CI entry point that loads the env
-        # file — because the whole job of this step is to read the values
-        # write-env composed.
-        run: >-
-          pnpm exec devtools-ci deploy secrets-file
-          --app ${{ matrix.app }}
-      # One step for both Workers via devtools-ci deploy — the
-      # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for both,
-      # `--var SENTRY_RELEASE:…`.
+      # `backstage deploy <app>` is the whole Worker deploy: it refuses without
+      # CLOUDFLARE_API_TOKEN, writes the Worker's secrets file from the app's
+      # manifest into a mkdtemp 0700 directory, runs `wrangler deploy` with it
+      # and removes it again whatever happened. It loads the env file write-env
+      # composed (no `--no-env`), which is where those values come from.
       - name: Deploy ${{ matrix.app }}
         env:
-          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-          # Read by `ci.ts`'s `runAppDeploy`, which forwards it to
-          # `wrangler deploy` as `--var SENTRY_RELEASE:…` — the ONLY way this
-          # reaches each Worker's runtime `env`, since neither reads it from
-          # `~/env`'s schema or a committed wrangler.jsonc var.
+          # Read by `backstage deploy`, which forwards it to `wrangler deploy`
+          # as `--var SENTRY_RELEASE:…` — the ONLY way this reaches each
+          # Worker's runtime `env`, since neither reads it from `~/env`'s
+          # schema or a committed wrangler.jsonc var.
           # `cloudflare/worker.ts` and `ScrapeWorkflow.ts` both pass this
           # through to `buildSentryOptions({ release })` so captured events
           # associate with the release this job's `action-release` step
           # created and uploaded source maps against.
           SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm exec devtools-ci deploy ${{ matrix.app }} --tier $DEPLOY_ENV
+        run: pnpm backstage deploy ${{ matrix.app }} --tier $DEPLOY_ENV --yes
+      # The docs search index lives in the platform's database, written from the
+      # compiled docs the build step above produced, and the Worker serves it as
+      # soon as it is live. After the deploy rather than before: the index
+      # should not describe pages the previous Worker cannot render yet.
+      # `populate:search` runs through `with-env`, so it reads the tier's env
+      # file for the database URL like any local run would.
+      - name: Index the docs for search
+        if: matrix.app == 'platform'
+        run: pnpm -F @devdogsuga/docs populate:search
       # Reconciles `meetings`/`workshops` against @devdogsuga/events, the
       # moment this deploy's own code is live rather than waiting on the
       # next fifteen-minute cron slot (see
@@ -174,17 +178,16 @@ jobs:
       # deploy, and not at migrate time in deploy.yaml: the config
       # `@devdogsuga/events` bundles into the Worker is baked in at build
       # time, so calling this route at migrate time would reconcile against
-      # whatever config the PREVIOUS release shipped with, not this one's —
-      # and on production specifically, the currently-deployed Worker (still
-      # pre-redesign, ahead of this pipeline's first promote) has no
-      # `/cron/config-reconcile` route at all, so a migrate-time call there
-      # 404s and would block that promote forever.
+      # whatever config the PREVIOUS release shipped with, not this one's.
       #
       # `devtools cron run` was NOT used here even though it already wraps
       # an authenticated GET at this route: it only checks the HTTP status,
       # and this route answers 200 even when the reconcile itself failed
       # (`{ success: false, reason: … }`) — a real failure would pass
-      # silently. @devdogsuga/deploy-checks' reconcile-cli reads the body.
+      # silently. `backstage deploy reconcile` reads the body.
+      #
+      # --no-env: the one credential is CRON_SECRET, in this step's env:. The
+      # host comes from workers.json's `smoke` field.
       #
       # `matrix.app == 'platform'` only: the config being reconciled
       # (meetings, workshops) is platform's alone, and schedule-builder
@@ -193,9 +196,7 @@ jobs:
         if: matrix.app == 'platform'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: >-
-          pnpm --filter @devdogsuga/deploy-checks run reconcile
-          -- --tier $DEPLOY_ENV
+        run: pnpm backstage deploy reconcile --tier $DEPLOY_ENV --no-env --yes
       # Read-only smoke test against the Worker version just deployed: every
       # listed public route answers 200, the one known protected route
       # redirects an anonymous request, and — only when SENTRY_AUTH_TOKEN is
@@ -203,18 +204,12 @@ jobs:
       # config-reconcile: the step immediately above is now the one and
       # only place that runs, so this would otherwise trigger it twice.
       # Fails the job (and so this deploy) on any non-skipped failure. No
-      # state-changing request of any kind.
+      # state-changing request of any kind. --no-env: the credentials it uses
+      # (SENTRY_AUTH_TOKEN, SENTRY_ORG) are already in the job environment, and
+      # the routes and hosts come from workers.json's `smoke` field.
       - name: Smoke test ${{ matrix.app }} (${{ env.DEPLOY_ENV }})
         env:
           SENTRY_PROJECT: ${{ matrix.app }}
         run: >-
-          pnpm --filter @devdogsuga/deploy-checks run smoke-test
-          -- --tier $DEPLOY_ENV --app ${{ matrix.app }}
-      # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
-      # so this is for the self-hosted case and for a job that fails between
-      # composing the file and using it.
-      - name: Remove the Worker secrets file
-        if: always()
-        env:
-          DIR: ${{ steps.secrets.outputs.dir }}
-        run: if [ -n "$DIR" ]; then rm -rf "$DIR"; fi
+          pnpm backstage deploy smoke --tier $DEPLOY_ENV --yes
+          --app ${{ matrix.app }} --no-env

@@ -722,6 +722,25 @@ describe("platform.docsPages", () => {
   });
 });
 
+describe("platform.replace_docs_index", () => {
+  // The function replaces the whole search index, so only the service role may
+  // call it. Success is not exercised here: it would wipe the index of the
+  // database this suite runs against.
+  const pages = [{ path: "t443/x", title: "x", plainText: "x" }];
+
+  it("refuses the public key and a signed-in member", async () => {
+    for (const client of [anon(), member.client]) {
+      const { error } = await client.rpc("replace_docs_index", { pages });
+      expect(error).not.toBeNull();
+    }
+  });
+
+  it("refuses an empty index even for the service role", async () => {
+    const { error } = await admin().rpc("replace_docs_index", { pages: [] });
+    expect(error?.message).toMatch(/no pages/);
+  });
+});
+
 describe("canPreviewDocs", () => {
   it("resolves for the role that holds it and for nobody else", async () => {
     const a = admin();

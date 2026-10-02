@@ -5,34 +5,34 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./types": {
-      "types": "./dist/database.types.d.ts",
-      "default": "./dist/database.types.js"
+      "types": "./src/database.types.ts",
+      "default": "./src/database.types.ts"
     },
     "./schemas": {
-      "types": "./dist/schemas.d.ts",
-      "default": "./dist/schemas.js"
+      "types": "./src/schemas.ts",
+      "default": "./src/schemas.ts"
     }
   },
   "files": [
-    "dist",
+    "src",
     "supabase"
   ],
   "scripts": {
-    "build": "tsc",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p ../../supabase",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rls": "with-env vitest run --config vitest.rls.config.ts",
-    "test:coverage": "vitest run --coverage"
+    "types:db": "with-env -c 'supabase gen types --db-url \"$DB_URL\" > src/database.types.ts.tmp && mv src/database.types.ts.tmp src/database.types.ts && prettier --write src/database.types.ts'",
+    "types:db:check": "pnpm run types:db && git diff --exit-code -- src/database.types.ts"
   },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.1",
     "@devdogsuga/db": "^0.1.1",
-    "@devdogsuga/env": "^0.1.2",
+    "@devdogsuga/env": "^0.1.4",
     "@supabase/supabase-js": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

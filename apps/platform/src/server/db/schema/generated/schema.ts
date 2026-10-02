@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, varchar, boolean, text, integer, pgEnum, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, boolean, varchar, text, pgEnum, integer, timestamp, date, smallint, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -222,6 +222,30 @@ export const credentialsInPlatform = platform.table.withRLS("credentials", {
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
 
+export const discordRoleMembershipsInPlatform = platform.table.withRLS("discordRoleMemberships", {
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	roleId: uuid().notNull().references(() => rolesInPlatform.id, { onDelete: "cascade" } ),
+	syncedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.userId, table.roleId], name: "discordRoleMemberships_pkey"}),
+	index("discordRoleMemberships_roleId_idx").using("btree", table.roleId.asc().nullsLast()),
+
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const docsIndexStateInPlatform = platform.table.withRLS("docsIndexState", {
+	id: boolean().default(true).primaryKey(),
+	hash: text().notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+check("docsIndexState_id_check", sql`id`),]);
+
 export const docsPagesInPlatform = platform.table.withRLS("docsPages", {
 	id: uuid().defaultRandom().primaryKey(),
 	path: text().notNull(),
@@ -383,6 +407,22 @@ export const oauthTestAccountsInPlatform = platform.table.withRLS("oauthTestAcco
 
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
+
+export const officerDiscordIdsInPlatform = platform.table.withRLS("officerDiscordIds", {
+	userId: uuid().primaryKey().references(() => users.id, { onDelete: "cascade" } ),
+	discordUserId: text().notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	uniqueIndex("officerDiscordIds_discordUserId_key").using("btree", table.discordUserId.asc().nullsLast()),
+
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+check("officerDiscordIds_discordUserId_snowflake_check", sql`("discordUserId" ~ '^[0-9]{15,25}$'::text)`),]);
 
 export const pointsInPlatform = platform.table.withRLS("points", {
 	leaderboardProfileId: varchar({ length: 255 }).notNull().references(() => leaderboardProfilesInPlatform.githubId, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -941,6 +981,8 @@ export { contentVisibilityInPlatform as contentVisibility };
 export { credentialRolesInPlatform as credentialRoles };
 export { credentialTypeInPlatform as credentialType };
 export { credentialsInPlatform as credentials };
+export { discordRoleMembershipsInPlatform as discordRoleMemberships };
+export { docsIndexStateInPlatform as docsIndexState };
 export { docsPagesInPlatform as docsPages };
 export { exportAuditInPlatform as exportAudit };
 export { filerActionInPlatform as filerAction };
@@ -956,6 +998,7 @@ export { oauthDeviceCodesInPlatform as oauthDeviceCodes };
 export { oauthRegistrationTypeInPlatform as oauthRegistrationType };
 export { oauthRegistrationsInPlatform as oauthRegistrations };
 export { oauthTestAccountsInPlatform as oauthTestAccounts };
+export { officerDiscordIdsInPlatform as officerDiscordIds };
 export { pointsInPlatform as points };
 export { profileInPlatform as profile };
 export { profileAcademicProgramsInPlatform as profileAcademicPrograms };
