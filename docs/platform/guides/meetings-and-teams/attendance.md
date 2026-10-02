@@ -82,7 +82,18 @@ pnpm backstage export reflections --from 2026-08-17
 ```
 
 Each takes `--from`/`--to`; `attendance` also takes `--meeting <date>` to
-export a single meeting.
+export a single meeting. Run at a terminal, each export asks where to save
+its file, with path completion.
+
+For one meeting, attendance can also be written in the shapes DevDogs reports
+attendance in elsewhere: a Bevy attendee import for the GDG event page
+(`bevy`) and an Involvement Network list, one MyID email per line
+(`involvement`). Pick several at once; each file is audited separately:
+
+```sh
+pnpm backstage export attendance --meeting 2026-09-09 --format platform,bevy,involvement
+```
+
 `--from`/`--to` are Eastern days (`--to` inclusive) and filter stars and
 attendance on the meeting's start and reflections on when the reflection was
 created. Each export is still recorded in the export audit log (an
