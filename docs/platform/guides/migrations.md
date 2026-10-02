@@ -18,7 +18,7 @@ So a schema change is a SQL change, and the TypeScript follows it. RLS policies,
 ## Making a schema change
 
 ```bash
-pnpm devtools preset new-migration
+pnpm devtools new-migration
 ```
 
 asks which app/schema the migration belongs to (`platform`, `schedule_builder`, or `study_group_finder`) and writes an empty `supabase/migrations/<timestamp>_<schema>_<desc>.sql`. Put the DDL in it:
@@ -87,13 +87,13 @@ If `main` grew a newer migration while yours was open, recreate yours with a fre
 
 ## Applying a migration
 
-| Target                 | How                                                               |
-| ---------------------- | ----------------------------------------------------------------- |
-| your own stack         | `pnpm devtools supabase db reset`                                 |
-| the shared dev project | `pnpm devtools --tier development:remote preset apply-migrations` |
-| production             | `production-migrate` in `.github/workflows/deploy.yaml`           |
+| Target                 | How                                                        |
+| ---------------------- | ---------------------------------------------------------- |
+| your own stack         | `pnpm devtools supabase db reset`                          |
+| the shared dev project | `pnpm devtools --tier development:remote apply-migrations` |
+| production             | `production-migrate` in `.github/workflows/deploy.yaml`    |
 
-`pnpm devtools --tier development:remote preset apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then offers to regenerate the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases).
+`pnpm devtools --tier development:remote apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then offers to regenerate the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases).
 
 > [!WARNING]
 > Never run `drizzle-kit push` against a hosted database: it writes the schema with no migration record and no rollback path. No script in this repo runs it, and none should.

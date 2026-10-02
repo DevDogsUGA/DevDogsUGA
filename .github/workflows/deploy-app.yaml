@@ -174,7 +174,7 @@ jobs:
       # time, so calling this route at migrate time would reconcile against
       # whatever config the PREVIOUS release shipped with, not this one's.
       #
-      # `devtools cron run` was NOT used here even though it already wraps
+      # `devtools jobs run` was NOT used here even though it already wraps
       # an authenticated GET at this route: it only checks the HTTP status,
       # and this route answers 200 even when the reconcile itself failed
       # (`{ success: false, reason: … }`) — a real failure would pass

@@ -14,7 +14,7 @@ actually building.
 ## 1. Draft the migration
 
 ```bash
-pnpm devtools preset new-migration
+pnpm devtools new-migration
 ```
 
 It asks which app/schema the migration is for when you don't pass one
@@ -50,7 +50,7 @@ it and the table is wide open.
 ## 3. Apply it and regenerate types
 
 ```bash
-pnpm devtools preset apply-migrations   # db push; then offers the Database types
+pnpm devtools apply-migrations   # db push; then offers the Database types
 pnpm --filter study-group-finder types:db
 ```
 

@@ -43,7 +43,7 @@ refreshes it, that code is stale, not the schema.
 ## Making a schema change
 
 ```bash
-pnpm devtools preset new-migration --app schedule-builder <description>
+pnpm devtools new-migration --app schedule-builder <description>
 ```
 
 writes an empty `supabase/migrations/<timestamp>_schedule_builder_<description>.sql`.

@@ -42,10 +42,10 @@ pnpm devtools supabase start && pnpm devtools supabase db reset   # local stack,
 pnpm -F schedule-builder populate:courses
 ```
 
-`populate:courses` is `devtools workflows run` for the development tier. Run that directly to pick a workflow interactively:
+`populate:courses` is `devtools jobs run` for the development tier. Run that directly to pick a job interactively:
 
 ```bash
-pnpm devtools workflows run --app schedule-builder --tier development
+pnpm devtools jobs run --app schedule-builder --tier development
 ```
 
 Interactively it will offer the one development workflow to pick. To skip every
@@ -53,7 +53,7 @@ prompt — in a script, or when you already know what you want — name the bind
 which is stable across tiers:
 
 ```bash
-pnpm devtools workflows run --app schedule-builder \
+pnpm devtools jobs run --app schedule-builder \
   --workflow SCRAPE_WORKFLOW --tier development
 ```
 
@@ -62,7 +62,7 @@ running, `--tier development` is ambiguous and devtools refuses it; pass
 `--tier development:local` or `--tier development:remote` instead.
 
 The full scrape pulls every available term and takes a while. If a session is
-already up (`pnpm devtools workflows serve --app schedule-builder`, which also
+already up (`pnpm devtools jobs serve --app schedule-builder`, which also
 serves the app itself), the trigger reuses it instead of starting its own.
 
 > [!NOTE]

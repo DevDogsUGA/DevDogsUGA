@@ -17,7 +17,7 @@ pnpm -F schedule-builder dev   # local stack auto-detected, else remote
 
 Schema changes follow the shared workflow in
 [Database](../../docs/platform/guides/database.md): write SQL under
-`supabase/migrations/` by hand (`pnpm devtools preset new-migration --app
+`supabase/migrations/` by hand (`pnpm devtools new-migration --app
 schedule-builder`), replay it, then run `pnpm -F schedule-builder
 types:drizzle` to regenerate the Drizzle schema from the live DB. See
 [Database](../../docs/schedule-builder/guides/database.md) for what's

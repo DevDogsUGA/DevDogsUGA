@@ -108,7 +108,7 @@ unauthenticated request the schedule sends, to `http://localhost:3000` by
 default:
 
 ```bash
-pnpm devtools cron run --app platform --cron '*/15 * * * *' --yes
+pnpm devtools jobs run --app platform --cron '*/15 * * * *' --yes
 ```
 
 `pnpm devtools setup` lists this as one of its next steps. Repeat it after

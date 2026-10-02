@@ -26,7 +26,7 @@
     "types:cf": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv",
     "types:cf:check": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv --check",
     "types:drizzle": "with-env tsx ../../scripts/drizzle-pull.ts",
-    "populate:courses": "pnpm --workspace-root devtools workflows run --app schedule-builder --workflow SCRAPE_WORKFLOW --tier development"
+    "populate:courses": "pnpm --workspace-root devtools jobs run --app schedule-builder --workflow SCRAPE_WORKFLOW --tier development"
   },
   "dependencies": {
     "@devdogsuga/db": "^0.1.1",

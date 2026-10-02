@@ -16,16 +16,18 @@ and `psql`, and a menu builds the same commands for you.
 **Backstage** repository. The root `devtools` script runs it through `dlx` at
 the latest version, so there is nothing to install and no version to bump.
 
-Run it without arguments to open the interactive menu. The menu reads the same
-command registry as `--help` and shell completions, but leaves out commands that
-only make sense in a shell pipeline. In particular, `check` and `completions`
-are CLI-only.
+Run it without arguments to open the interactive menu. Its first screen lists
+every interactive command in plain English ("Restart local Supabase"), with the
+command to type shown beside the highlighted one (`restart-stack`). The menu
+reads the same command registry as `--help` and shell completions, but leaves
+out commands that only make sense in a shell pipeline. In particular, `check`
+and `completions` are CLI-only.
 
 ```bash
 pnpm devtools                       # interactive menu
 pnpm devtools --help                # command map
-pnpm devtools preset --help         # one level deeper
-pnpm devtools cron run --help       # one command's options
+pnpm devtools jobs --help           # one level deeper
+pnpm devtools jobs run --help       # one command's options
 ```
 
 After a run that went through the menu (or filled a missing flag from a
@@ -81,13 +83,25 @@ pass `--local`, `--linked`, `--db-url` or `--project-ref` yourself. It never
 falls back to the linked project and never adds `--yes`. Against staging or
 production every command asks once before it runs.
 
-### Runtime
+### Supabase
 
-- `preset` — common jobs that take a few tool calls in a row: `restart-stack`,
-  `new-migration`, `apply-migrations` (then asks about `types:db`) and
-  `push-config`.
-- `cron` — audit configured schedules or manually fire a route-backed job.
-- `workflows` — list or trigger Cloudflare Workflows declared by Wrangler.
+Common jobs that take a few tool calls in a row:
+
+- `restart-stack` — stop and start the local stack, which is how a changed
+  `config.toml` lands.
+- `new-migration` — create an empty migration for an app's schema.
+- `apply-migrations` — push new migrations to the session's database, then ask
+  about `types:db`.
+- `push-config` — show the diff, then push `config.toml` to the session's
+  hosted project.
+
+These were `preset <name>`; the old spelling is refused with the new one.
+
+### Background jobs
+
+- `jobs` — run, list or serve the apps' background jobs: quick syncs (cron
+  routes) and long-running jobs (Cloudflare Workflows). See
+  [Running background jobs](#running-background-jobs) below.
 
 ### Configuration and access
 
@@ -126,41 +140,44 @@ see [Images](/docs/toolkit/guides/images) and [Environment commands](/docs/toolk
 Package scripts own the rest: `types:db`, `types:drizzle`, `types:cf`,
 `fetch:campus-map` and `preview`.
 
-## Cron jobs and Workflows
+## Running background jobs
 
-Both commands discover apps from `apps/*/wrangler.jsonc`; there is no app
-allowlist to maintain.
+`jobs` covers both kinds of background work an app runs on Cloudflare, and
+discovers them from `apps/*/wrangler.jsonc`; there is no app allowlist to
+maintain.
 
-`cron` reconciles each Wrangler tier's `triggers.crons` with the app's exported
-`CRON_ROUTES` and `WORKFLOW_CRONS`. A job remains available for manual use when
-a tier intentionally has an empty schedule, which is how staging avoids
-duplicating production automation while still supporting rehearsals.
-
-```bash
-pnpm devtools cron list
-pnpm devtools cron run
-pnpm devtools cron run --app platform --cron '*/15 * * * *' --tier staging
-```
-
-With no selector, `cron run` asks for the tier and then shows the discovered
-route jobs. Each choice says whether that tier schedules it automatically or
-keeps it manual-only. Staging and production require confirmation;
-noninteractive calls use `--yes`.
-
-`workflows` reads each tier's `workflows` bindings directly from Wrangler.
-Names, bindings, and implementation classes shown by the CLI are therefore the
-ones that deploy.
+- **Quick syncs** are Worker cron triggers that call a route from the app's
+  `CRON_ROUTES`. Each finishes in seconds.
+- **Long-running jobs** are Cloudflare Workflows: multi-step work that retries
+  and resumes where it stopped. Names, bindings and classes come straight from
+  each tier's `workflows` bindings, so they are the ones that deploy.
 
 ```bash
-pnpm devtools workflows list
-pnpm devtools workflows run
-pnpm devtools workflows run \
+pnpm devtools jobs list
+pnpm devtools jobs run
+pnpm devtools jobs run --app platform --cron '*/15 * * * *' --tier staging
+pnpm devtools jobs run \
   --app schedule-builder \
-  --workflow production-schedule-builder-scrape \
+  --workflow SCRAPE_WORKFLOW \
   --tier production --yes
 ```
 
-Development triggers the selected local Wrangler session. Staging and
+`jobs list` reconciles each Wrangler tier's `triggers.crons` and Workflow
+`schedules` with the app's `CRON_ROUTES` and `WORKFLOW_CRONS`, and flags a
+schedule that never fires or fires nothing. A job stays available for manual
+use when a tier intentionally has an empty schedule, which is how staging
+avoids duplicating production automation while still supporting rehearsals.
+
+With no `--cron` or `--workflow`, `jobs run` shows one picker with the two kinds
+under their own headings, then asks for the tier. Each sync says whether that
+tier schedules it automatically or keeps it manual-only. Staging and production
+require confirmation; noninteractive calls use `--yes`.
+
+`cron` and `workflows` still work as aliases that narrow `jobs` to one kind:
+`cron run` offers only quick syncs and `workflows run` only long-running jobs
+(`--kind sync` and `--kind long-running` say the same with `jobs`).
+
+A Workflow on development triggers the local Wrangler session. Staging and
 production invoke `wrangler workflows trigger` with the selected environment.
 Use `--params '<json>'` for a parameterized Workflow and `--port` when the
 local session is not on port 8787.
@@ -183,8 +200,8 @@ To keep Wrangler running in a separate terminal, use the app-scoped server
 command and pass the same port to the trigger:
 
 ```bash
-pnpm devtools workflows serve --app schedule-builder --port 8787
-pnpm devtools workflows run --app schedule-builder --tier development --port 8787
+pnpm devtools jobs serve --app schedule-builder --port 8787
+pnpm devtools jobs run --app schedule-builder --tier development --port 8787
 ```
 
 Bare `wrangler dev` does not read the repo-root `.env`; using it
@@ -193,7 +210,7 @@ directly still requires a populated app-local `.dev.vars` or an explicit
 The devtools server is the supported path because it derives the correct key
 set from the app's environment manifest without copying unrelated credentials.
 
-For a temporary server started by `workflows run`, devtools follows the created
+For a temporary server started by `jobs run`, devtools follows the created
 instance until it completes or errors before stopping Wrangler. A successful
 Wrangler trigger only means the instance was queued, so it is not treated as a
 successful Workflow run on its own.

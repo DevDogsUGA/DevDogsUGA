@@ -79,7 +79,7 @@ copy the Session pooler string, nothing else.
 By hand, if you'd rather not run the wizard or it fails partway:
 
 1. Copy the four values above into `.env` under the section for your app.
-2. Run migrations against your project: `pnpm devtools preset apply-migrations`
+2. Run migrations against your project: `pnpm devtools apply-migrations`
    (it runs `supabase db push`, then offers to regenerate the types).
 3. Configure sign-in — see the sign-in section below.
 4. Add your local dev URL to the project's allow list: Dashboard →
@@ -123,7 +123,7 @@ you're pointed at before running it elsewhere. `pnpm devtools setup` prints
 these steps in order, tailored to the apps you picked, once it has created
 your `.env`.
 
-Stop the stack with `pnpm devtools supabase stop`. `pnpm devtools preset
+Stop the stack with `pnpm devtools supabase stop`. `pnpm devtools
 restart-stack` is the stop/start pair, which is how a changed
 `supabase/config.toml` actually takes effect — `db reset` alone replays
 migrations into containers still holding the old config.
@@ -213,7 +213,7 @@ agree:
 - `apps/study-group-finder/ios/Runner/Info.plist`, a `CFBundleURLTypes`
   entry for the scheme `dev.dogpack`.
 - `supabase/config.toml`, in `additional_redirect_urls`. A local stack picks
-  the change up on `pnpm devtools preset restart-stack`. Production receives it
+  the change up on `pnpm devtools restart-stack`. Production receives it
   through the deploy workflow's `supabase config push`.
 
 A hosted project of your own doesn't read `config.toml`, so add
@@ -320,7 +320,7 @@ from the repo's config. With the platform dev server running, fire the
 15-minute reconcile cron once:
 
 ```bash
-pnpm devtools cron run --app platform --cron '*/15 * * * *'
+pnpm devtools jobs run --app platform --cron '*/15 * * * *'
 ```
 
 ## Doctor

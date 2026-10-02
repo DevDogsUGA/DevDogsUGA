@@ -39,7 +39,7 @@ production). Copy `.dev.vars.example` to `.dev.vars`, then:
 
 ```bash
 pnpm --filter schedule-builder preview   # vinext build, served by workerd
-pnpm devtools workflows serve --app schedule-builder   # Workflows served locally
+pnpm devtools jobs serve --app schedule-builder   # Workflows served locally
 ```
 
 After editing a `wrangler.jsonc` binding, regenerate the Worker types

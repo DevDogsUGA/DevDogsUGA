@@ -53,7 +53,7 @@ One flat `supabase/migrations/` directory across every app. Name a new file
 yourself, or generate the name:
 
 ```bash
-pnpm devtools preset new-migration --app schedule-builder
+pnpm devtools new-migration --app schedule-builder
 ```
 
 It asks for the app and a description if you don't pass them — the app decides the schema
@@ -84,6 +84,6 @@ the diff by hand:
 
 ```bash
 git pull --rebase origin main
-pnpm devtools supabase db reset   # or: pnpm devtools preset apply-migrations, against your branch's migrations
+pnpm devtools supabase db reset   # or: pnpm devtools apply-migrations, against your branch's migrations
 pnpm -F @devdogsuga/supabase types:db
 ```

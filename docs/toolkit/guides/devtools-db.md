@@ -53,11 +53,11 @@ PostgREST, Studio — and the **Postgres database** the session names. The
 lifecycle commands act on the stack on this machine regardless of session,
 because a hosted project has no container here:
 
-| Command                              | What it does                                        |
-| ------------------------------------ | --------------------------------------------------- |
-| `pnpm devtools supabase start`       | starts the stack and writes `.env.generated`        |
-| `pnpm devtools supabase stop`        | stops it                                            |
-| `pnpm devtools preset restart-stack` | stop, then start again — how a changed config lands |
+| Command                        | What it does                                        |
+| ------------------------------ | --------------------------------------------------- |
+| `pnpm devtools supabase start` | starts the stack and writes `.env.generated`        |
+| `pnpm devtools supabase stop`  | stops it                                            |
+| `pnpm devtools restart-stack`  | stop, then start again — how a changed config lands |
 
 The distinction is the one that costs people an afternoon: `config.toml` is
 read at `supabase start`, so `db reset` replays migrations into containers
@@ -78,12 +78,12 @@ from that refusal so they can report the very state that needs fixing.
 ## Migrate and reset
 
 `supabase db push` applies migrations that have not run yet. It erases nothing.
-`pnpm devtools preset apply-migrations` runs it and then asks whether to
+`pnpm devtools apply-migrations` runs it and then asks whether to
 regenerate `packages/supabase/src/database.types.ts`, which is the
 `types:db` script:
 
 ```bash
-pnpm devtools preset apply-migrations
+pnpm devtools apply-migrations
 pnpm -F @devdogsuga/supabase types:db
 ```
 
@@ -119,7 +119,7 @@ dashboard answers the question better than a wrapper could.
 
 ## The rest
 
-- `pnpm devtools preset new-migration` creates an empty migration file for an
+- `pnpm devtools new-migration` creates an empty migration file for an
   app's schema, for you to write by hand (`supabase migration new` is the same
   thing without the app prompt).
 - `pnpm -F <app> types:drizzle` pulls the app's live schema into its generated

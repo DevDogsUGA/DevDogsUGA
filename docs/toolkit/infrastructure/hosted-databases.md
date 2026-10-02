@@ -23,7 +23,7 @@ linked project.
 
 ## Pushing config to a hosted project
 
-`pnpm devtools preset push-config` pushes `config.toml` to the session's hosted
+`pnpm devtools push-config` pushes `config.toml` to the session's hosted
 project (`--yes` answers its confirmation). A local session is refused and
 offered a restart instead — the stack reads the file directly at
 `supabase start`, so there is nothing to push there.
@@ -40,12 +40,12 @@ the project's data.
 
 ## Applying a migration to a hosted tier
 
-| Target                 | How                                                               |
-| ---------------------- | ----------------------------------------------------------------- |
-| the shared dev project | `pnpm devtools --tier development:remote preset apply-migrations` |
-| production             | `production-migrate` in `.github/workflows/deploy.yaml`           |
+| Target                 | How                                                        |
+| ---------------------- | ---------------------------------------------------------- |
+| the shared dev project | `pnpm devtools --tier development:remote apply-migrations` |
+| production             | `production-migrate` in `.github/workflows/deploy.yaml`    |
 
-`preset apply-migrations` runs `supabase db push --db-url` against the
+`apply-migrations` runs `supabase db push --db-url` against the
 session's database — only the migrations its history table has not recorded —
 and then asks whether to regenerate the `Database` types with `types:db`.
 Production is pushed by CI with `backstage deploy migrate`, behind two dry

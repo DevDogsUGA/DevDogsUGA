@@ -58,7 +58,7 @@ Workers are named `<environment>-<app>` — `staging-platform`, `production-sche
 
 `vars`, `ratelimits`, `images`, `send_email`, `hyperdrive`, `kv_namespaces`, `cache` and `version_metadata` are **non-inheritable**: omitting one in an environment does not fall back to the top level, the binding is simply absent, and the failure appears at runtime. `routes` and `triggers` _are_ inherited, which is why the top-level block carries neither. `pnpm exec wrangler deploy --dry-run --env production` prints the resolved binding list and warns about every key left behind.
 
-Staging's `triggers.crons` is empty on purpose rather than merely omitted: staging shares the club's real Discord guild, so a staging cron is not a rehearsal — it would assign real roles to real members twice. Cron routes are exercised by hand instead, through `pnpm devtools cron run --tier staging`.
+Staging's `triggers.crons` is empty on purpose rather than merely omitted: staging shares the club's real Discord guild, so a staging cron is not a rehearsal — it would assign real roles to real members twice. Cron routes are exercised by hand instead, through `pnpm devtools jobs run --tier staging`.
 
 `send_email` pins `allowed_sender_addresses` to `noreply@mail.devdogsuga.org`; without that list, any code path holding the binding can send as any address on the domain.
 
