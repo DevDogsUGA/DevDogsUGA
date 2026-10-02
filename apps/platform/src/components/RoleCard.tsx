@@ -26,7 +26,6 @@ const PERMISSION_LABELS: Record<string, string> = {
   canManageRoles: "Manage roles & permissions",
   canManageSuspensions: "Manage suspensions",
   canViewAuditLog: "View audit log",
-  canManageVerification: "Manage verification",
   canManageAttendance: "Manage attendance",
   canExportStars: "Export stars",
   canPreviewDocs: "Preview docs",

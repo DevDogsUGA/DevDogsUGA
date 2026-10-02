@@ -21,7 +21,7 @@ insert into "platform"."roles" (
   "showOnProfile", "isLeadership",
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
-  "canViewAuditLog", "canManageVerification",
+  "canViewAuditLog",
   "canManageAttendance", "canExportStars", "canPreviewDocs"
 
 )
@@ -32,6 +32,6 @@ values
     'Vice President of DevDogs.',
     'custom', 200, true, true,
     '#1abc9c', '1237559269474308107', 'Vice President', 1752220,
-    true, true, true, true, true, true, true, true
+    true, true, true, true, true, true, true
   )
 on conflict do nothing;

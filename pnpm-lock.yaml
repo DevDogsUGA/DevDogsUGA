@@ -362,9 +362,6 @@ importers:
       open-graph-scraper:
         specifier: ^6.12.0
         version: 6.12.0
-      papaparse:
-        specifier: 'catalog:'
-        version: 5.6.0
       postgres:
         specifier: 'catalog:'
         version: 3.4.9
@@ -495,9 +492,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
-      '@types/papaparse':
-        specifier: 'catalog:'
-        version: 5.5.2
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.18

@@ -19,7 +19,6 @@ const SOURCES: Record<string, string> = {
   "/account": "app/(site)/account/page.tsx",
   "/tools/oauth": "app/(site)/tools/oauth/page.tsx",
   "/console/permissions": "app/(site)/console/permissions/page.tsx",
-  "/console/verification": "app/(site)/console/verification/page.tsx",
 };
 
 /** vitest runs with the app package as its root. */

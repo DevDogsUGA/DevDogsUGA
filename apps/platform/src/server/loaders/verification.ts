@@ -1,19 +1,7 @@
 import { eq } from "drizzle-orm";
 import { cache } from "react";
-import { canUserManageVerification } from "~/server/actions/permissions";
-import { requirePermission } from "~/server/auth/require";
 import { db } from "~/server/db";
 import { profileWithVerification, type profiles } from "~/server/db/schema";
-
-/**
- * The verification console's gate.
- *
- * Was `getVerificationPageData`, which returned no data at all: the page
- * called it for its side effect while reading as though it awaited something.
- */
-export const requireVerificationAccess = cache(async () => {
-  await requirePermission(canUserManageVerification);
-});
 
 // ── Profile verification checklist ───────────────────────────────────────────
 

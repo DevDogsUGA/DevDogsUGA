@@ -21,7 +21,7 @@ insert into "platform"."roles" (
   "showOnProfile", "isLeadership",
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
-  "canViewAuditLog", "canManageVerification",
+  "canViewAuditLog",
   "canManageAttendance", "canExportStars", "canPreviewDocs"
 
 )
@@ -32,6 +32,6 @@ values
     'Builds relationships with companies, alumni, and technology professionals.',
     'custom', 600, true, true,
     '#1abc9c', '1237558910848733254', 'Corporate Outreach Team', 1752220,
-    null, null, null, null, null, null, null, true
+    null, null, null, null, null, null, true
   )
 on conflict do nothing;

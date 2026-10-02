@@ -57,7 +57,7 @@ A trigger fires when `quarantinedBy` goes non-null — never when a report is me
 
 It takes the name from two sources, in order:
 
-1. **`legalFirstName` / `legalLastName`**, which come from the Involvement roster import and are never cleared by it — unlike `involvement*`, which the import nulls across every row before repopulating, and which is therefore unusable as a name of record.
+1. **`legalFirstName` / `legalLastName`**, which come from the Involvement roster import (an officer runs `pnpm backstage involvement import --file <OrganizationRoster.csv>` with the roster exported from the UGA Involvement Network) and are never cleared by it — unlike `involvement*`, which the import nulls across every row before repopulating, and which is therefore unusable as a name of record.
 2. **The Google identity's name, only when that identity's email is on `@uga.edu`.** A personal Gmail display name is self-set, so resetting an abusive name to it changes nothing in precisely the case this remedy exists for. The institutional domain is what makes the name attested by somebody other than its owner.
 
 If neither is available the name is **left alone** rather than blanked, and a warning goes to the Postgres log. A profile with an empty `preferredName` renders as a gap in every roster, which is worse than the name a moderator is already looking at — and they still have `warn`, `suspend` and `ban` for that.

@@ -175,19 +175,4 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
     { id: "assign-roles", label: "Assign Roles" },
     { id: "role-definitions", label: "Role Definitions" },
   ],
-
-  "/console/verification": [
-    {
-      id: "import-involvement",
-      label: "Import Involvement",
-      fields: [
-        {
-          id: "roster-csv",
-          label: "Roster CSV",
-          description:
-            "Export the membership roster from the UGA Involvement Network and upload it here. Members whose name and email match a profile are marked verified.",
-        },
-      ],
-    },
-  ],
 };

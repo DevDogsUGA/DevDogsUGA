@@ -138,14 +138,6 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "A record of moderation actions and content reports filed across all production OAuth clients.",
   },
   {
-    label: "Verification",
-    href: "/console/verification",
-    icon: "SealCheckIcon",
-    permission: "canManageVerification",
-    description:
-      "Upload the UGA Involvement Network roster to verify member profiles and unlock community page visibility.",
-  },
-  {
     label: "Exports",
     href: "/console/exports",
     icon: "DownloadSimpleIcon",

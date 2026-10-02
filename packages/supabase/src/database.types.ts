@@ -1194,7 +1194,6 @@ export type Database = {
           canManageAttendance: boolean | null;
           canManageRoles: boolean | null;
           canManageSuspensions: boolean | null;
-          canManageVerification: boolean | null;
           canModerate: boolean | null;
           canPreviewDocs: boolean | null;
           canViewAuditLog: boolean | null;
@@ -1216,7 +1215,6 @@ export type Database = {
           canManageAttendance?: boolean | null;
           canManageRoles?: boolean | null;
           canManageSuspensions?: boolean | null;
-          canManageVerification?: boolean | null;
           canModerate?: boolean | null;
           canPreviewDocs?: boolean | null;
           canViewAuditLog?: boolean | null;
@@ -1238,7 +1236,6 @@ export type Database = {
           canManageAttendance?: boolean | null;
           canManageRoles?: boolean | null;
           canManageSuspensions?: boolean | null;
-          canManageVerification?: boolean | null;
           canModerate?: boolean | null;
           canPreviewDocs?: boolean | null;
           canViewAuditLog?: boolean | null;
@@ -1680,7 +1677,6 @@ export type Database = {
           canManageAttendance: boolean | null;
           canManageRoles: boolean | null;
           canManageSuspensions: boolean | null;
-          canManageVerification: boolean | null;
           canModerate: boolean | null;
           canPreviewDocs: boolean | null;
           canViewAuditLog: boolean | null;
