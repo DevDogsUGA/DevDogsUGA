@@ -243,6 +243,12 @@ jobs:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
         run: pnpm backstage deploy write-env --no-env --yes
+      # The Sentry release action runs in its own container and never sees the
+      # file above, so the org slug is lifted into the job environment for it,
+      # the smoke tests and the monitor prune. Same as deploy-app.yaml.
+      - name: Export SENTRY_ORG from .env.production
+        if: steps.freshness.outputs.fresh == 'true'
+        run: grep -m1 '^SENTRY_ORG=' .env.production | tr -d "\"'" >> "$GITHUB_ENV"
       - name: Revalidate and apply migrations
         if: steps.freshness.outputs.fresh == 'true'
         env:
@@ -278,9 +284,24 @@ jobs:
       - name: Smoke test platform
         if: steps.freshness.outputs.fresh == 'true'
         env:
-          SENTRY_ORG: devdogsuga
           SENTRY_PROJECT: platform
         run: pnpm backstage deploy smoke --tier production --yes --app platform --no-env
+      # Deletes the Sentry Crons monitors the app no longer declares in
+      # `cloudflare/scheduled.ts`. Sentry never removes a monitor itself, so a
+      # renamed or dropped `monitorSlug` otherwise alerts on missed check-ins
+      # every period (PLATFORM-2). After the smoke test, so it only runs once
+      # this deploy's cron triggers are live. Production only: staging deploys
+      # `main`, which can drop a monitor production still checks in to.
+      #
+      # SENTRY_MONITORS_TOKEN is in the step's `env:` alone, not the job's: it
+      # can delete monitors and alert rules org-wide, and the deploy token (an
+      # org token) cannot list or delete monitors at all. Without it the step
+      # skips with a notice.
+      - name: Prune Sentry monitors for platform
+        if: steps.freshness.outputs.fresh == 'true'
+        env:
+          SENTRY_MONITORS_TOKEN: ${{ secrets.SENTRY_MONITORS_TOKEN }}
+        run: pnpm backstage deploy prune-monitors --tier production --yes --app platform --no-env
       - name: Create Sentry release and upload schedule-builder source maps
         if: steps.freshness.outputs.fresh == 'true' && env.SENTRY_AUTH_TOKEN != ''
         uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
@@ -297,9 +318,13 @@ jobs:
       - name: Smoke test schedule-builder
         if: steps.freshness.outputs.fresh == 'true'
         env:
-          SENTRY_ORG: devdogsuga
           SENTRY_PROJECT: schedule-builder
         run: pnpm backstage deploy smoke --tier production --yes --app schedule-builder --no-env
+      - name: Prune Sentry monitors for schedule-builder
+        if: steps.freshness.outputs.fresh == 'true'
+        env:
+          SENTRY_MONITORS_TOKEN: ${{ secrets.SENTRY_MONITORS_TOKEN }}
+        run: pnpm backstage deploy prune-monitors --tier production --yes --app schedule-builder --no-env
       - name: Report orphaned Worker secrets
         if: steps.freshness.outputs.fresh == 'true'
         env:
