@@ -1,8 +1,18 @@
-import { validateClubConfig, type ClubConfig } from "@devdogsuga/events";
-import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
+import {
+  validateClubConfig,
+  type ClubConfig,
+  type QuestionsConfig,
+} from "@devdogsuga/events";
+import { and, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import { clubDateKey } from "~/lib/eventTime";
 import type { db } from "~/server/db";
-import { meetings, workshops } from "~/server/db/schema";
+import {
+  meetings,
+  surveyAnswerRevisions,
+  surveyAnswers,
+  surveyQuestions,
+  workshops,
+} from "~/server/db/schema";
 import { postAlert } from "../alerts";
 
 /**
@@ -42,6 +52,18 @@ import { postAlert } from "../alerts";
  * meetings is almost certainly a bug upstream (a bad fetch, an empty file),
  * and reconciling it verbatim would archive every meeting and workshop the
  * club has. Refused outright, before a single write.
+ *
+ * ## Survey questions
+ *
+ * `questions.json` is copied into `surveyQuestions` in the same transaction,
+ * and each meeting's `questions` into its `surveyQuestionIds`. Unlike
+ * meetings, a question no longer in config is DELETED, but only while
+ * nobody has answered it: answers point at its id and are read back through
+ * its definition. The one check config's CI cannot make -- it has no
+ * database -- is made here instead: a question that has answers and was
+ * removed, or changed `type` or `scope`, aborts the whole reconcile the same
+ * way an invalid config does. Retiring it (`retired: true`) is the way to
+ * stop asking one.
  */
 
 export interface ReconcileTableCounts {
@@ -56,9 +78,17 @@ export interface ReconcileTableCounts {
   unarchived: number;
 }
 
+export interface ReconcileQuestionCounts {
+  /** Inserted or updated, including retired ones. */
+  upserted: number;
+  /** Deleted: absent from config, and never answered. */
+  removed: number;
+}
+
 export interface ReconcileCounts {
   meetings: ReconcileTableCounts;
   workshops: ReconcileTableCounts;
+  questions: ReconcileQuestionCounts;
 }
 
 export type ReconcileResult =
@@ -75,11 +105,23 @@ function emptyCounts(): ReconcileTableCounts {
  */
 const RESERVED_MEETING_SLUGS = ["directions"] as const;
 
+/**
+ * A question change that would orphan answers: thrown inside the transaction
+ * so nothing commits, then reported like any other abort.
+ */
+class QuestionConflict extends Error {
+  constructor(readonly conflicts: string[]) {
+    super("survey question change conflicts with recorded answers");
+  }
+}
+
 export async function reconcileFromConfig(
   database: typeof db,
   config: ClubConfig,
+  /** Omitted, the survey's questions are left exactly as they are. */
+  questions?: QuestionsConfig,
 ): Promise<ReconcileResult> {
-  const issues = validateClubConfig(config);
+  const issues = validateClubConfig(config, questions);
   if (issues.length > 0) {
     const reason = `@devdogsuga/events failed runtime validation (${issues.length} issue${issues.length === 1 ? "" : "s"})`;
     await postAlert(
@@ -110,147 +152,249 @@ export async function reconcileFromConfig(
   const counts: ReconcileCounts = {
     meetings: emptyCounts(),
     workshops: emptyCounts(),
+    questions: { upserted: 0, removed: 0 },
   };
 
-  await database.transaction(async (tx) => {
-    // ── Meetings ───────────────────────────────────────────────────────────
-    const existingMeetings = await tx
-      .select({
-        id: meetings.id,
-        configId: meetings.configId,
-        deletedAt: meetings.deletedAt,
-      })
-      .from(meetings)
-      .where(sql`${meetings.configId} is not null`);
-    const meetingByConfigId = new Map(
-      existingMeetings.map((m) => [m.configId!, m]),
-    );
-    const usedSlugs = new Set<string>([
-      ...(await tx.select({ slug: meetings.slug }).from(meetings)).map(
-        (m) => m.slug,
-      ),
-      ...RESERVED_MEETING_SLUGS,
-    ]);
+  try {
+    await database.transaction(async (tx) => {
+      // ── Survey questions ───────────────────────────────────────────────────
+      // First, so a meeting's `surveyQuestionIds` never names a question this
+      // run is about to refuse.
+      if (questions) counts.questions = await reconcileQuestions(tx, questions);
 
-    // Meeting configId → its platform uuid, so the workshop pass below can
-    // resolve `meetingId` without a second round trip per meeting.
-    const meetingIdByConfigId = new Map<string, string>();
-
-    for (const meeting of config.meetings) {
-      const values = {
-        nameOverride: meeting.title,
-        summary: meeting.summary,
-        kind: meeting.kind,
-        building: meeting.building,
-        location: meeting.location,
-        startsAt: new Date(meeting.startsAt),
-        endsAt: new Date(meeting.endsAt),
-        rsvpUrl: meeting.rsvpUrl,
-        cancelledAt:
-          meeting.cancelledAt === null ? null : new Date(meeting.cancelledAt),
-        cancellationReason: meeting.cancellationReason,
-        countsForCredit: meeting.countsForCredit,
-        surveyUrl: meeting.surveyUrl,
-        // Un-archives unconditionally. `archiveMissing` below sets this the
-        // moment a config item stops being listed, so a meeting reappearing
-        // in a later config edit has to clear it here or it would stay
-        // invisible everywhere despite being live again in config.
-        deletedAt: null,
-      };
-
-      const existing = meetingByConfigId.get(meeting.id);
-      if (existing) {
-        await tx
-          .update(meetings)
-          .set(values)
-          .where(eq(meetings.id, existing.id));
-        meetingIdByConfigId.set(meeting.id, existing.id);
-        if (existing.deletedAt !== null) counts.meetings.unarchived += 1;
-        else counts.meetings.upserted += 1;
-        continue;
-      }
-
-      // New meeting. The slug is derived once, on insert, and never
-      // recomputed: it is in URLs the moment the meeting is published, and
-      // regenerating it on every retitle would break every link anyone
-      // shared. Derived from the DATE rather than the title because the
-      // title is optional and most nights have none.
-      const slug = uniqueSlug(
-        clubDateKey(new Date(meeting.startsAt)),
-        usedSlugs,
+      // ── Meetings ───────────────────────────────────────────────────────────
+      const existingMeetings = await tx
+        .select({
+          id: meetings.id,
+          configId: meetings.configId,
+          deletedAt: meetings.deletedAt,
+        })
+        .from(meetings)
+        .where(sql`${meetings.configId} is not null`);
+      const meetingByConfigId = new Map(
+        existingMeetings.map((m) => [m.configId!, m]),
       );
-      usedSlugs.add(slug);
+      const usedSlugs = new Set<string>([
+        ...(await tx.select({ slug: meetings.slug }).from(meetings)).map(
+          (m) => m.slug,
+        ),
+        ...RESERVED_MEETING_SLUGS,
+      ]);
 
-      const [inserted] = await tx
-        .insert(meetings)
-        .values({ ...values, slug, configId: meeting.id })
-        .returning({ id: meetings.id });
-      meetingIdByConfigId.set(meeting.id, inserted!.id);
-      counts.meetings.upserted += 1;
-    }
+      // Meeting configId → its platform uuid, so the workshop pass below can
+      // resolve `meetingId` without a second round trip per meeting.
+      const meetingIdByConfigId = new Map<string, string>();
 
-    const presentMeetingConfigIds = config.meetings.map((m) => m.id);
-    counts.meetings.archived = await archiveMissing(
-      tx,
-      meetings,
-      presentMeetingConfigIds,
-    );
-
-    // ── Workshops ──────────────────────────────────────────────────────────
-    // Global, like meetings: `configId` is unique among live workshops across
-    // the WHOLE table, not merely within one meeting's agenda, mirroring the
-    // validator's cross-config uniqueness check.
-    const existingWorkshops = await tx
-      .select({
-        id: workshops.id,
-        configId: workshops.configId,
-        deletedAt: workshops.deletedAt,
-      })
-      .from(workshops)
-      .where(sql`${workshops.configId} is not null`);
-    const workshopByConfigId = new Map(
-      existingWorkshops.map((w) => [w.configId!, w]),
-    );
-
-    const presentWorkshopConfigIds: string[] = [];
-
-    for (const meeting of config.meetings) {
-      const meetingId = meetingIdByConfigId.get(meeting.id)!;
-
-      for (const item of meeting.agenda) {
-        presentWorkshopConfigIds.push(item.id);
+      for (const meeting of config.meetings) {
         const values = {
-          meetingId,
-          title: item.title,
-          description: item.description,
-          project: item.project,
+          nameOverride: meeting.title,
+          summary: meeting.summary,
+          kind: meeting.kind,
+          building: meeting.building,
+          location: meeting.location,
+          startsAt: new Date(meeting.startsAt),
+          endsAt: new Date(meeting.endsAt),
+          rsvpUrl: meeting.rsvpUrl,
+          cancelledAt:
+            meeting.cancelledAt === null ? null : new Date(meeting.cancelledAt),
+          cancellationReason: meeting.cancellationReason,
+          countsForCredit: meeting.countsForCredit,
+          surveyUrl: meeting.surveyUrl,
+          surveyQuestionIds: meeting.questions ?? [],
+          // Un-archives unconditionally. `archiveMissing` below sets this the
+          // moment a config item stops being listed, so a meeting reappearing
+          // in a later config edit has to clear it here or it would stay
+          // invisible everywhere despite being live again in config.
           deletedAt: null,
         };
 
-        const existing = workshopByConfigId.get(item.id);
+        const existing = meetingByConfigId.get(meeting.id);
         if (existing) {
           await tx
-            .update(workshops)
+            .update(meetings)
             .set(values)
-            .where(eq(workshops.id, existing.id));
-          if (existing.deletedAt !== null) counts.workshops.unarchived += 1;
-          else counts.workshops.upserted += 1;
+            .where(eq(meetings.id, existing.id));
+          meetingIdByConfigId.set(meeting.id, existing.id);
+          if (existing.deletedAt !== null) counts.meetings.unarchived += 1;
+          else counts.meetings.upserted += 1;
           continue;
         }
 
-        await tx.insert(workshops).values({ ...values, configId: item.id });
-        counts.workshops.upserted += 1;
-      }
-    }
+        // New meeting. The slug is derived once, on insert, and never
+        // recomputed: it is in URLs the moment the meeting is published, and
+        // regenerating it on every retitle would break every link anyone
+        // shared. Derived from the DATE rather than the title because the
+        // title is optional and most nights have none.
+        const slug = uniqueSlug(
+          clubDateKey(new Date(meeting.startsAt)),
+          usedSlugs,
+        );
+        usedSlugs.add(slug);
 
-    counts.workshops.archived = await archiveMissing(
-      tx,
-      workshops,
-      presentWorkshopConfigIds,
+        const [inserted] = await tx
+          .insert(meetings)
+          .values({ ...values, slug, configId: meeting.id })
+          .returning({ id: meetings.id });
+        meetingIdByConfigId.set(meeting.id, inserted!.id);
+        counts.meetings.upserted += 1;
+      }
+
+      const presentMeetingConfigIds = config.meetings.map((m) => m.id);
+      counts.meetings.archived = await archiveMissing(
+        tx,
+        meetings,
+        presentMeetingConfigIds,
+      );
+
+      // ── Workshops ──────────────────────────────────────────────────────────
+      // Global, like meetings: `configId` is unique among live workshops across
+      // the WHOLE table, not merely within one meeting's agenda, mirroring the
+      // validator's cross-config uniqueness check.
+      const existingWorkshops = await tx
+        .select({
+          id: workshops.id,
+          configId: workshops.configId,
+          deletedAt: workshops.deletedAt,
+        })
+        .from(workshops)
+        .where(sql`${workshops.configId} is not null`);
+      const workshopByConfigId = new Map(
+        existingWorkshops.map((w) => [w.configId!, w]),
+      );
+
+      const presentWorkshopConfigIds: string[] = [];
+
+      for (const meeting of config.meetings) {
+        const meetingId = meetingIdByConfigId.get(meeting.id)!;
+
+        for (const item of meeting.agenda) {
+          presentWorkshopConfigIds.push(item.id);
+          const values = {
+            meetingId,
+            title: item.title,
+            description: item.description,
+            project: item.project,
+            deletedAt: null,
+          };
+
+          const existing = workshopByConfigId.get(item.id);
+          if (existing) {
+            await tx
+              .update(workshops)
+              .set(values)
+              .where(eq(workshops.id, existing.id));
+            if (existing.deletedAt !== null) counts.workshops.unarchived += 1;
+            else counts.workshops.upserted += 1;
+            continue;
+          }
+
+          await tx.insert(workshops).values({ ...values, configId: item.id });
+          counts.workshops.upserted += 1;
+        }
+      }
+
+      counts.workshops.archived = await archiveMissing(
+        tx,
+        workshops,
+        presentWorkshopConfigIds,
+      );
+    });
+  } catch (error) {
+    if (!(error instanceof QuestionConflict)) throw error;
+    await postAlert(
+      "Config reconcile aborted: survey question change would orphan answers",
+      error.conflicts,
+      "Members have answered these questions, so they cannot be removed or " +
+        "change type or scope. Restore them in questions.json and retire " +
+        "them (`retired: true`) instead, or add a new question with a new " +
+        "id. Nothing was written.",
     );
-  });
+    return {
+      ok: false,
+      reason: `survey question changes conflict with recorded answers (${error.conflicts.length})`,
+    };
+  }
 
   return { ok: true, counts };
+}
+
+/**
+ * Upserts every configured question and deletes unanswered ones config no
+ * longer lists; throws `QuestionConflict` (rolling the transaction back) for
+ * any change answers cannot survive. A question is answered when it has a
+ * current answer or any revision -- a cleared answer still has history.
+ */
+async function reconcileQuestions(
+  tx: Tx,
+  config: QuestionsConfig,
+): Promise<ReconcileQuestionCounts> {
+  const existing = await tx
+    .select({
+      id: surveyQuestions.id,
+      scope: surveyQuestions.scope,
+      type: surveyQuestions.type,
+      retiredAt: surveyQuestions.retiredAt,
+    })
+    .from(surveyQuestions);
+  const existingIds = existing.map((q) => q.id);
+  const answered = new Set<string>(
+    existingIds.length === 0
+      ? []
+      : [
+          ...(
+            await tx
+              .selectDistinct({ id: surveyAnswers.questionId })
+              .from(surveyAnswers)
+              .where(inArray(surveyAnswers.questionId, existingIds))
+          ).map((r) => r.id),
+          ...(
+            await tx
+              .selectDistinct({ id: surveyAnswerRevisions.questionId })
+              .from(surveyAnswerRevisions)
+              .where(inArray(surveyAnswerRevisions.questionId, existingIds))
+          ).map((r) => r.id),
+        ],
+  );
+
+  const configured = new Map(config.questions.map((q) => [q.id, q]));
+  const conflicts: string[] = [];
+  for (const row of existing) {
+    if (!answered.has(row.id)) continue;
+    const question = configured.get(row.id);
+    if (!question) {
+      conflicts.push(`[${row.id}] removed from questions.json, but answered`);
+    } else if (question.type !== row.type || question.scope !== row.scope) {
+      conflicts.push(
+        `[${row.id}] changed from ${row.scope} ${row.type} to ` +
+          `${question.scope} ${question.type}, but answered`,
+      );
+    }
+  }
+  if (conflicts.length > 0) throw new QuestionConflict(conflicts);
+
+  const byId = new Map(existing.map((q) => [q.id, q]));
+  for (const question of config.questions) {
+    const values = {
+      scope: question.scope,
+      type: question.type,
+      definition: question,
+      // Kept from the first run that saw it retired, so it says when.
+      retiredAt: question.retired
+        ? (byId.get(question.id)?.retiredAt ?? new Date())
+        : null,
+      updatedAt: new Date(),
+    };
+    await tx
+      .insert(surveyQuestions)
+      .values({ id: question.id, ...values })
+      .onConflictDoUpdate({ target: surveyQuestions.id, set: values });
+  }
+
+  const gone = existingIds.filter((id) => !configured.has(id));
+  if (gone.length > 0) {
+    await tx.delete(surveyQuestions).where(inArray(surveyQuestions.id, gone));
+  }
+  return { upserted: config.questions.length, removed: gone.length };
 }
 
 // ── Shared helpers ───────────────────────────────────────────────────────────

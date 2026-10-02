@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { ClubConfig, Meeting } from "@devdogsuga/events";
+import type {
+  ClubConfig,
+  Meeting,
+  Question,
+  QuestionsConfig,
+} from "@devdogsuga/events";
 import { db } from "~/server/db";
 import { reconcileFromConfig } from "./reconcile";
 
@@ -16,7 +21,15 @@ import { reconcileFromConfig } from "./reconcile";
  * tests.
  */
 
+const ANSWERER = "e4700000-0000-4000-a000-000000000001";
+
 async function cleanup() {
+  // The answerer first: deleting the account cascades to its answers and
+  // their (otherwise append-only) revisions, which hold the questions.
+  await db.execute(sql`delete from auth.users where id = ${ANSWERER}`);
+  await db.execute(
+    sql`delete from platform."surveyQuestions" where id like 'reconcile_test_%'`,
+  );
   await db.execute(
     sql`delete from platform.meetings where "configId" like 'reconcile-test-%'`,
   );
@@ -102,10 +115,11 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
     cancellationReason: string | null;
     countsForCredit: boolean;
     surveyUrl: string | null;
+    surveyQuestionIds: string[];
   }>(sql`
     select "configId", "nameOverride", summary, kind, building, location,
       "startsAt", "endsAt", "rsvpUrl", "cancelledAt", "cancellationReason",
-      "countsForCredit", "surveyUrl"
+      "countsForCredit", "surveyUrl", "surveyQuestionIds"
     from platform.meetings
     where "configId" is not null and "configId" not like 'reconcile-test-%'
       and "deletedAt" is null
@@ -136,6 +150,9 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
           cancellationReason: row.cancellationReason,
           countsForCredit: row.countsForCredit,
           surveyUrl: row.surveyUrl,
+          ...(row.surveyQuestionIds.length > 0
+            ? { questions: row.surveyQuestionIds }
+            : {}),
           agenda: otherWorkshops
             .filter((w) => w.meetingConfigId === row.configId)
             .map((w) => ({
@@ -388,5 +405,158 @@ describe("reconcileFromConfig", () => {
 
     const row = await liveMeetingByConfigId(dupId);
     expect(row).toBeNull();
+  });
+});
+
+/**
+ * The survey questions live right now outside the `reconcile_test_` prefix,
+ * folded into each test's questions for the same reason `liveConfig` folds
+ * in meetings: an unanswered question absent from the config is deleted.
+ */
+async function liveQuestions(fixtures: Question[]): Promise<QuestionsConfig> {
+  const rows = await db.execute<{ definition: Question }>(sql`
+    select definition from platform."surveyQuestions"
+    where id not like 'reconcile_test_%'
+  `);
+  return { questions: [...fixtures, ...rows.map((r) => r.definition)] };
+}
+
+const memberQuestion: Question = {
+  id: "reconcile_test_member",
+  scope: "member",
+  prompt: "What do you study?",
+  type: "text",
+};
+
+const meetingQuestion: Question = {
+  id: "reconcile_test_meeting",
+  scope: "meeting",
+  prompt: "How was tonight?",
+  type: "scale",
+  min: 1,
+  max: 5,
+};
+
+async function questionRow(id: string) {
+  const rows = await db.execute<{
+    scope: string;
+    type: string;
+    definition: Question;
+    retiredAt: string | null;
+  }>(sql`
+    select scope, type, definition, "retiredAt"
+    from platform."surveyQuestions" where id = ${id}
+  `);
+  return rows[0] ?? null;
+}
+
+/** An answer to the member question, so it counts as answered. */
+async function answerMemberQuestion() {
+  await db.execute(sql`
+    insert into auth.users (id, email)
+    values (${ANSWERER}, 'reconcile-answerer@uga.edu')
+    on conflict do nothing
+  `);
+  await db.execute(sql`
+    insert into platform."surveyAnswers" ("userId", "questionId", answer)
+    values (${ANSWERER}, ${memberQuestion.id}, '{"text":"CS"}')
+  `);
+}
+
+describe("reconcileFromConfig: survey questions", () => {
+  beforeEach(cleanup);
+
+  it("copies questions and each meeting's question list", async () => {
+    const id = "reconcile-test-survey";
+    const { config } = await liveConfig([
+      meeting({ id, questions: [meetingQuestion.id] }),
+    ]);
+    const result = await reconcileFromConfig(
+      db,
+      config,
+      await liveQuestions([memberQuestion, meetingQuestion]),
+    );
+    expect(result.ok).toBe(true);
+
+    expect(await questionRow(meetingQuestion.id)).toMatchObject({
+      scope: "meeting",
+      type: "scale",
+      definition: meetingQuestion,
+      retiredAt: null,
+    });
+    const [row] = await db.execute<{ surveyQuestionIds: string[] }>(sql`
+      select "surveyQuestionIds" from platform.meetings where "configId" = ${id}
+    `);
+    expect(row?.surveyQuestionIds).toEqual([meetingQuestion.id]);
+  });
+
+  it("retires a question config retires, and deletes an unanswered one config drops", async () => {
+    const { config } = await liveConfig([
+      meeting({ id: "reconcile-test-survey" }),
+    ]);
+    await reconcileFromConfig(
+      db,
+      config,
+      await liveQuestions([memberQuestion, meetingQuestion]),
+    );
+
+    const result = await reconcileFromConfig(
+      db,
+      config,
+      await liveQuestions([{ ...memberQuestion, retired: true }]),
+    );
+    expect(result.ok && result.counts.questions.removed).toBe(1);
+    expect((await questionRow(memberQuestion.id))?.retiredAt).not.toBeNull();
+    expect(await questionRow(meetingQuestion.id)).toBeNull();
+  });
+
+  it("aborts, writing nothing, when an answered question is dropped or retyped", async () => {
+    const id = "reconcile-test-survey";
+    const { config } = await liveConfig([meeting({ id, title: "Before" })]);
+    await reconcileFromConfig(
+      db,
+      config,
+      await liveQuestions([memberQuestion]),
+    );
+    await answerMemberQuestion();
+
+    const renamed = await liveConfig([meeting({ id, title: "After" })]);
+    const dropped = await reconcileFromConfig(
+      db,
+      renamed.config,
+      await liveQuestions([]),
+    );
+    expect(dropped.ok).toBe(false);
+    if (!dropped.ok)
+      expect(dropped.reason).toMatch(/conflict with recorded answers/);
+
+    const retyped = await reconcileFromConfig(
+      db,
+      renamed.config,
+      await liveQuestions([{ ...memberQuestion, type: "longText" }]),
+    );
+    expect(retyped.ok).toBe(false);
+
+    expect(await questionRow(memberQuestion.id)).toMatchObject({
+      type: "text",
+    });
+    expect((await liveMeetingByConfigId(id))?.nameOverride).toBe("Before");
+  });
+
+  it("leaves questions alone when none are passed", async () => {
+    const { config } = await liveConfig([
+      meeting({ id: "reconcile-test-survey" }),
+    ]);
+    await reconcileFromConfig(
+      db,
+      config,
+      await liveQuestions([memberQuestion]),
+    );
+    const result = await reconcileFromConfig(db, config);
+    expect(result.ok && result.counts.questions).toEqual({
+      upserted: 0,
+      removed: 0,
+    });
+    expect(await questionRow(memberQuestion.id)).not.toBeNull();
   });
 });

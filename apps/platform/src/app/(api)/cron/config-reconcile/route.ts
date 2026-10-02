@@ -1,4 +1,4 @@
-import { getClubConfig } from "@devdogsuga/events";
+import { getClubConfig, getQuestions } from "@devdogsuga/events";
 import { unauthorized } from "next/navigation";
 import { NextResponse, connection } from "next/server";
 import { env } from "~/env";
@@ -9,7 +9,8 @@ import { reconcileFromConfig } from "~/server/config/reconcile";
 /**
  * GET /cron/config-reconcile
  *
- * Reconciles `meetings` and `workshops` against `@devdogsuga/events`.
+ * Reconciles `meetings`, `workshops` and the survey's `surveyQuestions`
+ * against `@devdogsuga/events`.
  * Fired on the shared fifteen-minute cron slot (see
  * `cloudflare/scheduled.ts`), and also by
  * `.github/workflows/deploy-app.yaml`'s "Reconcile meetings/workshops from
@@ -43,8 +44,10 @@ export async function GET(request: Request) {
   }
 
   let config;
+  let questions;
   try {
     config = getClubConfig();
+    questions = getQuestions();
   } catch (e) {
     // Broken at the file level (bad shape, or content the validator would
     // reject) -- CI's `check` step should have caught this before it ever
@@ -64,7 +67,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await reconcileFromConfig(db, config);
+    const result = await reconcileFromConfig(db, config, questions);
     if (!result.ok) {
       return NextResponse.json({ success: false, reason: result.reason });
     }
