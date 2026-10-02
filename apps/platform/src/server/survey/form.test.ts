@@ -122,10 +122,13 @@ describe("readAnswer", () => {
 describe("sameAnswer", () => {
   it("ignores key order and tells answers apart", () => {
     expect(
-      sameAnswer({ options: ["web"], other: "AI" }, {
-        other: "AI",
-        options: ["web"],
-      } as never),
+      sameAnswer(
+        { options: ["web"], other: "AI" },
+        {
+          other: "AI",
+          options: ["web"],
+        },
+      ),
     ).toBe(true);
     expect(sameAnswer({ option: "web" }, { option: "mobile" })).toBe(false);
     expect(sameAnswer(null, null)).toBe(true);

@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import PageShell from "~/components/PageShell";
 import StarGrid from "~/components/participation/StarGrid";
 import { StarTotalsRow } from "~/components/participation/StarBadges";
+import CheckInSurvey from "~/components/CheckInSurvey";
 import ReflectionCards from "~/components/ReflectionCards";
 import {
   formatEventDateTime,
@@ -17,6 +18,7 @@ import { getMyTeams } from "~/server/loaders/teams";
 import { getStarsForUser, totalStars } from "~/server/loaders/stars";
 import { getStreakForUser } from "~/server/loaders/streak";
 import { getReflectionActivities } from "~/server/reflections/load";
+import { getSurvey } from "~/server/survey/load";
 import { isMirrorStale } from "~/server/teams/mirrorFreshness";
 import Badge from "~/ui/badge";
 
@@ -89,14 +91,22 @@ export default async function AttendancePage({
   const checkedInMeeting = meetings.find((m) => m.id === requestedMeeting);
   const surveyUrl =
     receipt?.good && checkedInMeeting ? checkedInMeeting.surveyUrl : null;
-  const [stars, reflectionData, streak, myTeams] = userId
+  // The survey follows a check-in that stood (recorded or duplicate), for
+  // the meeting it was recorded against; `getSurvey` also checks the
+  // attendance row itself, so a hand-edited URL shows nothing.
+  const surveyMeetingId =
+    receipt?.good && requestedMeeting ? requestedMeeting : null;
+  const [stars, reflectionData, streak, myTeams, survey] = userId
     ? await Promise.all([
         getStarsForUser(userId),
         getReflectionActivities(userId),
         getStreakForUser(userId),
         getMyTeams(userId),
+        surveyMeetingId && isUuid(surveyMeetingId)
+          ? getSurvey(userId, surveyMeetingId)
+          : null,
       ])
-    : [null, null, null, null];
+    : [null, null, null, null, null];
   const selected = meetings.some((meeting) => meeting.id === requestedMeeting)
     ? requestedMeeting
     : meetings[0]?.id;
@@ -135,6 +145,8 @@ export default async function AttendancePage({
           )}
         </section>
       )}
+
+      {survey && <CheckInSurvey survey={survey} />}
 
       <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
         <h2 className="text-lg font-semibold text-white">Enter meeting code</h2>
@@ -304,5 +316,11 @@ function StreakStat({ label, value }: { label: string; value: string }) {
       <p className="text-xs tracking-wide text-mauve-400 uppercase">{label}</p>
       <p className="mt-1 font-semibold text-amber-300">{value}</p>
     </div>
+  );
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value,
   );
 }

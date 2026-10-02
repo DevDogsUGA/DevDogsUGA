@@ -1,4 +1,5 @@
 import { answerSchema, type Answer, type Question } from "@devdogsuga/events";
+import { OTHER, fieldName, otherFieldName } from "~/lib/surveyFields";
 
 /**
  * The survey form's wire format, shared by the form that writes it and the
@@ -8,6 +9,8 @@ import { answerSchema, type Answer, type Question } from "@devdogsuga/events";
  * - choice, scale: `q:<id>`, one option id or number (radios).
  * - multiChoice: `q:<id>`, repeated, one per checked option (checkboxes).
  * - Other: `OTHER` among the values above, its text in `q:<id>:other`.
+ * - `asked`, repeated: the id of every question the form showed, so a save
+ *   reads exactly those and leaves the rest alone.
  *
  * Reading turns those fields into the question's stored `Answer` shape and
  * checks it against the question with events' `answerSchema`, the same rule
@@ -15,10 +18,7 @@ import { answerSchema, type Answer, type Question } from "@devdogsuga/events";
  * no answer, or the member clearing one.
  */
 
-export const OTHER = "__other__";
-
-export const fieldName = (questionId: string) => `q:${questionId}`;
-export const otherFieldName = (questionId: string) => `q:${questionId}:other`;
+export { ASKED, OTHER, fieldName, otherFieldName } from "~/lib/surveyFields";
 
 export type ReadAnswer = { answer: Answer | null } | { error: string };
 

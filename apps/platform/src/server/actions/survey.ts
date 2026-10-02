@@ -8,7 +8,7 @@ import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
 import { auditEvents, surveyAnswerRevisions } from "~/server/db/schema";
 import { reflectionDeadline } from "~/server/reflections/policy";
-import { readAnswer, sameAnswer } from "~/server/survey/form";
+import { ASKED, readAnswer, sameAnswer } from "~/server/survey/form";
 import {
   attendedMeeting,
   questionsFor,
@@ -31,6 +31,10 @@ const inputSchema = z.object({ meetingId: z.uuid() });
  * one `survey.saved` audit event naming the questions. A required question
  * left blank, or an answer the question does not allow, saves nothing and
  * says which.
+ *
+ * Only the questions the form says it showed (its `asked` fields) are read:
+ * a question the member never saw -- added since the page loaded, or not
+ * rendered -- is neither answered nor cleared by a save.
  *
  * Meeting questions are answerable through the meeting's reflection window;
  * member questions always. Nothing here touches attendance.
@@ -93,9 +97,11 @@ async function writeSurvey(
       new Date() <=
       reflectionDeadline(meeting.endsAt, await submissionWindowDays(tx));
 
+    const asked = new Set(formData.getAll(ASKED));
     const errors: Record<string, string> = {};
     const pending: Pending[] = [];
     const read = (question: Question, scopeMeetingId: string | null) => {
+      if (!asked.has(question.id)) return;
       const result = readAnswer(question, formData);
       if ("error" in result) errors[question.id] = result.error;
       else if (result.answer === null && question.required) {

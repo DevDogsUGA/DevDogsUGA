@@ -11,7 +11,7 @@ import {
   vi,
 } from "vitest";
 import { db } from "~/server/db";
-import { OTHER, fieldName, otherFieldName } from "~/server/survey/form";
+import { ASKED, OTHER, fieldName, otherFieldName } from "~/server/survey/form";
 
 /**
  * `saveSurvey` and `getSurvey` against a real database: who may answer, what
@@ -139,6 +139,7 @@ beforeEach(() => {
 function form(meetingId: string, entries: [string, string][]): FormData {
   const data = new FormData();
   data.set("meetingId", meetingId);
+  for (const q of QUESTIONS) data.append(ASKED, q.id);
   for (const [k, v] of entries) data.append(k, v);
   return data;
 }
@@ -283,6 +284,17 @@ describe("saveSurvey", () => {
     expect(rows.find((r) => r.questionId === experience.id)?.answer).toEqual({
       option: "beginner",
     });
+  });
+
+  it("leaves a question the form did not show alone", async () => {
+    const data = new FormData();
+    data.set("meetingId", IDS.meeting);
+    data.append(ASKED, learn.id);
+    data.append(fieldName(learn.id), OTHER);
+    data.append(otherFieldName(learn.id), "A flyer");
+    const before = await answers(IDS.member);
+    await saveSurvey(initial, data);
+    expect(await answers(IDS.member)).toEqual(before);
   });
 });
 
