@@ -49,6 +49,7 @@ import type { ResolvedTerm } from "~/lib/parsers/termPartsOfTerm";
 import { createScheduleBuilderDb } from "~/server/db/create";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { resolveWorkflowDatabaseUrl } from "./database-url";
+import { SCRAPE_MONITOR_SLUG, SCRAPE_SCHEDULE } from "./scheduled";
 
 /**
  * Opaque -- scheduled and manual instances need no per-instance parameters.
@@ -72,20 +73,6 @@ interface WorkflowSentryEnv {
    * Workflow, which shares its bindings) the same `--var` way. */
   readonly SENTRY_RELEASE?: string;
 }
-
-/**
- * Sentry Crons monitor slug for the daily registrar scrape, and the native
- * Workflow schedule it upserts against -- kept in step with wrangler.jsonc's
- * production `workflows[].schedules` and the audit metadata in
- * `./scheduled.ts`'s `WORKFLOW_CRONS`. Only the production environment has
- * this schedule wired; staging/development instances are triggered by hand
- * (see wrangler.jsonc), so their check-ins upsert the same monitor config
- * without a missed-run alert ever firing there -- Sentry Crons issues are
- * scoped by monitor *and* environment tag, and alert rules are
- * production-only by the workspace's settled design.
- */
-const SCRAPE_MONITOR_SLUG = "schedule-builder-scrape";
-const SCRAPE_SCHEDULE = "5 14 * * *";
 
 /**
  * `run()`'s return value, and every intermediate `step.do` return value, is
@@ -139,6 +126,14 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
     // `step.do` persists and replays its return value instead, so every
     // resume after the first gets back the SAME `checkInId` without calling
     // `captureCheckIn` again.
+    //
+    // The slug and schedule are declared in `./scheduled.ts`'s
+    // `WORKFLOW_CRONS`. Only the production environment has this schedule
+    // wired; staging/development instances are triggered by hand (see
+    // wrangler.jsonc), so their check-ins upsert the same monitor config
+    // without a missed-run alert ever firing there -- Sentry Crons issues are
+    // scoped by monitor *and* environment tag, and alert rules are
+    // production-only by the workspace's settled design.
     const checkInId = await step.do("sentry-checkin-start", async () =>
       Sentry.captureCheckIn(
         { monitorSlug: SCRAPE_MONITOR_SLUG, status: "in_progress" },

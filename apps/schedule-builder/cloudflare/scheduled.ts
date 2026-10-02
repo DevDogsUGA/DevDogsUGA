@@ -45,6 +45,14 @@ export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
   {};
 
 /**
+ * The daily registrar scrape's schedule and Sentry Crons monitor slug, read by
+ * `./ScrapeWorkflow.ts`'s check-ins. The schedule is kept in step with
+ * wrangler.jsonc's production `workflows[].schedules`.
+ */
+export const SCRAPE_SCHEDULE = "5 14 * * *";
+export const SCRAPE_MONITOR_SLUG = "schedule-builder-scrape";
+
+/**
  * Cron expression to the natively scheduled Workflow binding and a one-line
  * description. This metadata lets `devtools cron list` give the trigger a
  * useful label and reconcile it against the binding's `schedules` field.
@@ -52,15 +60,20 @@ export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
  * Wrangler is the source of truth for whether it fires; this map is audit
  * metadata only. `devtools cron run` directs operators to `devtools workflows`
  * for manual smoke tests.
+ *
+ * `monitorSlug` is here, not only in the Workflow, because `backstage deploy
+ * prune-monitors` deletes every `schedule-builder-*` Sentry monitor that is
+ * not declared in this file's exports.
  */
 export const WORKFLOW_CRONS: Record<
   string,
-  { binding: string; label: string }
+  { binding: string; label: string; monitorSlug: string }
 > = {
-  "5 14 * * *": {
+  [SCRAPE_SCHEDULE]: {
     binding: "SCRAPE_WORKFLOW",
     label:
       "Daily registrar scrape (one retried, checkpointed ScrapeWorkflow step per term)",
+    monitorSlug: SCRAPE_MONITOR_SLUG,
   },
 };
 

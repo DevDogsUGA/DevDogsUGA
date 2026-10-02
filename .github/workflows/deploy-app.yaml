@@ -213,3 +213,22 @@ jobs:
         run: >-
           pnpm backstage deploy smoke --tier $DEPLOY_ENV --yes
           --app ${{ matrix.app }} --no-env
+      # Deletes the Sentry Crons monitors this app no longer declares in
+      # `cloudflare/scheduled.ts`. Sentry never removes a monitor itself, so a
+      # renamed or dropped `monitorSlug` otherwise alerts on missed check-ins
+      # every period (PLATFORM-2). After the smoke test, so it only runs once
+      # this deploy's cron triggers are live. Production only: staging deploys
+      # `main`, which can drop a monitor production still checks in to.
+      #
+      # SENTRY_MONITORS_TOKEN is in this step's `env:` alone, not the job's:
+      # it can delete monitors and alert rules org-wide, and the deploy token
+      # (an org token) cannot list or delete monitors at all. Without it the
+      # step skips with a notice. --no-env: SENTRY_ORG is already in the job
+      # environment.
+      - name: Prune Sentry monitors for ${{ matrix.app }}
+        if: env.DEPLOY_ENV == 'production'
+        env:
+          SENTRY_MONITORS_TOKEN: ${{ secrets.SENTRY_MONITORS_TOKEN }}
+        run: >-
+          pnpm backstage deploy prune-monitors --tier $DEPLOY_ENV --yes
+          --app ${{ matrix.app }} --no-env
