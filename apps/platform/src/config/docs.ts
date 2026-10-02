@@ -130,9 +130,7 @@ export const DOCS_PROJECT_LABELS: Record<
  * The docs landing page's own layout (contract item 4: "Which team are you
  * on?"). Large front-door cards for the two competition apps a new
  * contributor is actually choosing between; a smaller row underneath for the
- * two projects everyone eventually touches regardless of team. `sandbox` is
- * in neither list on purpose — still built and still reachable at
- * `/docs/sandbox`, just not a choice this page hands a newcomer.
+ * two projects everyone eventually touches regardless of team.
  */
 export const DOCS_LANDING_LARGE: readonly string[] = [
   "schedule-builder",

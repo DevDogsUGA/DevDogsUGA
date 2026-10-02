@@ -83,7 +83,6 @@ catalog:
   # All @sentry/* JS packages ship in lockstep off the sentry-javascript
   # monorepo; pin every one used in this workspace to the same release
   # (apps/platform and apps/schedule-builder depend on this family directly;
-  # apps/sandbox pins its own @sentry/* literally rather than via catalog:;
   # @devdogsuga/telemetry, which used to be the third catalog: consumer of
   # @sentry/core here, now pins its own copy in Backstage, same as
   # @devdogsuga/devtools does for its own @sentry/node dependency since the

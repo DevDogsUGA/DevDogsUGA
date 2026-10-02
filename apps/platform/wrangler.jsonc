@@ -176,9 +176,7 @@
         },
       ],
       // The staging deployment lives at staging.devdogsuga.org. One label
-      // deep, so Universal SSL covers it without Advanced Certificate Manager
-      // -- the same constraint the sandbox worker's wildcard route is shaped
-      // around.
+      // deep, so Universal SSL covers it without Advanced Certificate Manager.
       // Change it here and in the staging BASE_URL secret together; they are
       // read by different things and nothing cross-checks them.
       "routes": [

@@ -19,7 +19,6 @@
       "protectedRedirectPrefix": "/auth"
     }
   },
-  "apps/sandbox",
   {
     "path": "apps/schedule-builder",
     "smoke": {

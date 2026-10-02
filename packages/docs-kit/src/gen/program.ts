@@ -193,7 +193,7 @@ export function importPathFor(target: Target, absFile: string): string {
   const srcDir = toPosix(target.srcDir);
 
   if (target.kind === "app") {
-    // `apps/sandbox` declares no alias, so a relative path is the honest answer.
+    // An app that declares no alias gets a relative path, the honest answer.
     return file.startsWith(`${srcDir}/`)
       ? `./${stripExtension(file.slice(srcDir.length + 1))}`
       : stripExtension(file);

@@ -11,7 +11,6 @@ body:
         - study-group-finder
         - platform
         - toolkit / infrastructure
-        - sandbox
     validations:
       required: true
   - type: textarea

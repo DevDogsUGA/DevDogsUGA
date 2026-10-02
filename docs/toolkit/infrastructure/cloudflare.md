@@ -7,7 +7,7 @@ section: infrastructure
 
 # Cloudflare
 
-Everything here deploys to Cloudflare Workers: two Next.js apps (`platform`, `schedule-builder`) built by **vinext** `1.0.0-beta.11`, plus `sandbox`, a plain Worker with no framework. wrangler is `^4.136.3`. Read this before deploying, adding a binding, or picking a library that speaks HTTP: the restrictions here are unusual and the failures quiet. [Cloudflare's docs](https://developers.cloudflare.com/workers/) teach Workers; this does not.
+Everything here deploys to Cloudflare Workers: two Next.js apps (`platform`, `schedule-builder`) built by **vinext** `1.0.0-beta.11`. wrangler is `^4.136.3`. Read this before deploying, adding a binding, or picking a library that speaks HTTP: the restrictions here are unusual and the failures quiet. [Cloudflare's docs](https://developers.cloudflare.com/workers/) teach Workers; this does not.
 
 ## Building with vinext
 
@@ -51,7 +51,7 @@ workerd rejects `WebAssembly.compile()` outright: _"Wasm code generation disallo
 
 ## wrangler conventions
 
-Workers are named `<environment>-<app>` — `staging-platform`, `production-sandbox`. The top level of each `wrangler.jsonc` is the `development-*` worker, carrying no routes and no cron triggers, so an env-less `wrangler deploy` is inert rather than a second worker competing for the apex.
+Workers are named `<environment>-<app>` — `staging-platform`, `production-schedule-builder`. The top level of each `wrangler.jsonc` is the `development-*` worker, carrying no routes and no cron triggers, so an env-less `wrangler deploy` is inert rather than a second worker competing for the apex.
 
 <details>
 <summary>Which wrangler keys have to be repeated in every environment?</summary>
@@ -64,8 +64,6 @@ Staging's `triggers.crons` is empty on purpose rather than merely omitted: stagi
 
 </details>
 
-`sandbox` is a plain Worker (`src/index.ts`, no framework), dormant and outside the automated deploy.
-
 ## Deploying
 
 `.github/workflows/deploy-app.yaml` is the reusable deploy job both `staging-deploy` and `production-deploy` call. For each of `platform` and `schedule-builder`, in a matrix:
@@ -77,7 +75,5 @@ DEPLOY_ENV=<staging|production> pnpm -F <app> build  # with-env vinext build, en
 Workspace packages export TypeScript source, so there is no package build step. The `prebuild` script runs codegen before the build.
 
 Every other deploy step is a `pnpm backstage deploy` subcommand, run through `dlx` at the latest published version: `write-env` composes the env file, `preflight` classifies the project as paused (skip) or broken (fail), `plan` and `migrate` dry-run and apply the migrations, `<app>` checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file and runs `wrangler deploy`, and `smoke` and `reconcile` check the result and reconcile the platform's config. `pnpm backstage deploy --help` lists them. The platform's docs search index is refreshed after its Worker deploys with `pnpm -F @devdogsuga/docs populate:search`.
-
-`sandbox` is not part of this pipeline — there is no team-sandbox integration for it to proxy any more, so deploying it is a manual `pnpm backstage deploy sandbox --tier production`.
 
 The `Compose .env.<tier>` step is the only step in the whole workflow that reads the `secrets` and `vars` GitHub Actions contexts — after it runs, the checkout looks like a contributor's laptop with a filled-in env file, and every later step is a command you could run by hand.

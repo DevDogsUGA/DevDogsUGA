@@ -15,7 +15,6 @@ Two things live here: reference-shaped guides to the packages under `packages/*`
 | `apps/schedule-builder`   | Next.js — course schedule planning ("DogDays")                          | `schedule_builder`   |
 | `apps/study-group-finder` | Flutter — study groups ("Dog Pack"), still a scaffold                   | `study_group_finder` |
 | `apps/platform`           | Next.js — shared OAuth server, plus the DevDogs site, console, and docs | `platform`           |
-| `apps/sandbox`            | Cloudflare Worker — dormant; used to proxy each team's Supabase project | none                 |
 
 Schema-per-app is an organizational boundary, not a security one — see [Supabase](/docs/platform/guides/stack/supabase) for why Row-Level Security is what actually isolates one app's data from another's. The SQL is not in `packages/`: all three schemas are built by one migration history at the repo root, `supabase/migrations/`.
 
