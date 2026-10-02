@@ -76,10 +76,13 @@ Officers download a CSV snapshot of stars, attendance, or reflections with the
 officer CLI, not from the platform:
 
 ```sh
-pnpm backstage export <stars|attendance|reflections> [--from <date>] [--to <date>]
+pnpm backstage export stars --from 2026-08-17 --to 2026-12-12
+pnpm backstage export attendance --meeting 2026-09-09
+pnpm backstage export reflections --from 2026-08-17
 ```
 
-`attendance` also takes `--meeting <date>` to export a single meeting.
+Each takes `--from`/`--to`; `attendance` also takes `--meeting <date>` to
+export a single meeting.
 `--from`/`--to` are Eastern days (`--to` inclusive) and filter stars and
 attendance on the meeting's start and reflections on when the reflection was
 created. Each export is still recorded in the export audit log (an
