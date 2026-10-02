@@ -498,6 +498,7 @@ export type Database = {
           slug: string;
           startsAt: string;
           summary: string | null;
+          surveyQuestionIds: string[];
           surveyUrl: string | null;
         };
         Insert: {
@@ -517,6 +518,7 @@ export type Database = {
           slug: string;
           startsAt: string;
           summary?: string | null;
+          surveyQuestionIds?: string[];
           surveyUrl?: string | null;
         };
         Update: {
@@ -536,6 +538,7 @@ export type Database = {
           slug?: string;
           startsAt?: string;
           summary?: string | null;
+          surveyQuestionIds?: string[];
           surveyUrl?: string | null;
         };
         Relationships: [
@@ -1416,6 +1419,123 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      surveyAnswerRevisions: {
+        Row: {
+          answer: Json | null;
+          id: string;
+          meetingId: string | null;
+          questionId: string;
+          recordedAt: string;
+          userId: string;
+        };
+        Insert: {
+          answer?: Json | null;
+          id?: string;
+          meetingId?: string | null;
+          questionId: string;
+          recordedAt?: string;
+          userId: string;
+        };
+        Update: {
+          answer?: Json | null;
+          id?: string;
+          meetingId?: string | null;
+          questionId?: string;
+          recordedAt?: string;
+          userId?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "surveyAnswerRevisions_meetingId_fkey";
+            columns: ["meetingId"];
+            isOneToOne: false;
+            referencedRelation: "meetings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "surveyAnswerRevisions_questionId_fkey";
+            columns: ["questionId"];
+            isOneToOne: false;
+            referencedRelation: "surveyQuestions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      surveyAnswers: {
+        Row: {
+          answer: Json;
+          createdAt: string;
+          id: string;
+          meetingId: string | null;
+          questionId: string;
+          updatedAt: string;
+          userId: string;
+        };
+        Insert: {
+          answer: Json;
+          createdAt?: string;
+          id?: string;
+          meetingId?: string | null;
+          questionId: string;
+          updatedAt?: string;
+          userId: string;
+        };
+        Update: {
+          answer?: Json;
+          createdAt?: string;
+          id?: string;
+          meetingId?: string | null;
+          questionId?: string;
+          updatedAt?: string;
+          userId?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "surveyAnswers_meetingId_fkey";
+            columns: ["meetingId"];
+            isOneToOne: false;
+            referencedRelation: "meetings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "surveyAnswers_questionId_fkey";
+            columns: ["questionId"];
+            isOneToOne: false;
+            referencedRelation: "surveyQuestions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      surveyQuestions: {
+        Row: {
+          createdAt: string;
+          definition: Json;
+          id: string;
+          retiredAt: string | null;
+          scope: string;
+          type: string;
+          updatedAt: string;
+        };
+        Insert: {
+          createdAt?: string;
+          definition: Json;
+          id: string;
+          retiredAt?: string | null;
+          scope: string;
+          type: string;
+          updatedAt?: string;
+        };
+        Update: {
+          createdAt?: string;
+          definition?: Json;
+          id?: string;
+          retiredAt?: string | null;
+          scope?: string;
+          type?: string;
+          updatedAt?: string;
+        };
+        Relationships: [];
       };
       teamMembers: {
         Row: {

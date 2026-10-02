@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, varchar, text, pgEnum, boolean, integer, timestamp, smallint, date, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, boolean, uuid, pgEnum, text, integer, varchar, timestamp, date, smallint, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by types:drizzle after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -280,6 +280,7 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	cancellationReason: text(),
 	countsForCredit: boolean().default(false).notNull(),
 	seasonId: uuid().references(() => seasonsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	surveyQuestionIds: text().array().default([]).notNull(),
 }, (table) => [
 	uniqueIndex("meetings_configId_live_key").using("btree", table.configId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	index("meetings_live_idx").using("btree", table.startsAt.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
@@ -768,6 +769,68 @@ export const supportMessagesInPlatform = platform.table.withRLS("supportMessages
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 ]);
 
+export const surveyAnswerRevisionsInPlatform = platform.table.withRLS("surveyAnswerRevisions", {
+	id: uuid().defaultRandom().primaryKey(),
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	questionId: text().notNull().references(() => surveyQuestionsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	meetingId: uuid().references(() => meetingsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	answer: jsonb(),
+	recordedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("surveyAnswerRevisions_meetingId_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("meetingId" IS NOT NULL)`),
+	index("surveyAnswerRevisions_userId_questionId_idx").using("btree", table.userId.asc().nullsLast(), table.questionId.asc().nullsLast(), table.recordedAt.desc().nullsFirst()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+
+	pgPolicy("own_or_auditor_select", { for: "select", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") OR platform.has_permission(( SELECT auth.uid() AS uid), 'canViewAuditLog'::text))` }),
+check("surveyAnswerRevisions_answer_size", sql`((answer IS NULL) OR (pg_column_size(answer) <= 16384))`),]);
+
+export const surveyAnswersInPlatform = platform.table.withRLS("surveyAnswers", {
+	id: uuid().defaultRandom().primaryKey(),
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	questionId: text().notNull().references(() => surveyQuestionsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	meetingId: uuid().references(() => meetingsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	answer: jsonb().notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	uniqueIndex("surveyAnswers_meeting_key").using("btree", table.userId.asc().nullsLast(), table.questionId.asc().nullsLast(), table.meetingId.asc().nullsLast()).where(sql`("meetingId" IS NOT NULL)`),
+	index("surveyAnswers_meetingId_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("meetingId" IS NOT NULL)`),
+	uniqueIndex("surveyAnswers_member_key").using("btree", table.userId.asc().nullsLast(), table.questionId.asc().nullsLast()).where(sql`("meetingId" IS NULL)`),
+	index("surveyAnswers_questionId_idx").using("btree", table.questionId.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+
+	pgPolicy("own_select", { for: "select", to: ["authenticated"], using: sql`(( SELECT auth.uid() AS uid) = "userId")` }),
+check("surveyAnswers_answer_size", sql`(pg_column_size(answer) <= 16384)`),]);
+
+export const surveyQuestionsInPlatform = platform.table.withRLS("surveyQuestions", {
+	id: text().primaryKey(),
+	scope: text().notNull(),
+	type: text().notNull(),
+	definition: jsonb().notNull(),
+	retiredAt: timestamp({ withTimezone: true }),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+
+	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
+check("surveyQuestions_definition_size", sql`(pg_column_size(definition) <= 16384)`),check("surveyQuestions_id_format", sql`(id ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'::text)`),check("surveyQuestions_scope_choices", sql`(scope = ANY (ARRAY['member'::text, 'meeting'::text]))`),check("surveyQuestions_type_choices", sql`(type = ANY (ARRAY['text'::text, 'longText'::text, 'choice'::text, 'multiChoice'::text, 'scale'::text]))`),]);
+
 export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
 	id: uuid().defaultRandom().primaryKey(),
 	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -978,6 +1041,9 @@ export { supportConversationsInPlatform as supportConversations };
 export { supportForumPostsInPlatform as supportForumPosts };
 export { supportGuestsInPlatform as supportGuests };
 export { supportMessagesInPlatform as supportMessages };
+export { surveyAnswerRevisionsInPlatform as surveyAnswerRevisions };
+export { surveyAnswersInPlatform as surveyAnswers };
+export { surveyQuestionsInPlatform as surveyQuestions };
 export { teamMembersInPlatform as teamMembers };
 export { teamMembershipRequestsInPlatform as teamMembershipRequests };
 export { teamRoleInPlatform as teamRole };

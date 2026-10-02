@@ -682,6 +682,141 @@ describe("platform meetings, teams and attendance", () => {
   });
 });
 
+describe("platform check-in survey", () => {
+  const meetingId = "bbbbbbbb-0000-4000-a000-000000000047";
+  const questionId = "rls_survey_question";
+
+  beforeAll(async () => {
+    const a = admin();
+    const now = Date.now();
+    await a.from("meetings").insert({
+      id: meetingId,
+      slug: "rls-survey-meeting",
+      nameOverride: "RLS Survey Meeting",
+      startsAt: new Date(now).toISOString(),
+      endsAt: new Date(now + 7_200_000).toISOString(),
+      surveyQuestionIds: [questionId],
+    });
+    await a.from("surveyQuestions").insert({
+      id: questionId,
+      scope: "meeting",
+      type: "text",
+      definition: {
+        id: questionId,
+        scope: "meeting",
+        prompt: "RLS?",
+        type: "text",
+      },
+    });
+    await a.from("surveyAnswers").insert({
+      userId: member.userId,
+      questionId,
+      meetingId,
+      answer: { text: "Mine" },
+    });
+    await a.from("surveyAnswerRevisions").insert({
+      userId: member.userId,
+      questionId,
+      meetingId,
+      answer: { text: "Mine" },
+    });
+  }, 60_000);
+
+  afterAll(async () => {
+    await sql()`set session_replication_role = replica`;
+    try {
+      await sql()`delete from platform."surveyAnswerRevisions" where "questionId" = ${questionId}`;
+    } finally {
+      await sql()`set session_replication_role = origin`;
+    }
+    await admin().from("surveyAnswers").delete().eq("questionId", questionId);
+    await admin().from("surveyQuestions").delete().eq("id", questionId);
+    await admin().from("meetings").delete().eq("id", meetingId);
+  });
+
+  it("publishes questions read-only, even to logged-out visitors", async () => {
+    const { data } = await anon()
+      .from("surveyQuestions")
+      .select("id")
+      .eq("id", questionId);
+    expect(data).toEqual([{ id: questionId }]);
+
+    const { error } = await member.client.from("surveyQuestions").insert({
+      id: "rls_forged_question",
+      scope: "member",
+      type: "text",
+      definition: {},
+    });
+    expect(error?.code).toBe("42501");
+  });
+
+  it("shows a member their own answers, nobody else's, and keeps them server-written", async () => {
+    const { data: own } = await member.client
+      .from("surveyAnswers")
+      .select("answer")
+      .eq("questionId", questionId);
+    expect(own).toEqual([{ answer: { text: "Mine" } }]);
+
+    const { data: other } = await moderator.client
+      .from("surveyAnswers")
+      .select("id")
+      .eq("questionId", questionId);
+    expect(other).toEqual([]);
+
+    const { error } = await moderator.client.from("surveyAnswers").insert({
+      userId: moderator.userId,
+      questionId,
+      meetingId,
+      answer: { text: "Forged" },
+    });
+    expect(error?.code).toBe("42501");
+
+    await member.client
+      .from("surveyAnswers")
+      .update({ answer: { text: "Edited directly" } })
+      .eq("questionId", questionId);
+    const { data: stored } = await admin()
+      .from("surveyAnswers")
+      .select("answer")
+      .eq("questionId", questionId)
+      .single();
+    expect(stored?.answer).toEqual({ text: "Mine" });
+  });
+
+  it("keeps answer history append-only and readable by the owner or an auditor", async () => {
+    const { error } = await admin()
+      .from("surveyAnswerRevisions")
+      .update({ answer: { text: "Rewritten" } })
+      .eq("questionId", questionId);
+    expect(error?.code).toBe("55000");
+
+    const { data: own } = await member.client
+      .from("surveyAnswerRevisions")
+      .select("id")
+      .eq("questionId", questionId);
+    expect(own).toHaveLength(1);
+
+    const { data: beforeGrant } = await moderator.client
+      .from("surveyAnswerRevisions")
+      .select("id")
+      .eq("questionId", questionId);
+    expect(beforeGrant).toEqual([]);
+
+    const roleId = await grantRole(moderator, "Survey Audit Reader", {
+      canViewAuditLog: true,
+    });
+    try {
+      const { data } = await moderator.client
+        .from("surveyAnswerRevisions")
+        .select("id")
+        .eq("questionId", questionId);
+      expect(data).toHaveLength(1);
+    } finally {
+      await deleteRole(roleId);
+    }
+  });
+});
+
 describe("platform.docsPages", () => {
   const paths = ["t372/live", "t372/past", "t372/future"];
 
