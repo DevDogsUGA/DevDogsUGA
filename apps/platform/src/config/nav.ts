@@ -138,14 +138,6 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "A record of moderation actions and content reports filed across all production OAuth clients.",
   },
   {
-    label: "Exports",
-    href: "/console/exports",
-    icon: "DownloadSimpleIcon",
-    permission: "canExportStars",
-    description:
-      "Download CSV snapshots of stars, attendance, and reflections.",
-  },
-  {
     label: "Docs preview",
     href: "/preview/docs",
     icon: "BookOpenIcon",

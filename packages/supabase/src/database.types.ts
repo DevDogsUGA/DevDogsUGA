@@ -1190,7 +1190,6 @@ export type Database = {
       };
       roles: {
         Row: {
-          canExportStars: boolean | null;
           canManageAttendance: boolean | null;
           canManageRoles: boolean | null;
           canManageSuspensions: boolean | null;
@@ -1211,7 +1210,6 @@ export type Database = {
           title: string;
         };
         Insert: {
-          canExportStars?: boolean | null;
           canManageAttendance?: boolean | null;
           canManageRoles?: boolean | null;
           canManageSuspensions?: boolean | null;
@@ -1232,7 +1230,6 @@ export type Database = {
           title: string;
         };
         Update: {
-          canExportStars?: boolean | null;
           canManageAttendance?: boolean | null;
           canManageRoles?: boolean | null;
           canManageSuspensions?: boolean | null;
@@ -1673,7 +1670,6 @@ export type Database = {
       };
       resolvedUserPermissions: {
         Row: {
-          canExportStars: boolean | null;
           canManageAttendance: boolean | null;
           canManageRoles: boolean | null;
           canManageSuspensions: boolean | null;

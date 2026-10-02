@@ -29,7 +29,6 @@ export type RoleRow = {
   canManageSuspensions: boolean | null;
   canViewAuditLog: boolean | null;
   canManageAttendance: boolean | null;
-  canExportStars: boolean | null;
   canPreviewDocs: boolean | null;
   discordRoleId: string | null;
   discordSyncedName: string | null;
@@ -103,7 +102,6 @@ export const getPermissionsPageData = cache(
         canManageSuspensions: r.canManageSuspensions,
         canViewAuditLog: r.canViewAuditLog,
         canManageAttendance: r.canManageAttendance,
-        canExportStars: r.canExportStars,
         canPreviewDocs: r.canPreviewDocs,
         discordRoleId: r.discordRoleId,
         discordSyncedName: r.discordSyncedName,

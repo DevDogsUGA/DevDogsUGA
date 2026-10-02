@@ -48,7 +48,6 @@ const PERMISSION_KEYS = [
   "canManageSuspensions",
   "canViewAuditLog",
   "canManageAttendance",
-  "canExportStars",
   "canPreviewDocs",
 ] as const satisfies readonly PermissionKey[];
 
@@ -95,7 +94,6 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canManageSuspensions: false,
   canViewAuditLog: false,
   canManageAttendance: false,
-  canExportStars: false,
   canPreviewDocs: false,
 };
 
@@ -115,7 +113,6 @@ export async function resolveUserPermissions(
       canManageSuspensions: resolvedUserPermissions.canManageSuspensions,
       canViewAuditLog: resolvedUserPermissions.canViewAuditLog,
       canManageAttendance: resolvedUserPermissions.canManageAttendance,
-      canExportStars: resolvedUserPermissions.canExportStars,
       canPreviewDocs: resolvedUserPermissions.canPreviewDocs,
     })
     .from(resolvedUserPermissions)
@@ -156,7 +153,6 @@ export async function getCallerContext(userId: string): Promise<{
       canManageSuspensions: row.canManageSuspensions,
       canViewAuditLog: row.canViewAuditLog,
       canManageAttendance: row.canManageAttendance,
-      canExportStars: row.canExportStars,
       canPreviewDocs: row.canPreviewDocs,
     },
     minRank: row.minRank,
@@ -184,9 +180,6 @@ export async function canUserManageAttendance(
   userId: string,
 ): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canManageAttendance);
-}
-export async function canUserExportStars(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canExportStars);
 }
 export async function canUserPreviewDocs(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canPreviewDocs);
@@ -240,7 +233,6 @@ export type CreateRoleInput = {
   canManageSuspensions?: boolean | null;
   canViewAuditLog?: boolean | null;
   canManageAttendance?: boolean | null;
-  canExportStars?: boolean | null;
   canPreviewDocs?: boolean | null;
 };
 
@@ -269,7 +261,6 @@ export async function createRole(
       canManageSuspensions: data.canManageSuspensions ?? null,
       canViewAuditLog: data.canViewAuditLog ?? null,
       canManageAttendance: data.canManageAttendance ?? null,
-      canExportStars: data.canExportStars ?? null,
       canPreviewDocs: data.canPreviewDocs ?? null,
     })
     .returning({ id: roles.id });
@@ -328,9 +319,6 @@ export async function updateRole(
       }),
       ...(data.canManageAttendance !== undefined && {
         canManageAttendance: data.canManageAttendance,
-      }),
-      ...(data.canExportStars !== undefined && {
-        canExportStars: data.canExportStars,
       }),
       ...(data.canPreviewDocs !== undefined && {
         canPreviewDocs: data.canPreviewDocs,

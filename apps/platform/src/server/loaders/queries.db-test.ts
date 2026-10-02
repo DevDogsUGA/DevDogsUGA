@@ -18,7 +18,6 @@ import {
   getEntrants,
 } from "./teams";
 import { getStarsForUser } from "./stars";
-import { streamStarRows } from "~/server/export/stars";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
 
@@ -82,17 +81,6 @@ describe("every loader is valid SQL", () => {
   });
   it("stars", async () => {
     await getStarsForUser(NIL);
-    expect(true).toBe(true);
-  });
-  it("the stars export, including its filters", async () => {
-    // The export is a generator, so nothing runs until it is drained. An
-    // untouched `streamStarRows(...)` would prove nothing.
-    for await (const _ of streamStarRows({}, 10)) break;
-    for await (const _ of streamStarRows(
-      { from: new Date("2020-01-01"), to: new Date() },
-      10,
-    ))
-      break;
     expect(true).toBe(true);
   });
 });

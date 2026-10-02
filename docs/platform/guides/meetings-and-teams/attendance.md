@@ -9,7 +9,7 @@ section: guides
 
 The DevDogs Platform is authoritative for attendance. There is no downstream
 CMS receiving a projection of it any more — officers read it straight from the
-console, or a CSV export (see [Exports](#exports) below).
+console, or a CSV export from the officer CLI (see [Exports](#exports) below).
 
 ## Member check-in
 
@@ -64,14 +64,17 @@ not DevDogs, determines whether that evidence earns credit.
 
 ## Exports
 
-Officers with `canExportStars` can download a CSV snapshot of stars,
-attendance, or reflections from `/console/exports`. Each route
-(`/export/stars`, `/export/attendance`, `/export/reflections`) is gated on the
-same permission, streams its rows rather than buffering the file, and writes
-an `exportAudit` row — and the general audit ledger event it triggers —
-_before_ streaming starts, so a download that fails partway is still on
-record. `/export/attendance` takes `from`/`to` (on the meeting's start) and
-`meetingId`; `/export/reflections` takes `from`/`to` (on when the reflection
-was created). One row per attendance record or per reflection — the reflection
-export carries only the current text and a revision count, not the revision
-history itself, which stays behind `canViewAuditLog`.
+Officers download a CSV snapshot of stars, attendance, or reflections with the
+officer CLI, not from the platform:
+
+```sh
+pnpm backstage export <stars|attendance|reflections> [--from <date>] [--to <date>]
+```
+
+`attendance` also takes `--meeting <date>` to export a single meeting.
+`--from`/`--to` filter attendance on the meeting's start and reflections on when
+the reflection was created. Each export is still recorded in the export audit
+log (an `exportAudit` row) before any rows are written, so a download that fails
+partway is still on record. One row per attendance record or per reflection --
+the reflection export carries only the current text and a revision count, not
+the revision history itself, which stays behind `canViewAuditLog`.

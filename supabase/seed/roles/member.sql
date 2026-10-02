@@ -17,7 +17,7 @@ insert into "platform"."roles" (
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
   "canViewAuditLog",
-  "canManageAttendance", "canExportStars", "canPreviewDocs"
+  "canManageAttendance", "canPreviewDocs"
 
 )
 values
@@ -27,6 +27,6 @@ values
     'Default role for every member. No special permissions.',
     'default', null, true, false,
     null, null, null, null,
-    null, null, null, null, null, null, null
+    null, null, null, null, null, null
   )
 on conflict do nothing;

@@ -28,7 +28,6 @@ section: guides
 | Club config (nav, apps, tech stack, sections)    | `src/config/`                                           |
 | Docs system server queries                       | `src/server/docs/`                                      |
 | Transactional email                              | `src/server/email/`                                     |
-| Export (data downloads)                          | `src/server/export/`                                    |
 | Discord integration                              | `src/server/discord/`                                   |
 | Env contract                                     | `src/env.ts`                                            |
 | The Worker entry / cron dispatch (deploy)        | `cloudflare/worker.ts`, `cloudflare/scheduled.ts`       |

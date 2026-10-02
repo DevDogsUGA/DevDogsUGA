@@ -17,7 +17,7 @@ insert into "platform"."roles" (
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
   "canViewAuditLog",
-  "canManageAttendance", "canExportStars", "canPreviewDocs"
+  "canManageAttendance", "canPreviewDocs"
 
 )
 values
@@ -27,6 +27,6 @@ values
     'Maintains the platform and its deployment infrastructure.',
     'custom', 300, true, true,
     null, null, null, null,
-    true, true, true, true, true, true, true
+    true, true, true, true, true, true
   )
 on conflict do nothing;

@@ -22,7 +22,7 @@ insert into "platform"."roles" (
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
   "canViewAuditLog",
-  "canManageAttendance", "canExportStars", "canPreviewDocs"
+  "canManageAttendance", "canPreviewDocs"
 
 )
 values
@@ -32,6 +32,6 @@ values
     'Builds participation and relationships across the UGA campus.',
     'custom', 500, true, true,
     '#1abc9c', '1237558784017305642', 'Campus Engagement Team', 1752220,
-    null, null, null, null, true, null, true
+    null, null, null, null, true, true
   )
 on conflict do nothing;

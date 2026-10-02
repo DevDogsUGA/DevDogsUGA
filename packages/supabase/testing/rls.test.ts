@@ -651,7 +651,7 @@ describe("platform meetings, teams and attendance", () => {
 
   it("resolves the two new permissions", async () => {
     const a = admin();
-    for (const perm of ["canManageAttendance", "canExportStars"] as const) {
+    for (const perm of ["canManageAttendance", "canPreviewDocs"] as const) {
       const { data: before } = await a.rpc("has_permission", {
         uid: member.userId,
         perm,
@@ -673,7 +673,7 @@ describe("platform meetings, teams and attendance", () => {
       // columns because they have different audiences.
       const { data: neighbour } = await a.rpc("has_permission", {
         uid: member.userId,
-        perm: "canExportStars",
+        perm: "canPreviewDocs",
       });
       expect(neighbour).toBe(false);
     } finally {
@@ -763,7 +763,7 @@ describe("canPreviewDocs", () => {
       // Its own column: granting it grants nothing next to it.
       const neighbour = await a.rpc("has_permission", {
         uid: member.userId,
-        perm: "canExportStars",
+        perm: "canManageAttendance",
       });
       expect(neighbour.data).toBe(false);
     } finally {

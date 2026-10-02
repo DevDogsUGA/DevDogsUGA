@@ -22,7 +22,7 @@ insert into "platform"."roles" (
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
   "canViewAuditLog",
-  "canManageAttendance", "canExportStars", "canPreviewDocs"
+  "canManageAttendance", "canPreviewDocs"
 
 )
 values
@@ -32,6 +32,6 @@ values
     'Leads a DevDogs focus area.',
     'custom', 800, true, true,
     '#1abc9c', '1283289579700621322', 'Focus Lead', 1752220,
-    null, null, null, null, null, null, true
+    null, null, null, null, null, true
   )
 on conflict do nothing;

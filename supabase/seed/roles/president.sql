@@ -24,7 +24,7 @@ insert into "platform"."roles" (
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
   "canViewAuditLog",
-  "canManageAttendance", "canExportStars", "canPreviewDocs"
+  "canManageAttendance", "canPreviewDocs"
 
 )
 values
@@ -34,6 +34,6 @@ values
     'President of DevDogs.',
     'custom', 100, true, true,
     '#9b59b6', null, null, null,
-    true, true, true, true, true, true, true
+    true, true, true, true, true, true
   )
 on conflict do nothing;

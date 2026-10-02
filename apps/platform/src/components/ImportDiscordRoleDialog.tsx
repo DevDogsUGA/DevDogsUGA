@@ -29,7 +29,6 @@ const PERMISSION_LABELS: Record<string, string> = {
   canManageSuspensions: "Manage suspensions",
   canViewAuditLog: "View audit log",
   canManageAttendance: "Manage attendance",
-  canExportStars: "Export stars",
   canPreviewDocs: "Preview docs",
 };
 

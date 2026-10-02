@@ -89,7 +89,6 @@ export function useRoles(
             canManageSuspensions: data.canManageSuspensions ?? null,
             canViewAuditLog: data.canViewAuditLog ?? null,
             canManageAttendance: data.canManageAttendance ?? null,
-            canExportStars: data.canExportStars ?? null,
             canPreviewDocs: data.canPreviewDocs ?? null,
             discordRoleId: null,
             discordSyncedName: null,
@@ -145,8 +144,7 @@ export function useRoles(
                 ...(data.canManageAttendance !== undefined && {
                   canManageAttendance: data.canManageAttendance ?? null,
                 }),
-                ...(data.canExportStars !== undefined && {
-                  canExportStars: data.canExportStars ?? null,
+                ...(data.canPreviewDocs !== undefined && {
                   canPreviewDocs: data.canPreviewDocs ?? null,
                 }),
               }

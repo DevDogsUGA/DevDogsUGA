@@ -40,7 +40,6 @@ export default function robots(): MetadataRoute.Robots {
         "/auth", // sign-in entry point and OAuth callback
         "/discord", // Discord interaction webhook, signature-verified
         "/github", // GitHub App webhook, signature-verified
-        "/export", // CSV exports, permission-gated
         "/search", // JSON search API; there is no results PAGE to index
         // The navbar's viewer lookup. `$` because Disallow is a prefix match,
         // and a bare "/me" would also hide any public path starting "/me".
