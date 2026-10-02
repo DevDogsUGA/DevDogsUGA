@@ -39,7 +39,7 @@ export async function GET(request: Request) {
 
   const pages = matchEntries(appEntries, query, 8);
   const [docs, forum] = await Promise.all([
-    searchDocs(query, 10).catch((error) => {
+    searchDocs(query, { limit: 10 }).catch((error) => {
       console.error("[search] docs full-text search failed", error);
       return [];
     }),

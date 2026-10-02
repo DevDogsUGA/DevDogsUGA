@@ -38,6 +38,17 @@ appear. The widget polls every 10 seconds while a conversation is active and
 backs off to 30 and then 60 seconds once it goes quiet. A visitor's own write
 evicts the snapshot so they see their message at once.
 
+While the visitor writes a question, the widget searches the forum index
+and the docs for it, once typing pauses. Their title and body are prose, not
+search terms, so this search matches any of their words rather than all of
+them, and ranks by how many it matches (`tsQuery` and `tsScore` in
+`server/search/tsquery.ts`). Cmd-K keeps all-words matching. Matches show as one
+line in the form that opens a dialog with two tabs: similar questions, with
+the question text and, for FAQ posts, the answer; and docs pages, with their
+description and matching passage, the reader's own project first. Only FAQ
+answers are previewed whole, since an officer read those before
+publishing them.
+
 Postgres holds only what Discord can't:
 
 | Table                  | Holds                                                                            |
@@ -100,6 +111,12 @@ falls back to the visitor's next step: **Sign in**, then **Link Discord**, then
 Work happens in `#tech-support` as usual. Widget posts are the ones by
 `… (via docs)`.
 
+- **Read the tags.** A widget post arrives tagged with its docs project, its
+  stack (`Next.js` or `Flutter`, from the page) and the platform the docs were
+  showing (`macOS`, `Linux`, `WSL` or `Windows`). The visitor sees these
+  before posting and can remove a wrong one. The platform can be the
+  browser's guess if the reader never picked one. Three tags at most, so
+  `Resolved` and `FAQ` still fit under Discord's five.
 - **Answer in the thread.** Anyone can reply. The widget badges officers.
 - **Right-click a message → Apps → Mark as answer.** This pins it, records it
   as the answer and tags the post Resolved.
@@ -130,8 +147,10 @@ default to Cloudflare's always-pass test keys.
 Everything that needs setting up once:
 
 1. Forum tags named `Resolved`, `Duplicate` and `FAQ` on the forum,
-   plus optional tags named after docs projects (`Platform`, `Workshops`, …),
-   which new posts get automatically. Tags are matched by name.
+   plus optional tags that new posts get automatically: one per docs project
+   (`Platform`, `Workshops`, …), `Next.js` and `Flutter`, and `macOS`,
+   `Linux`, `WSL` and `Windows`. Tags are matched by name, and a missing one
+   is skipped.
 2. The bot needs View Channel, Read Message History, Send Messages in Threads,
    Manage Threads, Manage Messages and Pin Messages on the forum.
 3. A webhook on the forum, stored as `DISCORD_SUPPORT_WEBHOOK_URL`.

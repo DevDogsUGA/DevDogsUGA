@@ -131,14 +131,35 @@ export interface SupportInbox {
   guestsEnabled: boolean;
 }
 
-export interface SupportSuggestion {
-  kind: "doc" | "forum";
+/** A forum post that might already cover the visitor's question. */
+export interface SupportQuestionSuggestion {
+  threadId: string;
   title: string;
+  status: SupportStatus;
+  hasAnswer: boolean;
+  /** Published at `/help/<threadId>`. */
+  isFaq: boolean;
+  /** Project, stack and platform tags; status tags are left out. */
+  tags: string[];
+  /** Anonymized Discord markdown, cut short. */
+  question: string;
+  /** The marked answer, likewise; FAQ posts only. */
+  answer: string | null;
+  /** Pre-escaped HTML with <mark> highlights. */
+  snippet: string;
+}
+
+export interface SupportDocSuggestion {
+  title: string;
+  description: string | null;
+  breadcrumbs: string[];
   /** Pre-escaped HTML with <mark> highlights. */
   snippet: string;
   url: string;
-  /** Forum posts only. */
-  threadId?: string;
-  status?: SupportStatus;
-  hasAnswer?: boolean;
+}
+
+/** What `/support/suggest` finds while the visitor types. */
+export interface SupportSuggestions {
+  questions: SupportQuestionSuggestion[];
+  docs: SupportDocSuggestion[];
 }

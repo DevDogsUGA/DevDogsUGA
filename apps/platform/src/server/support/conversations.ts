@@ -9,6 +9,7 @@ import {
   supportMessages,
 } from "~/server/db/schema";
 import { getDocsProjects } from "~/server/docs/queries";
+import { OS_TAGS, STACK_TAGS, type SetupTags } from "~/lib/support/setup";
 import type {
   SupportConversationSummary,
   SupportInbox,
@@ -68,6 +69,23 @@ async function conversationFor(visitor: Visitor, threadId: string) {
     .limit(1);
   if (!row) throw new SupportError(404, "Conversation not found.");
   return row;
+}
+
+/**
+ * Runs a thread's reads alongside the ownership check instead of after it,
+ * a round trip saved, while keeping the check's failure first: a visitor
+ * who doesn't own the thread gets its 404, never a Discord error that would
+ * say whether the post exists.
+ */
+async function afterOwnership<C, R>(
+  ownership: Promise<C>,
+  reads: Promise<R>,
+): Promise<[C, R]> {
+  // Handled here so a read failing while the check is pending isn't
+  // reported as unhandled; awaiting `reads` below still throws it.
+  reads.catch(() => undefined);
+  const owned = await ownership;
+  return [owned, await reads];
 }
 
 function avatarOf(visitor: Visitor): string | null {
@@ -206,11 +224,13 @@ export interface NewConversation {
   title: string;
   body: string;
   page: { path: string; title: string } | null;
+  setup: SetupTags;
 }
 
 /**
- * Starts a forum post from the widget. The post carries the project's tag
- * (when the forum has one by that name), and one subtext line
+ * Starts a forum post from the widget. The post carries tags for the
+ * project, stack and platform (each when the forum has one by that name;
+ * see setup.ts), and one subtext line
  * of context for officers: the page it was asked from and, for a linked
  * member, a ping, which also joins them to the thread so Discord notifies
  * them of replies.
@@ -219,11 +239,16 @@ export async function startConversation(
   config: SupportConfig,
   visitor: Visitor,
   input: NewConversation,
-): Promise<{ threadId: string }> {
+): Promise<{ threadId: string; thread: SupportThread }> {
   const tags = await getForumTags(config);
   const project = input.page ? projectOf(input.page.path) : null;
-  const projectTag = project ? tagId(tags, project.name) : undefined;
-  const tagIds = projectTag ? [projectTag] : [];
+  const tagIds = [
+    project?.name,
+    input.setup.stack && STACK_TAGS[input.setup.stack],
+    input.setup.os && OS_TAGS[input.setup.os],
+  ]
+    .map((name) => (name ? tagId(tags, name) : undefined))
+    .filter((id): id is string => id !== undefined);
 
   const context: string[] = [];
   if (input.page) {
@@ -249,32 +274,56 @@ export async function startConversation(
   const threadId = message.channel_id;
   await invalidateForumSnapshot(config);
 
-  await db.insert(supportConversations).values({
+  await Promise.all([
+    db.insert(supportConversations).values({
+      threadId,
+      ...owner(visitor),
+      role: "asker",
+      lastReadMessageId: message.id,
+      followedInDiscordAt:
+        visitor.kind === "member" && visitor.discord ? sql`now()` : null,
+    }),
+    db
+      .insert(supportMessages)
+      .values({ messageId: message.id, threadId, ...owner(visitor) }),
+  ]);
+
+  const [messages] = await Promise.all([
+    // The new thread as the widget renders it, from the message Discord
+    // already returned, so the widget opens it without a second round trip.
+    toSupportMessages([message], {
+      visitor,
+      webhookId: webhookIdOf(config.webhookUrl),
+      answerMessageId: null,
+    }),
+    // Indexed immediately so the next visitor's "similar questions" can find
+    // it without waiting for the cron.
+    upsertForumPost(
+      {
+        id: threadId,
+        name: input.title,
+        applied_tags: tagIds,
+        last_message_id: message.id,
+      } as APIThreadChannel,
+      message,
+      tags,
+    ),
+  ]);
+
+  return {
     threadId,
-    ...owner(visitor),
-    role: "asker",
-    lastReadMessageId: message.id,
-    followedInDiscordAt:
-      visitor.kind === "member" && visitor.discord ? sql`now()` : null,
-  });
-  await db
-    .insert(supportMessages)
-    .values({ messageId: message.id, threadId, ...owner(visitor) });
-
-  // Indexed immediately so the next visitor's "similar questions" can find
-  // it without waiting for the cron.
-  await upsertForumPost(
-    {
-      id: threadId,
-      name: input.title,
-      applied_tags: tagIds,
-      last_message_id: message.id,
-    } as APIThreadChannel,
-    message,
-    tags,
-  );
-
-  return { threadId };
+    thread: {
+      threadId,
+      title: input.title,
+      status: "open",
+      discordUrl: threadUrl(threadId),
+      duplicateOf: null,
+      roles: {},
+      messages,
+      truncated: false,
+      role: "asker",
+    },
+  };
 }
 
 /** Reopens a resolved or archived post; a visitor replying means it is not done. */
@@ -315,11 +364,10 @@ export async function reply(
   threadId: string,
   body: string,
 ): Promise<void> {
-  await conversationFor(visitor, threadId);
-  const [thread, tags] = await Promise.all([
-    forumThread(config, threadId),
-    getForumTags(config),
-  ]);
+  const [thread, tags] = await afterOwnership(
+    conversationFor(visitor, threadId),
+    Promise.all([forumThread(config, threadId), getForumTags(config)]),
+  ).then(([, reads]) => reads);
   await reopenIfNeeded(tags, thread);
 
   const message = await postReply(config, threadId, {
@@ -327,14 +375,18 @@ export async function reply(
     username: displayName(visitor),
     avatarUrl: avatarOf(visitor),
   });
-  await invalidateForumSnapshot(config, threadId);
-  await db
-    .insert(supportMessages)
-    .values({ messageId: message.id, threadId, ...owner(visitor) });
-  await db
-    .update(supportConversations)
-    .set({ lastReadMessageId: message.id })
-    .where(and(ownedBy(visitor), eq(supportConversations.threadId, threadId)));
+  await Promise.all([
+    invalidateForumSnapshot(config, threadId),
+    db
+      .insert(supportMessages)
+      .values({ messageId: message.id, threadId, ...owner(visitor) }),
+    db
+      .update(supportConversations)
+      .set({ lastReadMessageId: message.id })
+      .where(
+        and(ownedBy(visitor), eq(supportConversations.threadId, threadId)),
+      ),
+  ]);
 }
 
 /** The asker marks their own post resolved: tag swapped, thread archived. */
@@ -418,12 +470,16 @@ export async function readThread(
   visitor: Visitor,
   threadId: string,
 ): Promise<SupportThread> {
-  const conversation = await conversationFor(visitor, threadId);
-  const [thread, tags, answerMessageId] = await Promise.all([
-    getThreadForRead(config, threadId),
-    getForumTags(config),
-    answerMessageIdFor(threadId),
-  ]);
+  // This is the route the open widget polls, so the reads don't wait on
+  // the ownership check (see `afterOwnership`).
+  const [conversation, [thread, tags, answerMessageId]] = await afterOwnership(
+    conversationFor(visitor, threadId),
+    Promise.all([
+      getThreadForRead(config, threadId),
+      getForumTags(config),
+      answerMessageIdFor(threadId),
+    ]),
+  );
   if (thread?.parent_id !== config.forumId) {
     throw new SupportError(404, "That post no longer exists.");
   }

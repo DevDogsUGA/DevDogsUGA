@@ -63,28 +63,29 @@ async function currentMember(): Promise<Extract<
   const userId = await expectSession().catch(() => null);
   if (!userId) return null;
 
-  const [profile] = await db
-    .select({ name: profiles.preferredName })
-    .from(profiles)
-    .where(eq(profiles.userId, userId))
-    .limit(1);
+  const [[profile], [identity]] = await Promise.all([
+    db
+      .select({ name: profiles.preferredName })
+      .from(profiles)
+      .where(eq(profiles.userId, userId))
+      .limit(1),
+    db
+      .select({
+        id: identitiesInAuth.providerId,
+        data: identitiesInAuth.identityData,
+      })
+      .from(identitiesInAuth)
+      .where(
+        and(
+          eq(identitiesInAuth.userId, userId),
+          eq(identitiesInAuth.provider, "discord"),
+        ),
+      )
+      .limit(1),
+  ]);
   // A session without a profile is an account that never finished signing
   // up; the rest of the site treats it as signed out, and so does this.
   if (!profile) return null;
-
-  const [identity] = await db
-    .select({
-      id: identitiesInAuth.providerId,
-      data: identitiesInAuth.identityData,
-    })
-    .from(identitiesInAuth)
-    .where(
-      and(
-        eq(identitiesInAuth.userId, userId),
-        eq(identitiesInAuth.provider, "discord"),
-      ),
-    )
-    .limit(1);
 
   const avatar = (identity?.data as { avatar_url?: unknown } | undefined)
     ?.avatar_url;
@@ -133,10 +134,11 @@ async function currentGuest(): Promise<Extract<
  * claim flow: no callback hook, no separate endpoint.
  */
 export async function currentVisitor(): Promise<Visitor | null> {
-  const member = await currentMember();
-  if (!member) return currentGuest();
+  // Both at once: most visitors have one or the other, and the guest lookup
+  // costs nothing without its cookie.
+  const [member, guest] = await Promise.all([currentMember(), currentGuest()]);
+  if (!member) return guest;
 
-  const guest = await currentGuest();
   if (guest) {
     await claimGuest(guest.guestId, member.userId);
     (await cookies()).delete({ name: GUEST_COOKIE, path: COOKIE_PATH });

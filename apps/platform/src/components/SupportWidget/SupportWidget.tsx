@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useDeferredValue,
   useEffect,
   useId,
   useRef,
@@ -10,6 +9,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeftIcon,
   ArrowSquareOutIcon,
@@ -19,19 +19,29 @@ import {
   DiscordLogoIcon,
   PaperPlaneRightIcon,
   PlusIcon,
+  TagIcon,
   XIcon,
 } from "@phosphor-icons/react/ssr";
 import { Button } from "~/ui/button";
 import { Input } from "~/ui/input";
 import { Textarea } from "~/ui/textarea";
 import { cn } from "~/lib/cn";
+import {
+  OS_TAGS,
+  STACK_TAGS,
+  isOs,
+  stackOf,
+  type SetupTags,
+} from "~/lib/support/setup";
 import type {
   SupportInbox,
-  SupportSuggestion,
   SupportThread,
   SupportViewer,
 } from "~/lib/support/types";
+import { useDocsVariant } from "~/components/DocsVariants/store";
 import {
+  pendingMessage,
+  prefetchThread,
   useFollow,
   useInbox,
   useReply,
@@ -43,12 +53,22 @@ import {
 import { gateStep, useGateHref } from "./DiscordGate";
 import { OPEN_SUPPORT_EVENT } from "./events";
 import Message from "./Message";
+import { SuggestionsDialog, SuggestionsSummary } from "./SuggestionsDialog";
 import Turnstile from "./Turnstile";
 
 type View =
   | { name: "inbox" }
   | { name: "compose" }
-  | { name: "thread"; threadId: string; justPosted?: boolean };
+  | {
+      name: "thread";
+      threadId: string;
+      /** From the inbox, to show while the thread loads. */
+      title?: string;
+      justPosted?: boolean;
+    };
+
+/** Each docs project's platforms, to resolve which one its page is showing. */
+type ProjectPlatforms = Record<string, readonly string[]>;
 
 /** Where the launcher shows by default. Elsewhere, only Cmd-K opens it. */
 function showsLauncher(pathname: string | null): boolean {
@@ -70,7 +90,13 @@ function showsLauncher(pathname: string | null): boolean {
  * read the page behind it. Escape closes it and focus returns to the
  * launcher.
  */
-export default function SupportWidget({ siteKey }: { siteKey: string | null }) {
+export default function SupportWidget({
+  siteKey,
+  projectPlatforms,
+}: {
+  siteKey: string | null;
+  projectPlatforms: ProjectPlatforms;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>({ name: "inbox" });
@@ -102,9 +128,15 @@ export default function SupportWidget({ siteKey }: { siteKey: string | null }) {
           role="dialog"
           aria-label="Get help from DevDogs"
           onKeyDown={(event: KeyboardEvent) => {
+            // Keys from the suggestions dialog bubble here through React's
+            // tree though it is portaled elsewhere; its Escape is its own.
+            if (!event.currentTarget.contains(event.target as Node)) return;
             if (event.key === "Escape") close();
           }}
-          className="bg-popover text-popover-foreground shadow-block-outlined-lg fixed inset-x-2 bottom-2 z-50 flex max-h-[min(40rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-xl border-2 border-black sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[26rem]"
+          // Lifted off the page on purpose: the page is mauve-950, so the
+          // panel is a step lighter with a lit border and a cyan block
+          // shadow, the launcher's colors.
+          className="text-popover-foreground shadow-block-lg fixed inset-x-2 bottom-2 z-50 flex max-h-[min(40rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-xl border-2 border-mauve-500 bg-mauve-900 shadow-cyan-400/70 sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[26rem]"
         >
           <Panel
             view={view}
@@ -112,6 +144,7 @@ export default function SupportWidget({ siteKey }: { siteKey: string | null }) {
             inbox={inbox.data}
             inboxError={inbox.error}
             siteKey={siteKey}
+            projectPlatforms={projectPlatforms}
             onClose={close}
           />
         </section>
@@ -131,7 +164,9 @@ export default function SupportWidget({ siteKey }: { siteKey: string | null }) {
           }
           onClick={() => (open ? close() : setOpen(true))}
           className={cn(
-            "bg-primary text-primary-foreground shadow-block-outlined-md fixed right-4 bottom-4 z-50 flex size-14 items-center justify-center rounded-full border-2 border-black transition-transform hover:-translate-y-0.5 sm:right-6 sm:bottom-6",
+            // The site's call-to-action colors (cyan, amber shadow): the
+            // one thing in the corner that should catch the eye.
+            "shadow-block-md transition-lift fixed right-4 bottom-4 z-50 flex size-14 items-center justify-center rounded-full border-2 border-black bg-cyan-400 text-black shadow-amber-400 hover:-translate-x-0.5 hover:-translate-y-0.5 sm:right-6 sm:bottom-6",
             open && "max-sm:hidden",
           )}
         >
@@ -157,6 +192,7 @@ function Panel({
   inbox,
   inboxError,
   siteKey,
+  projectPlatforms,
   onClose,
 }: {
   view: View;
@@ -164,13 +200,14 @@ function Panel({
   inbox: SupportInbox | undefined;
   inboxError: Error | null;
   siteKey: string | null;
+  projectPlatforms: ProjectPlatforms;
   onClose: () => void;
 }) {
   const viewer: SupportViewer = inbox?.viewer ?? { kind: "anonymous" };
 
   return (
     <>
-      <header className="flex items-center gap-2 border-b-2 border-black px-3 py-2.5">
+      <header className="flex items-center gap-2 border-b-2 border-mauve-600 bg-mauve-950/40 px-3 py-2.5">
         {view.name !== "inbox" && (
           <Button
             variant="ghost"
@@ -203,7 +240,9 @@ function Panel({
         <InboxView
           inbox={inbox}
           error={inboxError}
-          onOpen={(threadId) => setView({ name: "thread", threadId })}
+          onOpen={(threadId, title) =>
+            setView({ name: "thread", threadId, title })
+          }
           onCompose={() => setView({ name: "compose" })}
         />
       )}
@@ -212,6 +251,7 @@ function Panel({
           viewer={viewer}
           guestsEnabled={inbox?.guestsEnabled ?? false}
           siteKey={siteKey}
+          projectPlatforms={projectPlatforms}
           onPosted={(threadId) =>
             setView({ name: "thread", threadId, justPosted: true })
           }
@@ -221,6 +261,7 @@ function Panel({
         <ThreadView
           key={view.threadId}
           threadId={view.threadId}
+          title={view.title}
           viewer={viewer}
           justPosted={view.justPosted ?? false}
           onOpenThread={(threadId) => setView({ name: "thread", threadId })}
@@ -238,9 +279,10 @@ function InboxView({
 }: {
   inbox: SupportInbox | undefined;
   error: Error | null;
-  onOpen: (threadId: string) => void;
+  onOpen: (threadId: string, title: string) => void;
   onCompose: () => void;
 }) {
+  const client = useQueryClient();
   const conversations = inbox?.conversations ?? [];
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -265,8 +307,16 @@ function InboxView({
               <li key={conversation.threadId}>
                 <button
                   type="button"
-                  onClick={() => onOpen(conversation.threadId)}
-                  className="hover:bg-muted flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left"
+                  onClick={() =>
+                    onOpen(conversation.threadId, conversation.title)
+                  }
+                  onPointerEnter={() =>
+                    void prefetchThread(client, conversation.threadId)
+                  }
+                  onFocus={() =>
+                    void prefetchThread(client, conversation.threadId)
+                  }
+                  className="flex w-full items-center gap-2 rounded-lg border border-mauve-700 bg-mauve-950/40 px-3 py-2 text-left hover:border-mauve-500 hover:bg-mauve-800"
                 >
                   <span className="min-w-0 flex-1">
                     <span
@@ -293,7 +343,7 @@ function InboxView({
           </ul>
         )}
       </div>
-      <div className="border-t p-3">
+      <div className="border-t border-mauve-700 p-3">
         <Button className="w-full" onClick={onCompose}>
           <PlusIcon /> Ask a question
         </Button>
@@ -302,72 +352,79 @@ function InboxView({
   );
 }
 
-function SuggestionList({
-  suggestions,
-  onFollow,
-  following,
+/** `value`, once it has stopped changing for `ms`. */
+function useDebounced<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
+
+const ALL_PLATFORMS = Object.keys(OS_TAGS);
+
+/**
+ * The tags a question from this page starts with: the page's stack, and the
+ * platform its docs are showing (the reader's pick, or the guess from their
+ * browser). Platform only on docs pages, where the reader can see it.
+ */
+/** The docs project a page belongs to, by slug. */
+function projectOf(pathname: string): string | null {
+  return /^\/docs\/([^/]+)/.exec(pathname)?.[1] ?? null;
+}
+
+function useDetectedSetup(
+  pathname: string,
+  projectPlatforms: ProjectPlatforms,
+): SetupTags {
+  const project = projectOf(pathname);
+  const offered = project ? projectPlatforms[project] : undefined;
+  const os = useDocsVariant("os", offered ?? ALL_PLATFORMS);
+  return {
+    stack: stackOf(pathname),
+    os: offered && isOs(os) ? os : null,
+  };
+}
+
+/**
+ * The tags a question will carry, each removable: they come from the docs
+ * settings, which a reader can have left on a guess. The project's tag is
+ * applied too but not listed; the page decides it, so it is never wrong.
+ */
+function SetupTagList({
+  setup,
+  onRemove,
 }: {
-  suggestions: SupportSuggestion[];
-  onFollow: (threadId: string) => void;
-  following: string | null;
+  setup: SetupTags;
+  onRemove: (group: keyof SetupTags) => void;
 }) {
+  const tags = [
+    setup.stack && { group: "stack" as const, label: STACK_TAGS[setup.stack] },
+    setup.os && { group: "os" as const, label: OS_TAGS[setup.os] },
+  ].filter((tag) => tag !== null);
+  if (tags.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-semibold">Similar questions</p>
-      <ul className="flex flex-col gap-1.5">
-        {suggestions.map((suggestion) => (
-          <li
-            key={suggestion.url}
-            className="bg-muted/40 flex flex-col gap-1 rounded-lg border px-3 py-2"
+    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="text-muted-foreground flex items-center gap-1">
+        <TagIcon className="size-3.5" /> Tagged
+      </span>
+      {tags.map((tag) => (
+        <span
+          key={tag.group}
+          className="flex items-center gap-1 rounded-full border border-mauve-600 bg-mauve-800 py-0.5 pr-1 pl-2"
+        >
+          {tag.label}
+          <button
+            type="button"
+            aria-label={`Remove the ${tag.label} tag`}
+            onClick={() => onRemove(tag.group)}
+            className="text-muted-foreground rounded-full p-0.5 hover:bg-mauve-700 hover:text-white"
           >
-            <span className="flex items-center gap-2">
-              <span className="text-muted-foreground text-[0.65rem] font-semibold uppercase">
-                {suggestion.kind === "doc"
-                  ? "Docs"
-                  : suggestion.hasAnswer
-                    ? "Answered"
-                    : suggestion.status === "resolved"
-                      ? "Resolved"
-                      : "Open"}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                {suggestion.title}
-              </span>
-            </span>
-            <span
-              className="text-muted-foreground line-clamp-2 text-xs [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-current"
-              // Server-built: HTML-escaped before the <mark> swap.
-              dangerouslySetInnerHTML={{ __html: suggestion.snippet }}
-            />
-            <span className="flex gap-3 text-xs">
-              {(suggestion.kind === "doc" || suggestion.hasAnswer) && (
-                <a
-                  href={suggestion.url}
-                  className="text-primary font-medium hover:underline"
-                >
-                  {suggestion.kind === "doc"
-                    ? "Read the page"
-                    : "See the answer"}
-                </a>
-              )}
-              {suggestion.kind === "forum" &&
-                suggestion.status === "open" &&
-                suggestion.threadId && (
-                  <button
-                    type="button"
-                    disabled={following !== null}
-                    onClick={() => onFollow(suggestion.threadId!)}
-                    className="text-primary font-medium hover:underline disabled:opacity-50"
-                  >
-                    {following === suggestion.threadId
-                      ? "Following…"
-                      : "Same question — follow it"}
-                  </button>
-                )}
-            </span>
-          </li>
-        ))}
-      </ul>
+            <XIcon className="size-3" weight="bold" />
+          </button>
+        </span>
+      ))}
     </div>
   );
 }
@@ -376,14 +433,16 @@ function ComposeView({
   viewer,
   guestsEnabled,
   siteKey,
+  projectPlatforms,
   onPosted,
 }: {
   viewer: SupportViewer;
   guestsEnabled: boolean;
   siteKey: string | null;
+  projectPlatforms: ProjectPlatforms;
   onPosted: (threadId: string) => void;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/docs";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [token, setToken] = useState<string | null>(null);
@@ -394,11 +453,19 @@ function ComposeView({
     if (token) setTurnstileReset((n) => n + 1);
   };
   const [following, setFollowing] = useState<string | null>(null);
+  const [removed, setRemoved] = useState<(keyof SetupTags)[]>([]);
+  const [dialogTab, setDialogTab] = useState<"questions" | "docs" | null>(null);
   const start = useStart();
   const follow = useFollow();
-  const query = useDeferredValue(`${title} ${body}`.trim().slice(0, 200));
-  const suggestions = useSuggestions(query);
-  const signInHref = `/support/sign-in?next=${encodeURIComponent(pathname ?? "/docs")}`;
+  // Searched once typing pauses, not per keystroke.
+  const query = useDebounced(`${title} ${body}`.trim().slice(0, 200), 350);
+  const suggestions = useSuggestions(query, projectOf(pathname));
+  const detected = useDetectedSetup(pathname, projectPlatforms);
+  const setup: SetupTags = {
+    stack: removed.includes("stack") ? null : detected.stack,
+    os: removed.includes("os") ? null : detected.os,
+  };
+  const signInHref = `/support/sign-in?next=${encodeURIComponent(pathname)}`;
 
   const needsGuestCheck = viewer.kind === "anonymous";
   const canPostAsGuest = guestsEnabled && siteKey !== null;
@@ -424,6 +491,11 @@ function ComposeView({
     body.trim().length > 0 &&
     (!needsGuestCheck || token !== null);
   const error = start.error ?? follow.error;
+  // Previous results are kept while the next load, but not once the query
+  // is too short to search at all.
+  const found = query.length >= 4 ? suggestions.data : undefined;
+  const anyFound =
+    found !== undefined && found.questions.length + found.docs.length > 0;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -432,9 +504,8 @@ function ComposeView({
       {
         title: title.trim(),
         body: body.trim(),
-        page: pathname
-          ? { path: pathname, title: document.title.split(" | ")[0] ?? "" }
-          : null,
+        page: { path: pathname, title: document.title.split(" | ")[0] ?? "" },
+        setup,
         turnstileToken: token ?? undefined,
       },
       {
@@ -450,7 +521,10 @@ function ComposeView({
     follow.mutate(
       { threadId, turnstileToken: token ?? undefined },
       {
-        onSuccess: () => onPosted(threadId),
+        onSuccess: () => {
+          setDialogTab(null);
+          onPosted(threadId);
+        },
         onError: spentToken,
         onSettled: () => setFollowing(null),
       },
@@ -480,11 +554,26 @@ function ComposeView({
             className="max-h-48 min-h-24"
           />
         </label>
-        {suggestions.data && suggestions.data.length > 0 && (
-          <SuggestionList
-            suggestions={suggestions.data}
+        <SetupTagList
+          setup={setup}
+          onRemove={(group) => setRemoved((r) => [...r, group])}
+        />
+        {anyFound && (
+          <SuggestionsSummary suggestions={found} onOpen={setDialogTab} />
+        )}
+        {found && (
+          <SuggestionsDialog
+            suggestions={found}
+            tab={dialogTab}
+            onTabChange={setDialogTab}
+            onClose={() => setDialogTab(null)}
             onFollow={onFollow}
             following={following}
+            followBlocked={
+              needsGuestCheck && !token
+                ? "Finish the check under the form first."
+                : null
+            }
           />
         )}
         {needsGuestCheck && siteKey && (
@@ -509,7 +598,7 @@ function ComposeView({
         </p>
         {error && <p className="text-destructive text-sm">{error.message}</p>}
       </div>
-      <div className="border-t p-3">
+      <div className="border-t border-mauve-700 p-3">
         <Button
           type="submit"
           className="w-full"
@@ -547,11 +636,13 @@ function NotifyNudge() {
 
 function ThreadView({
   threadId,
+  title,
   viewer,
   justPosted,
   onOpenThread,
 }: {
   threadId: string;
+  title: string | undefined;
   viewer: SupportViewer;
   justPosted: boolean;
   onOpenThread: (threadId: string) => void;
@@ -560,8 +651,10 @@ function ThreadView({
   const reply = useReply(threadId);
   const resolve = useResolve(threadId);
   const [draft, setDraft] = useState("");
+  // When the reply being sent went out, for its pending message's time.
+  const [sentAt, setSentAt] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
-  const count = thread.data?.messages.length ?? 0;
+  const count = (thread.data?.messages.length ?? 0) + (reply.isPending ? 1 : 0);
 
   // Stick to the bottom as messages arrive, the way every chat does.
   useEffect(() => {
@@ -575,20 +668,48 @@ function ThreadView({
     );
   }
   if (!thread.data) {
-    return <p className="text-muted-foreground p-4 text-sm">Loading…</p>;
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {title && (
+          <p className="truncate border-b border-mauve-700 px-3 py-2 text-sm font-medium">
+            {title}
+          </p>
+        )}
+        <div className="flex flex-col gap-3 p-3" aria-busy>
+          {[0, 1].map((i) => (
+            <div key={i} className="flex gap-2.5">
+              <div className="size-8 shrink-0 animate-pulse rounded-full bg-mauve-800" />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <div className="h-3 w-24 animate-pulse rounded bg-mauve-800" />
+                <div className="h-3 w-full animate-pulse rounded bg-mauve-800" />
+              </div>
+            </div>
+          ))}
+          <span className="sr-only">Loading the conversation…</span>
+        </div>
+      </div>
+    );
   }
   const data: SupportThread = thread.data;
+  // The reply in flight, shown at once (see `useReply`).
+  const messages =
+    reply.isPending && reply.variables
+      ? [...data.messages, pendingMessage(reply.variables, sentAt)]
+      : data.messages;
 
   const send = (event: FormEvent) => {
     event.preventDefault();
     const body = draft.trim();
     if (!body || reply.isPending) return;
-    reply.mutate(body, { onSuccess: () => setDraft("") });
+    setSentAt(Date.now());
+    setDraft("");
+    // Put back what they wrote if it didn't go through.
+    reply.mutate(body, { onError: () => setDraft(body) });
   };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-2">
+      <div className="flex items-center gap-2 border-b border-mauve-700 px-3 py-2">
         <p className="min-w-0 flex-1 truncate text-sm font-medium">
           {data.title}
         </p>
@@ -619,32 +740,41 @@ function ThreadView({
             Showing the latest 100 messages.
           </p>
         )}
-        {data.messages.map((message, i) => {
-          const previous = data.messages[i - 1];
+        {messages.map((message, i) => {
+          const previous = messages[i - 1];
           const grouped =
             previous?.system === null &&
             previous.author.name === message.author.name &&
             new Date(message.createdAt).getTime() -
               new Date(previous.createdAt).getTime() <
               5 * 60 * 1000;
+          const pending = message.id === "pending";
           return (
-            <Message
+            <div
               key={message.id}
-              message={message}
-              thread={data}
-              viewer={viewer}
-              grouped={grouped}
-            />
+              className={cn(pending && "opacity-60")}
+              aria-busy={pending || undefined}
+            >
+              <Message
+                message={message}
+                thread={data}
+                viewer={viewer}
+                grouped={grouped}
+              />
+            </div>
           );
         })}
       </div>
       {data.status === "resolved" && (
-        <p className="text-muted-foreground flex items-center justify-center gap-1.5 border-t px-3 py-2 text-xs">
+        <p className="text-muted-foreground flex items-center justify-center gap-1.5 border-t border-mauve-700 px-3 py-2 text-xs">
           <CheckCircleIcon className="size-4 text-emerald-400" weight="fill" />
           Resolved. Reply to reopen it.
         </p>
       )}
-      <form onSubmit={send} className="flex flex-col gap-2 border-t p-3">
+      <form
+        onSubmit={send}
+        className="flex flex-col gap-2 border-t border-mauve-700 p-3"
+      >
         <div className="flex items-end gap-2">
           <Textarea
             value={draft}

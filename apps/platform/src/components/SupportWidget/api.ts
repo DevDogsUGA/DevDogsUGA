@@ -1,9 +1,17 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import type { SetupTags } from "~/lib/support/setup";
 import type {
   SupportInbox,
-  SupportSuggestion,
+  SupportMessage,
+  SupportSuggestions,
   SupportThread,
 } from "~/lib/support/types";
 
@@ -60,26 +68,50 @@ export function pollInterval(thread: SupportThread | undefined, now: number) {
   return 60_000;
 }
 
+const fetchThread = (threadId: string) =>
+  request<SupportThread>(`/support/conversations/${threadId}`);
+
 /** One conversation, polled while it is on screen (see `pollInterval`). */
 export function useThread(threadId: string | null) {
   return useQuery({
     queryKey: threadKey(threadId ?? ""),
-    queryFn: () => request<SupportThread>(`/support/conversations/${threadId}`),
+    queryFn: () => fetchThread(threadId!),
     enabled: threadId !== null,
     refetchInterval: (query) => pollInterval(query.state.data, Date.now()),
   });
 }
 
-export function useSuggestions(query: string) {
+/**
+ * Starts loading a conversation before it is opened (the inbox calls this
+ * on hover and focus), so opening it usually shows it at once.
+ */
+export function prefetchThread(client: QueryClient, threadId: string) {
+  return client.prefetchQuery({
+    queryKey: threadKey(threadId),
+    queryFn: () => fetchThread(threadId),
+    staleTime: 5_000,
+  });
+}
+
+/**
+ * Suggestions for a settled query (the caller debounces). The previous
+ * results stay up while the next ones load, so the list updates in place
+ * instead of blinking out on every pause in typing.
+ */
+export function useSuggestions(query: string, project: string | null) {
   return useQuery({
-    queryKey: ["support", "suggest", query],
+    queryKey: ["support", "suggest", query, project],
     queryFn: ({ signal }) =>
-      request<SupportSuggestion[]>(
-        `/support/suggest?q=${encodeURIComponent(query)}`,
+      request<SupportSuggestions>(
+        `/support/suggest?${new URLSearchParams({
+          q: query,
+          ...(project ? { project } : {}),
+        })}`,
         { signal },
       ),
     enabled: query.length >= 4,
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -87,21 +119,63 @@ export interface StartInput {
   title: string;
   body: string;
   page: { path: string; title: string } | null;
+  setup: SetupTags;
   turnstileToken?: string;
 }
 
+/** Posts a question. The response carries the new thread, so it opens at once. */
 export function useStart() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: StartInput) =>
-      request<{ threadId: string }>("/support/conversations", {
-        method: "POST",
-        body: JSON.stringify(input),
-      }),
-    onSuccess: () => client.invalidateQueries({ queryKey: INBOX_KEY }),
+      request<{ threadId: string; thread: SupportThread }>(
+        "/support/conversations",
+        { method: "POST", body: JSON.stringify(input) },
+      ),
+    onSuccess: ({ threadId, thread }) => {
+      client.setQueryData(threadKey(threadId), thread);
+      return client.invalidateQueries({ queryKey: INBOX_KEY });
+    },
   });
 }
 
+/**
+ * A reply as the thread shows it while it is being sent: what the visitor
+ * typed, under their name, before the relay to Discord and the refetch,
+ * the two slowest steps in the widget.
+ */
+export function pendingMessage(body: string, sentAt: number): SupportMessage {
+  return {
+    id: "pending",
+    author: {
+      name: "You",
+      avatarUrl: null,
+      isOfficer: false,
+      isVisitor: true,
+      isBot: false,
+    },
+    mine: true,
+    content: body,
+    createdAt: new Date(sentAt).toISOString(),
+    editedAt: null,
+    system: null,
+    attachments: [],
+    embeds: [],
+    stickers: [],
+    reactions: [],
+    reference: null,
+    poll: null,
+    users: {},
+    isAnswer: false,
+  };
+}
+
+/**
+ * Sends a reply. It stays pending until the refetched thread has the real
+ * message, so the thread can show `variables` in its place the whole time
+ * (see `pendingMessage`) with no gap and no duplicate. Kept out of the query
+ * cache on purpose: a poll landing mid-send would overwrite it there.
+ */
 export function useReply(threadId: string) {
   const client = useQueryClient();
   return useMutation({

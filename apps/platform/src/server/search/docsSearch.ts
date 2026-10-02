@@ -3,6 +3,7 @@ import { db } from "~/server/db";
 import { docsHref, splitProjectPath } from "~/lib/docsSlug";
 import { toTitleCase } from "~/lib/toTitleCase";
 import { escapeHtml } from "./match";
+import { tsQuery, tsScore, type TsMatch } from "./tsquery";
 import type { SearchEntry } from "./types";
 
 // Control-character sentinels can't appear in stored plain text, so they
@@ -31,31 +32,46 @@ function toSnippetHtml(raw: string): string {
  * phrases, OR, -exclusions). The table is populated at deploy time by
  * `pnpm -F @devdogsuga/docs populate:search` from the same build-time artifact the pages render from.
  * See `docs-kit index`. ts_headline runs on the top N rows only; it's by
- * far the most expensive part.
+ * far the most expensive part. `match` "any" swaps the syntax for any-word
+ * matching (see `tsQuery`).
  */
 export async function searchDocs(
   query: string,
-  limit = 10,
+  options: {
+    limit: number;
+    match?: TsMatch;
+    /** A project whose pages win ties, so its copy of a shared page leads. */
+    preferProject?: string | null;
+  },
 ): Promise<SearchEntry[]> {
+  const match = options.match ?? "all";
+  const tsq = tsQuery(query, match);
+  const preferred = options.preferProject
+    ? sql`(split_part(p."path", '/', 1) = ${options.preferProject})`
+    : sql`false`;
   const rows = await db.execute(sql`
-    with "hits" as (
+    with "matches" as (
       select
         p."title",
         p."description",
         p."path",
         p."plainText",
-        ts_rank(p."search", websearch_to_tsquery('english', ${query})) as "rank"
+        ${tsScore(sql`p."search"`, query, match)} as "rank",
+        ${preferred} as "preferred"
       -- Schema-qualified: this is the only raw db.execute() in the app, so it
       -- doesn't get the qualification drizzle's query builder applies, and the
       -- connection's search_path does not include "platform".
       from platform."docsPages" p
-      where p."search" @@ websearch_to_tsquery('english', ${query})
+      where p."search" @@ ${tsq}
         -- A page scheduled for later is not found until its time, to the
         -- second: now() is read per query, not per deploy. See
         -- "publishAt" on the table, and docs-kit index.
         and (p."publishAt" is null or p."publishAt" <= now())
-      order by "rank" desc
-      limit ${limit}
+    ),
+    "hits" as (
+      select * from "matches"
+      order by floor("rank") desc, "preferred" desc, "rank" desc
+      limit ${options.limit}
     )
     select
       "title",
@@ -64,11 +80,11 @@ export async function searchDocs(
       ts_headline(
         'english',
         "plainText",
-        websearch_to_tsquery('english', ${query}),
+        ${tsq},
         ${HEADLINE_OPTIONS}
       ) as "snippet"
     from "hits"
-    order by "rank" desc
+    order by floor("rank") desc, "preferred" desc, "rank" desc
   `);
 
   return (rows as unknown as DocsHit[]).map((hit) => {

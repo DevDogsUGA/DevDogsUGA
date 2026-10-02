@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { OS_TAGS, STACK_TAGS, type Os, type Stack } from "~/lib/support/setup";
 import { startConversation } from "~/server/support/conversations";
 import { LIMITS } from "~/server/support/forum";
 import {
@@ -34,6 +35,13 @@ const body = z.object({
     })
     .nullable()
     .default(null),
+  // Shown to the visitor as removable tags before posting; see setup.ts.
+  setup: z
+    .object({
+      stack: z.enum(Object.keys(STACK_TAGS) as [Stack, ...Stack[]]).nullable(),
+      os: z.enum(Object.keys(OS_TAGS) as [Os, ...Os[]]).nullable(),
+    })
+    .default({ stack: null, os: null }),
   turnstileToken: z.string().max(2048).optional(),
 });
 

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { escapeHtml } from "~/server/search/match";
+import { tsQuery, tsScore, type TsMatch } from "~/server/search/tsquery";
 import type { SearchEntry } from "~/server/search/types";
 
 // Same sentinel trick as docsSearch.ts: control characters survive
@@ -16,12 +17,28 @@ export interface ForumHit {
   snippet: string;
   isResolved: boolean;
   hasAnswer: boolean;
+  isFaq: boolean;
+  /** Tag names, as indexed. */
+  tags: string[];
+  /** Anonymized, cut to `PREVIEW_CHARS`. */
+  question: string;
+  /** Anonymized and cut like `question`, and only for FAQ posts. */
+  answer: string | null;
 }
+
+/** How much of a question or answer a suggestion previews. */
+const PREVIEW_CHARS = 600;
 
 function toSnippetHtml(raw: string): string {
   return escapeHtml(raw)
     .replaceAll(START, "<mark>")
     .replaceAll(STOP, "</mark>");
+}
+
+function clip(text: string): string {
+  return text.length > PREVIEW_CHARS
+    ? `${text.slice(0, PREVIEW_CHARS).trimEnd()}…`
+    : text;
 }
 
 /**
@@ -32,8 +49,10 @@ function toSnippetHtml(raw: string): string {
  */
 export async function searchForum(
   query: string,
-  options: { limit: number; faqOnly: boolean },
+  options: { limit: number; faqOnly: boolean; match?: TsMatch },
 ): Promise<ForumHit[]> {
+  const match = options.match ?? "all";
+  const tsq = tsQuery(query, match);
   const faqFilter = options.faqOnly
     ? sql`and f."isFaq" and f."answer" is not null`
     : sql``;
@@ -45,9 +64,11 @@ export async function searchForum(
         f."question",
         f."answer",
         f."isResolved",
-        ts_rank(f."search", websearch_to_tsquery('english', ${query})) as "rank"
+        f."isFaq",
+        f."tags",
+        ${tsScore(sql`f."search"`, query, match)} as "rank"
       from platform."supportForumPosts" f
-      where f."search" @@ websearch_to_tsquery('english', ${query})
+      where f."search" @@ ${tsq}
         ${faqFilter}
       order by "rank" desc
       limit ${options.limit}
@@ -56,11 +77,17 @@ export async function searchForum(
       "threadId",
       "title",
       "isResolved",
+      "isFaq",
+      "tags",
       "answer" is not null as "hasAnswer",
+      left("question", ${PREVIEW_CHARS + 1}) as "question",
+      -- Only FAQ answers are previewed whole: an officer read those before
+      -- publishing them. Others show as the highlighted snippet.
+      case when "isFaq" then left("answer", ${PREVIEW_CHARS + 1}) end as "answer",
       ts_headline(
         'english',
         coalesce("answer", "question"),
-        websearch_to_tsquery('english', ${query}),
+        ${tsq},
         ${HEADLINE_OPTIONS}
       ) as "snippet"
     from "hits"
@@ -70,6 +97,8 @@ export async function searchForum(
   return (rows as unknown as ForumHit[]).map((hit) => ({
     ...hit,
     snippet: toSnippetHtml(hit.snippet),
+    question: clip(hit.question),
+    answer: hit.answer === null ? null : clip(hit.answer),
   }));
 }
 
