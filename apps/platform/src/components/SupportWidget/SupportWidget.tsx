@@ -136,7 +136,7 @@ export default function SupportWidget({
           }}
           // Lifted off the page on purpose: the page is mauve-950, so the
           // panel is a step lighter with a lit border.
-          className="text-popover-foreground fixed inset-x-2 bottom-2 z-50 flex max-h-[min(40rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-xl border-2 border-mauve-500 bg-mauve-900 sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[26rem]"
+          className="text-popover-foreground fixed inset-x-2 bottom-2 z-50 flex max-h-[min(40rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-xl border-2 border-mauve-600 bg-mauve-900 sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[26rem]"
         >
           <Panel
             view={view}
@@ -207,7 +207,7 @@ function Panel({
 
   return (
     <>
-      <header className="flex items-center gap-2 border-b-2 border-mauve-600 bg-mauve-950/40 px-3 py-2.5">
+      <header className="flex items-center gap-2 border-b-2 border-mauve-700 bg-mauve-950/40 px-3 py-2.5">
         {view.name !== "inbox" && (
           <Button
             variant="ghost"
@@ -318,7 +318,7 @@ function InboxView({
                   onFocus={() =>
                     void prefetchThread(client, conversation.threadId)
                   }
-                  className="flex w-full items-center gap-2 rounded-lg border border-mauve-700 bg-mauve-950/40 px-3 py-2 text-left hover:border-mauve-500 hover:bg-mauve-800"
+                  className="flex w-full items-center gap-2 rounded-lg border border-mauve-800 bg-mauve-950/40 px-3 py-2 text-left hover:border-mauve-600 hover:bg-mauve-800"
                 >
                   <span className="min-w-0 flex-1">
                     <span
@@ -345,7 +345,7 @@ function InboxView({
           </ul>
         )}
       </div>
-      <div className="border-t border-mauve-700 p-3">
+      <div className="border-t border-mauve-800 p-3">
         <Button className="w-full" onClick={onCompose}>
           <PlusIcon /> Ask a question
         </Button>
@@ -414,7 +414,7 @@ function SetupTagList({
       {tags.map((tag) => (
         <span
           key={tag.group}
-          className="flex items-center gap-1 rounded-full border border-mauve-600 bg-mauve-800 py-0.5 pr-1 pl-2"
+          className="flex items-center gap-1 rounded-full border border-mauve-700 bg-mauve-800 py-0.5 pr-1 pl-2"
         >
           {tag.label}
           <button
@@ -600,7 +600,7 @@ function ComposeView({
         </p>
         {error && <p className="text-destructive text-sm">{error.message}</p>}
       </div>
-      <div className="border-t border-mauve-700 p-3">
+      <div className="border-t border-mauve-800 p-3">
         <Button
           type="submit"
           className="w-full"
@@ -673,7 +673,7 @@ function ThreadView({
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         {title && (
-          <p className="truncate border-b border-mauve-700 px-3 py-2 text-sm font-medium">
+          <p className="truncate border-b border-mauve-800 px-3 py-2 text-sm font-medium">
             {title}
           </p>
         )}
@@ -711,7 +711,7 @@ function ThreadView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-2 border-b border-mauve-700 px-3 py-2">
+      <div className="flex items-center gap-2 border-b border-mauve-800 px-3 py-2">
         <p className="min-w-0 flex-1 truncate text-sm font-medium">
           {data.title}
         </p>
@@ -768,14 +768,14 @@ function ThreadView({
         })}
       </div>
       {data.status === "resolved" && (
-        <p className="text-muted-foreground flex items-center justify-center gap-1.5 border-t border-mauve-700 px-3 py-2 text-xs">
+        <p className="text-muted-foreground flex items-center justify-center gap-1.5 border-t border-mauve-800 px-3 py-2 text-xs">
           <CheckCircleIcon className="size-4 text-emerald-400" weight="fill" />
           Resolved. Reply to reopen it.
         </p>
       )}
       <form
         onSubmit={send}
-        className="flex flex-col gap-2 border-t border-mauve-700 p-3"
+        className="flex flex-col gap-2 border-t border-mauve-800 p-3"
       >
         <div className="flex items-end gap-2">
           <Textarea

@@ -96,8 +96,8 @@ export function SuggestionsDialog({
   const { questions, docs } = suggestions;
   return (
     <Dialog open={tab !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden border-2 border-mauve-600 bg-mauve-900 p-0 sm:max-w-2xl">
-        <div className="flex flex-col gap-1 border-b border-mauve-700 px-5 pt-4 pb-3">
+      <DialogContent className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden border-2 border-mauve-700 bg-mauve-900 p-0 sm:max-w-2xl">
+        <div className="flex flex-col gap-1 border-b border-mauve-800 px-5 pt-4 pb-3">
           <DialogTitle className="text-base font-semibold">
             Before you post
           </DialogTitle>
@@ -218,7 +218,7 @@ function QuestionCard({
   const canFollow = question.status === "open";
 
   return (
-    <article className="flex flex-col gap-2.5 rounded-lg border border-mauve-700 bg-mauve-950/50 p-3.5">
+    <article className="flex flex-col gap-2.5 rounded-lg border border-mauve-800 bg-mauve-950/50 p-3.5">
       <header className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
           <span
@@ -232,7 +232,7 @@ function QuestionCard({
           {question.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded border border-mauve-700 px-1.5 py-0.5 text-[0.65rem] text-mauve-300"
+              className="rounded border border-mauve-800 px-1.5 py-0.5 text-[0.65rem] text-mauve-300"
             >
               {tag}
             </span>
@@ -309,7 +309,7 @@ function DocCard({
   onNavigate: () => void;
 }) {
   return (
-    <article className="flex flex-col gap-1.5 rounded-lg border border-mauve-700 bg-mauve-950/50 p-3.5">
+    <article className="flex flex-col gap-1.5 rounded-lg border border-mauve-800 bg-mauve-950/50 p-3.5">
       {doc.breadcrumbs.length > 0 && (
         <p className="text-muted-foreground flex items-center gap-1 text-xs">
           <BookOpenIcon className="size-3.5 shrink-0" />
@@ -322,7 +322,7 @@ function DocCard({
       )}
       {doc.snippet && (
         <p
-          className="text-muted-foreground line-clamp-4 border-l-2 border-mauve-600 pl-2.5 text-xs [&_mark]:rounded-sm [&_mark]:bg-cyan-400/20 [&_mark]:px-0.5 [&_mark]:text-cyan-100"
+          className="text-muted-foreground line-clamp-4 border-l-2 border-mauve-700 pl-2.5 text-xs [&_mark]:rounded-sm [&_mark]:bg-cyan-400/20 [&_mark]:px-0.5 [&_mark]:text-cyan-100"
           // Server-built: HTML-escaped before the <mark> swap.
           dangerouslySetInnerHTML={{ __html: doc.snippet }}
         />
