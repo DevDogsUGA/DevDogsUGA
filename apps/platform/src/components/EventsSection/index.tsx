@@ -54,7 +54,7 @@ interface Props {
  * if I turn up*: a few concrete dates, and the format. So the section opens the
  * way the Projects section does, an "Events" heading over one short paragraph,
  * then the next three nights as a receding stack and "All events", which is the
- * job: handing the reader to `/events`. The explainer ("A Week in DevDogs", the
+ * job: handing the reader to `/events`. The explainer ("Weekly Programming", the
  * same component `/events` renders as its legend) sits a wide breath below, for
  * whoever wants to know what a night is like before turning up to one.
  *

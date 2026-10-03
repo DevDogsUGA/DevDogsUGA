@@ -98,7 +98,7 @@ export default function EventsPage({
             the link says where it went rather than keeping a second copy here
             in step by hand. */}
         <Link href="/#how-it-works" className={HEADER_PRIMARY_LINK_CLS}>
-          A Week in DevDogs <ArrowRightIcon />
+          Weekly Programming <ArrowRightIcon />
         </Link>
       </PageHeader>
 

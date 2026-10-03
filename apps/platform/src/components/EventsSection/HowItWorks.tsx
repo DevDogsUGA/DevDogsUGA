@@ -311,7 +311,7 @@ export default function HowItWorks({
               id={`${id}-heading`}
               className={`font-display text-2xl font-extrabold md:text-3xl ${t.heading}`}
             >
-              A Week in DevDogs
+              Weekly Programming
             </h2>
             <p className={`text-base/relaxed text-balance ${t.intro}`}>
               Every DevDogs project grows one merged feature at a time, with a
