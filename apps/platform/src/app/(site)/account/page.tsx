@@ -21,6 +21,7 @@ import { SettingsFormProvider } from "~/ui/settings-form";
 import SettingsSaveBar from "~/ui/settings-save-bar";
 import { CardSkeleton } from "~/components/Skeletons";
 import VerificationStatusField from "~/components/VerificationStatusField";
+import { publicProfilesEnabled } from "~/server/features";
 import { getProfilePageData } from "~/server/loaders/console";
 import { getHandleOptions } from "~/server/loaders/publicProfiles";
 import Callout from "~/ui/callout";
@@ -43,7 +44,9 @@ async function AccountContent({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const data = await getProfilePageData();
-  const handleChoices = await getHandleOptions(data.id);
+  const handleChoices = publicProfilesEnabled()
+    ? await getHandleOptions(data.id)
+    : null;
   const params = await searchParams;
 
   // Set by a moderator resolving a report with `quarantine`. Everything under
@@ -147,31 +150,33 @@ async function AccountContent({
         </ConsoleCard.Content>
       </ConsoleCard.Root>
 
-      <ConsoleCard.Root id="publicProfileSettings">
-        <ConsoleCard.Header title="Public Profile" />
-        <ConsoleCard.Content>
-          {/* Frozen like the profile fields: the switches are columns on
+      {handleChoices && (
+        <ConsoleCard.Root id="publicProfileSettings">
+          <ConsoleCard.Header title="Public Profile" />
+          <ConsoleCard.Content>
+            {/* Frozen like the profile fields: the switches are columns on
               platform."profile", which RLS refuses to a quarantined member. */}
-          <Fields>
-            <PublicProfileSection
-              settings={{
-                ...handleChoices,
-                isVerified: data.isVerified,
-                switches: {
-                  publicProfile: data.profile.publicProfile,
-                  showName: data.profile.showName,
-                  showAvatar: data.profile.showAvatar,
-                  showBio: data.profile.showBio,
-                  showLinks: data.profile.showLinks,
-                  showCompetitions: data.profile.showCompetitions,
-                  showContributions: data.profile.showContributions,
-                  showStars: data.profile.showStars,
-                },
-              }}
-            />
-          </Fields>
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
+            <Fields>
+              <PublicProfileSection
+                settings={{
+                  ...handleChoices,
+                  isVerified: data.isVerified,
+                  switches: {
+                    publicProfile: data.profile.publicProfile,
+                    showName: data.profile.showName,
+                    showAvatar: data.profile.showAvatar,
+                    showBio: data.profile.showBio,
+                    showLinks: data.profile.showLinks,
+                    showCompetitions: data.profile.showCompetitions,
+                    showContributions: data.profile.showContributions,
+                    showStars: data.profile.showStars,
+                  },
+                }}
+              />
+            </Fields>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
+      )}
 
       <ConsoleCard.Root id="status">
         <ConsoleCard.Header title="Status" />

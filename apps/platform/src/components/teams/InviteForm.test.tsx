@@ -167,3 +167,19 @@ describe("InviteForm combobox", () => {
     expect(screen.getByRole("option")).toHaveTextContent("@grace");
   });
 });
+
+describe("InviteForm without search", () => {
+  it("asks for an exact email or GitHub username and suggests nobody", async () => {
+    const inviteToTeam = vi.fn(() =>
+      Promise.resolve({ ok: true as const, value: "request-1" }),
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<InviteForm teamId="team-1" inviteToTeam={inviteToTeam} />);
+
+    expect(screen.getByLabelText("Email or GitHub username")).toBe(input());
+    await user.type(input(), "ada");
+    await settle();
+    expect(screen.queryByRole("option")).toBeNull();
+    expect(input()).toHaveAttribute("aria-expanded", "false");
+  });
+});

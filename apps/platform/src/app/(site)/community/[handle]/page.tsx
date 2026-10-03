@@ -7,6 +7,7 @@ import {
   getPublicProfileByHandle,
 } from "~/server/loaders/publicProfiles";
 import { handleFromSegment } from "~/lib/profilePath";
+import { publicProfilesEnabled } from "~/server/features";
 
 /**
  * /community/@<handle>, a verified member's public profile.
@@ -32,7 +33,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ handle: string }>;
 }): Promise<Metadata> {
-  const handle = handleFromSegment((await params).handle);
+  const handle = publicProfilesEnabled()
+    ? handleFromSegment((await params).handle)
+    : null;
   const profile = handle ? await getPublicProfileByHandle(handle) : null;
 
   // Same title as the 404 page, so metadata does not distinguish a miss either.
@@ -46,6 +49,7 @@ export default async function CommunityProfilePage({
 }: {
   params: Promise<{ handle: string }>;
 }) {
+  if (!publicProfilesEnabled()) notFound();
   const handle = handleFromSegment((await params).handle);
   if (!handle) notFound();
 

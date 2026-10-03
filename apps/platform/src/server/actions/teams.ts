@@ -5,6 +5,7 @@ import { env } from "~/env";
 import { postAlert } from "~/server/alerts";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
+import { publicProfilesEnabled } from "~/server/features";
 import {
   profiles,
   teamMembers,
@@ -533,6 +534,7 @@ async function resolveInvitee(identifier: string): Promise<string | null> {
   if (trimmed.length === 0) return null;
 
   if (trimmed.startsWith("@") && !trimmed.slice(1).includes("@")) {
+    if (!publicProfilesEnabled()) return null;
     const handle = trimmed.slice(1).toLowerCase();
     if (handle.length === 0) return null;
     // `searchPublicProfiles` is a prefix search that ranks an exact handle
@@ -582,6 +584,7 @@ async function searchInviteesImpl(
   query: string,
 ): Promise<InviteeSuggestion[]> {
   const callerId = await expectSession();
+  if (!publicProfilesEnabled()) return [];
 
   // Too short to be worth a database read or a budget hit; the client does
   // not send these either.

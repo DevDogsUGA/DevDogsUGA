@@ -7,6 +7,7 @@ import {
 } from "~/config/nav";
 import { PAGE_SECTIONS } from "~/config/pageSections";
 import type { ResolvedPermissions } from "~/server/actions/permissions";
+import { publicProfilesEnabled } from "~/server/features";
 import type { SearchEntry } from "./types";
 
 function toEntry(item: NavItem, breadcrumbs: string[] = []): SearchEntry {
@@ -34,6 +35,10 @@ function toEntries(item: NavItem, breadcrumbs: string[] = []): SearchEntry[] {
   const trail = [...breadcrumbs, item.label];
 
   for (const section of PAGE_SECTIONS[item.href] ?? []) {
+    // /account only renders this card while public profiles are on.
+    if (section.id === "publicProfileSettings" && !publicProfilesEnabled()) {
+      continue;
+    }
     entries.push({
       id: `section:${item.href}#${section.id}`,
       title: section.label,

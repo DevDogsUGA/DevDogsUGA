@@ -196,6 +196,23 @@ describe("inviteToTeam identifiers", () => {
     expect(await invitedUserIds()).toEqual([]);
   });
 
+  it("ignores handles and suggests nobody in production, where public profiles are off", async () => {
+    vi.stubEnv("DEPLOY_ENV", "production");
+    try {
+      expect(await searchInvitees(TEAM, "ada")).toEqual({
+        ok: true,
+        value: [],
+      });
+      expect(await inviteToTeam(TEAM, "@t318-ada")).toEqual({
+        ok: false,
+        code: "invitee_not_found",
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(await invitedUserIds()).toEqual([]);
+  });
+
   it("does not treat a prefix of a handle as that handle", async () => {
     expect(await inviteToTeam(TEAM, "@t318-ad")).toEqual({
       ok: false,

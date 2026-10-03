@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import CompetitionArchive from "~/components/CompetitionArchive";
 import PageShell from "~/components/PageShell";
+import { publicProfilesEnabled } from "~/server/features";
 import { getCompetitionArchive } from "~/server/loaders/competitionArchive";
 
 /**
@@ -24,6 +26,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CompetitionArchivePage() {
+  if (!publicProfilesEnabled()) notFound();
   const competitions = await getCompetitionArchive();
 
   return (

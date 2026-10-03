@@ -17,6 +17,7 @@ import {
   transferLead,
 } from "~/server/actions/teams";
 import { requireSession } from "~/server/auth/require";
+import { publicProfilesEnabled } from "~/server/features";
 import {
   getAllTeams,
   getPendingForUser,
@@ -225,7 +226,9 @@ export default async function TeamPage({
             <InviteForm
               teamId={team.id}
               inviteToTeam={inviteToTeam}
-              searchInvitees={searchInvitees}
+              searchInvitees={
+                publicProfilesEnabled() ? searchInvitees : undefined
+              }
             />
           )}
           <RosterActions

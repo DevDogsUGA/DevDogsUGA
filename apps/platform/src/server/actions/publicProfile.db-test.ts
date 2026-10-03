@@ -134,7 +134,7 @@ describe("getPublicProfileSettings", () => {
       github: "ppact-s",
       profile: { showStars: false },
     });
-    const settings = await getPublicProfileSettings();
+    const settings = (await getPublicProfileSettings())!;
     expect(settings.isVerified).toBe(true);
     expect(settings.current).toBe("ppact-s");
     expect(settings.switches.showStars).toBe(false);
@@ -144,7 +144,20 @@ describe("getPublicProfileSettings", () => {
 
   it("reports an unverified member as such", async () => {
     await insertMember({ id: A, handle: null, verified: false });
-    expect((await getPublicProfileSettings()).isVerified).toBe(false);
+    expect((await getPublicProfileSettings())?.isVerified).toBe(false);
+  });
+
+  it("answers null in production, where public profiles are off", async () => {
+    await insertMember({ id: A, handle: "ppact-off" });
+    vi.stubEnv("DEPLOY_ENV", "production");
+    try {
+      expect(await getPublicProfileSettings()).toBeNull();
+      await expect(setPublicProfileField("showStars", false)).rejects.toThrow(
+        "Public profiles are off",
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 

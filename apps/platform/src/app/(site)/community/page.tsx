@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import CommunityDirectory from "~/components/CommunityDirectory";
 import PageShell from "~/components/PageShell";
+import { INVOLVEMENT_NETWORK_ROSTER_URL } from "~/config/nav";
+import { publicProfilesEnabled } from "~/server/features";
 import { getCurrentOfficers } from "~/server/loaders/officers";
 import {
   getPublicHandlesByUserId,
@@ -29,6 +32,10 @@ export const metadata: Metadata = {
 };
 
 export default async function Community() {
+  // A temporary redirect, so browsers do not remember the detour once the
+  // directory is switched on.
+  if (!publicProfilesEnabled()) redirect(INVOLVEMENT_NETWORK_ROSTER_URL);
+
   const [officers, members] = await Promise.all([
     getCurrentOfficers(),
     listPublicProfiles(),

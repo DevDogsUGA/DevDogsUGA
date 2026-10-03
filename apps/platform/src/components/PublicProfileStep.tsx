@@ -20,7 +20,8 @@ import VisibilityToggle from "~/ui/visibility-toggle";
  *
  * The dialog sits in the navbar and has no page to hand it data, so the
  * settings are read through a server action, and only when this step renders
- * (an unverified member never loads them).
+ * (an unverified member never loads them). The action answers null while
+ * public profiles are switched off, and the step then renders nothing.
  */
 export default function PublicProfileStep({
   onNavigate,
@@ -34,6 +35,8 @@ export default function PublicProfileStep({
     // /account since the dialog last showed.
     staleTime: 0,
   });
+
+  if (data === null) return null;
 
   return (
     <div className="flex flex-col gap-3 border-t border-mauve-800 pt-4">

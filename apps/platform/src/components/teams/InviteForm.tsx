@@ -39,6 +39,10 @@ const MIN_QUERY_LENGTH = 2;
  * `/teams/requests` is where the invitee actually answers, and the email
  * this fires (`teamInvite`, best-effort -- see `notifyInvitee`) is the other
  * way they hear about it.
+ *
+ * Without `searchInvitees` (public profiles switched off, see
+ * `server/features.ts`) the field takes an exact email or GitHub username
+ * only and never suggests anyone.
  */
 export default function InviteForm({
   teamId,
@@ -50,7 +54,7 @@ export default function InviteForm({
     teamId: string,
     identifier: string,
   ) => Promise<TeamActionOutcome<string>>;
-  searchInvitees: (
+  searchInvitees?: (
     teamId: string,
     query: string,
   ) => Promise<TeamActionOutcome<InviteeSuggestion[]>>;
@@ -93,7 +97,11 @@ export default function InviteForm({
     const query = value.trim().replace(/^@/, "");
     // An `@` in the middle means an email is being typed, which suggestions
     // cannot help with.
-    if (query.length < MIN_QUERY_LENGTH || query.includes("@")) {
+    if (
+      !searchInvitees ||
+      query.length < MIN_QUERY_LENGTH ||
+      query.includes("@")
+    ) {
       setOpen(false);
       setSuggestions([]);
       setActiveIndex(-1);
@@ -159,8 +167,10 @@ export default function InviteForm({
         title="Invite Somebody"
         description={
           <>
-            Search members by name or handle, or enter anyone&apos;s exact email
-            or GitHub username. They will see it on{" "}
+            {searchInvitees
+              ? "Search members by name or handle, or enter anyone's exact email or GitHub username."
+              : "Their exact email or GitHub username -- there is no directory to search."}{" "}
+            They will see it on{" "}
             <span className="font-semibold text-white">/teams/requests</span>,
             and get an email too.
           </>
@@ -191,7 +201,9 @@ export default function InviteForm({
                 htmlFor={`${listboxId}-input`}
                 className="font-semibold text-white"
               >
-                Name, handle, email or GitHub username
+                {searchInvitees
+                  ? "Name, handle, email or GitHub username"
+                  : "Email or GitHub username"}
               </label>
               <input
                 id={`${listboxId}-input`}
@@ -213,7 +225,11 @@ export default function InviteForm({
                 autoComplete="off"
                 spellCheck={false}
                 required
-                placeholder="Ada Lovelace, ada@uga.edu or adalovelace"
+                placeholder={
+                  searchInvitees
+                    ? "Ada Lovelace, ada@uga.edu or adalovelace"
+                    : "ada@uga.edu or adalovelace"
+                }
                 className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white outline-none placeholder:text-mauve-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
               />
               <ul

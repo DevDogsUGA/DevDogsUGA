@@ -10,6 +10,7 @@ import {
 } from "~/lib/publicProfileFields";
 import { db } from "~/server/db";
 import { profiles } from "~/server/db/schema";
+import { publicProfilesEnabled } from "~/server/features";
 import { getVerificationStatus } from "~/server/loaders/verification";
 import {
   getHandleOptions,
@@ -52,8 +53,11 @@ function revalidatePublicPages(handle: string | null | undefined) {
  * Everything the public-profile controls need for the signed-in member, for
  * the verification dialog, which lives in the navbar and so cannot take it as
  * a prop from a page. `/account` reads the same pieces directly.
+ *
+ * Null while public profiles are switched off, which hides the step.
  */
-export async function getPublicProfileSettings(): Promise<PublicProfileSettings> {
+export async function getPublicProfileSettings(): Promise<PublicProfileSettings | null> {
+  if (!publicProfilesEnabled()) return null;
   const userId = await sessionUserId();
   const [choices, { isVerified }, [row]] = await Promise.all([
     getHandleOptions(userId),
@@ -90,6 +94,7 @@ export async function getPublicProfileSettings(): Promise<PublicProfileSettings>
 
 /** Just the handle options, for the picker to re-read after a lost race. */
 export async function getMyHandleChoices(): Promise<HandleChoices> {
+  if (!publicProfilesEnabled()) throw new Error("Public profiles are off");
   return getHandleOptions(await sessionUserId());
 }
 
@@ -109,6 +114,7 @@ export async function setPublicProfileField(
   if (!PUBLIC_PROFILE_FIELDS.includes(field) || typeof value !== "boolean") {
     throw new Error(`Unknown public profile field: ${String(field)}`);
   }
+  if (!publicProfilesEnabled()) throw new Error("Public profiles are off");
   const userId = await sessionUserId();
 
   const allowed = await consumeRateLimit({
