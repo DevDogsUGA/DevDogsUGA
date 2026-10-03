@@ -12,6 +12,7 @@ import GithubField from "~/components/ConnectedAccountField/GithubField";
 import GraduationDateField from "~/components/GraduationDateField";
 import LinkedinField from "~/components/ConnectedAccountField/LinkedinField";
 import PageShell from "~/components/PageShell";
+import PublicProfileSection from "~/components/PublicProfileSection";
 import PreferredNameField from "~/components/PreferredNameField";
 import ProfileLinks from "~/components/ProfileLinks";
 import PronounsField from "~/components/PronounsField";
@@ -21,6 +22,7 @@ import SettingsSaveBar from "~/ui/settings-save-bar";
 import { CardSkeleton } from "~/components/Skeletons";
 import VerificationStatusField from "~/components/VerificationStatusField";
 import { getProfilePageData } from "~/server/loaders/console";
+import { getHandleOptions } from "~/server/loaders/publicProfiles";
 import Callout from "~/ui/callout";
 import { env } from "~/env";
 
@@ -41,6 +43,7 @@ async function AccountContent({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const data = await getProfilePageData();
+  const handleChoices = await getHandleOptions(data.id);
   const params = await searchParams;
 
   // Set by a moderator resolving a report with `quarantine`. Everything under
@@ -141,6 +144,32 @@ async function AccountContent({
           >
             <LinkedinField {...data} />
           </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
+
+      <ConsoleCard.Root id="publicProfileSettings">
+        <ConsoleCard.Header title="Public Profile" />
+        <ConsoleCard.Content>
+          {/* Frozen like the profile fields: the switches are columns on
+              platform."profile", which RLS refuses to a quarantined member. */}
+          <Fields>
+            <PublicProfileSection
+              settings={{
+                ...handleChoices,
+                isVerified: data.isVerified,
+                switches: {
+                  publicProfile: data.profile.publicProfile,
+                  showName: data.profile.showName,
+                  showAvatar: data.profile.showAvatar,
+                  showBio: data.profile.showBio,
+                  showLinks: data.profile.showLinks,
+                  showCompetitions: data.profile.showCompetitions,
+                  showContributions: data.profile.showContributions,
+                  showStars: data.profile.showStars,
+                },
+              }}
+            />
+          </Fields>
         </ConsoleCard.Content>
       </ConsoleCard.Root>
 

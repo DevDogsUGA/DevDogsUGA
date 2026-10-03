@@ -7,6 +7,7 @@ import {
   InfoIcon,
   XIcon,
 } from "@phosphor-icons/react/ssr";
+import PublicProfileStep from "~/components/PublicProfileStep";
 import SyncPreferredNameButton from "~/components/SyncPreferredNameButton";
 import { INVOLVEMENT_NETWORK_URL } from "~/config/nav";
 
@@ -183,6 +184,8 @@ export default function VerificationChecklist({
           </CheckItem>
         </ul>
       </div>
+
+      {isVerified && <PublicProfileStep onNavigate={onNavigate} />}
     </div>
   );
 }

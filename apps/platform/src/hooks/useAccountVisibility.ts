@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { createClient } from "~/supabase/client";
 import { toast } from "~/lib/toast";
+import { revalidateMyPublicProfile } from "~/server/actions/publicProfile";
 
 type Provider = "github" | "discord" | "uga" | "linkedin";
 
@@ -45,6 +46,13 @@ export function useAccountVisibility(
         .update(column)
         .eq("userId", userId);
       if (error) throw error;
+      // GitHub, Discord and LinkedIn appear on the public profile, so the
+      // directory and the member's page must drop the cached copy. The email
+      // switch is never public. A failure here must not roll the toggle back:
+      // the write succeeded, and the cached pages lapse on their own.
+      if (provider !== "uga") {
+        await revalidateMyPublicProfile().catch(() => undefined);
+      }
       return { provider, show };
     },
     onSuccess: ({ provider, show }) => {
