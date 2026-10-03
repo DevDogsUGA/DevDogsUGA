@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { cache } from "react";
 import { env } from "~/env";
 import { db } from "~/server/db";
@@ -159,6 +159,26 @@ export const listPublicProfiles = cache(
       avatarUrl: row.hasAvatar ? avatarUrlFor(row.userId!) : null,
       bio: row.bio,
     }));
+  },
+);
+
+/**
+ * The public handle of each given account that has a public profile, keyed by
+ * user id. Accounts the view drops are simply absent, so a caller links
+ * exactly the people who have a page to link to (the directory uses this to
+ * link officers, who are listed whether or not they are public).
+ *
+ * Server-side only: the result is keyed by `userId`. Look values up and pass
+ * the handle on; never forward the map to a client component.
+ */
+export const getPublicHandlesByUserId = cache(
+  async (userIds: readonly string[]): Promise<Map<string, string>> => {
+    if (userIds.length === 0) return new Map();
+    const rows = await db
+      .select({ userId: publicProfiles.userId, handle: publicProfiles.handle })
+      .from(publicProfiles)
+      .where(inArray(publicProfiles.userId, [...userIds]));
+    return new Map(rows.map((row) => [row.userId!, row.handle!]));
   },
 );
 

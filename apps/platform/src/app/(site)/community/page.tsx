@@ -1,38 +1,53 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import UnderConstruction from "~/components/UnderConstruction";
-import { INVOLVEMENT_NETWORK_ROSTER_URL } from "~/config/nav";
+import CommunityDirectory from "~/components/CommunityDirectory";
+import PageShell from "~/components/PageShell";
+import { getCurrentOfficers } from "~/server/loaders/officers";
+import {
+  getPublicHandlesByUserId,
+  listPublicProfiles,
+} from "~/server/loaders/publicProfiles";
 
 /**
- * Static copy (or a redirect); changes only with a deploy.
+ * Who is listed changes whenever a member edits their handle or visibility,
+ * and `setHandle` calls `revalidatePath("/community")` for those, so the page
+ * is normally fresh within a request of the change. The hour is the backstop
+ * for what does not: a verification, a profile toggle, a moderation action or
+ * a direct database edit. Nothing here reads the request, which is what lets
+ * the HTML be cached at all.
  */
-export const revalidate = false;
+export const revalidate = 3600;
 
 /**
  * The description is the one `config/nav.ts` already gives this link in the
  * navbar and the command palette, not a second sentence written here. A menu
  * row and a search result are the same promise about the same page, and two
  * copies of it drift.
- *
- * It describes the page this route will be, not the placeholder it renders
- * today. The unfurl for a URL somebody pastes now should say what they will
- * find when they open it, and a "coming soon" description would have to be
- * removed at exactly the moment nobody is thinking about metadata.
  */
 export const metadata: Metadata = {
   title: "Community | DevDogs",
   description: "Meet the members and leadership of DevDogs.",
 };
 
-/**
- * The platform's community page is not built yet. Production sends visitors
- * to the Involvement Network roster with a temporary redirect so browsers do
- * not remember the detour after the local page launches.
- */
-export default function Community() {
-  if (process.env.DEPLOY_ENV === "production") {
-    redirect(INVOLVEMENT_NETWORK_ROSTER_URL);
-  }
+export default async function Community() {
+  const [officers, members] = await Promise.all([
+    getCurrentOfficers(),
+    listPublicProfiles(),
+  ]);
+  const officerHandles = await getPublicHandlesByUserId(
+    officers.map((officer) => officer.slug),
+  );
 
-  return <UnderConstruction />;
+  return (
+    <PageShell
+      accent="emerald"
+      title="Community"
+      description="Meet the members and leadership of DevDogs."
+    >
+      <CommunityDirectory
+        officers={officers}
+        officerHandles={officerHandles}
+        members={members}
+      />
+    </PageShell>
+  );
 }

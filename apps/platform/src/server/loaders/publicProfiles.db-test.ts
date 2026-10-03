@@ -12,6 +12,7 @@ import {
 import {
   getHandleOptions,
   getPublicProfileActivity,
+  getPublicHandlesByUserId,
   getPublicProfileByHandle,
   listPublicProfiles,
   searchPublicProfiles,
@@ -118,6 +119,20 @@ describe("publicProfiles: who is public", () => {
     expect((await getPublicProfileByHandle("ppdb-ada"))?.displayName).toBe(
       "Ada Lovelace",
     );
+  });
+
+  it("maps user ids to handles for public members only", async () => {
+    await member({ id: A, handle: "ppdb-mapped" });
+    await member({
+      id: B,
+      handle: "ppdb-mapped-off",
+      profile: { publicProfile: false },
+    });
+    const map = await getPublicHandlesByUserId([A, B, C]);
+    expect(map.get(A)).toBe("ppdb-mapped");
+    expect(map.has(B)).toBe(false);
+    expect(map.has(C)).toBe(false);
+    expect((await getPublicHandlesByUserId([])).size).toBe(0);
   });
 
   it("excludes unverified accounts", async () => {
