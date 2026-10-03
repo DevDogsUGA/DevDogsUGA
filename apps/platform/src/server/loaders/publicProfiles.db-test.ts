@@ -33,11 +33,13 @@ const A = id(1);
 const B = id(2);
 const C = id(3);
 const D = id(4);
+const E = id(5);
 const MODERATOR = id(90);
-const ALL = [A, B, C, D, MODERATOR] as const;
+const ALL = [A, B, C, D, E, MODERATOR] as const;
 
 const TEAM = "f9000000-0000-4000-b000-000000000001";
 const COMP = "f9000000-0000-4000-c000-000000000001";
+const OFFICER_ROLE = "f9000000-0000-4000-d000-000000000001";
 
 async function cleanup() {
   await db.execute(
@@ -48,6 +50,9 @@ async function cleanup() {
   );
   await db.execute(sql`delete from platform.teams where id = ${TEAM}::uuid`);
   await deleteMembers(ALL);
+  await db.execute(
+    sql`delete from platform.roles where id = ${OFFICER_ROLE}::uuid`,
+  );
 }
 
 beforeEach(cleanup);
@@ -103,6 +108,26 @@ async function quarantine(userId: string) {
   await db.execute(
     sql`update platform.profile set "quarantinedBy" = ${resolution!.id}::uuid where "userId" = ${userId}::uuid`,
   );
+}
+
+/** Gives `userId` a homepage Leadership role, creating the role on first use. */
+async function makeOfficer(userId: string) {
+  await db.execute(sql`
+    insert into platform.roles (id, title, rank, "isLeadership")
+    values (${OFFICER_ROLE}::uuid, 'ppdb officer', 987654.321, true)
+    on conflict (id) do nothing
+  `);
+  await db.execute(sql`
+    insert into platform."userRoles" ("userId", "roleId")
+    values (${userId}::uuid, ${OFFICER_ROLE}::uuid)
+  `);
+}
+
+async function verification(userId: string) {
+  const [row] = await db.execute<{ verified: boolean; hasPronouns: boolean }>(
+    sql`select verified, "hasPronouns" from platform."profileWithVerification" where "userId" = ${userId}::uuid`,
+  );
+  return row;
 }
 
 async function member(overrides: Partial<MemberFixture> & { id: string }) {
@@ -596,23 +621,33 @@ describe("set_handle", () => {
   });
 });
 
+/** The migration's backfill block, scoped to this file's fixture ids, run once. */
+async function runBackfill() {
+  const migration = readFileSync(
+    resolve(
+      __dirname,
+      "../../../../../supabase/migrations/20261003000000_49_platform_public_profiles.sql",
+    ),
+    "utf8",
+  );
+  const block = /\ndo \$\$[\s\S]*?\n\$\$;/.exec(migration)?.[0];
+  expect(block).toBeDefined();
+  const scoped = block!.replace(
+    `where v.verified and v."nameMatchesInvolvement" and p."handle" is null`,
+    `where v.verified and v."nameMatchesInvolvement" and p."handle" is null and p."userId" in ('${A}', '${B}', '${C}', '${D}', '${E}')`,
+  );
+  expect(scoped).not.toBe(block);
+  await db.execute(sql.raw(scoped));
+
+  const rows = await db.execute<{ userId: string; handle: string | null }>(sql`
+    select "userId", handle from platform.profile
+     where "userId" in (${A}::uuid, ${B}::uuid, ${C}::uuid, ${D}::uuid, ${E}::uuid)
+  `);
+  return Object.fromEntries(rows.map((r) => [r.userId, r.handle]));
+}
+
 describe("backfill", () => {
   it("gives verified members preferred_full, then initial, then a suffix, oldest account first", async () => {
-    const migration = readFileSync(
-      resolve(
-        __dirname,
-        "../../../../../supabase/migrations/20261003000000_49_platform_public_profiles.sql",
-      ),
-      "utf8",
-    );
-    const block = /\ndo \$\$[\s\S]*?\n\$\$;/.exec(migration)?.[0];
-    expect(block).toBeDefined();
-    const scoped = block!.replace(
-      `where v.verified and p."handle" is null`,
-      `where v.verified and p."handle" is null and p."userId" in ('${A}', '${B}', '${C}', '${D}')`,
-    );
-    expect(scoped).not.toBe(block);
-
     const base = { first: "Sam", last: "Lee", handle: null };
     // Inserted newest-first to prove the order is by account age, not insertion.
     await insertMember({ ...base, id: C, createdAt: "2026-03-01T00:00:00Z" });
@@ -625,20 +660,71 @@ describe("backfill", () => {
       verified: false,
     });
 
-    await db.execute(sql.raw(scoped));
-    const rows = await db.execute<{
-      userId: string;
-      handle: string | null;
-    }>(sql`
-      select "userId", handle from platform.profile where "userId" in (${A}::uuid, ${B}::uuid, ${C}::uuid, ${D}::uuid)
-    `);
-    const byId = Object.fromEntries(rows.map((r) => [r.userId, r.handle]));
-    expect(byId).toEqual({
+    expect(await runBackfill()).toEqual({
       [A]: "samlee",
       [B]: "saml",
       [C]: "saml2",
       [D]: null,
     });
+  });
+
+  it("names an officer only when their display name is their roster name", async () => {
+    await insertMember({
+      id: A,
+      first: "Grace",
+      last: "Hopper",
+      verified: false,
+      handle: null,
+    });
+    await insertMember({
+      id: B,
+      first: "Anaya",
+      last: "Hilson",
+      preferredName: "Ro Hilson",
+      verified: false,
+      handle: null,
+    });
+    await makeOfficer(A);
+    await makeOfficer(B);
+
+    const byId = await runBackfill();
+    expect(byId[A]).toBe("gracehopper");
+    expect(byId[B]).toBeNull();
+  });
+});
+
+describe("officers are verified", () => {
+  it("verifies an officer whose checklist is unfinished, and only while they hold the role", async () => {
+    await member({ id: A, handle: "ppdb-officer", verified: false });
+    expect((await verification(A))?.verified).toBe(false);
+    expect(await names()).not.toContain("ppdb-officer");
+
+    await makeOfficer(A);
+    // The override is on "verified" alone; the criteria still report honestly.
+    expect(await verification(A)).toEqual({
+      verified: true,
+      hasPronouns: false,
+    });
+    expect(await names()).toContain("ppdb-officer");
+
+    await db.execute(
+      sql`delete from platform."userRoles" where "userId" = ${A}::uuid`,
+    );
+    expect((await verification(A))?.verified).toBe(false);
+    expect(await names()).not.toContain("ppdb-officer");
+  });
+
+  it("ignores roles that are not on the homepage", async () => {
+    await member({ id: A, verified: false });
+    await db.execute(sql`
+      insert into platform.roles (id, title, rank, "isLeadership")
+      values (${OFFICER_ROLE}::uuid, 'ppdb officer', 987654.321, false)
+    `);
+    await db.execute(sql`
+      insert into platform."userRoles" ("userId", "roleId")
+      values (${A}::uuid, ${OFFICER_ROLE}::uuid)
+    `);
+    expect((await verification(A))?.verified).toBe(false);
   });
 });
 

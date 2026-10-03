@@ -382,6 +382,47 @@ revoke execute on function "platform"."set_handle"(uuid, text) from anon;
 
 
 -- ============================================================
+-- Officers are verified
+-- ============================================================
+--
+-- A member on the homepage Leadership section is verified whatever their
+-- checklist says: the club already vouches for them by name in public, so a
+-- profile page and a directory card cannot reveal more than the homepage does.
+-- "Officer" is the homepage's own predicate, holding any role with
+-- "isLeadership" (getCurrentOfficers in the platform app), so assigning or
+-- removing the role moves both together.
+--
+-- No client can read this view (the identity checks need auth.identities,
+-- which authenticated cannot select), so the "userRoles" lookup inline runs
+-- only as the server's owner role and needs no definer function.
+--
+-- Same columns in the same order as file 01, so `create or replace` keeps every
+-- dependent; only "verified" gains the override. The five criteria still
+-- report the checklist honestly, so an officer sees what is unfinished.
+-- security_invoker stays load-bearing for the reason given in file 01.
+create or replace view "platform"."profileWithVerification" with (security_invoker = true) as  SELECT "userId",
+    ((pronouns IS NOT NULL) AND (array_length(pronouns, 1) > 0)) AS "hasPronouns",
+    (("graduationSemester" IS NOT NULL) AND ("graduationYear" IS NOT NULL)) AS "hasGraduationDate",
+    (EXISTS ( SELECT 1
+           FROM auth.identities i
+          WHERE ((i.user_id = p."userId") AND (i.provider = 'github'::text)))) AS "hasGithub",
+    (EXISTS ( SELECT 1
+           FROM auth.identities i
+          WHERE ((i.user_id = p."userId") AND (i.provider = 'discord'::text)))) AS "hasDiscord",
+    (("involvementFirstName" IS NOT NULL) AND (lower(TRIM(BOTH FROM "preferredName")) = lower(((TRIM(BOTH FROM "involvementFirstName") || ' '::text) || TRIM(BOTH FROM "involvementLastName"))))) AS "nameMatchesInvolvement",
+    (((pronouns IS NOT NULL) AND (array_length(pronouns, 1) > 0) AND ("graduationSemester" IS NOT NULL) AND ("graduationYear" IS NOT NULL) AND ("involvementFirstName" IS NOT NULL) AND (lower(TRIM(BOTH FROM "preferredName")) = lower(((TRIM(BOTH FROM "involvementFirstName") || ' '::text) || TRIM(BOTH FROM "involvementLastName")))) AND (EXISTS ( SELECT 1
+           FROM auth.identities i
+          WHERE ((i.user_id = p."userId") AND (i.provider = 'github'::text)))) AND (EXISTS ( SELECT 1
+           FROM auth.identities i
+          WHERE ((i.user_id = p."userId") AND (i.provider = 'discord'::text)))))
+     OR (EXISTS ( SELECT 1
+           FROM (platform."userRoles" ur
+             JOIN platform.roles r ON ((r.id = ur."roleId")))
+          WHERE ((ur."userId" = p."userId") AND r."isLeadership")))) AS verified
+   FROM platform.profile p;
+
+
+-- ============================================================
 -- Backfill
 -- ============================================================
 --
@@ -394,6 +435,11 @@ revoke execute on function "platform"."set_handle"(uuid, text) from anon;
 -- Processed oldest account first (userId as the tiebreaker) so a collision
 -- always resolves the same way. Members who become verified later pick theirs
 -- in the app.
+--
+-- Only members whose display name IS their roster name. An officer is verified
+-- without that check, and a roster first name they don't go by ("Anaya" for
+-- someone who goes by "Ro") must never become their public URL unasked. They
+-- pick a handle themselves, like a member verified after today.
 do $$
 declare
   m record;
@@ -408,7 +454,7 @@ begin
       from "platform"."profile" p
       join "platform"."profileWithVerification" v on v."userId" = p."userId"
       join auth.users u on u.id = p."userId"
-     where v.verified and p."handle" is null
+     where v.verified and v."nameMatchesInvolvement" and p."handle" is null
      order by u.created_at, p."userId"
   loop
     chosen := (
