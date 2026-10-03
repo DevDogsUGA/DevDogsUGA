@@ -89,7 +89,7 @@ export default function CommunityDirectory({
         <section aria-labelledby="community-leadership">
           <h2
             id="community-leadership"
-            className="font-display mb-4 px-1 text-2xl font-extrabold"
+            className="font-display mb-4 px-1 text-2xl font-extrabold text-white"
           >
             Leadership
           </h2>
@@ -115,13 +115,13 @@ export default function CommunityDirectory({
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 px-1">
           <h2
             id="community-members"
-            className="font-display text-2xl font-extrabold"
+            className="font-display text-2xl font-extrabold text-white"
           >
             Members
           </h2>
           <Link
             href={`${COMMUNITY_PATH}/competitions`}
-            className="text-sm font-semibold underline underline-offset-2"
+            className="text-sm font-semibold text-mauve-200 underline underline-offset-2 hover:text-white"
           >
             Competition archive
           </Link>
