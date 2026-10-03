@@ -739,6 +739,7 @@ export type Database = {
           graduationSemester:
             Database["platform"]["Enums"]["graduationSemester"] | null;
           graduationYear: number | null;
+          handle: string | null;
           identitySourcedAt: string | null;
           involvementFirstName: string | null;
           involvementImportedAt: string | null;
@@ -747,12 +748,20 @@ export type Database = {
           legalLastName: string | null;
           preferredName: string;
           pronouns: string[] | null;
+          publicProfile: boolean;
           quarantinedBy: string | null;
           roleDescription: string | null;
+          showAvatar: boolean;
+          showBio: boolean;
+          showCompetitions: boolean;
+          showContributions: boolean;
           showDiscord: boolean;
           showEmail: boolean;
           showGithub: boolean;
           showLinkedin: boolean;
+          showLinks: boolean;
+          showName: boolean;
+          showStars: boolean;
           ugaEmail: string | null;
           userId: string;
           viewedConsole: boolean;
@@ -762,6 +771,7 @@ export type Database = {
           graduationSemester?:
             Database["platform"]["Enums"]["graduationSemester"] | null;
           graduationYear?: number | null;
+          handle?: string | null;
           identitySourcedAt?: string | null;
           involvementFirstName?: string | null;
           involvementImportedAt?: string | null;
@@ -770,12 +780,20 @@ export type Database = {
           legalLastName?: string | null;
           preferredName: string;
           pronouns?: string[] | null;
+          publicProfile?: boolean;
           quarantinedBy?: string | null;
           roleDescription?: string | null;
+          showAvatar?: boolean;
+          showBio?: boolean;
+          showCompetitions?: boolean;
+          showContributions?: boolean;
           showDiscord?: boolean;
           showEmail?: boolean;
           showGithub?: boolean;
           showLinkedin?: boolean;
+          showLinks?: boolean;
+          showName?: boolean;
+          showStars?: boolean;
           ugaEmail?: string | null;
           userId: string;
           viewedConsole?: boolean;
@@ -785,6 +803,7 @@ export type Database = {
           graduationSemester?:
             Database["platform"]["Enums"]["graduationSemester"] | null;
           graduationYear?: number | null;
+          handle?: string | null;
           identitySourcedAt?: string | null;
           involvementFirstName?: string | null;
           involvementImportedAt?: string | null;
@@ -793,12 +812,20 @@ export type Database = {
           legalLastName?: string | null;
           preferredName?: string;
           pronouns?: string[] | null;
+          publicProfile?: boolean;
           quarantinedBy?: string | null;
           roleDescription?: string | null;
+          showAvatar?: boolean;
+          showBio?: boolean;
+          showCompetitions?: boolean;
+          showContributions?: boolean;
           showDiscord?: boolean;
           showEmail?: boolean;
           showGithub?: boolean;
           showLinkedin?: boolean;
+          showLinks?: boolean;
+          showName?: boolean;
+          showStars?: boolean;
           ugaEmail?: string | null;
           userId?: string;
           viewedConsole?: boolean;
@@ -851,6 +878,13 @@ export type Database = {
             referencedRelation: "profileWithVerification";
             referencedColumns: ["userId"];
           },
+          {
+            foreignKeyName: "profileAcademicPrograms_userId_profile_userId_fkey";
+            columns: ["userId"];
+            isOneToOne: false;
+            referencedRelation: "publicProfiles";
+            referencedColumns: ["userId"];
+          },
         ];
       };
       profileLinks: {
@@ -891,6 +925,13 @@ export type Database = {
             columns: ["userId"];
             isOneToOne: false;
             referencedRelation: "profileWithVerification";
+            referencedColumns: ["userId"];
+          },
+          {
+            foreignKeyName: "profileLinks_userId_profile_userId_fkey";
+            columns: ["userId"];
+            isOneToOne: false;
+            referencedRelation: "publicProfiles";
             referencedColumns: ["userId"];
           },
         ];
@@ -1782,6 +1823,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      publicProfiles: {
+        Row: {
+          bio: string | null;
+          discordHandle: string | null;
+          displayName: string | null;
+          githubHandle: string | null;
+          handle: string | null;
+          hasAvatar: boolean | null;
+          linkedinName: string | null;
+          roleDescription: string | null;
+          showAvatar: boolean | null;
+          showBio: boolean | null;
+          showCompetitions: boolean | null;
+          showContributions: boolean | null;
+          showLinks: boolean | null;
+          showName: boolean | null;
+          showStars: boolean | null;
+          userId: string | null;
+        };
+        Relationships: [];
+      };
       resolvedUserPermissions: {
         Row: {
           canManageAttendance: boolean | null;
@@ -1857,6 +1919,26 @@ export type Database = {
           reportId: string;
         }[];
       };
+      handle_candidates: {
+        Args: { uid: string };
+        Returns: {
+          available: boolean;
+          handle: string;
+          kind: string;
+          ord: number;
+        }[];
+      };
+      handle_is_valid: { Args: { candidate: string }; Returns: boolean };
+      handle_options: {
+        Args: { uid: string };
+        Returns: {
+          available: boolean;
+          handle: string;
+          kind: string;
+        }[];
+      };
+      handle_slug: { Args: { input: string }; Returns: string };
+      handle_suffixed: { Args: { base: string; uid: string }; Returns: string };
       has_permission: { Args: { perm: string; uid: string }; Returns: boolean };
       inspect_content: {
         Args: { app_slug: string; content_ref: string; content_type: string };
@@ -1943,6 +2025,10 @@ export type Database = {
           subject_action: Database["platform"]["Enums"]["subjectAction"];
         };
         Returns: Json;
+      };
+      set_handle: {
+        Args: { new_handle: string; uid: string };
+        Returns: string;
       };
     };
     Enums: {

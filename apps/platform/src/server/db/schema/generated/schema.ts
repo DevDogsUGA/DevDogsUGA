@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, boolean, uuid, pgEnum, text, integer, varchar, timestamp, date, smallint, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, pgEnum, text, boolean, varchar, integer, timestamp, date, smallint, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by types:drizzle after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -429,7 +429,18 @@ export const profileInPlatform = platform.table.withRLS("profile", {
 	legalLastName: text(),
 	identitySourcedAt: timestamp({ withTimezone: true }),
 	quarantinedBy: uuid().references(() => reportResolutionsInPlatform.id, { onDelete: "set null" } ),
+	publicProfile: boolean().default(true).notNull(),
+	showName: boolean().default(true).notNull(),
+	showAvatar: boolean().default(true).notNull(),
+	showBio: boolean().default(true).notNull(),
+	showLinks: boolean().default(true).notNull(),
+	showCompetitions: boolean().default(true).notNull(),
+	showContributions: boolean().default(true).notNull(),
+	showStars: boolean().default(true).notNull(),
+	handle: text(),
 }, (table) => [
+	uniqueIndex("profile_handle_key").using("btree", table.handle.asc().nullsLast()),
+	index("profile_handle_prefix_idx").using("btree", table.handle.asc().nullsLast().op("text_pattern_ops")).where(sql`(handle IS NOT NULL)`),
 	uniqueIndex("profile_ugaEmail_key").using("btree", table.ugaEmail.asc().nullsLast()),
 
 	pgPolicy("crud_authenticated_policy_delete", { as: "restrictive", for: "delete", to: ["authenticated"], using: sql`false` }),
@@ -439,7 +450,7 @@ export const profileInPlatform = platform.table.withRLS("profile", {
 	pgPolicy("crud_authenticated_policy_select", { for: "select", to: ["authenticated"], using: sql`(( SELECT auth.uid() AS uid) = "userId")` }),
 
 	pgPolicy("crud_authenticated_policy_update", { for: "update", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") AND ("quarantinedBy" IS NULL) AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))`, withCheck: sql`((( SELECT auth.uid() AS uid) = "userId") AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))` }),
-check("profile_ugaEmail_lowercase", sql`(("ugaEmail" IS NULL) OR ("ugaEmail" = lower("ugaEmail")))`),]);
+check("profile_handle_format", sql`((handle IS NULL) OR ((handle ~ '^[a-z0-9][a-z0-9._-]*[a-z0-9]$'::text) AND ((char_length(handle) >= 2) AND (char_length(handle) <= 39))))`),check("profile_ugaEmail_lowercase", sql`(("ugaEmail" IS NULL) OR ("ugaEmail" = lower("ugaEmail")))`),]);
 
 export const profileAcademicProgramsInPlatform = platform.table.withRLS("profileAcademicPrograms", {
 	userId: uuid().notNull().references(() => profileInPlatform.userId, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -968,7 +979,25 @@ export const profileWithVerificationInPlatform = platform.view("profileWithVerif
 	hasDiscord: boolean(),
 	nameMatchesInvolvement: boolean(),
 	verified: boolean(),
-}).with({"securityInvoker":true}).as(sql`SELECT "userId", pronouns IS NOT NULL AND array_length(pronouns, 1) > 0 AS "hasPronouns", "graduationSemester" IS NOT NULL AND "graduationYear" IS NOT NULL AS "hasGraduationDate", (EXISTS ( SELECT 1 FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text)) AS "hasGithub", (EXISTS ( SELECT 1 FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text)) AS "hasDiscord", "involvementFirstName" IS NOT NULL AND lower(TRIM(BOTH FROM "preferredName")) = lower((TRIM(BOTH FROM "involvementFirstName") || ' '::text) || TRIM(BOTH FROM "involvementLastName")) AS "nameMatchesInvolvement", pronouns IS NOT NULL AND array_length(pronouns, 1) > 0 AND "graduationSemester" IS NOT NULL AND "graduationYear" IS NOT NULL AND "involvementFirstName" IS NOT NULL AND lower(TRIM(BOTH FROM "preferredName")) = lower((TRIM(BOTH FROM "involvementFirstName") || ' '::text) || TRIM(BOTH FROM "involvementLastName")) AND (EXISTS ( SELECT 1 FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text)) AND (EXISTS ( SELECT 1 FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text)) AS verified FROM platform.profile p`);
+}).with({"securityInvoker":true}).as(sql`SELECT "userId", pronouns IS NOT NULL AND array_length(pronouns, 1) > 0 AS "hasPronouns", "graduationSemester" IS NOT NULL AND "graduationYear" IS NOT NULL AS "hasGraduationDate", (EXISTS ( SELECT 1 FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text)) AS "hasGithub", (EXISTS ( SELECT 1 FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text)) AS "hasDiscord", "involvementFirstName" IS NOT NULL AND lower(TRIM(BOTH FROM "preferredName")) = lower((TRIM(BOTH FROM "involvementFirstName") || ' '::text) || TRIM(BOTH FROM "involvementLastName")) AS "nameMatchesInvolvement", pronouns IS NOT NULL AND array_length(pronouns, 1) > 0 AND "graduationSemester" IS NOT NULL AND "graduationYear" IS NOT NULL AND "involvementFirstName" IS NOT NULL AND lower(TRIM(BOTH FROM "preferredName")) = lower((TRIM(BOTH FROM "involvementFirstName") || ' '::text) || TRIM(BOTH FROM "involvementLastName")) AND (EXISTS ( SELECT 1 FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text)) AND (EXISTS ( SELECT 1 FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text)) OR (EXISTS ( SELECT 1 FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" WHERE ur."userId" = p."userId" AND r."isLeadership")) AS verified FROM platform.profile p`);
+
+export const publicProfilesInPlatform = platform.view("publicProfiles", {	userId: uuid(),
+	handle: text(),
+	displayName: varchar(),
+	hasAvatar: boolean(),
+	bio: varchar(),
+	roleDescription: varchar(),
+	githubHandle: text(),
+	discordHandle: text(),
+	linkedinName: text(),
+	showName: boolean(),
+	showAvatar: boolean(),
+	showBio: boolean(),
+	showLinks: boolean(),
+	showCompetitions: boolean(),
+	showContributions: boolean(),
+	showStars: boolean(),
+}).as(sql`SELECT p."userId", p.handle, CASE WHEN p."showName" THEN p."preferredName" ELSE NULL::character varying END AS "displayName", p."showAvatar" AND (EXISTS ( SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'avatars'::text AND o.name = p."userId"::text)) AS "hasAvatar", CASE WHEN p."showBio" THEN p.bio ELSE NULL::character varying END AS bio, CASE WHEN p."showBio" THEN p."roleDescription" ELSE NULL::character varying END AS "roleDescription", CASE WHEN p."showGithub" THEN ( SELECT lower(i.identity_data ->> 'user_name'::text) AS lower FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text) ELSE NULL::text END AS "githubHandle", CASE WHEN p."showDiscord" THEN ( SELECT i.identity_data ->> 'full_name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text) ELSE NULL::text END AS "discordHandle", CASE WHEN p."showLinkedin" THEN ( SELECT i.identity_data ->> 'name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'linkedin_oidc'::text) ELSE NULL::text END AS "linkedinName", p."showName", p."showAvatar", p."showBio", p."showLinks", p."showCompetitions", p."showContributions", p."showStars" FROM platform.profile p JOIN platform."profileWithVerification" v ON v."userId" = p."userId" WHERE v.verified AND p."publicProfile" AND p.handle IS NOT NULL AND p."quarantinedBy" IS NULL AND NOT platform.is_suspended(p."userId")`);
 
 export const resolvedUserPermissionsInPlatform = platform.materializedView("resolvedUserPermissions", {	userId: uuid(),
 	canModerate: boolean(),
@@ -1017,6 +1046,7 @@ export { profileInPlatform as profile };
 export { profileAcademicProgramsInPlatform as profileAcademicPrograms };
 export { profileLinksInPlatform as profileLinks };
 export { profileWithVerificationInPlatform as profileWithVerification };
+export { publicProfilesInPlatform as publicProfiles };
 export { quarantineEffectInPlatform as quarantineEffect };
 export { rateLimitHitsInPlatform as rateLimitHits };
 export { reflectionRevisionsInPlatform as reflectionRevisions };

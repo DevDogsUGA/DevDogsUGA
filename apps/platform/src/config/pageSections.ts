@@ -109,6 +109,10 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
         },
       ],
     },
+    // No fields: they are rendered inside PublicProfileSection, which shares
+    // switch state between them, so the page source has no `<Field>` to mirror.
+    // The card anchor still lands search on the section.
+    { id: "publicProfileSettings", label: "Public Profile" },
     {
       id: "status",
       label: "Status",

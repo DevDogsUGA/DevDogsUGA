@@ -6,12 +6,15 @@ interface Props {
   checked: boolean;
   pending: boolean;
   onToggle: () => void;
+  /** What the switch controls. Defaults to the connected-account wording. */
+  label?: string;
 }
 
 export default function VisibilityToggle({
   checked,
   pending,
   onToggle,
+  label = "Display on Profile",
 }: Props) {
   return (
     <form
@@ -23,7 +26,7 @@ export default function VisibilityToggle({
     >
       <label className="contents">
         <Toggle checked={checked} pending={pending} disabled={pending} />
-        Display on Profile
+        {label}
       </label>
       <span className="text-mauve-400">
         {checked ? "(Currently Visible)" : "(Currently Hidden)"}

@@ -29,6 +29,7 @@ const underConcurrentTeamCap = vi.fn();
 const sendTemplate = vi.fn();
 const sendEach = vi.fn();
 const postAlert = vi.fn();
+const searchPublicProfiles = vi.fn();
 const dbSelect = vi.fn();
 const dbTransaction = vi.fn();
 
@@ -51,6 +52,7 @@ vi.mock("~/server/github/teamSync", () => ({
 vi.mock("~/server/teams/limits", () => ({ underConcurrentTeamCap }));
 vi.mock("~/server/email/send", () => ({ sendTemplate, sendEach }));
 vi.mock("~/server/alerts", () => ({ postAlert }));
+vi.mock("~/server/loaders/publicProfiles", () => ({ searchPublicProfiles }));
 vi.mock("~/server/db/schema", () => ({
   teams: {},
   teamMembers: {},
@@ -205,6 +207,30 @@ describe("teams.ts rate-limit wiring", () => {
       windowSeconds: 86400,
     });
     expect(dbSelect).not.toHaveBeenCalled();
+  });
+
+  it("searchInvitees: refuses on its own budget before the lead check or any search", async () => {
+    consumeRateLimit.mockResolvedValue(false);
+    const { searchInvitees } = await loadTeams();
+
+    const outcome = await searchInvitees(TEAM_ID, "ada");
+
+    expect(outcome).toEqual({ ok: false, code: "rate_limited" });
+    expect(consumeRateLimit).toHaveBeenCalledWith({
+      scope: "team:invite:search",
+      subjectId: USER_ID,
+      limit: 60,
+      windowSeconds: 60,
+    });
+    expect(dbTransaction).not.toHaveBeenCalled();
+    expect(searchPublicProfiles).not.toHaveBeenCalled();
+  });
+
+  it("searchInvitees: a query under two characters costs no budget", async () => {
+    const { searchInvitees } = await loadTeams();
+
+    expect(await searchInvitees(TEAM_ID, "a")).toEqual({ ok: true, value: [] });
+    expect(consumeRateLimit).not.toHaveBeenCalled();
   });
 
   it("respondToMembership: accepting refuses with rate_limited before requireTwoFactor or the transaction", async () => {

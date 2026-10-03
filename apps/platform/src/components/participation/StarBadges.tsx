@@ -15,7 +15,7 @@ export function StarTotalsRow({ totals }: { totals: StarTotals }) {
           <dt className="text-xs tracking-wide text-mauve-400 uppercase">
             {label}
           </dt>
-          <dd className="flex items-baseline gap-1.5 text-2xl font-bold tabular-nums">
+          <dd className="flex items-baseline gap-1.5 text-2xl font-bold text-white tabular-nums">
             <span aria-hidden className="text-amber-300">
               {glyph}
             </span>

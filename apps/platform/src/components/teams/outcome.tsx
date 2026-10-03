@@ -42,7 +42,7 @@ export const TEAM_PROBLEM_MESSAGES: Record<TeamProblemCode, string> = {
     "This one is no longer open — it has been answered or withdrawn already.",
   name_taken: "Another team already has that name. Pick a different one.",
   invitee_not_found:
-    "Nobody on the platform matches that email or GitHub username exactly. Have them sign up on the platform and link GitHub, then invite them again.",
+    "Nobody on the platform matches that email, GitHub username or @handle exactly. Have them sign up on the platform and link GitHub, then invite them again.",
   not_found: "That team or request no longer exists.",
   rate_limited:
     "That's too many attempts in a short time. Wait a bit and try again.",

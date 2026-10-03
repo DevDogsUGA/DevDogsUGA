@@ -10,6 +10,7 @@ import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import {
   disbandTeamAction,
   inviteToTeam,
+  searchInvitees,
   joinTeam,
   leaveTeam,
   requestToJoin,
@@ -221,7 +222,11 @@ export default async function TeamPage({
       {isMember ? (
         <>
           {isLead && (
-            <InviteForm teamId={team.id} inviteToTeam={inviteToTeam} />
+            <InviteForm
+              teamId={team.id}
+              inviteToTeam={inviteToTeam}
+              searchInvitees={searchInvitees}
+            />
           )}
           <RosterActions
             teamId={team.id}
