@@ -12,6 +12,7 @@ import {
   teams,
 } from "~/server/db/schema";
 import { sendEach, sendTemplate } from "~/server/email/send";
+import { searchPublicProfiles } from "~/server/loaders/publicProfiles";
 import {
   TeamActionError,
   isUniqueViolation,
@@ -85,6 +86,12 @@ import { usersInAuth } from "~/supabase/drizzle/schema";
  *   team's invite volume can run away -- transferring the lead role mid-day
  *   should not reset how many invites the TEAM has sent, so this counts
  *   against the team's id, not the (rotating) lead's.
+ * - `invite search`: typeahead, so a lead typing one name fires a request per
+ *   pause, not per sitting. The client debounces and waits for two
+ *   characters; 60 per minute per caller leaves several people's worth of
+ *   typing and retyping while still capping how fast one account can walk the
+ *   public directory a prefix at a time (which `/community` already shows
+ *   anyone, so the budget bounds load, not secrecy).
  */
 const PER_ACCOUNT_ACTION_LIMIT = 10;
 const PER_ACCOUNT_ACTION_WINDOW_SECONDS = 10 * 60;
@@ -92,6 +99,10 @@ const INVITES_PER_LEAD_LIMIT = 20;
 const INVITES_PER_LEAD_WINDOW_SECONDS = 60 * 60;
 const INVITES_PER_TEAM_LIMIT = 50;
 const INVITES_PER_TEAM_WINDOW_SECONDS = 24 * 60 * 60;
+const INVITE_SEARCH_LIMIT = 60;
+const INVITE_SEARCH_WINDOW_SECONDS = 60;
+const INVITE_SEARCH_MIN_QUERY = 2;
+const INVITE_SEARCH_RESULTS = 8;
 
 /**
  * Consumes one hit of a budget, translating a refusal into the error every
@@ -488,23 +499,47 @@ async function notifyLeadsOfRequest(
 }
 
 /**
- * The account an exact email or GitHub username names, or null.
+ * The account an invite identifier names, or null. Three shapes, in this
+ * order:
  *
- * There is no member directory to search: a lead types the one thing they
- * already know about the person they want -- the email they use, or the
- * GitHub username on their profile -- and this either matches it exactly or
- * it does not. An `@` decides which of the two it is; UGA emails and GitHub
- * logins never collide on that character.
+ * 1. `@handle` -- a leading `@` and no other `@`. A member's public profile
+ *    handle, which the invite picker fills in when a suggestion is chosen
+ *    (see `searchInvitees`). Resolved through `searchPublicProfiles`, so it
+ *    only ever finds what the Community directory shows: a hidden, unverified,
+ *    quarantined or suspended member returns null, indistinguishable from a
+ *    handle that does not exist. This check must come BEFORE the email check,
+ *    which fires on any `@`. It cannot swallow a real email: an address needs
+ *    something before its `@`, so it never starts with one, and one with a
+ *    second `@` is not a handle either.
+ * 2. An email, anything else containing `@`. Exact match on the account's
+ *    sign-in address, which works for every member whether or not they have a
+ *    public profile.
+ * 3. A GitHub username, exact match on the linked identity. UGA emails and
+ *    GitHub logins never collide on `@`.
  *
- * Deliberately two different tables. `usersInAuth.email` is the account's
- * sign-in address; a GitHub username only ever appears on the linked
- * identity's `identity_data` (`githubLoginFor`'s counterpart,
- * `userIdForGithubLogin`, in `teamSync.ts`), because this platform does not
- * duplicate it anywhere of its own.
+ * Email and GitHub username are the only routes to a member who is not
+ * public: there is no way to search for them, a lead has to already know the
+ * exact value. `usersInAuth.email` is the account's sign-in address; a GitHub
+ * username only ever appears on the linked identity's `identity_data`
+ * (`githubLoginFor`'s counterpart, `userIdForGithubLogin`, in
+ * `teamSync.ts`), because this platform does not duplicate it anywhere of its
+ * own.
+ *
+ * Not exported: this file is `"use server"`, so every export is callable from
+ * a browser, and this returns account ids.
  */
 async function resolveInvitee(identifier: string): Promise<string | null> {
   const trimmed = identifier.trim();
   if (trimmed.length === 0) return null;
+
+  if (trimmed.startsWith("@") && !trimmed.slice(1).includes("@")) {
+    const handle = trimmed.slice(1).toLowerCase();
+    if (handle.length === 0) return null;
+    // `searchPublicProfiles` is a prefix search that ranks an exact handle
+    // first, so the top hit is either that handle or proof there is none.
+    const [match] = await searchPublicProfiles(handle, 1);
+    return match?.handle === handle ? match.userId : null;
+  }
 
   if (trimmed.includes("@")) {
     // Case-insensitive on BOTH sides: `usersInAuth.email` is whatever case
@@ -527,6 +562,49 @@ async function resolveInvitee(identifier: string): Promise<string | null> {
   }
 
   return userIdForGithubLogin(trimmed);
+}
+
+/**
+ * One invite-picker suggestion. Deliberately no `userId`: picking one puts
+ * `@handle` in the identifier field and the invite resolves it again
+ * server-side, so an account id never reaches the browser.
+ */
+export interface InviteeSuggestion {
+  handle: string;
+  /** The member's name, or `@handle` when they hide it. */
+  label: string;
+  /** Null when the member hides their avatar or never uploaded one. */
+  avatarUrl: string | null;
+}
+
+async function searchInviteesImpl(
+  teamId: string,
+  query: string,
+): Promise<InviteeSuggestion[]> {
+  const callerId = await expectSession();
+
+  // Too short to be worth a database read or a budget hit; the client does
+  // not send these either.
+  if (query.trim().replace(/^@/, "").length < INVITE_SEARCH_MIN_QUERY) {
+    return [];
+  }
+
+  // Before the lead check so probing teams one is not a lead of is bounded
+  // too.
+  await guardRateLimit(
+    "team:invite:search",
+    callerId,
+    INVITE_SEARCH_LIMIT,
+    INVITE_SEARCH_WINDOW_SECONDS,
+  );
+  await db.transaction((tx) => requireLead(tx, teamId, callerId));
+
+  const matches = await searchPublicProfiles(query, INVITE_SEARCH_RESULTS);
+  return matches.map((match) => ({
+    handle: match.handle,
+    label: match.displayName ?? `@${match.handle}`,
+    avatarUrl: match.avatarUrl,
+  }));
 }
 
 async function inviteToTeamImpl(
@@ -559,7 +637,7 @@ async function inviteToTeamImpl(
   if (inviteeId === null) {
     throw new TeamActionError(
       "invitee_not_found",
-      "Nobody on the platform matches that email or GitHub username exactly. Have them sign up and link GitHub, then invite them again.",
+      "Nobody on the platform matches that email, GitHub username or @handle exactly. Have them sign up and link GitHub, then invite them again.",
     );
   }
 
@@ -1018,15 +1096,27 @@ export async function requestToJoin(
 }
 
 /**
- * `identifier` is an exact email or GitHub username, not an account id --
- * there is no member directory or search to pick one from. See
- * `resolveInvitee`.
+ * `identifier` is an exact email, GitHub username or `@handle`, never an
+ * account id. See `resolveInvitee`.
  */
 export async function inviteToTeam(
   teamId: string,
   identifier: string,
 ): Promise<TeamActionOutcome<string>> {
   return attempt(() => inviteToTeamImpl(teamId, identifier));
+}
+
+/**
+ * Typeahead for the invite picker: public members whose handle or name starts
+ * with `query` (at least two characters), at most eight, lead-only and rate
+ * limited. Covers the same members as the Community directory and nobody
+ * else; everyone else is invited by exact email or GitHub username.
+ */
+export async function searchInvitees(
+  teamId: string,
+  query: string,
+): Promise<TeamActionOutcome<InviteeSuggestion[]>> {
+  return attempt(() => searchInviteesImpl(teamId, query));
 }
 
 export async function respondToMembership(
