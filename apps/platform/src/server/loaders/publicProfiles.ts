@@ -182,6 +182,44 @@ export const getPublicHandlesByUserId = cache(
   },
 );
 
+/**
+ * The directory row of each given account that has a public profile, keyed by
+ * user id. Like `getPublicHandlesByUserId` but with the name and avatar a list
+ * of people needs; hidden fields are already null, and accounts the view drops
+ * are absent.
+ *
+ * Server-side only: the result is keyed by `userId`. Look values up and pass
+ * the summary on; never forward the map to a client component.
+ */
+export const getPublicSummariesByUserId = cache(
+  async (
+    userIds: readonly string[],
+  ): Promise<Map<string, PublicProfileSummary>> => {
+    if (userIds.length === 0) return new Map();
+    const rows = await db
+      .select({
+        userId: publicProfiles.userId,
+        handle: publicProfiles.handle,
+        displayName: publicProfiles.displayName,
+        hasAvatar: publicProfiles.hasAvatar,
+        bio: publicProfiles.bio,
+      })
+      .from(publicProfiles)
+      .where(inArray(publicProfiles.userId, [...userIds]));
+    return new Map(
+      rows.map((row) => [
+        row.userId!,
+        {
+          handle: row.handle!,
+          displayName: row.displayName,
+          avatarUrl: row.hasAvatar ? avatarUrlFor(row.userId!) : null,
+          bio: row.bio,
+        },
+      ]),
+    );
+  },
+);
+
 const SEARCH_LIMIT_MAX = 25;
 
 /** Escape `%`, `_` and `\` so user input is matched literally by LIKE. */

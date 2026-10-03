@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "~/ui/avatar";
-import { profilePath } from "~/lib/profilePath";
+import { COMMUNITY_PATH, profilePath } from "~/lib/profilePath";
 import type { PublicProfileSummary } from "~/server/loaders/publicProfiles";
 import type { LeaderProfile } from "~/components/LeadershipSection/LeaderCluster/profile";
 
@@ -112,8 +112,6 @@ export default function CommunityDirectory({
       )}
 
       <section aria-labelledby="community-members">
-        {/* The header row is where the link to the competition archive
-            (/community/competitions) goes once that page exists. */}
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 px-1">
           <h2
             id="community-members"
@@ -121,6 +119,12 @@ export default function CommunityDirectory({
           >
             Members
           </h2>
+          <Link
+            href={`${COMMUNITY_PATH}/competitions`}
+            className="text-sm font-semibold underline underline-offset-2"
+          >
+            Competition archive
+          </Link>
         </div>
         {others.length === 0 ? (
           <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
