@@ -11,10 +11,11 @@ import { teamRulesetName, teamRulesetPayload } from "./rulesets";
  */
 
 const TEAM_ID = 4815162;
+const ADMINS_TEAM_ID = 108;
 
 describe("per-team ruleset", () => {
   it("restricts exactly the team's own branch", () => {
-    const payload = teamRulesetPayload("sicem", TEAM_ID);
+    const payload = teamRulesetPayload("sicem", TEAM_ID, ADMINS_TEAM_ID);
 
     expect(payload.conditions.ref_name.include).toEqual([
       "refs/heads/team/sicem",
@@ -23,18 +24,27 @@ describe("per-team ruleset", () => {
     expect(payload.target).toBe("branch");
   });
 
-  it("names the team as the only actor allowed past it", () => {
-    const payload = teamRulesetPayload("sicem", TEAM_ID);
+  it("allows only the competition team and admins past it", () => {
+    const payload = teamRulesetPayload("sicem", TEAM_ID, ADMINS_TEAM_ID);
 
     expect(payload.bypass_actors).toEqual([
       { actor_id: TEAM_ID, actor_type: "Team", bypass_mode: "always" },
+      {
+        actor_id: ADMINS_TEAM_ID,
+        actor_type: "Team",
+        bypass_mode: "always",
+      },
     ]);
   });
 
   it("restricts updates, which is the rule the isolation rests on", () => {
     // Without `update` the ruleset enforces nothing that matters: the team grant
     // is repository-wide, so every other team can already push here.
-    const types = teamRulesetPayload("sicem", TEAM_ID).rules.map((r) => r.type);
+    const types = teamRulesetPayload(
+      "sicem",
+      TEAM_ID,
+      ADMINS_TEAM_ID,
+    ).rules.map((r) => r.type);
     expect(types).toContain("update");
     expect(types).toContain("deletion");
   });
@@ -43,7 +53,11 @@ describe("per-team ruleset", () => {
     // `creation` would be inert (the branch is cut first) and would break the
     // recovery path. `non_fast_forward` and `pull_request` have no shared
     // integration branch to belong to any more.
-    const types = teamRulesetPayload("sicem", TEAM_ID).rules.map((r) => r.type);
+    const types = teamRulesetPayload(
+      "sicem",
+      TEAM_ID,
+      ADMINS_TEAM_ID,
+    ).rules.map((r) => r.type);
     expect(types).not.toContain("creation");
     expect(types).not.toContain("non_fast_forward");
     expect(types).not.toContain("pull_request");
@@ -54,8 +68,8 @@ describe("per-team ruleset", () => {
     // `team/sicem-2`. Under a glob, sicem's ruleset would match sicem-2's
     // branch AND name sicem as its bypass actor, handing one team push access
     // to another's work, with both rulesets reading correctly in isolation.
-    const include = teamRulesetPayload("sicem", TEAM_ID).conditions.ref_name
-      .include;
+    const include = teamRulesetPayload("sicem", TEAM_ID, ADMINS_TEAM_ID)
+      .conditions.ref_name.include;
 
     expect(include).toHaveLength(1);
     expect(include[0]).not.toContain("*");
@@ -67,7 +81,7 @@ describe("per-team ruleset", () => {
     // createRepoRuleset does not reject a duplicate name. A name that cannot be
     // recomputed makes re-provisioning create a second ruleset over one branch.
     expect(teamRulesetName("sicem")).toBe("team/sicem");
-    expect(teamRulesetPayload("sicem", TEAM_ID).name).toBe(
+    expect(teamRulesetPayload("sicem", TEAM_ID, ADMINS_TEAM_ID).name).toBe(
       teamRulesetName("sicem"),
     );
   });

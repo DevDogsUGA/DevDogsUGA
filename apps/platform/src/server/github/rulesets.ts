@@ -108,9 +108,9 @@ export function teamRulesetName(teamSlug: string): string {
  * The ruleset for one team's branch.
  *
  * `update` is the load-bearing rule: it restricts pushes to the matching ref to
- * bypass actors only, and the team is the only bypass actor. Every other team
- * holds the same repository-wide `push` grant and is stopped here and nowhere
- * else.
+ * bypass actors only. The competition team and the organization admins are
+ * the only bypass actors. Every other team holds the same repository-wide
+ * `push` grant and is stopped here and nowhere else.
  *
  * `deletion` stops another team removing this branch. It does NOT stop the team
  * removing its own, because bypass is ruleset-scoped (constraint 1) — THIS
@@ -151,6 +151,7 @@ export function teamRulesetName(teamSlug: string): string {
 export function teamRulesetPayload(
   teamSlug: string,
   githubTeamId: number,
+  adminsTeamId: number,
 ): RulesetPayload {
   return {
     name: teamRulesetName(teamSlug),
@@ -158,6 +159,7 @@ export function teamRulesetPayload(
     enforcement: "active",
     bypass_actors: [
       { actor_id: githubTeamId, actor_type: "Team", bypass_mode: "always" },
+      { actor_id: adminsTeamId, actor_type: "Team", bypass_mode: "always" },
     ],
     conditions: {
       ref_name: {
