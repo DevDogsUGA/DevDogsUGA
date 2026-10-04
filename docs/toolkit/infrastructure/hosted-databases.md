@@ -43,19 +43,22 @@ the project's data.
 | Target                 | How                                                        |
 | ---------------------- | ---------------------------------------------------------- |
 | the shared dev project | `pnpm devtools --tier development:remote apply-migrations` |
-| production             | `production-migrate` in `.github/workflows/deploy.yaml`    |
+| staging                | `staging-migrate` in `.github/workflows/deploy.yaml`       |
+| production             | the `production` job in `.github/workflows/deploy.yaml`    |
 
 `apply-migrations` runs `supabase db push --db-url` against the
 session's database — only the migrations its history table has not recorded —
 and then asks whether to regenerate the `Database` types with `types:db`.
-Production is pushed by CI with `backstage deploy migrate`, behind two dry
-runs (`backstage deploy plan`): `main-plan` prints the plan on every merge to
-`main`, and `production-plan` recomputes it seconds before the real push,
-because the first goes stale as soon as another promotion lands.
 
-Staging is **not** migrated by that workflow. `staging-preflight` only
-classifies the project as awake or paused, and `staging-deploy` builds and
-deploys the Workers.
+CI pushes staging and production with `backstage deploy migrate
+--include-seed`, so the seed files a tier has not recorded run right after its
+migrations, and then `backstage deploy avatars` uploads any seeded headshot the
+bucket lacks without replacing existing ones (see
+[Migrations](/docs/platform/guides/migrations)'s "Seeds"). Production sits
+behind two dry runs (`backstage deploy plan --include-seed`): `production-plan`
+prints the plan, seeds included, on every merge to `main` under the read-only
+`migration_planner` role, and the `production` job recomputes it seconds before
+the real push, because the first goes stale as soon as another promotion lands.
 
 > [!WARNING]
 > Never run `drizzle-kit push` against a hosted database: it writes the

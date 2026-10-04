@@ -68,10 +68,20 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
-      - name: Apply staging migrations
+      # --include-seed runs the seed files staging has not recorded yet; they
+      # are insert-only, so a rerun or an edited file changes nothing there.
+      - name: Apply staging migrations and new seeds
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm backstage deploy migrate --no-env --yes
+        run: pnpm backstage deploy migrate --no-env --yes --include-seed
+      # The seed SQL never touches Storage. This uploads only the headshots
+      # the bucket lacks, so a photo an officer replaced is never overwritten.
+      - name: Upload new seeded headshots
+        env:
+          API_URL: ${{ vars.API_URL }}
+          PROJECT_REF: ${{ vars.PROJECT_REF }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        run: pnpm backstage deploy avatars --no-env --yes
 
   staging-deploy:
     needs: [staging-preflight, staging-migrate]
@@ -99,7 +109,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm backstage deploy plan --no-env --yes
+          pnpm backstage deploy plan --no-env --yes --include-seed
           --label 'Migration plan — production candidate'
       - name: Summarize candidate source
         run: |
@@ -253,13 +263,20 @@ jobs:
       - name: Export SENTRY_ORG from .env.production
         if: steps.freshness.outputs.fresh == 'true'
         run: grep -m1 '^SENTRY_ORG=' .env.production | tr -d "\"'" >> "$GITHUB_ENV"
-      - name: Revalidate and apply migrations
+      - name: Revalidate and apply migrations and new seeds
         if: steps.freshness.outputs.fresh == 'true'
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: |
-          pnpm backstage deploy plan --no-env --yes --label 'Approved migration plan — production'
-          pnpm backstage deploy migrate --no-env --yes
+          pnpm backstage deploy plan --no-env --yes --include-seed --label 'Approved migration plan — production'
+          pnpm backstage deploy migrate --no-env --yes --include-seed
+      - name: Upload new seeded headshots
+        if: steps.freshness.outputs.fresh == 'true'
+        env:
+          API_URL: ${{ vars.API_URL }}
+          PROJECT_REF: ${{ vars.PROJECT_REF }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        run: pnpm backstage deploy avatars --no-env --yes
       - name: Apply Supabase configuration
         if: steps.freshness.outputs.fresh == 'true'
         env:
