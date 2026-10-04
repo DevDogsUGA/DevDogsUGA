@@ -186,6 +186,7 @@ const LAMP_CHANNEL = {
   monday: "#10b981", // emerald-500
   wednesday: "#0ea5e9", // sky-500
   week: "#eab308", // yellow-500
+  nextMonday: "#f43f5e", // rose-500
 } satisfies Record<StripDay, string>;
 
 /** Each channel has a repeatable mechanical position for both controls. */
@@ -193,6 +194,7 @@ const KNOB_ROTATION = {
   monday: [35, -20],
   wednesday: [80, 35],
   week: [135, 90],
+  nextMonday: [190, 145],
 } satisfies Record<StripDay, readonly [number, number]>;
 
 export default function CrtTv({ showing, channel, className }: Props) {
