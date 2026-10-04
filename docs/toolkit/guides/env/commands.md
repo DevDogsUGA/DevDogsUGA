@@ -44,10 +44,14 @@ offers to save.
 
 Four places, in order, stopping at the first hit: `--access-token`;
 `BWS_ACCESS_TOKEN`, which includes your `.env`, since `with-env` loads it for
-every command; your Bitwarden Password Manager vault, which `env` signs in to
-and unlocks itself; and finally asking you —
-masked, with an offer to save it to `.env` or to the vault as _"DevDogs Secrets
-Manager access token (admin)"_.
+every command; your personal Bitwarden Password Manager vault, which `env`
+signs in to and unlocks itself; and finally asking you —
+masked, with an offer to save it to `.env` or to your personal vault as
+_"DevDogs Secrets Manager access token (admin)"_.
+
+The token is yours alone. An item of that name in the DevDogs organization is
+ignored, and the save never puts it in one: a shared token makes everyone's
+calls look the same, and revoking it locks everyone out at once.
 
 Explicit beats ambient, so the flag wins over the environment: somebody passing
 it while `BWS_ACCESS_TOKEN` is set is overriding on purpose, and quietly using
