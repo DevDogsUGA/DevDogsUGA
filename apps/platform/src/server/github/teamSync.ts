@@ -44,6 +44,7 @@ import { teamRulesetName, teamRulesetPayload } from "./rulesets";
 
 const org = () => env.GITHUB_ORG;
 const repo = () => env.GITHUB_COMPETITION_REPO;
+const ADMIN_TEAM_SLUG = "admins";
 
 /** Why a GitHub operation did not happen, in terms a caller can act on. */
 export type GithubSkip =
@@ -214,7 +215,17 @@ async function ensureTeamRuleset(
   githubTeamId: number,
 ): Promise<GithubResult> {
   const api = octokit();
-  const payload = teamRulesetPayload(teamSlug, githubTeamId);
+  let adminsTeamId: number;
+  try {
+    const { data } = await api.rest.teams.getByName({
+      org: org(),
+      team_slug: ADMIN_TEAM_SLUG,
+    });
+    adminsTeamId = data.id;
+  } catch (error) {
+    return failed("api_error", describe(error));
+  }
+  const payload = teamRulesetPayload(teamSlug, githubTeamId, adminsTeamId);
 
   let existingId: number | undefined;
   try {
