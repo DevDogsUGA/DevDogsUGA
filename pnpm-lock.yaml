@@ -150,7 +150,7 @@ overrides:
   fflate: ~0.7.5
 
 patchedDependencies:
-  '@vinext/cloudflare@1.0.0-beta.9': d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42
+  '@vinext/cloudflare@1.0.1': d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42
   react-dom@19.2.8: f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e
   react-server-dom-webpack@19.3.0: 38ac24cc74e7250221d3143971d7d0740bde7331727072f014d0bfc99ddb6cb5
   react@19.2.8: e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572
@@ -313,8 +313,8 @@ importers:
         specifier: 'catalog:'
         version: 5.101.4(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
       '@vinext/cloudflare':
-        specifier: 1.0.0-beta.9
-        version: 1.0.0-beta.9(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(vinext@1.0.0-beta.11(aab7078633d9529272150d6290c12996))
+        specifier: 1.0.1
+        version: 1.0.1(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(@cloudflare/vite-plugin@1.57.1(@types/node@26.2.0)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(wrangler@4.136.3(@cloudflare/workers-types@5.20260820.1)(@types/node@26.2.0)))(vinext@1.0.1(8235a4955b5521fbac3ab5bbd1ddee52))
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -442,8 +442,8 @@ importers:
         specifier: ^11.0.5
         version: 11.0.5
       vinext:
-        specifier: 1.0.0-beta.11
-        version: 1.0.0-beta.11(aab7078633d9529272150d6290c12996)
+        specifier: 1.0.1
+        version: 1.0.1(8235a4955b5521fbac3ab5bbd1ddee52)
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -620,8 +620,8 @@ importers:
         specifier: 'catalog:'
         version: 5.101.4(@tanstack/react-query@5.101.4(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
       '@vinext/cloudflare':
-        specifier: 1.0.0-beta.9
-        version: 1.0.0-beta.9(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(vinext@1.0.0-beta.11(aab7078633d9529272150d6290c12996))
+        specifier: 1.0.1
+        version: 1.0.1(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(@cloudflare/vite-plugin@1.57.1(@types/node@26.2.0)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(wrangler@4.136.3(@cloudflare/workers-types@5.20260820.1)(@types/node@26.2.0)))(vinext@1.0.1(8235a4955b5521fbac3ab5bbd1ddee52))
       cheerio:
         specifier: ^1.2.0
         version: 1.2.0
@@ -656,8 +656,8 @@ importers:
         specifier: ^19.3.0
         version: 19.3.0(patch_hash=38ac24cc74e7250221d3143971d7d0740bde7331727072f014d0bfc99ddb6cb5)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(webpack@5.107.2(esbuild@0.28.2)(postcss@8.5.26))
       vinext:
-        specifier: 1.0.0-beta.11
-        version: 1.0.0-beta.11(aab7078633d9529272150d6290c12996)
+        specifier: 1.0.1
+        version: 1.0.1(8235a4955b5521fbac3ab5bbd1ddee52)
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -1163,8 +1163,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workers-response-store@0.1.0-beta.1':
-    resolution: {integrity: sha512-BG7dqbkHw3OXYPRxDuPrIY4JBPeqCd9T4u3jGKAt46QIEZANVWjrlhYy4cqN+onb9xPZeCiSQ8Ghrc0q2pLHZw==}
+  '@cloudflare/workers-response-store@1.0.1':
+    resolution: {integrity: sha512-rZdrveppNHye0CCvup2BUcx+/OIJyaIPUWeAqXICASM/60Fc9EK0aVFjLz7SrHIj8rgFRynshlI24yQIO7P1Ug==}
     engines: {node: '>=22'}
 
   '@cloudflare/workers-types@5.20260820.1':
@@ -3494,8 +3494,8 @@ packages:
     resolution: {integrity: sha512-xBaJish5OeGmniDj9cW5PRa/PtmuVU3ziqrbr5xJj901ZDN4TosrVaNZpEiLZAxdfnhAe7uQ7QFWfjPe9d9K2Q==}
     engines: {node: '>= 10'}
 
-  '@resvg/resvg-wasm@2.4.0':
-    resolution: {integrity: sha512-C7c51Nn4yTxXFKvgh2txJFNweaVcfUPQxwEUFw4aWsCmfiBDJsTSwviIF8EcwjQ6k8bPyMWCl1vw4BdxE569Cg==}
+  '@resvg/resvg-wasm@2.4.1':
+    resolution: {integrity: sha512-yi6R0HyHtsoWTRA06Col4WoDs7SvlXU3DLMNP2bdAgs7HK18dTEVl1weXgxRzi8gwLteGUbIg29zulxIB3GSdg==}
     engines: {node: '>= 10'}
 
   '@rolldown/binding-android-arm-eabi@1.2.9':
@@ -4559,19 +4559,26 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@vercel/og@0.8.6':
-    resolution: {integrity: sha512-hBcWIOppZV14bi+eAmCZj8Elj8hVSUZJTpf1lgGBhVD85pervzQ1poM/qYfFUlPraYSZYP+ASg6To5BwYmUSGQ==}
-    engines: {node: '>=16'}
+  '@vercel/og@1.0.3':
+    resolution: {integrity: sha512-/iYJ34PDu4lty1TXdL86qHEw8viveHTllG1PWLuJX8tSFfqKL7kyVJeUORJmQ250bHB0h+alcalXUlza3c/NSA==}
+    engines: {node: '>=22'}
 
-  '@vinext/cloudflare@1.0.0-beta.9':
-    resolution: {integrity: sha512-ZAiCMmYown0E4rf8vNVzBb3FEJxiNTD67Rbj+jZNCh84qXCQtvHg6SzJh3mTCqr1iayT0wVkrCPbnA86VJWLUw==}
+  '@vinext/cloudflare@1.0.1':
+    resolution: {integrity: sha512-mprsRYbtI+b7T28/8DkR0Xousa/F6YGtJO3yn9fR4lG82H+3pDK5KITrTnAsMvrrw+gySrRJYnkAKjYbm97PJQ==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
-      vinext: ^1.0.0-beta.11
+      '@cloudflare/vite-plugin': '*'
+      cf: '*'
+      vinext: ^1.0.1
+    peerDependenciesMeta:
+      '@cloudflare/vite-plugin':
+        optional: true
+      cf:
+        optional: true
 
-  '@vinext/types@1.0.0-beta.2':
-    resolution: {integrity: sha512-kbKY/H1RWlf7yox4G6Vwk1JeM6x0Tv1EAv28f3tDYkK3brq+89vp5eZHbdw3L/pZMbAhG4oFyhT9C976y+jkhQ==}
+  '@vinext/types@1.0.1':
+    resolution: {integrity: sha512-zH4WbVl47rNGxG8Y7XoWJAc8e0VQFQ+r8Cuh0crv1L2SuNovDD3jMtxQDjzoS1b9hYaZXbds0CjRo5tSm7F9Zw==}
     engines: {node: '>=22'}
 
   '@vitejs/plugin-react@6.1.0':
@@ -5139,10 +5146,6 @@ packages:
   css-color-keywords@1.0.0:
     resolution: {integrity: sha512-FyyrDHZKEjXDpNJYvVsV960FiqQyXc/LlYmsxl2BcdMb2WPx0OGRVgTg55rPSyLSNMqP52R9r8geSp7apN3Ofg==}
     engines: {node: '>=4'}
-
-  css-gradient-parser@0.0.16:
-    resolution: {integrity: sha512-3O5QdqgFRUbXvK1x5INf1YkBz1UKSWqrd63vWsum8MNHDBYD5urm3QtxZbKU259OrEXNM26lP/MPY3d1IGkBgA==}
-    engines: {node: '>=16'}
 
   css-gradient-parser@0.0.17:
     resolution: {integrity: sha512-w2Xy9UMMwlKtou0vlRnXvWglPAceXCTtcmVSo8ZBUvqCV5aXEFP/PC6d+I464810I9FT++UACwTD5511bmGPUg==}
@@ -7821,12 +7824,12 @@ packages:
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
 
-  satori@0.16.0:
-    resolution: {integrity: sha512-ZvHN3ygzZ8FuxjSNB+mKBiF/NIoqHzlBGbD0MJiT+MvSsFOvotnWOhdTjxKzhHRT2wPC1QbhLzx2q/Y83VhfYQ==}
-    engines: {node: '>=16'}
-
   satori@0.33.4:
     resolution: {integrity: sha512-dCnaW6D/tkCJxG5UvpZPWnnvfTdGTVVSAq1tzH6xC5MeOhAeeswRcSq5zT7C6lRCdTGow9PRGus7PCzdp5JJYw==}
+    engines: {node: '>=16'}
+
+  satori@0.33.5:
+    resolution: {integrity: sha512-PNW6ktrQ8SM6kk7u4aOuTkkUewkzyTOrj+QeEzXSsnNMAdff4ire9CAqIz8+4C3rCiBtK8QTELv52AZEd1PbRw==}
     engines: {node: '>=16'}
 
   saxes@6.0.0:
@@ -8479,8 +8482,8 @@ packages:
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
 
-  vinext@1.0.0-beta.11:
-    resolution: {integrity: sha512-V56xQcTJEyzGJwkeNYfQI03w8CtI4LW8kqYA9p1r44kItsFXpjQlWA4xaLqqksFkm1FTzn9VPj6xvQLcZDpCfg==}
+  vinext@1.0.1:
+    resolution: {integrity: sha512-t5woy0mgS4/6xoPwIB2sxXRlOSoCG2z8dBMbMfZ1xGMZvQnYrfa3S5X7uqZukaRK0KPavov+gtGJ7ymMT9THvw==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -9064,7 +9067,7 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20260921.1':
     optional: true
 
-  '@cloudflare/workers-response-store@0.1.0-beta.1': {}
+  '@cloudflare/workers-response-store@1.0.1': {}
 
   '@cloudflare/workers-types@5.20260820.1': {}
 
@@ -11101,7 +11104,7 @@ snapshots:
       '@resvg/resvg-js-win32-ia32-msvc': 2.6.2
       '@resvg/resvg-js-win32-x64-msvc': 2.6.2
 
-  '@resvg/resvg-wasm@2.4.0': {}
+  '@resvg/resvg-wasm@2.4.1': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.9':
     optional: true
@@ -12015,17 +12018,23 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.12.2':
     optional: true
 
-  '@vercel/og@0.8.6':
+  '@vercel/og@1.0.3(@types/node@26.2.0)':
     dependencies:
-      '@resvg/resvg-wasm': 2.4.0
-      satori: 0.16.0
+      '@resvg/resvg-wasm': 2.4.1
+      satori: 0.33.5
+    optionalDependencies:
+      sharp: 0.35.4(@types/node@26.2.0)
+    transitivePeerDependencies:
+      - '@types/node'
 
-  '@vinext/cloudflare@1.0.0-beta.9(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(vinext@1.0.0-beta.11(aab7078633d9529272150d6290c12996))':
+  '@vinext/cloudflare@1.0.1(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(@cloudflare/vite-plugin@1.57.1(@types/node@26.2.0)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(wrangler@4.136.3(@cloudflare/workers-types@5.20260820.1)(@types/node@26.2.0)))(vinext@1.0.1(8235a4955b5521fbac3ab5bbd1ddee52))':
     dependencies:
-      '@cloudflare/workers-response-store': 0.1.0-beta.1
-      vinext: 1.0.0-beta.11(aab7078633d9529272150d6290c12996)
+      '@cloudflare/workers-response-store': 1.0.1
+      vinext: 1.0.1(8235a4955b5521fbac3ab5bbd1ddee52)
+    optionalDependencies:
+      '@cloudflare/vite-plugin': 1.57.1(@types/node@26.2.0)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(wrangler@4.136.3(@cloudflare/workers-types@5.20260820.1)(@types/node@26.2.0))
 
-  '@vinext/types@1.0.0-beta.2': {}
+  '@vinext/types@1.0.1': {}
 
   '@vitejs/plugin-react@6.1.0(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))':
     dependencies:
@@ -12641,8 +12650,6 @@ snapshots:
   css-box-shadow@1.0.0-3: {}
 
   css-color-keywords@1.0.0: {}
-
-  css-gradient-parser@0.0.16: {}
 
   css-gradient-parser@0.0.17: {}
 
@@ -15826,21 +15833,23 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
-  satori@0.16.0:
+  satori@0.33.4:
     dependencies:
       '@shuding/opentype.js': 1.4.0-beta.0
       css-background-parser: 0.1.0
       css-box-shadow: 1.0.0-3
-      css-gradient-parser: 0.0.16
+      css-gradient-parser: 0.0.17
       css-to-react-native: 3.2.0
       emoji-regex-xs: 2.0.1
       escape-html: 1.0.3
+      fflate: 0.7.5
+      harfbuzzjs: 0.10.0
       linebreak: 1.1.0
       parse-css-color: 0.2.1
       postcss-value-parser: 4.2.0
       yoga-layout: 3.2.1
 
-  satori@0.33.4:
+  satori@0.33.5:
     dependencies:
       '@shuding/opentype.js': 1.4.0-beta.0
       css-background-parser: 0.1.0
@@ -16639,11 +16648,11 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vinext@1.0.0-beta.11(aab7078633d9529272150d6290c12996):
+  vinext@1.0.1(8235a4955b5521fbac3ab5bbd1ddee52):
     dependencies:
       '@unpic/react': 1.0.2(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
-      '@vercel/og': 0.8.6
-      '@vinext/types': 1.0.0-beta.2
+      '@vercel/og': 1.0.3(@types/node@26.2.0)
+      '@vinext/types': 1.0.1
       '@vitejs/plugin-react': 6.1.0(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
       ipaddr.js: 2.5.0
       magic-string: 0.30.21
@@ -16656,6 +16665,7 @@ snapshots:
       '@vitejs/plugin-rsc': 0.5.35(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react-server-dom-webpack@19.3.0(patch_hash=38ac24cc74e7250221d3143971d7d0740bde7331727072f014d0bfc99ddb6cb5)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(webpack@5.107.2(esbuild@0.28.2)(postcss@8.5.26)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
       react-server-dom-webpack: 19.3.0(patch_hash=38ac24cc74e7250221d3143971d7d0740bde7331727072f014d0bfc99ddb6cb5)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(webpack@5.107.2(esbuild@0.28.2)(postcss@8.5.26))
     transitivePeerDependencies:
+      - '@types/node'
       - next
 
   vite-plugin-commonjs@0.10.4:

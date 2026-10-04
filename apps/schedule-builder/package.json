@@ -51,7 +51,7 @@
     "@tailwindcss/postcss": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-devtools": "catalog:",
-    "@vinext/cloudflare": "1.0.0-beta.9",
+    "@vinext/cloudflare": "1.0.1",
     "cheerio": "^1.2.0",
     "date-fns": "catalog:",
     "drizzle-orm": "catalog:",
@@ -63,7 +63,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-server-dom-webpack": "^19.3.0",
-    "vinext": "1.0.0-beta.11",
+    "vinext": "1.0.1",
     "zod": "catalog:"
   },
   "devDependencies": {
