@@ -3,6 +3,7 @@ import SectionBackground, {
   type EdgeType,
 } from "~/ui/section-background";
 import SpinStarImage from "./MissionStar";
+import { MISSION_PARAGRAPHS } from "~/components/homeCopy";
 
 /* The wash is two hues at two strengths each. */
 const BLOB_ROSE_PALE = "#fecdd3";
@@ -59,19 +60,9 @@ export default function MissionSection({ topEdge, bottomEdge }: Props) {
             <h2 className="font-display mb-8 text-left text-4xl font-extrabold text-black md:text-right md:text-5xl">
               Our Mission
             </h2>
-            <p>
-              DevDogs is the large-scale application development club at UGA
-              dedicated to benefitting our community through code.
-            </p>
-            <p>
-              All of our projects are free, open-source, and designed to teach
-              students industry-standard technologies and best-practices for
-              collaboration in a fun and welcoming environment.
-            </p>
-            <p>
-              Whether you&rsquo;re writing your first line of code or your
-              thousandth, there&rsquo;s a place for you here.
-            </p>
+            {MISSION_PARAGRAPHS.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
           </div>
         </div>
       </section>

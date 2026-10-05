@@ -4,8 +4,8 @@ import dynamic from "next/dynamic";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
 import type { DialogTone } from "~/ui/dialog-shell";
 import { ACTION_DARK_CLS } from "../meetingView";
-import { BUILDING_CENTERS, VIEW, type BuildingKey } from "./campusMapMeta";
-import { BUILDING_NAME } from "./buildings";
+import { VIEW, type BuildingKey } from "./campusMapMeta";
+import { BUILDING_NAME, mapUrls } from "./buildings";
 
 /**
  * The map is the heavy part of the dialog, 46 KB of OSM paths, so it is a
@@ -19,23 +19,6 @@ const CampusMap = dynamic(() => import("./CampusMap"), {
 });
 export function preloadCampusMap() {
   void import("./CampusMap");
-}
-
-/**
- * The destination is a coordinate pin, not a place query: the DLW only opened
- * in August 2026, and searching either app for it by name still lands on the
- * wrong building or nothing at all. A coordinate works the same for all ten
- * buildings, so what the newest one needs, they all get. The pin is the
- * centroid of the same OSM footprint the map highlights, so regenerating the
- * map data moves both together.
- */
-function mapUrls(building: BuildingKey) {
-  const { lat, lon } = BUILDING_CENTERS[building];
-  const destination = `${lat},${lon}`;
-  return {
-    google: `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
-    apple: `https://maps.apple.com/?daddr=${destination}`,
-  };
 }
 
 interface Props {

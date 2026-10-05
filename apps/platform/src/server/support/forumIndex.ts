@@ -3,7 +3,7 @@ import type { APIMessage, APIThreadChannel } from "discord-api-types/v10";
 import { db } from "~/server/db";
 import { supportForumPosts } from "~/server/db/schema";
 import { anonymize } from "./anonymize";
-import { SUPPORT_TAGS, type SupportConfig } from "./config";
+import { SUPPORT_TAGS, supportConfig, type SupportConfig } from "./config";
 import {
   getActiveForumThreads,
   getArchivedForumThreads,
@@ -147,6 +147,17 @@ export async function getFaqPost(threadId: string) {
     )
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * The FAQ post a `/help/<threadId>` link names, or null wherever that page
+ * would 404: support switched off in this deployment, a thread id that isn't
+ * a Discord snowflake, or a post nobody published. Shared by the page and its
+ * terminal twin so the two can't disagree about which posts are public.
+ */
+export async function getPublishedFaqPost(threadId: string) {
+  if (!supportConfig() || !/^\d{17,20}$/.test(threadId)) return null;
+  return getFaqPost(threadId);
 }
 
 export async function forumTitle(threadId: string): Promise<string | null> {

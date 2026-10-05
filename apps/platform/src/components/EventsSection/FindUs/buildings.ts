@@ -1,4 +1,8 @@
-import { BUILDING_KEYS, type BuildingKey } from "./campusMapMeta";
+import {
+  BUILDING_CENTERS,
+  BUILDING_KEYS,
+  type BuildingKey,
+} from "./campusMapMeta";
 
 /**
  * What a meeting can say about where it is, on the app's side of the line.
@@ -146,4 +150,47 @@ export function locationLine(
 ): string | null {
   const short = isMappedBuilding(building) ? BUILDING_LABEL[building] : null;
   return [short, room].filter((part) => part !== null).join(" ") || null;
+}
+
+/**
+ * The destination is a coordinate pin, not a place query: the DLW only opened
+ * in August 2026, and searching either app for it by name still lands on the
+ * wrong building or nothing at all. A coordinate works the same for all ten
+ * buildings, so what the newest one needs, they all get. The pin is the
+ * centroid of the same OSM footprint the map highlights, so regenerating the
+ * map data moves both together.
+ */
+export function mapUrls(building: BuildingKey) {
+  const { lat, lon } = BUILDING_CENTERS[building];
+  const destination = `${lat},${lon}`;
+  return {
+    google: `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
+    apple: `https://maps.apple.com/?daddr=${destination}`,
+  };
+}
+
+/**
+ * Which building and room a `/events/directions?b=…&r=…` link means. Shared
+ * by the page and its terminal twin so a pasted link resolves the same way in
+ * both.
+ *
+ * Anything unrecognised falls back to the DLW instead of erroring: this URL
+ * gets shared by hand, and a truncated paste should still show somebody a map.
+ * A bare link is the club's standing answer to "where are you", so it
+ * resolves to the usual room rather than to the DLW with no room, which would
+ * drop the floor plan this link mostly exists to reach. A link naming some
+ * other building means somewhere else, and gets no room.
+ */
+export function directionsTarget(
+  b: string | string[] | null | undefined,
+  r: string | string[] | null | undefined,
+): { building: BuildingKey; room: string | null } {
+  const building = typeof b === "string" && isMappedBuilding(b) ? b : "DLW";
+  const room =
+    typeof r === "string" && r !== ""
+      ? r
+      : building === "DLW"
+        ? USUAL_ROOM
+        : null;
+  return { building, room };
 }

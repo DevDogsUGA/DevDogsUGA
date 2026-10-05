@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import UnderConstruction from "~/components/UnderConstruction";
+import { partnersPageEnabled } from "~/server/features";
 
 /**
  * Static copy; changes only with a deploy.
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 export default async function Partners() {
   "use cache";
 
-  if (process.env.DEPLOY_ENV === "production") return <UnderConstruction />;
+  if (!partnersPageEnabled()) return <UnderConstruction />;
 
   return <UnderConstruction />;
 }

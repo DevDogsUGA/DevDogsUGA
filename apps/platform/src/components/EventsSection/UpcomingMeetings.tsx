@@ -84,7 +84,7 @@ function UpcomingStack({ meetings }: { meetings: MeetingInRange[] }) {
  * Bounded on `endsAt` like every other "upcoming" read here: a meeting already
  * in progress is still the one worth naming.
  */
-async function nextMeetings(count: number): Promise<MeetingInRange[]> {
+export async function nextMeetings(count: number): Promise<MeetingInRange[]> {
   const now = new Date();
   const horizon = new Date(now);
   horizon.setUTCMonth(horizon.getUTCMonth() + 3);

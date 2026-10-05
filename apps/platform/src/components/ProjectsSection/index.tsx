@@ -5,6 +5,7 @@ import SectionBackground, {
 import { PROJECTS } from "~/config/projects";
 import ProjectCard from "./ProjectCard";
 import Link from "next/link";
+import { PROJECTS_BLURB } from "~/components/homeCopy";
 
 const OPEN_PROJECTS = PROJECTS.filter((p) => p.contributions === "open");
 const CLOSED_PROJECTS = PROJECTS.filter((p) => p.contributions === "closed");
@@ -76,11 +77,7 @@ export default function ProjectsSection({ topEdge, bottomEdge }: Props) {
               Projects
             </h2>
             <div className="mx-auto flex max-w-prose flex-col gap-5 text-base font-medium text-mauve-800 *:text-balance">
-              <p>
-                Every semester, DevDogs members collaborate across design,
-                frontend, and backend to ship a product consumed by real users.
-                Our projects are built by students, for students.
-              </p>
+              <p>{PROJECTS_BLURB}</p>
               <p>
                 We&rsquo;re committed to keeping all of our active projects free
                 and open-source, and all of those projects live in a{" "}

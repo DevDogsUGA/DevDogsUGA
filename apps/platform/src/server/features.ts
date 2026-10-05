@@ -20,3 +20,13 @@
 export function publicProfilesEnabled(): boolean {
   return process.env.DEPLOY_ENV !== "production";
 }
+
+/**
+ * Whether `/partners` shows its real content. Off in production while the
+ * page is under construction; today both branches render the placeholder, so
+ * this exists to give the eventual page (and the terminal's twin of it) one
+ * switch to flip rather than an inline environment check each.
+ */
+export function partnersPageEnabled(): boolean {
+  return process.env.DEPLOY_ENV !== "production";
+}

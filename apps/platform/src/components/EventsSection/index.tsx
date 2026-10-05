@@ -6,6 +6,7 @@ import SectionBackground, {
 } from "~/ui/section-background";
 import LinkButton from "~/ui/link-button";
 import HowItWorks from "./HowItWorks";
+import { EVENTS_BLURB } from "~/components/homeCopy";
 
 export const EVENTS_BLOBS: BlobDef[] = [
   { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#a5f3fc" }, // cyan
@@ -99,11 +100,7 @@ export default function EventsSection({
                 Events
               </h2>
               <div className="mx-auto flex max-w-2xl flex-col gap-3 text-base/relaxed font-medium text-mauve-800">
-                <p>
-                  DevDogs meets regularly on Mondays and Wednesdays: we host
-                  workshops, hackathons, and open build nights. Here&rsquo;s
-                  what&rsquo;s next.
-                </p>
+                <p>{EVENTS_BLURB}</p>
               </div>
             </div>
             {upcomingMeetings}

@@ -6,6 +6,7 @@ import SectionBackground, {
 import LinkButton from "~/ui/link-button";
 import LeaderCluster from "./LeaderCluster";
 import { getCurrentOfficers } from "~/server/loaders/officers";
+import { LEADERSHIP_BLURB } from "~/components/homeCopy";
 
 const LEADERSHIP_BLOBS: BlobDef[] = [
   { cx: "20%", cy: "30%", rx: "55%", ry: "50%", fill: "#a7f3d0" }, // emerald
@@ -61,8 +62,7 @@ export default async function LeadershipSection({
               Leadership
             </h2>
             <p className="font-800 mx-auto max-w-2xl text-mauve-800">
-              DevDogs is led by a diverse team of UGA students across several
-              disciplines and years.
+              {LEADERSHIP_BLURB}
             </p>
           </div>
 
