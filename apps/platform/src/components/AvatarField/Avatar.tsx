@@ -5,52 +5,40 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactCrop, {
   centerCrop,
+  convertToPixelCrop,
   makeAspectCrop,
-  type Crop,
-  type PixelCrop,
+  type PercentCrop,
 } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
-import { CameraIcon, UploadIcon, XIcon } from "@phosphor-icons/react/ssr";
+import { CameraIcon, UploadIcon } from "@phosphor-icons/react/ssr";
 import { useAvatarSrc, useAvatarUpload } from "~/hooks/useAvatarUpload";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "~/ui/dialog";
+import { DialogClose, DialogDescription, DialogTitle } from "~/ui/dialog";
+import DialogShell from "~/ui/dialog-shell";
 
 import FormButton from "~/components/FormButton";
 
 /**
- * Extracts the crop region from the rendered `<img>` element and
- * downscales to `size`×`size` WebP. Uses the rendered dimensions to
- * derive the scale factor back to natural pixel coordinates.
+ * Extracts the crop region from the `<img>` element and scales it to
+ * `size`×`size` WebP. The crop is kept in percent of the image, so it maps
+ * onto natural pixels directly, whatever size the preview rendered at.
  */
 async function exportCrop(
   imgEl: HTMLImageElement,
-  pixelCrop: PixelCrop,
+  crop: PercentCrop,
   size = 512,
 ): Promise<File> {
-  const scaleX = imgEl.naturalWidth / imgEl.width;
-  const scaleY = imgEl.naturalHeight / imgEl.height;
+  const { x, y, width, height } = convertToPixelCrop(
+    crop,
+    imgEl.naturalWidth,
+    imgEl.naturalHeight,
+  );
 
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   canvas
     .getContext("2d")!
-    .drawImage(
-      imgEl,
-      pixelCrop.x * scaleX,
-      pixelCrop.y * scaleY,
-      pixelCrop.width * scaleX,
-      pixelCrop.height * scaleY,
-      0,
-      0,
-      size,
-      size,
-    );
+    .drawImage(imgEl, x, y, width, height, 0, 0, size, size);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -82,8 +70,10 @@ export default function Avatar({
   const [dialogOpen, setDialogOpen] = useState(false);
   // Blob URL of the file currently loaded in the cropper.
   const [pendingSrc, setPendingSrc] = useState<string | null>(null);
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  // In percent of the image, the one unit that means the same thing on
+  // screen and in the file. Seeded on image load, so Upload works without a
+  // drag.
+  const [crop, setCrop] = useState<PercentCrop>();
 
   const avatarSrc = useAvatarSrc(userId);
   const { upload, isPending } = useAvatarUpload(userId);
@@ -110,7 +100,6 @@ export default function Avatar({
       if (pendingSrc) URL.revokeObjectURL(pendingSrc);
       setPendingSrc(URL.createObjectURL(file));
       setCrop(undefined);
-      setCompletedCrop(undefined);
       setDialogOpen(true);
       e.target.value = "";
     },
@@ -145,8 +134,8 @@ export default function Avatar({
   );
 
   const handleSave = useCallback(async () => {
-    if (!imgRef.current || !completedCrop) return;
-    const file = await exportCrop(imgRef.current, completedCrop);
+    if (!imgRef.current || !crop) return;
+    const file = await exportCrop(imgRef.current, crop);
     const croppedUrl = URL.createObjectURL(file);
 
     upload(
@@ -163,7 +152,7 @@ export default function Avatar({
         },
       },
     );
-  }, [completedCrop, pendingSrc, router, upload]);
+  }, [crop, pendingSrc, router, upload]);
 
   const avatarVisual = (
     <Root className="inline-flex size-[1em] items-center justify-center overflow-hidden rounded-full border border-mauve-900 bg-linear-to-br from-cyan-400 to-cyan-500 align-middle shadow-xs select-none">
@@ -202,80 +191,77 @@ export default function Avatar({
         onChange={handleFileChange}
       />
 
-      <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
-        <DialogContent
-          className="shadow-block max-w-lg overflow-hidden border-black bg-white p-0"
-          onInteractOutside={(e) => isPending && e.preventDefault()}
-          onEscapeKeyDown={(e) => isPending && e.preventDefault()}
-          showCloseButton={false}
-        >
-          <DialogHeader className="flex-row items-center justify-between px-4 pt-4 pb-2">
-            <DialogTitle className="text-lg font-semibold">
+      <DialogShell
+        open={dialogOpen}
+        onOpenChange={handleOpenChange}
+        tone="dark"
+        header={
+          <div className="flex flex-col gap-1 pr-10">
+            <DialogTitle className="font-display text-xl font-extrabold text-white">
               Crop Photo
             </DialogTitle>
+            <DialogDescription className="text-mauve-400">
+              Drag the circle to frame your photo.
+            </DialogDescription>
+          </div>
+        }
+      >
+        {pendingSrc && (
+          <div className="flex justify-center">
+            {/* The image renders at its own aspect ratio, never letterboxed:
+                the crop is measured against the <img> box, so any empty
+                space inside it would be croppable and would skew the
+                mapping back to the file's pixels. ReactCrop's stylesheet
+                caps the <img> at this max-height and the full width. */}
+            <ReactCrop
+              crop={crop}
+              onChange={(_, percentCrop) => setCrop(percentCrop)}
+              aspect={1}
+              circularCrop
+              keepSelection
+              className="max-h-[55dvh]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                ref={imgRef}
+                src={pendingSrc}
+                alt="Crop preview"
+                onLoad={onImageLoad}
+              />
+            </ReactCrop>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <button
+            type="button"
+            className="text-sm text-mauve-400 hover:text-white hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={openFilePicker}
+            disabled={isPending}
+          >
+            Choose a different image
+          </button>
+
+          <div className="flex items-center gap-3">
             <DialogClose
-              className="rounded-sm p-1 text-mauve-500 hover:bg-mauve-100 hover:text-mauve-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isPending}
-              aria-label="Close"
             >
-              <XIcon />
+              Cancel
             </DialogClose>
-          </DialogHeader>
-
-          <div className="bg-white">
-            {pendingSrc && (
-              <ReactCrop
-                crop={crop}
-                onChange={setCrop}
-                onComplete={setCompletedCrop}
-                aspect={1}
-                circularCrop
-                keepSelection
-                className="max-h-[60vh] w-full"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  ref={imgRef}
-                  src={pendingSrc}
-                  alt="Crop preview"
-                  className="max-h-[60vh] w-full object-contain"
-                  onLoad={onImageLoad}
-                />
-              </ReactCrop>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-4 px-4 py-3">
-            <button
+            <FormButton
+              theme="black"
               type="button"
-              className="text-sm text-mauve-500 hover:text-mauve-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={openFilePicker}
-              disabled={isPending}
+              className="text-sm"
+              onClick={handleSave}
+              disabled={isPending || !crop}
             >
-              Choose a different image
-            </button>
-
-            <div className="flex items-center gap-2">
-              <DialogClose
-                className="rounded-sm border border-black bg-white px-4 py-1 text-sm text-mauve-700 transition-[background-color] hover:bg-mauve-100 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isPending}
-              >
-                Cancel
-              </DialogClose>
-              <FormButton
-                theme="black"
-                type="button"
-                className="gap-1.5 px-4 py-1 text-sm font-medium"
-                onClick={handleSave}
-                disabled={isPending || !completedCrop}
-              >
-                <UploadIcon />
-                Upload
-              </FormButton>
-            </div>
+              <UploadIcon />
+              Upload
+            </FormButton>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </DialogShell>
     </>
   );
 }
