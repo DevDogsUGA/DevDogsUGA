@@ -118,6 +118,11 @@ export const TERMINAL_PATHS = [
     page: "(site)/legal/privacy/page.tsx",
   },
   {
+    pattern: "/legal/terms",
+    regex: /^\/legal\/terms\/?$/,
+    page: "(site)/legal/terms/page.tsx",
+  },
+  {
     pattern: "/account",
     regex: /^\/account\/?$/,
     page: "(site)/account/page.tsx",

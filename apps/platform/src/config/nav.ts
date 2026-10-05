@@ -93,6 +93,12 @@ export const SEARCH_ONLY_PAGES: NavItem[] = [
     description: "How DevDogs collects, uses, and protects your data.",
   },
   {
+    label: "Terms of Service",
+    href: "/legal/terms",
+    icon: "ScrollIcon",
+    description: "The rules for using DevDogs, its platform, and its apps.",
+  },
+  {
     label: "Changelog",
     href: "/changelog",
     icon: "TerminalWindowIcon",

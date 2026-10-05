@@ -17,6 +17,7 @@ describe("showsAnnouncement", () => {
     "/docs",
     "/docs/platform/guides/meetings-and-teams/events",
     "/legal/privacy",
+    "/legal/terms",
     "/competitions/spring-2026",
   ];
 

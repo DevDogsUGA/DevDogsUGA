@@ -13,7 +13,8 @@
         "/partners",
         "/changelog",
         "/attendance",
-        "/legal/privacy"
+        "/legal/privacy",
+        "/legal/terms"
       ],
       "protectedPath": "/console/permissions",
       "protectedRedirectPrefix": "/auth"

@@ -40,6 +40,9 @@ export const TERMINAL_ROUTES = {
   "/legal/privacy": browserOnly(
     "The privacy policy is long-form legal text; read it in a browser, where its headings link and its tables lay out.",
   ),
+  "/legal/terms": browserOnly(
+    "The terms of service are long-form legal text; read them in a browser, where their headings link.",
+  ),
   "/account": browserOnly(SIGNED_IN),
   "/attendance": browserOnly(
     "Check-in happens in a browser: scan the code at the meeting, or open the link it gives you.",

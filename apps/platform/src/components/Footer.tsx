@@ -175,6 +175,12 @@ export default async function Footer() {
                     Privacy Policy
                   </Link>
                 </li>
+
+                <li>
+                  <Link href="/legal/terms" className="hover:underline">
+                    Terms of Service
+                  </Link>
+                </li>
               </ul>
             </div>
 
