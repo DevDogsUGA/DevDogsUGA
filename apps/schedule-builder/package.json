@@ -9,7 +9,7 @@
     "build": "with-env vinext build",
     "predev": "pnpm run codegen",
     "dev": "with-env vinext dev",
-    "start": "with-env --worker schedule-builder wrangler dev --config dist/server/wrangler.json --env-file {env-file}",
+    "start": "with-env --worker schedule-builder -- wrangler dev --config dist/server/wrangler.json --env-file \"{env-file}\"",
     "preview": "pnpm run build && pnpm run start",
     "prelint": "pnpm run codegen",
     "lint": "eslint src",
