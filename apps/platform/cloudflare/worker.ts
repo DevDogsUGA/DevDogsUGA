@@ -35,6 +35,7 @@ import { buildSentryOptions } from "@devdogsuga/telemetry";
 import handler from "vinext/server/app-router-entry";
 import { withEdgeNonce } from "./nonce";
 import { scheduled, type CronEnv } from "./scheduled";
+import { serveTerminal } from "./terminal";
 import type { env as platformEnv } from "~/env";
 
 /**
@@ -92,9 +93,13 @@ export default Sentry.withSentry(
   },
   {
     // Every HTML response gets its CSP nonce here, cache hits included; see
-    // ./nonce.
-    fetch: async (request, env, ctx) =>
-      withEdgeNonce(await handler.fetch(request, env, ctx)),
+    // ./nonce. curl and friends get the terminal pages first; see ./terminal.
+    fetch: async (request, env, ctx) => {
+      const app = (forwarded: Request) => handler.fetch(forwarded, env, ctx);
+      return withEdgeNonce(
+        (await serveTerminal(request, app)) ?? (await app(request)),
+      );
+    },
     scheduled: (event, env) => scheduled(event, env),
   },
 );
