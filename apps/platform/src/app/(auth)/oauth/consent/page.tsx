@@ -4,6 +4,7 @@ import type { TestAccount } from "~/server/actions/testAccounts";
 import { expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
 import ConsentForm from "~/components/ConsentForm";
+import { testAccountName } from "~/lib/testAccountName";
 
 /**
  * A step inside an authorization flow, reachable only with a live
@@ -75,13 +76,7 @@ export default async function ConsentPage({ searchParams }: Props) {
     ({ user, createdAt }) =>
       ({
         userId: user.id,
-        displayName:
-          user.rawUserMetaData &&
-          typeof user.rawUserMetaData === "object" &&
-          "display_name" in user.rawUserMetaData &&
-          typeof user.rawUserMetaData.display_name === "string"
-            ? user.rawUserMetaData.display_name
-            : "Test User",
+        displayName: testAccountName(user.rawUserMetaData),
         createdAt: createdAt.toISOString(),
       }) satisfies TestAccount,
   );

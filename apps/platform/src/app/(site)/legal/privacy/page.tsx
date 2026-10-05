@@ -461,11 +461,11 @@ export default async function Privacy() {
           personal records, and tell you when it&apos;s done.
           <ul>
             <li>
-              <strong>What stays, and why:</strong> to keep EL and audit records
-              trustworthy, edits to reflections and the audit log can&apos;t be
-              changed after the fact. When you&apos;re deleted, we remove your
-              identity from these records instead of deleting them. The same
-              goes for moderation records (§6).
+              <strong>Reflections and reports:</strong> your reflections and
+              their edit history are deleted with your account. So are reports
+              you filed and reports filed about you. The audit log keeps a
+              record that changes happened, without the reflection text and
+              without anything that identifies you.
             </li>
             <li>
               <strong>Outside our systems:</strong> we&apos;ll also remove you

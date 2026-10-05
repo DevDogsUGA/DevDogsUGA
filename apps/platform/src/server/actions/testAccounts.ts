@@ -68,8 +68,8 @@ export async function addTestAccount(formData: FormData) {
   // subdomain scopes uniqueness per user. The .test TLD (IANA-reserved)
   // prevents any risk of impersonation.
   //
-  // Display name and email for OAuth clients are stored in user_metadata and
-  // surfaced via the custom_access_token hook.
+  // The display name goes in `name` and `full_name`, the keys GoTrue's
+  // userinfo endpoint reports, so an OAuth client sees it as the user's name.
   const testUserId = crypto.randomUUID();
   const { data: createUser, error: createUserError } =
     await supabaseAdmin.auth.admin.createUser({
@@ -122,6 +122,7 @@ export async function updateTestAccount(
     {
       user_metadata: {
         is_test_account: true,
+        name: displayName,
         full_name: displayName,
       },
     },

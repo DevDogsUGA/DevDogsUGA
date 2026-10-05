@@ -95,8 +95,8 @@ export const auditEventsInPlatform = platform.table.withRLS("auditEvents", {
 	targetId: text().notNull(),
 	correlationId: text(),
 	metadata: jsonb().default({}).notNull(),
-	beforeReflectionRevisionId: uuid().references(() => reflectionRevisionsInPlatform.id, { onDelete: "restrict" } ),
-	afterReflectionRevisionId: uuid().references(() => reflectionRevisionsInPlatform.id, { onDelete: "restrict" } ),
+	beforeReflectionRevisionId: uuid().references(() => reflectionRevisionsInPlatform.id, { onDelete: "set null" } ),
+	afterReflectionRevisionId: uuid().references(() => reflectionRevisionsInPlatform.id, { onDelete: "set null" } ),
 }, (table) => [
 	uniqueIndex("auditEvents_correlation_idempotency_key").using("btree", table.source.asc().nullsLast(), table.correlationId.asc().nullsLast(), table.action.asc().nullsLast(), table.targetType.asc().nullsLast(), table.targetId.asc().nullsLast()).where(sql`("correlationId" IS NOT NULL)`),
 	index("auditEvents_createdAt_idx").using("btree", table.createdAt.desc().nullsFirst(), table.id.desc().nullsFirst()),
@@ -360,7 +360,8 @@ export const oauthTestAccountsInPlatform = platform.table.withRLS("oauthTestAcco
 	ownerUserId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	createdAt: timestamp().default(sql`now()`).notNull(),
 }, (table) => [
-	unique("oauthTestAccounts_ownerUserId_key").on(table.ownerUserId),
+	index("oauthTestAccounts_ownerUserId_idx").using("btree", table.ownerUserId.asc().nullsLast()),
+
 	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
 
 	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),

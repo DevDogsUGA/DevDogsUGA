@@ -14,6 +14,7 @@ import {
   getInvolvementFullName,
   getVerificationStatus,
 } from "~/server/loaders/verification";
+import { testAccountName } from "~/lib/testAccountName";
 import { supabaseAdmin } from "~/supabase/admin";
 
 export type AssignedRole = {
@@ -132,13 +133,7 @@ export const getOAuthPageData = cache(async () => {
   const mappedTestAccounts: TestAccount[] = testAccounts.map(
     ({ user, createdAt }) => ({
       userId: user.id,
-      displayName:
-        user.rawUserMetaData &&
-        typeof user.rawUserMetaData === "object" &&
-        "display_name" in user.rawUserMetaData &&
-        typeof user.rawUserMetaData.display_name === "string"
-          ? user.rawUserMetaData.display_name
-          : "Test User",
+      displayName: testAccountName(user.rawUserMetaData),
       createdAt: createdAt.toISOString(),
     }),
   );
