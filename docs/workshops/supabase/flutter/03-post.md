@@ -45,45 +45,18 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/02-sig
 
 ## Allow Signed-In Posts
 
-**Dashboard → SQL Editor**:
+The table and read policy are in place from step 1: only the new policy at the end runs.
 
-The table and read policy from step 1. The new policy goes at the end.
+Run it as one query in **Dashboard → SQL Editor**:
 
-Only signed-in users can insert, and `with check (auth.uid() = user_id)` means only as themselves.
-
-```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/e0f6d425f0c0032d1a7cd4540a9d1a4440901ce4...9b7fb5c960e2ad2086522f6f3a1f55e1720943b9#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F03-insert-naive&from=02-supabase%2F02-sign-in&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql
---- a/supabase/migrations/20260928000000_guestbook.sql
-+++ b/supabase/migrations/20260928000000_guestbook.sql
-@@ -1,22 +1,29 @@
- -- Guestbook messages table (workshop step 1 & 2: read, sign in, naive insert).
- --
- -- This is the "naive" version: the client sends its own display name with
- -- every message. Step 2 (profiles.sql) explains why that's a bad idea and
- -- fixes it.
-
- create table public.messages (
-   id uuid primary key default gen_random_uuid(),
-   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
-   author_name text not null,
-   body text not null check (char_length(body) between 1 and 500),
-   created_at timestamptz not null default now()
- );
-
- alter table public.messages enable row level security;
-
- -- Anyone (signed in or not) can read the guestbook.
- create policy "messages are readable by everyone"
-   on public.messages
-   for select
-   to anon, authenticated
-   using (true);
-+
-+-- Only signed-in users can post, and only under their own user id.
-+create policy "authenticated users can insert their own messages"
-+  on public.messages
-+  for insert
-+  to authenticated
-+  with check (auth.uid() = user_id);
+```sql
+-- Only signed-in users can insert, and with check (auth.uid() = user_id) means
+-- only as themselves.
+create policy "authenticated users can insert their own messages"
+  on public.messages
+  for insert
+  to authenticated
+  with check (auth.uid() = user_id);
 ```
 
 [The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/9b7fb5c960e2ad2086522f6f3a1f55e1720943b9/supabase/migrations/20260928000000_guestbook.sql)

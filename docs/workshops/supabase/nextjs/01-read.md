@@ -47,11 +47,11 @@ The guestbook from Framework Intros is already in your starter code, keeping mes
 
 ## Create the Messages Table
 
-**Dashboard → SQL Editor**:
+Run it as one query in **Dashboard → SQL Editor**:
 
-`create table` makes the `messages` table. `default auth.uid()` fills in `user_id` with whoever is signed in.
-
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=7-13 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L7-L13 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=7-13
+```sql
+-- create table makes the messages table. default auth.uid() fills in user_id
+-- with whoever is signed in.
 create table public.messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
@@ -59,18 +59,13 @@ create table public.messages (
   body text not null check (char_length(body) between 1 and 500),
   created_at timestamptz not null default now()
 );
-```
 
-Row-level security goes on: from now on, nobody can read or write a row unless a policy says so.
-
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=15 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L15-L15 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=15
+-- Row-level security goes on: from now on, nobody can read or write a row
+-- unless a policy says so.
 alter table public.messages enable row level security;
-```
 
-The first policy: anyone, signed in (`authenticated`) or not (`anon`), can read every message.
-
-```sql file=supabase/migrations/20260928000000_guestbook.sql lines=17-22 href=https://github.com/DevDogsUGA/Web-Workshops/blob/469df6f2a496d788b9887ffae477a40995ccc0fd/supabase/migrations/20260928000000_guestbook.sql#L17-L22 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql&lines=17-22
--- Anyone (signed in or not) can read the guestbook.
+-- The first policy: anyone, signed in (authenticated) or not (anon), can read
+-- every message.
 create policy "messages are readable by everyone"
   on public.messages
   for select

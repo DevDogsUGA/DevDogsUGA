@@ -45,53 +45,18 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/04-pro
 
 ## Let Users Delete Their Own Messages
 
-**Dashboard → SQL Editor**:
+Everything above is in place already: only the new policy at the end runs.
 
-One more policy, at the end.
+Run it as one query in **Dashboard → SQL Editor**:
 
-Signed-in users can delete a message only when it's theirs. There's no update policy, on purpose.
-
-```diff file=supabase/migrations/20260928000000_guestbook.sql lang=sql context=6 href=https://github.com/DevDogsUGA/Web-Workshops/compare/6fc4e76029e55c0299adc31cb9b570101023b3d1...8f26e3ad3d31168d85c4e4b402f59da66376522f#diff-5d1eb0c93f905e8db60c6bf0111f6a064ec9a44666f86a14842c382c1b354ae1 vscode=vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&to=02-supabase%2F05-delete&from=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000000_guestbook.sql
---- a/supabase/migrations/20260928000000_guestbook.sql
-+++ b/supabase/migrations/20260928000000_guestbook.sql
-@@ -1,29 +1,37 @@
- -- Guestbook messages table (workshop step 1 & 2: read, sign in, naive insert).
- --
- -- This is the "naive" version: the client sends its own display name with
- -- every message. Step 2 (profiles.sql) explains why that's a bad idea and
- -- fixes it.
-
- create table public.messages (
-   id uuid primary key default gen_random_uuid(),
-   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
-   author_name text not null,
-   body text not null check (char_length(body) between 1 and 500),
-   created_at timestamptz not null default now()
- );
-
- alter table public.messages enable row level security;
-
- -- Anyone (signed in or not) can read the guestbook.
- create policy "messages are readable by everyone"
-   on public.messages
-   for select
-   to anon, authenticated
-   using (true);
-
- -- Only signed-in users can post, and only under their own user id.
- create policy "authenticated users can insert their own messages"
-   on public.messages
-   for insert
-   to authenticated
-   with check (auth.uid() = user_id);
-+
-+-- Signed-in users can remove their own messages. There is no update
-+-- policy: we only support post-and-delete for this workshop.
-+create policy "authenticated users can delete their own messages"
-+  on public.messages
-+  for delete
-+  to authenticated
-+  using (auth.uid() = user_id);
+```sql
+-- Signed-in users can delete a message only when it's theirs. There's no update
+-- policy, on purpose.
+create policy "authenticated users can delete their own messages"
+  on public.messages
+  for delete
+  to authenticated
+  using (auth.uid() = user_id);
 ```
 
 [The whole `supabase/migrations/20260928000000_guestbook.sql` at this point](https://github.com/DevDogsUGA/Web-Workshops/blob/8f26e3ad3d31168d85c4e4b402f59da66376522f/supabase/migrations/20260928000000_guestbook.sql)

@@ -47,57 +47,43 @@ Store each person's name once, on the server, when they sign up. Every message t
 
 ## Move Names into Profiles
 
-**Dashboard → SQL Editor**:
+Run it as one query in **Dashboard → SQL Editor**:
 
-A `profiles` table: one row per person, keyed by their `auth.users` id.
-
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=6-11 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L6-L11 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=6-11
+```sql
+-- A profiles table: one row per person, keyed by their auth.users id.
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   name text not null
 );
 
 alter table public.profiles enable row level security;
-```
 
-Names are public, so everyone can read profiles. There's no write policy: only the trigger below writes here.
-
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=13-19 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L13-L19 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=13-19
--- Names are public (they show up next to every message), but nobody can
--- write to this table directly -- only the trigger below does that.
+-- Names are public, so everyone can read profiles. There's no write policy:
+-- only the trigger below writes here.
 create policy "profiles are readable by everyone"
   on public.profiles
   for select
   to anon, authenticated
   using (true);
-```
 
-A function that runs as its owner (`security definer`), so it can write a profile the signed-in user can't.
-
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=25-30 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L25-L30 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=25-30
+-- A function that runs as its owner (security definer), so it can write a
+-- profile the signed-in user can't.
 create function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
-```
-
-It inserts one profile for each new user…
-
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=31-37 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L31-L37 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=31-37
+-- It inserts one profile for each new user…
 begin
   insert into public.profiles (id, name)
   values (
     new.id,
+    -- …named by coalesce: the first of name, full_name, preferred_username, or
+    -- the start of the email.
     coalesce(
       new.raw_user_meta_data ->> 'name',
       new.raw_user_meta_data ->> 'full_name',
-```
-
-…named by `coalesce`: the first of `name`, `full_name`, `preferred_username`, or the start of the email.
-
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=38-44 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L38-L44 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=38-44
       new.raw_user_meta_data ->> 'preferred_username',
       split_part(new.email, '@', 1)
     )
@@ -105,20 +91,13 @@ begin
   return new;
 end;
 $$;
-```
 
-The trigger runs that function every time someone signs up.
-
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=46-48 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L46-L48 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=46-48
+-- The trigger runs that function every time someone signs up.
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-```
 
-The backfill gives everyone who signed up before tonight a profile too.
-
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=50-61 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L50-L61 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=50-61
--- Backfill: give everyone who signed up before this migration a profile too.
+-- The backfill gives everyone who signed up before tonight a profile too.
 insert into public.profiles (id, name)
 select
   id,
@@ -130,14 +109,8 @@ select
   )
 from auth.users
 on conflict (id) do nothing;
-```
 
-Messages now point at profiles, and the `author_name` column goes away.
-
-```sql file=supabase/migrations/20260928000100_profiles.sql lines=63-70 href=https://github.com/DevDogsUGA/Web-Workshops/blob/6fc4e76029e55c0299adc31cb9b570101023b3d1/supabase/migrations/20260928000100_profiles.sql#L63-L70 vscode=vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F04-profiles&file=supabase%2Fmigrations%2F20260928000100_profiles.sql&lines=63-70
--- Messages now point at profiles (not auth.users directly), so PostgREST
--- can embed `profiles(name)` in a single select. The client can no longer
--- send its own author_name -- the name always comes from the server.
+-- Messages now point at profiles, and the author_name column goes away.
 alter table public.messages
   add constraint messages_user_id_profiles_fkey
   foreign key (user_id) references public.profiles (id) on delete cascade;
