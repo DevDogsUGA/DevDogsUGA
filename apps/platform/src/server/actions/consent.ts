@@ -18,12 +18,12 @@ const denySchema = zfd.formData({
   authorizationId: zfd.text(),
 });
 
-export async function approveAuthorization(
+async function approveAuthorization(
   // Only uses client.auth.* (schema-independent), so accept any schema.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: SupabaseClient<any, any, any, any, any>,
   authorizationId: string,
-): Promise<never> {
+): Promise<string> {
   const { data: authorizationDetails, error: authorizationDetailsError } =
     await client.auth.oauth.getAuthorizationDetails(authorizationId);
 
@@ -34,7 +34,7 @@ export async function approveAuthorization(
 
   if ("redirect_url" in authorizationDetails) {
     // User has previously approved authorization
-    redirect(authorizationDetails.redirect_url);
+    return authorizationDetails.redirect_url;
   }
 
   const { data: authorizationApproval, error: authorizationApprovalError } =
@@ -47,7 +47,7 @@ export async function approveAuthorization(
     throw new Error("Failed to approve authorization");
   }
 
-  redirect(authorizationApproval.redirect_url);
+  return authorizationApproval.redirect_url;
 }
 
 export async function approveTestAccountAuthorization(
@@ -118,7 +118,21 @@ export async function approveTestAccountAuthorization(
       throw new Error("Failed to exchange magic link for session");
     }
 
-    return await approveAuthorization(testAccountClient, authorizationId);
+    // The magic-link session exists only to approve this one authorization.
+    // Revoke it as soon as that is done so a full session for the test
+    // account never outlives the request; the client's own token comes from
+    // the code exchange and is issued (and restricted) separately.
+    let redirectUrl: string;
+    try {
+      redirectUrl = await approveAuthorization(
+        testAccountClient,
+        authorizationId,
+      );
+    } finally {
+      await testAccountClient.auth.signOut({ scope: "local" });
+    }
+
+    redirect(redirectUrl);
   } catch (err) {
     unstable_rethrow(err);
     console.error(err);

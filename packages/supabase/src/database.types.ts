@@ -2026,6 +2026,7 @@ export type Database = {
         };
         Returns: Json;
       };
+      restrict_oauth_tokens: { Args: { event: Json }; Returns: Json };
       set_handle: {
         Args: { new_handle: string; uid: string };
         Returns: string;

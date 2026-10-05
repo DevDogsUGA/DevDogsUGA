@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { approveAuthorization } from "~/server/actions/consent";
 import type { TestAccount } from "~/server/actions/testAccounts";
-import { expectSession, expectUserWith } from "~/server/auth";
+import { expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
-import { createSupabaseServerClient } from "~/supabase/server";
 import ConsentForm from "~/components/ConsentForm";
 
 /**
@@ -37,20 +35,6 @@ export default async function ConsentPage({ searchParams }: Props) {
   if (!oauthRegistration) {
     notFound();
   }
-  // Production clients are auto-approved with the real user's identity, with no
-  // interaction.
-  if (oauthRegistration.type === "production") {
-    await expectSession().catch(() => {
-      const callbackPath = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
-      redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
-    });
-
-    return await approveAuthorization(
-      await createSupabaseServerClient(),
-      authorizationId,
-    );
-  }
-
   // Ensure the user is signed in.
   const user = await expectUserWith({
     testAccounts: {
@@ -77,6 +61,15 @@ export default async function ConsentPage({ searchParams }: Props) {
     const callbackPath = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
     redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
   });
+
+  // Sign in with DevDogs is a local-development tool: only the member who
+  // registered the client can approve it, and only as themselves or one of
+  // their test accounts. Everyone else gets the same 404 as a stale id. The
+  // access token hook (migration 50) enforces the same rule on every token,
+  // since GoTrue's own consent endpoint does not go through this page.
+  if (!user.oauthRegistrations[0]) {
+    notFound();
+  }
 
   const testAccounts = user.testAccounts.map(
     ({ user, createdAt }) =>

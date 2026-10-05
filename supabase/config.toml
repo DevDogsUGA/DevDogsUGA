@@ -128,6 +128,14 @@ enable_manual_linking = true
 enabled = true
 uri = "pg-functions://postgres/platform/require_uga_signup_email"
 
+# Tokens issued to "Sign in with DevDogs" clients: refused unless the user is
+# the client's owner or one of their test accounts, and re-roled to
+# `oauth_identity` (no data access) when they are. Every other token passes
+# through unchanged. See 20261005120000_50_platform_oauth_dev_only.sql.
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/platform/restrict_oauth_tokens"
+
 [auth.oauth_server]
 enabled = true
 authorization_url_path = "/oauth/consent"

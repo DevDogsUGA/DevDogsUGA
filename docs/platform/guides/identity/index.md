@@ -28,6 +28,13 @@ signup paths before an Auth user is written. Supabase's service-role admin API
 intentionally bypasses Auth hooks; possession of that key is already database
 administrator authority and must remain server-only.
 
+## What a Sign in with DevDogs token is good for
+
+Sign in with DevDogs is for local development only. Deployed apps share the platform's own sign-in and never use it. A client's tokens are limited to match, by the `custom_access_token` hook (`platform.restrict_oauth_tokens`):
+
+- **Who:** a token is issued only to the member who registered the client at `/tools/oauth`, or to one of that member's test accounts. Any other account, and any client with no registration, is refused at the code exchange and again on every refresh.
+- **What:** an issued token carries `role = oauth_identity`, which has no database privileges. The userinfo endpoint answers it, and that is all your local stack should need: GoTrue reads userinfo once, creates a local user, and issues its own session. The same token sent to the platform's REST, Storage or RPC endpoints is refused with `permission denied`.
+
 ## A third thing, easily confused with both
 
 The GitHub **OAuth app** — configured as `[auth.external.github]` in `supabase/config.toml` with `GH_CLIENT_ID` and `GH_CLIENT_SECRET` — is what links a member's GitHub profile to their Supabase identity. It is not either column above, and the GitHub App does **not** replace it: member login needs an OAuth scope that GitHub Apps do not have at all. That is the first thing the [GitHub App](/docs/toolkit/infrastructure/github-app) page covers, and getting it wrong silently breaks the day a student joins.
