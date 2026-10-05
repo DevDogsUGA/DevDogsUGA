@@ -14,7 +14,6 @@ const MEETING_ID = "aaaaaaaa-0000-4000-a000-000000000001";
 const MEETING: TitleCardMeeting = {
   title: "Supabase",
   kind: "Build Session",
-  summary: "Auth, a database, and row-level security.",
   building: "DLW",
   location: "124",
   startsAt: new Date("2026-09-28T22:00:00.000Z"),
@@ -46,7 +45,6 @@ describe("AttendanceDisplay", () => {
     render(
       <AttendanceDisplay
         meetingId={MEETING_ID}
-        title={MEETING.title}
         canceled={false}
         meeting={MEETING}
       />,
@@ -56,7 +54,7 @@ describe("AttendanceDisplay", () => {
     expect(
       screen.getByRole("heading", { name: MEETING.title }),
     ).toBeInTheDocument();
-    expect(screen.getByText("BUILD SESSION")).toBeInTheDocument();
+    expect(screen.getByText("WELCOME!")).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
@@ -78,7 +76,6 @@ describe("AttendanceDisplay", () => {
     render(
       <AttendanceDisplay
         meetingId={MEETING_ID}
-        title={MEETING.title}
         canceled={false}
         meeting={MEETING}
       />,
@@ -114,7 +111,6 @@ describe("AttendanceDisplay", () => {
     render(
       <AttendanceDisplay
         meetingId={MEETING_ID}
-        title={MEETING.title}
         canceled={false}
         meeting={MEETING}
       />,
@@ -135,12 +131,7 @@ describe("AttendanceDisplay", () => {
 
   it("shows the canceled meeting's confirm step before the title card", () => {
     render(
-      <AttendanceDisplay
-        meetingId={MEETING_ID}
-        title={MEETING.title}
-        canceled
-        meeting={MEETING}
-      />,
+      <AttendanceDisplay meetingId={MEETING_ID} canceled meeting={MEETING} />,
     );
 
     expect(screen.getByText("This meeting is canceled")).toBeInTheDocument();

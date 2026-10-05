@@ -41,7 +41,6 @@ export default async function PresentAttendancePage({
   return (
     <AttendanceDisplay
       meetingId={meeting.id}
-      title={title}
       canceled={meeting.cancelledAt !== null}
       meeting={toTitleCardMeeting(meeting, title)}
       present

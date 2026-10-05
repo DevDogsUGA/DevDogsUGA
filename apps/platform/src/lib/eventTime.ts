@@ -294,6 +294,16 @@ export function formatEventShortDate(at: Date | string): string {
   });
 }
 
+/** "Wednesday, September 30": a meeting's day spelled out, for a title slide. */
+export function formatEventLongDate(at: Date | string): string {
+  return new Date(at).toLocaleDateString("en-US", {
+    timeZone: EVENT_TZ,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export function formatEventTime(at: Date | string): string {
   return new Date(at).toLocaleTimeString("en-US", {
     timeZone: EVENT_TZ,

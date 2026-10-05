@@ -33,7 +33,6 @@ export default async function OfficerAttendancePage({
     >
       <AttendanceDisplay
         meetingId={meeting.id}
-        title={title}
         canceled={meeting.cancelledAt !== null}
         meeting={toTitleCardMeeting(meeting, title)}
       />

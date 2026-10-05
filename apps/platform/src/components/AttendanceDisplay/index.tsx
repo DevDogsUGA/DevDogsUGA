@@ -1,13 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowsOutIcon,
-  CheckCircleIcon,
-  WarningIcon,
-} from "@phosphor-icons/react/ssr";
+import { ArrowsOutIcon, WarningIcon } from "@phosphor-icons/react/ssr";
 import { QR_DEFAULTS, renderQrSvg } from "@devdogsuga/brand/qr";
-import TitleCard, { type TitleCardMeeting } from "./TitleCard";
+import TitleCard, { titleCardWash, type TitleCardMeeting } from "./TitleCard";
 import { useAttendanceCodes } from "./useAttendanceCodes";
 
 /** Advances from the title card to the code, presenter-remote-friendly. */
@@ -23,13 +19,11 @@ const BACK_KEYS = new Set(["ArrowLeft", "Backspace", "PageUp"]);
 
 export default function AttendanceDisplay({
   meetingId,
-  title,
   canceled,
   meeting,
   present = false,
 }: {
   meetingId: string;
-  title: string;
   canceled: boolean;
   /** Everything the opening title card needs -- see `TitleCard`'s doc. */
   meeting: TitleCardMeeting;
@@ -37,11 +31,8 @@ export default function AttendanceDisplay({
    * Renders edge-to-edge at the viewport instead of as a bordered card
    * inside the console page -- for the `(present)` route a popup opened via
    * `OpenDisplayLink` lands on, which has no site chrome around it to be a
-   * card inside of. Also tags the root with `data-present-mode`, which the
-   * `big:` Tailwind variant (see globals.css) matches the same way it
-   * matches real `:fullscreen`, so the projector-scaled type and layout an
-   * officer would otherwise only get after clicking "Full screen" apply
-   * immediately.
+   * card inside of. The slide itself looks the same either way: it scales
+   * with its box.
    */
   present?: boolean;
 }) {
@@ -114,19 +105,13 @@ export default function AttendanceDisplay({
     };
   }, [confirmed]);
 
+  // The template's own QR: `QR_DEFAULTS` is white modules straight on the
+  // slide background with the DevDogs mark in the middle, which is what the
+  // reference deck's pasted code was exported with.
   const qr = useMemo(
     () =>
       payload
-        ? renderQrSvg(payload.url, {
-            ...QR_DEFAULTS,
-            size: 900,
-            margin: 3,
-            color: "#09090b",
-            background: "#ffffff",
-            logoSize: 1,
-            errorLevel: "M",
-            shape: "rounded",
-          })
+        ? renderQrSvg(payload.url, QR_DEFAULTS, "/brand/devdog.svg")
         : null,
     [payload],
   );
@@ -164,83 +149,62 @@ export default function AttendanceDisplay({
   return (
     <div
       ref={screen}
-      data-present-mode={present || undefined}
-      // `h-[36rem]`/`h-dvh`, never `min-h`: the title card and code panel
-      // are stacked with `absolute inset-0` so they can cross-fade in
-      // place, and an absolutely positioned box with `inset-0` sizes itself
-      // from its containing block's own *specified* height. A `min-height`
-      // doesn't count as one -- Chrome renders that containing block, and
-      // every `inset-0` descendant of it, at 0 height, min-height or not.
+      // `h-[36rem]`/`h-dvh`, never `min-h`: the slide sizes itself in
+      // container query units off the region below, and a size container
+      // needs a *specified* height to measure. A `min-height` doesn't count
+      // as one -- the region, and the slide in it, would collapse to 0.
       className={
         present
           ? "relative isolate flex h-dvh w-full flex-col overflow-hidden bg-mauve-950"
           : "fullscreen:rounded-none fullscreen:border-0 fullscreen:h-screen relative isolate flex h-[36rem] flex-col overflow-hidden rounded-2xl border-2 border-cyan-400/50 bg-mauve-950 shadow-2xl shadow-cyan-950/40"
       }
     >
-      {/* Both panels are absolutely stacked over the same box, so switching
-          between them reads as a slide advance (a CSS transition of the
-          panel already on screen) rather than a page load or remount. A
-          flex sibling (not an overlay) reserves the "Full screen" button's
-          own row below this, so the button can never sit on top of either
-          panel's content -- see the row at the bottom of this component. */}
-      <div className="relative min-h-0 flex-1">
-        <div
-          aria-hidden={revealed}
-          className={`absolute inset-0 transition-all duration-500 ease-in-out ${
-            revealed
-              ? "pointer-events-none -translate-x-6 opacity-0"
-              : "translate-x-0 opacity-100"
-          }`}
-        >
-          <TitleCard meeting={meeting} onReveal={advance} />
-        </div>
-
-        <div
-          aria-hidden={!revealed}
-          className={`big:p-[clamp(1.5rem,4vw,4rem)] absolute inset-0 flex flex-col justify-center p-5 transition-all duration-500 ease-in-out ${
-            revealed
-              ? "translate-x-0 opacity-100"
-              : "pointer-events-none translate-x-6 opacity-0"
-          }`}
-        >
-          <div className="pointer-events-none absolute -top-1/2 -right-1/4 -z-10 size-[80%] rounded-full bg-cyan-500/20 blur-3xl" />
-          <header className="big:justify-center big:text-center flex items-start justify-between gap-4">
-            <div>
-              <p className="font-display text-sm font-bold tracking-[0.2em] text-cyan-300 uppercase">
-                DevDogs attendance
+      {/* `container-type: size` so the slide can letterbox itself to 16:9
+          inside whatever is left once the button row below takes its
+          height; the wash stays full-bleed out here. A flex sibling (not an
+          overlay) reserves the "Full screen" button's own row, so the
+          button can never sit on top of the slide's content. */}
+      <div
+        className="[container-type:size] relative min-h-0 flex-1"
+        style={{ backgroundImage: titleCardWash(meeting.kind) }}
+      >
+        <TitleCard
+          meeting={meeting}
+          onReveal={advance}
+          qr={
+            !revealed ? (
+              <p className="flex size-full items-center justify-center rounded-[4%] border-[0.15cqw] border-dashed border-white/15 p-[8%] text-center text-[1.1cqw] text-mauve-400">
+                <span className="text-balance">
+                  Space / → / Enter to show the{" "}
+                  <span className="whitespace-nowrap">check-in</span> code
+                </span>
               </p>
-              <h2 className="font-display big:text-[clamp(2rem,5vw,5rem)] mt-2 text-2xl font-semibold text-white sm:text-4xl">
-                {title}
-              </h2>
-            </div>
-          </header>
-
-          {error ? (
-            <p
-              className="big:text-center mt-10 rounded-lg bg-rose-950/70 p-4 text-rose-200"
-              role="alert"
-            >
-              {error}. The last displayed code may have expired.
-            </p>
-          ) : !payload || !qr ? (
-            <p className="big:text-center mt-10 text-mauve-300">
-              Preparing attendance codes…
-            </p>
-          ) : (
-            <div className="big:mt-[clamp(1.5rem,4vh,4rem)] big:w-full big:max-w-[100rem] big:grid-cols-[minmax(20rem,1fr)_minmax(24rem,0.9fr)] big:gap-[clamp(2rem,5vw,6rem)] big:self-center mt-6 grid items-center gap-8 md:grid-cols-[minmax(18rem,1fr)_minmax(18rem,0.8fr)]">
+            ) : error ? (
+              <p
+                className="flex size-full items-center justify-center p-[8%] text-center text-[1.1cqw] text-rose-300"
+                role="alert"
+              >
+                {error}. The last displayed code may have expired.
+              </p>
+            ) : !payload || !qr ? (
+              <p className="flex size-full items-center justify-center text-center text-[1.1cqw] text-mauve-400">
+                Preparing attendance codes…
+              </p>
+            ) : (
               <div
                 aria-label="QR code for meeting attendance"
-                className="big:max-w-[min(62vh,50rem)] big:max-h-none big:p-4 mx-auto aspect-square max-h-[24rem] w-full max-w-xl overflow-hidden rounded-2xl bg-white p-3 [&>svg]:size-full"
+                className="animate-in fade-in size-full duration-500 [&>svg]:size-full"
                 dangerouslySetInnerHTML={{ __html: qr }}
               />
-              <div className="flex flex-col items-center text-center md:items-start md:text-left">
-                <p className="text-sm font-semibold tracking-widest text-cyan-300 uppercase">
-                  Or enter this code
-                </p>
-                <p className="mt-3 font-mono text-[clamp(3rem,9vw,8rem)] leading-none font-black tracking-[0.12em] text-white tabular-nums">
+            )
+          }
+          code={
+            revealed && payload && !error ? (
+              <>
+                <p className="font-mono text-[2.6cqw] leading-none font-bold tracking-[0.12em] text-white tabular-nums">
                   {payload.code.slice(0, 3)} {payload.code.slice(3)}
                 </p>
-                <div className="big:mt-8 big:h-3 big:max-w-xl mt-6 h-2 w-full max-w-md overflow-hidden rounded-full bg-white/10">
+                <div className="mt-[1.2cqw] h-[0.3cqw] w-3/5 overflow-hidden rounded-full bg-white/10">
                   <div
                     key={payload.expiresAt}
                     className="h-full origin-left bg-cyan-400"
@@ -250,20 +214,22 @@ export default function AttendanceDisplay({
                     }}
                   />
                 </div>
-                <p className="big:text-lg mt-2 text-sm text-mauve-300 tabular-nums">
-                  Rotates in {remaining} second{remaining === 1 ? "" : "s"}
-                </p>
-                <p className="big:text-2xl big:mt-10 mt-8 flex items-center gap-2 text-lg text-white">
-                  <CheckCircleIcon
-                    weight="fill"
-                    className="big:size-8 size-6 text-cyan-400"
-                  />
+              </>
+            ) : null
+          }
+          status={
+            revealed && payload && !error ? (
+              <>
+                <p className="text-[1.064cqw] leading-none font-bold text-white tabular-nums">
                   {payload.attendanceCount} checked in
                 </p>
-              </div>
-            </div>
-          )}
-        </div>
+                <p className="text-[0.917cqw] leading-none text-[#d7d0d7] tabular-nums">
+                  New code in {remaining} second{remaining === 1 ? "" : "s"}
+                </p>
+              </>
+            ) : null
+          }
+        />
       </div>
 
       {/* A real, laid-out row rather than an overlay, so it can never sit on

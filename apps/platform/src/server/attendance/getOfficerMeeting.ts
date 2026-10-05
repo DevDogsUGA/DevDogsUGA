@@ -8,7 +8,6 @@ export async function getOfficerAttendanceMeeting(meetingId: string) {
       id: meetings.id,
       nameOverride: meetings.nameOverride,
       kind: meetings.kind,
-      summary: meetings.summary,
       building: meetings.building,
       location: meetings.location,
       startsAt: meetings.startsAt,
