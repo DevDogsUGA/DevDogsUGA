@@ -193,8 +193,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       '@devdogsuga/brand':
-        specifier: ^0.1.4
-        version: 0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0))
+        specifier: ^0.1.9
+        version: 0.1.9(@resvg/resvg-js@2.6.2)(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)
       '@devdogsuga/db':
         specifier: ^0.1.1
         version: 0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9)
@@ -554,8 +554,8 @@ importers:
   apps/schedule-builder:
     dependencies:
       '@devdogsuga/brand':
-        specifier: ^0.1.4
-        version: 0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0))
+        specifier: ^0.1.9
+        version: 0.1.9(@resvg/resvg-js@2.6.2)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.5)
       '@devdogsuga/db':
         specifier: ^0.1.1
         version: 0.1.1(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9)
@@ -1224,6 +1224,26 @@ packages:
       react: ^19.0.0
       satori: ^0.33.4
       sharp: 0.35.3
+    peerDependenciesMeta:
+      '@resvg/resvg-js':
+        optional: true
+      next:
+        optional: true
+      react:
+        optional: true
+      satori:
+        optional: true
+      sharp:
+        optional: true
+
+  '@devdogsuga/brand@0.1.9':
+    resolution: {integrity: sha512-SxcTk2OJZ09Inzpq4w1Hxr+e4LDjQZh1ktG/j8VVFGEw4Pro4YaRiwqbEjemG9kYF+c/sdKj8k/mTrknx++H9g==}
+    peerDependencies:
+      '@resvg/resvg-js': ^2.6.2
+      next: '>=16'
+      react: ^19.0.0
+      satori: ^0.33.4
+      sharp: 0.35.5
     peerDependenciesMeta:
       '@resvg/resvg-js':
         optional: true
@@ -9113,6 +9133,26 @@ snapshots:
       react: 19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)
       satori: 0.33.4
       sharp: 0.35.3(@types/node@26.2.0)
+
+  '@devdogsuga/brand@0.1.9(@resvg/resvg-js@2.6.2)(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)':
+    dependencies:
+      qrcode: 1.5.4
+      zod: 4.4.3
+    optionalDependencies:
+      '@resvg/resvg-js': 2.6.2
+      next: 16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
+      react: 19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)
+      satori: 0.33.4
+
+  '@devdogsuga/brand@0.1.9(@resvg/resvg-js@2.6.2)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.5)':
+    dependencies:
+      qrcode: 1.5.4
+      zod: 4.4.3
+    optionalDependencies:
+      '@resvg/resvg-js': 2.6.2
+      next: 16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
+      react: 19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)
+      satori: 0.33.5
 
   '@devdogsuga/config@0.1.1(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)':
     dependencies:

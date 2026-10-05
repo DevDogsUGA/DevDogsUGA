@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
-    "@devdogsuga/brand": "^0.1.4",
+    "@devdogsuga/brand": "^0.1.9",
     "@devdogsuga/db": "^0.1.1",
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/email": "workspace:*",

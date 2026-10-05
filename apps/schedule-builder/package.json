@@ -29,8 +29,8 @@
     "populate:courses": "pnpm --workspace-root devtools jobs run --app schedule-builder --workflow SCRAPE_WORKFLOW --tier development"
   },
   "dependencies": {
+    "@devdogsuga/brand": "^0.1.9",
     "@devdogsuga/db": "^0.1.1",
-    "@devdogsuga/brand": "^0.1.4",
     "@devdogsuga/env": "^0.1.4",
     "@devdogsuga/headers": "0.1.1",
     "@devdogsuga/supabase": "workspace:*",

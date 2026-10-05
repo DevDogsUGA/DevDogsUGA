@@ -65,6 +65,7 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   // buildings, and the bare URL is the canonical one.
   { url: url("/events/directions"), changeFrequency: "yearly", priority: 0.4 },
   { url: url("/legal/privacy"), changeFrequency: "yearly", priority: 0.3 },
+  { url: url("/legal/terms"), changeFrequency: "yearly", priority: 0.3 },
 ];
 
 /**
