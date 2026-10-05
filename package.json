@@ -2,6 +2,7 @@
   "name": "devdogs-monorepo",
   "version": "0.1.0",
   "private": true,
+  "license": "BSD-3-Clause",
   "type": "module",
   "scripts": {
     "devtools": "pnpm --config.ignore-scripts=true dlx @devdogsuga/devtools",
