@@ -42,8 +42,14 @@ jobs:
             fi
           done
 
+  # Staging moves to DevDogsUGA/Backstage (TASK-489). The cutover is two
+  # repository variables flipped together: DEVDOGSUGA_DEPLOYS_STAGING=false
+  # here and BACKSTAGE_DEPLOYS_STAGING=true there. Until then (unset) this
+  # repo keeps deploying staging exactly as before.
   staging-preflight:
-    if: github.event_name == 'push' && !inputs.prune_orphans
+    if: >-
+      github.event_name == 'push' && !inputs.prune_orphans
+      && vars.DEVDOGSUGA_DEPLOYS_STAGING != 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: staging
@@ -211,7 +217,7 @@ jobs:
     if: >-
       github.event_name == 'push'
       && !cancelled()
-      && needs.staging-deploy.result == 'success'
+      && (needs.staging-deploy.result == 'success' || vars.DEVDOGSUGA_DEPLOYS_STAGING == 'false')
       && needs.production-plan.result == 'success'
       && needs.production-artifacts.result == 'success'
     runs-on: ubuntu-latest
