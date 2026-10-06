@@ -90,9 +90,12 @@ catalog:
   # @devdogsuga/devtools does for its own @sentry/node dependency since the
   # devtools cutover — see minimumReleaseAgeExclude below, which still holds
   # the whole family, including @sentry/core, since it is still installed
-  # transitively at this version).
-  "@sentry/cloudflare": ^10.75.1
-  "@sentry/nextjs": ^10.75.1
+  # transitively at this version). Exact, not caret: Backstage's catalog pins the
+  # same versions exactly (a caret let a fresh resolve there pull a newer
+  # release and duplicate the types), and its toolchain check fails when the
+  # two catalogs disagree.
+  "@sentry/cloudflare": 10.75.1
+  "@sentry/nextjs": 10.75.1
 
   # --- Styling ---
   "@tailwindcss/forms": ^0.5.11

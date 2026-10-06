@@ -37,10 +37,10 @@ catalogs:
       specifier: ^1.2.16
       version: 1.2.16
     '@sentry/cloudflare':
-      specifier: ^10.75.1
+      specifier: 10.75.1
       version: 10.75.1
     '@sentry/nextjs':
-      specifier: ^10.75.1
+      specifier: 10.75.1
       version: 10.75.1
     '@supabase/ssr':
       specifier: ^0.12.4
