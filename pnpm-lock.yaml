@@ -214,8 +214,8 @@ importers:
         specifier: 0.1.1
         version: 0.1.1
       '@devdogsuga/newsletter':
-        specifier: ^0.1.2
-        version: 0.1.2
+        specifier: ^0.1.18
+        version: 0.1.18(@resvg/resvg-js@2.6.2)(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(satori@0.33.4)
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -1213,9 +1213,6 @@ packages:
   '@date-fns/tz@1.5.0':
     resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
 
-  '@devdogsuga/brand@0.1.2':
-    resolution: {integrity: sha512-GRAiNKf2pekVa870nJ4jSKB8bl75o0EAjMUbpPFRZ8Fe23mGxNOW8adRSQKtytJ+NX1dF+y6tn/UVC7B+T67Cw==}
-
   '@devdogsuga/brand@0.1.4':
     resolution: {integrity: sha512-R8elyIrHqZBsbLuO1J3wsH0gjKuqZpQMkkIn61FPhlLfTT7VcR+JcvjHWyuMRIRsKVtSIzVv1Z1QnsCp201LIw==}
     peerDependencies:
@@ -1271,17 +1268,14 @@ packages:
     resolution: {integrity: sha512-eFV5dcOpT9UGz1wIivqS4ivHMOLQtT24VVIGQGH0HafYraOyFHRmFpOaQKOqbsSK/lVHuVpejC3QRGkklpOiNg==}
     hasBin: true
 
-  '@devdogsuga/events@0.1.3':
-    resolution: {integrity: sha512-/pAVqj1NkjUfeC6kHORP4T2xhscR1krW0BcKox6MOWIMhkgvFyvw7s7gSRpozmH0Db/EmSvWK5+UC6WyQmQhaA==}
-
   '@devdogsuga/events@0.1.8':
     resolution: {integrity: sha512-Mtxpf2DShcKq0dK+rhlsZzubDT2Qd5/sPh5KkGMjf2aycmMAwP75WPVeAd+Oo5dpdqW5rBBWdcgSpMqsRM1NdA==}
 
   '@devdogsuga/headers@0.1.1':
     resolution: {integrity: sha512-d+ikt6YHylyStw4pQpx0oOWU0jg0rjPeJKBkRhNBBDooyaEfllt3yT9Tb9BKQdvEtffF7Ykxgo66I8dJM6SzMQ==}
 
-  '@devdogsuga/newsletter@0.1.2':
-    resolution: {integrity: sha512-D8getVWoJMmJMrYNbQZAAQPyVsgRY9XdprvvxaeF8gq/4f0akfHrmSKwi0GSm1m9CZ9rzhHzl70FIwieC00kiw==}
+  '@devdogsuga/newsletter@0.1.18':
+    resolution: {integrity: sha512-q9ZmRsApuRXc2a+SnmeYWBvvFbsbRL6kGiUTEpjDd3DpqlWwWyZW3Q3V+CDEfS6LAiJZ3LgYqO+1Ux/d6H+s7A==}
 
   '@devdogsuga/telemetry@0.1.1':
     resolution: {integrity: sha512-CJ6n1iWmRTmorgddXeyLp6EE3FYzyBkqHCsjbbAy3yINJDeiVFn9E1HIu3p3xG5+XlO5Y36sWcKWVEB7cDIdew==}
@@ -9121,8 +9115,6 @@ snapshots:
 
   '@date-fns/tz@1.5.0': {}
 
-  '@devdogsuga/brand@0.1.2': {}
-
   '@devdogsuga/brand@0.1.4(@resvg/resvg-js@2.6.2)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)(sharp@0.35.3(@types/node@26.2.0))':
     dependencies:
       qrcode: 1.5.4
@@ -9201,22 +9193,23 @@ snapshots:
       - typescript
       - valibot
 
-  '@devdogsuga/events@0.1.3':
-    dependencies:
-      zod: 4.4.3
-
   '@devdogsuga/events@0.1.8':
     dependencies:
       zod: 4.4.3
 
   '@devdogsuga/headers@0.1.1': {}
 
-  '@devdogsuga/newsletter@0.1.2':
+  '@devdogsuga/newsletter@0.1.18(@resvg/resvg-js@2.6.2)(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(satori@0.33.4)':
     dependencies:
-      '@devdogsuga/brand': 0.1.2
-      '@devdogsuga/events': 0.1.3
+      '@devdogsuga/brand': 0.1.9(@resvg/resvg-js@2.6.2)(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.2.0)(react-dom@19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)))(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))(satori@0.33.4)
+      '@devdogsuga/events': 0.1.8
       react: 19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572)
       react-dom: 19.2.8(patch_hash=f7bfba9c20a10324f9262c69f855ef21d5cb8d95e4c0eab17a2cab644a7be20e)(react@19.2.8(patch_hash=e73a523b8d4d67e73f39d3b71aa14675e2dc9b6ce4c501b5aff0aba2f9b20572))
+    transitivePeerDependencies:
+      - '@resvg/resvg-js'
+      - next
+      - satori
+      - sharp
 
   '@devdogsuga/telemetry@0.1.1':
     dependencies:

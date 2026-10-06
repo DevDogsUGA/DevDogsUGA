@@ -37,7 +37,7 @@
     "@devdogsuga/env": "^0.1.4",
     "@devdogsuga/events": "^0.1.8",
     "@devdogsuga/headers": "0.1.1",
-    "@devdogsuga/newsletter": "^0.1.2",
+    "@devdogsuga/newsletter": "^0.1.18",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "^0.1.1",
     "@discordjs/builders": "^1.14.1",
