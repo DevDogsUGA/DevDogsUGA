@@ -6,6 +6,7 @@ import {
 import { and, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import type { db } from "~/server/db";
 import {
+  configReconcileState,
   meetings,
   surveyAnswerRevisions,
   surveyAnswers,
@@ -67,6 +68,19 @@ import { postAlert } from "../alerts";
  * removed, or changed `type` or `scope`, aborts the whole reconcile the same
  * way an invalid config does. Retiring it (`retired: true`) is the way to
  * stop asking one.
+ *
+ * ## Newest Worker wins
+ *
+ * The config is bundled into each Worker version, and every deployed version
+ * can run this: the fifteen-minute cron, or the deploy's own call. Given the
+ * version that's running (`worker`), a run from a version uploaded BEFORE the
+ * one that last applied the config is refused without writing anything, so a
+ * previous Worker still serving mid-deploy can't put its old schedule back.
+ * The last application is recorded in `configReconcileState`, along with a
+ * hash of what it applied, which is how a run knows whether it `changed`
+ * anything worth invalidating the cached schedule for. Without `worker`
+ * (local development, tests) there is no version to compare, nothing is
+ * recorded, and every run counts as a change.
  */
 
 export interface ReconcileTableCounts {
@@ -94,8 +108,28 @@ export interface ReconcileCounts {
   questions: ReconcileQuestionCounts;
 }
 
+/** Cloudflare's version metadata for the Worker running the reconcile. */
+export interface WorkerVersion {
+  id: string;
+  /** When the version was uploaded, ISO 8601. */
+  timestamp: string;
+}
+
 export type ReconcileResult =
-  { ok: true; counts: ReconcileCounts } | { ok: false; reason: string };
+  | {
+      ok: true;
+      counts: ReconcileCounts;
+      /** The config differed from the last one applied, or a row was
+       *  archived, unarchived or removed: the cached schedule is stale. */
+      changed: boolean;
+    }
+  | {
+      ok: false;
+      reason: "superseded";
+      /** The newer version that last applied the config. */
+      appliedBy: WorkerVersion;
+    }
+  | { ok: false; reason: string };
 
 function emptyCounts(): ReconcileTableCounts {
   return { upserted: 0, archived: 0, unarchived: 0 };
@@ -116,6 +150,8 @@ export async function reconcileFromConfig(
   config: ClubConfig,
   /** Omitted, the survey's questions are left exactly as they are. */
   questions?: QuestionsConfig,
+  /** The running Worker's version; omitted, the version guard is off. */
+  worker?: WorkerVersion,
 ): Promise<ReconcileResult> {
   const issues = validateClubConfig(config, questions);
   if (issues.length > 0) {
@@ -150,9 +186,35 @@ export async function reconcileFromConfig(
     workshops: emptyCounts(),
     questions: { upserted: 0, removed: 0 },
   };
+  const configHash = await hashConfig(config, questions);
+  // Assigned inside the transaction callback, which TS can't follow.
+  let appliedBy = null as WorkerVersion | null;
+  let configChanged = true;
 
   try {
     await database.transaction(async (tx) => {
+      // ── Version guard ──────────────────────────────────────────────────────
+      // Locked, so two versions reconciling at once take turns and the second
+      // sees what the first recorded.
+      if (worker) {
+        const [state] = await tx
+          .select()
+          .from(configReconcileState)
+          .for("update");
+        if (
+          state &&
+          state.workerVersionTimestamp.getTime() >
+            new Date(worker.timestamp).getTime()
+        ) {
+          appliedBy = {
+            id: state.workerVersionId,
+            timestamp: state.workerVersionTimestamp.toISOString(),
+          };
+          return;
+        }
+        configChanged = state?.configHash !== configHash;
+      }
+
       // ── Survey questions ───────────────────────────────────────────────────
       // First, so a meeting's `surveyQuestionIds` never names a question this
       // run is about to refuse.
@@ -316,6 +378,19 @@ export async function reconcileFromConfig(
           )
           .returning({ id: workshops.id })
       ).length;
+
+      if (worker) {
+        const values = {
+          workerVersionId: worker.id,
+          workerVersionTimestamp: new Date(worker.timestamp),
+          configHash,
+          appliedAt: new Date(),
+        };
+        await tx
+          .insert(configReconcileState)
+          .values({ id: true, ...values })
+          .onConflictDoUpdate({ target: configReconcileState.id, set: values });
+      }
     });
   } catch (error) {
     if (!(error instanceof QuestionConflict)) throw error;
@@ -333,7 +408,29 @@ export async function reconcileFromConfig(
     };
   }
 
-  return { ok: true, counts };
+  if (appliedBy) return { ok: false, reason: "superseded", appliedBy };
+
+  const rowsMoved =
+    counts.meetings.archived +
+    counts.meetings.unarchived +
+    counts.workshops.archived +
+    counts.workshops.unarchived +
+    counts.questions.removed;
+  return { ok: true, counts, changed: configChanged || rowsMoved > 0 };
+}
+
+/** SHA-256 of exactly what this run applies, hex. */
+async function hashConfig(
+  config: ClubConfig,
+  questions: QuestionsConfig | undefined,
+): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(JSON.stringify({ config, questions })),
+  );
+  return Array.from(new Uint8Array(digest), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
 }
 
 /**

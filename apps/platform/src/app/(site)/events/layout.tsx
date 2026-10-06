@@ -1,4 +1,4 @@
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import EventsPage, {
   type EventsPageProps,
 } from "~/components/EventsSection/EventsPage";
@@ -14,6 +14,7 @@ import {
   getFurthestMeetingStart,
   getMeetingsInRange,
   getPastMeetings,
+  MEETINGS_TAG,
 } from "~/server/loaders/meetings";
 
 /**
@@ -70,12 +71,11 @@ async function EventsBody() {
 /**
  * Everything time- and database-dependent about the page, resolved once.
  *
- * `cacheLife` rather than a tag because no event-specific push invalidation is
- * wired. The config reconcile runs every 15 minutes, so a five-minute
- * revalidate means the page is never more than one reconcile window behind,
- * and `stale` lets a visitor have the previous answer instantly while that
- * happens. vinext's KV data adapter does support tag invalidation; if the
- * reconcile starts emitting an events tag, this scope can consume it.
+ * Tagged `MEETINGS_TAG`, which the config reconcile expires whenever it
+ * changes a meeting (`revalidateMeetings`), so a config change shows at once.
+ * The `cacheLife` is the backstop for what the tag can't see: "now" moving
+ * past a meeting, and any write that doesn't go through the reconcile. `stale`
+ * lets a visitor have the previous answer instantly while it refreshes.
  *
  * Reading the clock is legal here because this IS a cache scope; the value is
  * resolved when the entry is built and handed down as data, so no component
@@ -86,6 +86,7 @@ async function EventsBody() {
 async function getSchedule(): Promise<Omit<EventsPageProps, "checkIn">> {
   "use cache";
   cacheLife({ stale: 60, revalidate: 300, expire: 900 });
+  cacheTag(MEETINGS_TAG);
 
   const now = new Date();
   const today = clubDay(now);

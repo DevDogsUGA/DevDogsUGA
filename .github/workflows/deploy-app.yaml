@@ -180,6 +180,15 @@ jobs:
       # (`{ success: false, reason: … }`) — a real failure would pass
       # silently. `backstage deploy reconcile` reads the body.
       #
+      # It also waits for THIS deploy's Worker: the route names the release
+      # that answered, and `backstage deploy reconcile` retries until that is
+      # GITHUB_SHA (the SENTRY_RELEASE the deploy step gave the Worker). The
+      # previous Worker can keep answering for a minute after `wrangler
+      # deploy`, and its reconcile applies its own, older config. The route
+      # itself refuses to let an older Worker overwrite what a newer one
+      # applied, so the fifteen-minute cron on a lingering old Worker can't
+      # undo this step either.
+      #
       # --no-env: the one credential is CRON_SECRET, in this step's env:. The
       # host comes from workers.json's `smoke` field.
       #

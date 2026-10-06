@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { QueryBuilder } from "drizzle-orm/pg-core";
 import { correlatedCount } from "~/server/db/correlatedCount";
 import { cache } from "react";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db } from "~/server/db";
 import { attendance, meetings, workshops } from "~/server/db/schema";
 
@@ -14,6 +15,24 @@ import { attendance, meetings, workshops } from "~/server/db/schema";
  * still fully present in the database, and only these filters keep it off
  * the site.
  */
+
+export const MEETINGS_TAG = "meetings";
+
+/**
+ * Expires every cached view of the schedule after the config reconcile changed
+ * it: the `/events` schedule (`MEETINGS_TAG`), every page under `/events`, and
+ * the homepage, whose next-meetings stack sits in its own page-level cache.
+ *
+ * Expired outright rather than stale-while-revalidate. A renamed, moved or
+ * cancelled meeting is exactly what a visitor must not be shown one more time,
+ * and the reconcile only gets here when something actually changed, so it is
+ * rare. Called from the reconcile route, never during render.
+ */
+export function revalidateMeetings(): void {
+  revalidateTag(MEETINGS_TAG, { expire: 0 });
+  revalidatePath("/events", "layout");
+  revalidatePath("/");
+}
 
 export interface MeetingSummary {
   id: string;

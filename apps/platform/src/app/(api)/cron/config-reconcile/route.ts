@@ -5,6 +5,8 @@ import { env } from "~/env";
 import { db } from "~/server/db";
 import { postAlert } from "~/server/alerts";
 import { reconcileFromConfig } from "~/server/config/reconcile";
+import { currentDeployment } from "~/server/deployment";
+import { revalidateMeetings } from "~/server/loaders/meetings";
 
 /**
  * GET /cron/config-reconcile
@@ -29,6 +31,15 @@ import { reconcileFromConfig } from "~/server/config/reconcile";
  * function's header for why the two checks are not redundant. Both cases end
  * the same way here: nothing was written, and the alert already fired.
  *
+ * Every response names the Worker that answered: `release` (the git SHA) and
+ * `version` (Cloudflare's version id). The deploy step waits until `release`
+ * is the commit it just deployed, so it never mistakes the previous Worker's
+ * answer for its own. A run from a Worker older than the one that last
+ * applied the config writes nothing and answers `skipped: "superseded"`, a
+ * success: an old version still serving is expected mid-deploy, not an
+ * error. When the reconcile changed something, the cached schedule and
+ * homepage are expired so the change shows at once.
+ *
  * Auth: `Authorization: Bearer <CRON_SECRET>`, skipped when running locally
  * -- the same convention every other cron route in this directory follows.
  */
@@ -42,6 +53,12 @@ export async function GET(request: Request) {
   ) {
     unauthorized();
   }
+
+  const deployment = currentDeployment();
+  const answeredBy = {
+    release: deployment.release ?? null,
+    version: deployment.version?.id ?? null,
+  };
 
   let config;
   let questions;
@@ -63,15 +80,42 @@ export async function GET(request: Request) {
         "repo, run `pnpm -F @devdogsuga/events check:events` to see " +
         "the same failure locally.",
     );
-    return NextResponse.json({ success: false, reason: "invalid_config_file" });
+    return NextResponse.json({
+      success: false,
+      reason: "invalid_config_file",
+      ...answeredBy,
+    });
   }
 
   try {
-    const result = await reconcileFromConfig(db, config, questions);
+    const result = await reconcileFromConfig(
+      db,
+      config,
+      questions,
+      deployment.version,
+    );
     if (!result.ok) {
-      return NextResponse.json({ success: false, reason: result.reason });
+      if ("appliedBy" in result) {
+        return NextResponse.json({
+          success: true,
+          skipped: "superseded",
+          appliedBy: result.appliedBy.id,
+          ...answeredBy,
+        });
+      }
+      return NextResponse.json({
+        success: false,
+        reason: result.reason,
+        ...answeredBy,
+      });
     }
-    return NextResponse.json({ success: true, counts: result.counts });
+    if (result.changed) revalidateMeetings();
+    return NextResponse.json({
+      success: true,
+      counts: result.counts,
+      changed: result.changed,
+      ...answeredBy,
+    });
   } catch (e) {
     console.error(e);
     return new NextResponse("An unknown error occurred.", { status: 500 });

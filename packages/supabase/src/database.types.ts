@@ -291,6 +291,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      configReconcileState: {
+        Row: {
+          appliedAt: string;
+          configHash: string;
+          id: boolean;
+          workerVersionId: string;
+          workerVersionTimestamp: string;
+        };
+        Insert: {
+          appliedAt?: string;
+          configHash: string;
+          id?: boolean;
+          workerVersionId: string;
+          workerVersionTimestamp: string;
+        };
+        Update: {
+          appliedAt?: string;
+          configHash?: string;
+          id?: boolean;
+          workerVersionId?: string;
+          workerVersionTimestamp?: string;
+        };
+        Relationships: [];
+      };
       contentTypes: {
         Row: {
           appId: string;

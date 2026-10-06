@@ -159,6 +159,23 @@ export const competitionsInPlatform = platform.table.withRLS("competitions", {
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("competitions_title_length", sql`(char_length(title) <= 160)`),]);
 
+export const configReconcileStateInPlatform = platform.table.withRLS("configReconcileState", {
+	id: boolean().default(true).primaryKey(),
+	workerVersionId: text().notNull(),
+	workerVersionTimestamp: timestamp({ withTimezone: true }).notNull(),
+	configHash: text().notNull(),
+	appliedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+check("configReconcileState_single_row", sql`id`),]);
+
 export const contentTypesInPlatform = platform.table.withRLS("contentTypes", {
 	id: uuid().defaultRandom().primaryKey(),
 	appId: uuid().notNull().references(() => appsInPlatform.id, { onDelete: "cascade" } ),
@@ -1021,6 +1038,7 @@ export { auditEventsInPlatform as auditEvents };
 export { checkInMethodInPlatform as checkInMethod };
 export { competitionEntriesInPlatform as competitionEntries };
 export { competitionsInPlatform as competitions };
+export { configReconcileStateInPlatform as configReconcileState };
 export { contentActionInPlatform as contentAction };
 export { contentTypesInPlatform as contentTypes };
 export { contentVisibilityInPlatform as contentVisibility };

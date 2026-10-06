@@ -95,6 +95,28 @@ other cron route):
   (`*/15 * * * *`) — a keep-alive for whatever the deploy-time call might
   have missed, not a primary trigger.
 
+### Old Workers and cached pages
+
+For a minute or so after a deploy, the previous Worker can still answer, and
+its reconcile applies the config _it_ was built with. Two guards keep it from
+undoing a deploy:
+
+- **The deploy waits for its own Worker.** The route's response names the
+  `release` (git SHA) that answered, and `backstage deploy reconcile` retries
+  until that is the commit just deployed.
+- **The newest Worker wins.** `platform."configReconcileState"` records the
+  Worker version that last applied the config. A reconcile from a version
+  uploaded before it writes nothing and answers `skipped: "superseded"`.
+  Redeploying an old commit uploads a new version, so it still applies;
+  `wrangler rollback` to an old version does not.
+
+When a reconcile actually changes something (a different config from the
+last one applied, or a row archived or revived), the route expires the cached
+schedule (the `meetings` cache tag), every page under `/events`, and the
+homepage, so the change shows at once instead of after the pages' cache
+lifetimes. Locally there is no Worker version, so nothing is recorded and
+every run counts as a change.
+
 ## Local development
 
 `supabase/seed/` only ever holds roles and officers — meetings and

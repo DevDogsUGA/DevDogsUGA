@@ -8,7 +8,7 @@ import type {
   QuestionsConfig,
 } from "@devdogsuga/events";
 import { db } from "~/server/db";
-import { reconcileFromConfig } from "./reconcile";
+import { reconcileFromConfig, type WorkerVersion } from "./reconcile";
 
 /**
  * The reconcile against a real database: upsert, archive, un-archive and
@@ -32,6 +32,9 @@ async function cleanup() {
   await db.execute(
     sql`delete from platform.meetings where slug like ${`${PREFIX}%`}`,
   );
+  // Only ever written when a Worker version is passed, which nothing but
+  // the version-guard tests below do locally.
+  await db.execute(sql`delete from platform."configReconcileState"`);
 }
 
 /** A fixture meeting, named by the tail of its slug. */
@@ -414,6 +417,109 @@ describe("reconcileFromConfig", () => {
     if (result.ok) return;
     expect(result.reason).toMatch(/runtime validation/);
     expect(await meetingRow("invalid")).toBeNull();
+  });
+});
+
+describe("reconcileFromConfig: newest Worker wins", () => {
+  beforeEach(cleanup);
+
+  const older: WorkerVersion = {
+    id: "older-version",
+    timestamp: "2026-10-05T22:00:00.000Z",
+  };
+  const newer: WorkerVersion = {
+    id: "newer-version",
+    timestamp: "2026-10-05T22:37:00.000Z",
+  };
+
+  async function state() {
+    const rows = await db.execute<{ workerVersionId: string }>(
+      sql`select "workerVersionId" from platform."configReconcileState"`,
+    );
+    return rows[0]?.workerVersionId ?? null;
+  }
+
+  it("refuses a version uploaded before the one that last applied, writing nothing", async () => {
+    const renamed = await liveConfig([
+      meeting("guard", { title: "Build Session" }),
+    ]);
+    expect(
+      await reconcileFromConfig(db, renamed.config, undefined, newer),
+    ).toMatchObject({ ok: true });
+
+    // The previous Worker, still serving, with its old copy of the config.
+    const stale = await liveConfig([
+      meeting("guard", { title: "Judging" }),
+      meeting("guard-only-old"),
+    ]);
+    const result = await reconcileFromConfig(
+      db,
+      stale.config,
+      undefined,
+      older,
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: "superseded",
+      appliedBy: newer,
+    });
+    expect((await meetingRow("guard"))?.nameOverride).toBe("Build Session");
+    expect(await meetingRow("guard-only-old")).toBeNull();
+    expect(await state()).toBe(newer.id);
+  });
+
+  it("lets a newer version apply after an older one, and records it", async () => {
+    const { config } = await liveConfig([meeting("guard")]);
+    await reconcileFromConfig(db, config, undefined, older);
+    const result = await reconcileFromConfig(db, config, undefined, newer);
+    expect(result.ok).toBe(true);
+    expect(await state()).toBe(newer.id);
+  });
+
+  it("reports a change only when the config differs or a row was archived or revived", async () => {
+    const first = await liveConfig([meeting("guard")]);
+    const applied = await reconcileFromConfig(
+      db,
+      first.config,
+      undefined,
+      newer,
+    );
+    expect(applied.ok && applied.changed).toBe(true);
+
+    const again = await reconcileFromConfig(db, first.config, undefined, newer);
+    expect(again.ok && again.changed).toBe(false);
+
+    const retitled = await liveConfig([
+      meeting("guard", { title: "Retitled" }),
+    ]);
+    const edited = await reconcileFromConfig(
+      db,
+      retitled.config,
+      undefined,
+      newer,
+    );
+    expect(edited.ok && edited.changed).toBe(true);
+
+    // Same config as last applied, but a row it lists was archived behind
+    // its back: putting it back is a change the cache has to hear about.
+    await db.execute(
+      sql`update platform.meetings set "deletedAt" = now() where slug = ${`${PREFIX}guard`}`,
+    );
+    const revived = await reconcileFromConfig(
+      db,
+      retitled.config,
+      undefined,
+      newer,
+    );
+    expect(revived.ok && revived.changed).toBe(true);
+  });
+
+  it("without a version, records nothing and always reports a change", async () => {
+    const { config } = await liveConfig([meeting("guard")]);
+    await reconcileFromConfig(db, config);
+    const result = await reconcileFromConfig(db, config);
+    expect(result.ok && result.changed).toBe(true);
+    expect(await state()).toBeNull();
   });
 });
 
