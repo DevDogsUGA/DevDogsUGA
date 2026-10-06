@@ -20,7 +20,7 @@ order: 0
 - A guestbook visitors can sign
 
 > [!IMPORTANT]
-> Install Git, VS Code, Node and pnpm first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-nextjs-track) cover all of them.
+> Install Git, VS Code, Node and pnpm first: the [Prerequisites](../../../_shared/getting-started/prerequisites.md#for-the-nextjs-track) cover all of them.
 
 ## Get the Workshop Code
 

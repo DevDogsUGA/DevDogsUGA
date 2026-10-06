@@ -8,7 +8,7 @@ mount: [schedule-builder, platform]
 
 # Next.js
 
-Next.js 16.3.2, App Router, in two apps: `platform` (site, console, docs, OAuth server) and `schedule-builder`. Both build with **vinext** (`1.0.0-beta.11`), which compiles the app with Vite and deploys it to Cloudflare Workers — see [Cloudflare](/docs/toolkit/infrastructure/cloudflare) for the build and deploy side of that. Read this before adding a `"use cache"` directive, editing `next.config.ts`, or working out why a route you expected to be static renders on every request. It assumes you know the App Router already — [upstream](https://nextjs.org/docs/app) teaches that.
+Next.js 16.3.2, App Router, in two apps: `platform` (site, console, docs, OAuth server) and `schedule-builder`. Both build with **vinext** (`1.0.0-beta.11`), which compiles the app with Vite and deploys it to Cloudflare Workers — see [Cloudflare](../../../toolkit/infrastructure/cloudflare.md) for the build and deploy side of that. Read this before adding a `"use cache"` directive, editing `next.config.ts`, or working out why a route you expected to be static renders on every request. It assumes you know the App Router already — [upstream](https://nextjs.org/docs/app) teaches that.
 
 ## Cache Components is off, `"use cache"` is on
 

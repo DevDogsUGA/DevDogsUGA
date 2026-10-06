@@ -31,7 +31,7 @@ work.
 root; the output is `dist/index.js` plus `dist/index.d.ts`, a typed data module
 the platform app imports. Each page ships pre-rendered — Shiki for code, KaTeX
 for math, GitHub alerts, the variant directives described in
-[Writing docs](/docs/toolkit/infrastructure/docs-system/writing#variants) — so
+[Writing docs](../infrastructure/docs-system/writing.md#variants) — so
 the platform app has no markdown renderer of its own; it drops the compiled
 `html` string straight into the page. Anything else added to this CLI has to
 leave that mode exactly as it was.
@@ -43,7 +43,7 @@ pages included), and every documented `pnpm devtools`, `pnpm -F` / `pnpm --filte
 package script. A command that no longer exists fails the build, so a green
 build means the docs are current. A fence tagged with the extra word `nocheck` opts a block out
 of the second check — see
-[Writing docs](/docs/toolkit/infrastructure/docs-system/writing#supported-syntax)
+[Writing docs](../infrastructure/docs-system/writing.md#supported-syntax)
 for the exact syntax.
 
 **`check`** is the prose lint — page length, collapsible defects, missing
@@ -96,5 +96,5 @@ cd docs && pnpm exec docs-kit check
 ```
 
 What the rules mean for a page you are writing is
-[Writing docs](/docs/toolkit/infrastructure/docs-system/writing); how a page reaches
-the site is [the docs system](/docs/toolkit/infrastructure/docs-system).
+[Writing docs](../infrastructure/docs-system/writing.md); how a page reaches
+the site is [the docs system](../infrastructure/docs-system/index.md).

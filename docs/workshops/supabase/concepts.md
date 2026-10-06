@@ -144,4 +144,4 @@ The workshop doesn't use either, but your project might.
 4. **RLS policies** check what they can reach.
 5. The **PostgreSQL database** stores the data, and sends back what they're allowed to see.
 
-Ready to build it? Start the [Next.js track](./nextjs/setup) or the [Flutter track](./flutter/setup).
+Ready to build it? Start the [Next.js track](./nextjs/setup.md) or the [Flutter track](./flutter/setup.md).

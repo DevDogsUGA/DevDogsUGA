@@ -45,7 +45,7 @@ no `--default-out`.
 
 Event graphics are backed by meetings rather than committed files. They read the
 published `@devdogsuga/events` (see
-[Events](/docs/platform/infrastructure/events)) — no database, local or
+[Events](../../platform/infrastructure/events.md)) — no database, local or
 hosted, is involved. A wildcard export warns and continues with static
 graphics when events are unavailable; a specific `event/*` request fails
 because it has nothing useful to render.

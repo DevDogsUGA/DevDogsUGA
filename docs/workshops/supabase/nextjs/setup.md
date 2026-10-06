@@ -23,7 +23,7 @@ pnpm install
 ```
 
 > [!NOTE]
-> Skipped [Intro to Next.js](/docs/workshops/framework-intros/nextjs/setup)? That's fine: this branch already has its code, guestbook included.
+> Skipped [Intro to Next.js](../../framework-intros/nextjs/setup.md)? That's fine: this branch already has its code, guestbook included.
 
 ## Project Setup
 

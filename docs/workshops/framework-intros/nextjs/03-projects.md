@@ -18,7 +18,7 @@ checkpoint: "01-nextjs-intro/03-projects"
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
 
-**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](/docs/workshops/getting-started/prerequisites#git-and-a-github-account).
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](../../../_shared/getting-started/prerequisites.md#git-and-a-github-account).
 
 ```bash cwd=~/Web-Workshops
 git fetch origin --tags

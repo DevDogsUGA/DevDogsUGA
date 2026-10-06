@@ -32,4 +32,4 @@ section: guides
 | Env contract                                     | `src/env.ts`                                            |
 | The Worker entry / cron dispatch (deploy)        | `cloudflare/worker.ts`, `cloudflare/scheduled.ts`       |
 
-See [Identity](/docs/platform/guides/identity) for the OAuth server and the GitHub App, [Moderation](/docs/platform/guides/moderation) and [Reporting](/docs/platform/guides/reporting) for the content-safety subsystem, and [Meetings & Teams](/docs/platform/guides/meetings-and-teams) for the domain model `src/server/github/` and `src/server/attendance/` build against.
+See [Identity](./identity/index.md) for the OAuth server and the GitHub App, [Moderation](./moderation/index.md) and [Reporting](./reporting/index.md) for the content-safety subsystem, and [Meetings & Teams](./meetings-and-teams/index.md) for the domain model `src/server/github/` and `src/server/attendance/` build against.

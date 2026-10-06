@@ -8,12 +8,17 @@ mount: [platform, schedule-builder, study-group-finder, workshops]
 
 # Prerequisites
 
-:::only{project="platform schedule-builder study-group-finder"}
-Everything here happens before you clone the repo. [Running the project](./running)
-picks up from the clone.
-:::
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
-:::only{project="workshops"}
+Everything here happens before you clone the repo. [Running the project](./running.md)
+picks up from the clone.
+
+</details>
+
+<details data-project="workshops">
+<summary>For Workshops</summary>
+
 Install these before your first workshop. Everyone needs the first section;
 after that, you only need the section for your track.
 
@@ -25,27 +30,30 @@ after that, you only need the section for your track.
 > This is the workshop subset. Contributing to the monorepo's projects (DogDays,
 > DogPack, the platform) also needs Docker for the local database, Git
 > line-ending settings, and a few other things: follow the full
-> [Prerequisites](/docs/schedule-builder/getting-started/prerequisites) in that
+> [Prerequisites](./prerequisites.md?project=schedule-builder) in that
 > project's docs instead.
 
 ## For everyone
 
-:::
+</details>
 
-:::only{project="workshops"}
+<details data-project="workshops">
+<summary>For Workshops</summary>
 
 ### OS setup
 
-:::
+</details>
 
-:::only{project="platform schedule-builder study-group-finder"}
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## OS setup
 
-:::
+</details>
 
-:::tabs{group="os"}
-::tab{value="macos"}
+<details name="os" data-value="macos">
+<summary>macOS</summary>
+
 Install the Xcode command line tools — several native modules in the
 dependency tree compile on install and need them:
 
@@ -66,7 +74,11 @@ The installer prints one or two `export PATH` lines at the end. Run those, or
 open a new terminal, before continuing. The steps below install fnm and
 (optionally) Docker Desktop through it.
 
-::tab{value="linux"}
+</details>
+
+<details name="os" data-value="linux">
+<summary>Linux</summary>
+
 Install build tools through your distro's package manager. On Ubuntu/Debian:
 
 ```bash
@@ -77,7 +89,11 @@ sudo apt-get install -y build-essential curl git
 Several native modules in the dependency tree compile on install and need a
 C toolchain.
 
-::tab{value="wsl"}
+</details>
+
+<details name="os" data-value="wsl">
+<summary>Windows (WSL2)</summary>
+
 Install WSL2 first, from an elevated PowerShell:
 
 ```powershell
@@ -96,7 +112,11 @@ sudo apt-get update
 sudo apt-get install -y build-essential curl git
 ```
 
-::tab{value="windows"}
+</details>
+
+<details name="os" data-value="windows">
+<summary>Windows (native)</summary>
+
 Allow local scripts to run. PowerShell blocks them by default, including the
 ones fnm and pnpm need. From a PowerShell window (not elevated — this is a
 per-user setting):
@@ -119,19 +139,21 @@ assume `bash` is available even on Windows:
 winget install --id Git.Git -e --source winget
 ```
 
-:::
+</details>
 
-:::only{project="workshops"}
+<details data-project="workshops">
+<summary>For Workshops</summary>
 
 ### Git and a GitHub account
 
-:::
+</details>
 
-:::only{project="platform schedule-builder study-group-finder"}
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Git and a GitHub account
 
-:::
+</details>
 
 You need Git (installed above) and a [GitHub account](https://github.com/join).
 Fork the repository if you don't have push access, and set up how you
@@ -157,28 +179,36 @@ GitHub — nothing about this repo's workflow is unusual there.
 
 </details>
 
-:::only{project="workshops"}
+<details data-project="workshops">
+<summary>For Workshops</summary>
 
 ### Editor
 
-:::
+</details>
 
-:::only{project="platform schedule-builder study-group-finder"}
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Editor
 
-:::
+</details>
 
-:::only{project="workshops"}
+<details data-project="workshops">
+<summary>For Workshops</summary>
+
 Install [VS Code](https://code.visualstudio.com/). The workshops use it
 throughout: the Flutter track installs its SDK through VS Code's Flutter
 extension, and each step's **Review in VS Code** button opens that step's
 changes in it.
-:::
 
-:::only{project="platform schedule-builder study-group-finder"}
+</details>
+
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
+
 Nothing here is required, but VS Code is what the docs assume.
-:::
+
+</details>
 
 If you use VS Code on WSL2, install the
 [WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl)
@@ -186,24 +216,28 @@ and open the repo with `code .` from inside the Ubuntu terminal, not from
 Windows. This runs the editor's server inside WSL, next to your files, which
 is what makes IntelliSense and the terminal agree with each other.
 
-:::only{project="workshops"}
+<details data-project="workshops">
+<summary>For Workshops</summary>
 
 ## For the Next.js track
 
 Node runs Next.js, and pnpm installs its packages.
-:::
 
-:::only{project="workshops"}
+</details>
+
+<details data-project="workshops">
+<summary>For Workshops</summary>
 
 ### Node, through fnm
 
-:::
+</details>
 
-:::only{project="platform schedule-builder study-group-finder"}
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Node, through fnm
 
-:::
+</details>
 
 We use [fnm](https://github.com/Schniz/fnm) rather than nvm or a system
 package: it reads `.nvmrc` and switches automatically when you `cd` into a
@@ -234,52 +268,70 @@ eval "$(fnm env --use-on-cd)"
 fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
 ```
 
-:::only{os="windows"}
+<details data-os="windows">
+<summary>For Windows (native)</summary>
+
 The PowerShell profile is the file at `$PROFILE`. Create it if
 `Test-Path $PROFILE` says it doesn't exist yet.
-:::
+
+</details>
 
 **Open a new terminal after adding this line** — it does nothing
 retroactively in the one you edited it from. Without it, a fresh terminal
 falls back to whatever Node your system has (or none), and `pnpm` fails with
 a confusing error instead of a clear "Node not found."
-:::only{project="platform schedule-builder study-group-finder"}
-See [fnm not found](./troubleshooting#fnm-not-found) if that still isn't
+
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
+
+See [fnm not found](./troubleshooting.md#fnm-not-found) if that still isn't
 happening.
-:::
 
-:::only{project="platform schedule-builder study-group-finder"}
+</details>
+
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
+
 For now, install any recent Node so `npm` can install pnpm below:
-:::
 
-:::only{project="workshops"}
+</details>
+
+<details data-project="workshops">
+<summary>For Workshops</summary>
+
 Install the current long-term-support Node:
-:::
+
+</details>
 
 ```bash
 fnm install --lts
 ```
 
-:::only{project="platform schedule-builder study-group-finder"}
-After cloning, [Running the project](./running) switches you to the exact
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
+
+After cloning, [Running the project](./running.md) switches you to the exact
 version the repo pins; fnm reads it from `.nvmrc`, so there's nothing to pick.
 
 `.nvmrc` pins **24**. The repo's actual floor is **22.12** — pnpm 11 needs
 `node:sqlite`, stable there — so 24 is the version everyone should be on, not
 the minimum that happens to work.
-:::
 
-:::only{project="workshops"}
+</details>
+
+<details data-project="workshops">
+<summary>For Workshops</summary>
 
 ### pnpm
 
-:::
+</details>
 
-:::only{project="platform schedule-builder study-group-finder"}
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## pnpm
 
-:::
+</details>
 
 ```bash
 npm install -g pnpm
@@ -291,7 +343,8 @@ reads that pin and re-execs itself as the pinned version the first time it
 runs in the repo — no separate activation step, nothing to remember to re-run
 after a pin bump.
 
-::::only{project="platform schedule-builder study-group-finder"}
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Git line endings
 
@@ -316,11 +369,12 @@ to look on disk.
 ## Docker, for the local Supabase option
 
 Hosted Supabase is the default database for local development and needs no
-Docker at all — see [Running the project](./running). Docker only matters if
+Docker at all — see [Running the project](./running.md). Docker only matters if
 you want the local stack instead.
 
-:::tabs{group="os"}
-::tab{value="macos"}
+<details name="os" data-value="macos">
+<summary>macOS</summary>
+
 Install Docker Desktop, then open it once so the daemon starts:
 
 ```bash
@@ -329,7 +383,11 @@ brew install --cask docker
 
 Don't use Colima; the Supabase CLI doesn't work reliably against it.
 
-::tab{value="linux wsl"}
+</details>
+
+<details name="os" data-value="linux wsl">
+<summary>Linux and Windows (WSL2)</summary>
+
 Docker Engine, installed directly inside the distro — never Docker Desktop:
 
 ```bash
@@ -340,21 +398,30 @@ sudo usermod -aG docker $USER
 Log out and back in (or run `newgrp docker`) for the group membership to
 take effect.
 
-::tab{value="windows"}
+</details>
+
+<details name="os" data-value="windows">
+<summary>Windows (native)</summary>
+
 Not available. There's no local Docker path documented for native Windows —
 use hosted Supabase.
-:::
-::::
 
-::::only{project="study-group-finder workshops"}
+</details>
 
-:::only{project="workshops"}
+</details>
+
+<details data-project="study-group-finder workshops">
+<summary>For Study Group Finder and Workshops</summary>
+
+<details data-project="workshops">
+<summary>For Workshops</summary>
 
 ## For the Flutter track
 
-:::
+</details>
 
-:::only{project="study-group-finder"}
+<details data-project="study-group-finder">
+<summary>For Study Group Finder</summary>
 
 ## Flutter and Android tooling
 
@@ -363,15 +430,19 @@ runner directory, and no `flutter build web` path is documented for it. You
 need the Flutter SDK on `PATH` (`pubspec.yaml` pins the Dart SDK to
 `^3.5.0`) plus an emulator to run against. Nothing else in the monorepo needs
 Flutter, so a contributor without it is never blocked on the rest of the repo.
-:::
 
-:::only{project="workshops"}
+</details>
+
+<details data-project="workshops">
+<summary>For Workshops</summary>
+
 The Flutter track needs the Flutter SDK on `PATH` and an emulator to run the
 app on. You don't need Node or pnpm for it.
-:::
 
-:::tabs{group="os"}
-::tab{value="windows macos"}
+</details>
+
+<details name="os" data-value="windows macos">
+<summary>Windows (native) and macOS</summary>
 
 The VS Code Flutter extension downloads the SDK and puts it on `PATH` for you.
 
@@ -407,11 +478,16 @@ are the same as step 6 above.
 
 </details>
 
-::tab{value="linux wsl"}
+</details>
+
+<details name="os" data-value="linux wsl">
+<summary>Linux and Windows (WSL2)</summary>
+
 Flutter on Linux builds for Android only (no iOS toolchain). Follow
 [Flutter's Linux install guide](https://docs.flutter.dev/get-started/install/linux),
 install Android Studio for the SDK and an emulator, and run `flutter doctor`.
-:::
+
+</details>
 
 ### Running the SDK inside WSL2 against an emulator on Windows
 
@@ -457,14 +533,18 @@ Supabase containers — and the local stack isn't documented for native
 Windows at all, so this only comes up if you're also on WSL2 for the
 database.
 
-:::only{project="study-group-finder"}
-See [adb no devices](./troubleshooting#adb-no-devices) if `flutter run`
+<details data-project="study-group-finder">
+<summary>For Study Group Finder</summary>
+
+See [adb no devices](./troubleshooting.md#adb-no-devices) if `flutter run`
 reports no connected devices.
-:::
 
 </details>
 
-:::only{project="study-group-finder"}
+</details>
+
+<details data-project="study-group-finder">
+<summary>For Study Group Finder</summary>
 
 ### Verify
 
@@ -473,26 +553,31 @@ flutter doctor
 ```
 
 Resolve anything it reports before moving on. `pnpm devtools doctor` (see
-[Running the project](./running)) checks the rest of the toolchain but does
+[Running the project](./running.md)) checks the rest of the toolchain but does
 not replace `flutter doctor` — Flutter's own prerequisites are Flutter's to
 check.
-:::
 
-::::
+</details>
 
-:::only{project="workshops"}
+</details>
+
+<details data-project="workshops">
+<summary>For Workshops</summary>
 
 ## Next
 
 Head back to the workshop you came from, or start at the beginning:
-[Intro to Next.js](/docs/workshops/framework-intros/nextjs/setup) or
-[Intro to Flutter](/docs/workshops/framework-intros/flutter/setup).
-:::
+[Intro to Next.js](../../workshops/framework-intros/nextjs/setup.md) or
+[Intro to Flutter](../../workshops/framework-intros/flutter/setup.md).
 
-:::only{project="platform schedule-builder study-group-finder"}
+</details>
+
+<details data-project="platform schedule-builder study-group-finder">
+<summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Next
 
-[Running the project](./running) — clone, install, database, sign-in, and
+[Running the project](./running.md) — clone, install, database, sign-in, and
 starting the app.
-:::
+
+</details>

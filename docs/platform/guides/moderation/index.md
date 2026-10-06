@@ -15,7 +15,7 @@ alter table forum."resources"
     references "platform"."reportResolutions"("id") on delete set null;
 ```
 
-That is the whole registration. This page is about everything that sentence leaves out, and you need it if you own a table members can write to. If you are only calling the reporting functions from a client, [Reporting](/docs/platform/guides/reporting) is the page you want; the SQL you actually have to write is [Integrating your own app](/docs/platform/guides/moderation/integrating).
+That is the whole registration. This page is about everything that sentence leaves out, and you need it if you own a table members can write to. If you are only calling the reporting functions from a client, [Reporting](../reporting/index.md) is the page you want; the SQL you actually have to write is [Integrating your own app](./integrating.md).
 
 Nothing is stored on the platform side, so nothing can drift. `platform.content_types()` asks `pg_constraint` every time — there is no registration call, nothing to restart, and no cache to invalidate. Drop the column and the table stops being moderatable, with no stale registration left behind to disagree with the schema.
 

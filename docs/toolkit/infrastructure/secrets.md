@@ -43,7 +43,7 @@ The order above — least dangerous to most — is the order the interactive pic
 
 ## Where the detail lives
 
-`pnpm backstage env --help` lists the three that touch Bitwarden and GitHub (`pull`, `push`, `audit`) and `pnpm devtools env --help` the three local ones (`init`, `example`, `reset`), with the options each takes; either command with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](/docs/toolkit/guides/env) is the reference for how the two are kept in step, and [the commands](/docs/toolkit/guides/env/commands) is what `audit` compares.
+`pnpm backstage env --help` lists the three that touch Bitwarden and GitHub (`pull`, `push`, `audit`) and `pnpm devtools env --help` the three local ones (`init`, `example`, `reset`), with the options each takes; either command with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](../guides/env/index.md) is the reference for how the two are kept in step, and [the commands](../guides/env/commands.md) is what `audit` compares.
 
 After a manifest declares a new variable, run `pnpm devtools env init --target
 staging` and then `--target production`. Re-running `init` appends only missing

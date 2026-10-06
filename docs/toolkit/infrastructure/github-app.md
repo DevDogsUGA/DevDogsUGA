@@ -9,7 +9,7 @@ section: infrastructure
 
 `apps/platform` authenticates as a GitHub App on every call it makes to GitHub. `env.ts` requires `GH_APP_ID`, `GH_APP_INSTALLATION_ID` and `GH_APP_PRIVATE_KEY`, so the platform will not boot without all three — though the placeholders in `.env.example` are enough to run it locally unless you are working on the organization integration.
 
-Read this if you are creating, installing, rotating or operating that App. If what you want is to let another project sign DevDogs members in, that is [Sign in with DevDogs](/docs/platform/getting-started/running) instead.
+Read this if you are creating, installing, rotating or operating that App. If what you want is to let another project sign DevDogs members in, that is [Sign in with DevDogs](../../_shared/getting-started/running.md?project=platform) instead.
 
 ## Why an App rather than a token
 
@@ -58,12 +58,12 @@ The App holds `administration: write`, `contents: write`, `issues: read`, `metad
 
 **Post installation:** Setup URL blank, "Redirect on update" unchecked. A setup URL is for Apps needing per-installation configuration; this one is installed once, on one organization.
 
-**Webhook:** ⚠️ code-ready, **not yet enabled by Sloan**. The teams-core step removed the old `/github/webhook`; the teams-mirror step reintroduced it against the new team-branch model -- see [Teams](/docs/platform/guides/meetings-and-teams/teams), "The live mirror" -- and the competitions step added two more events. Nobody has done the dashboard half yet:
+**Webhook:** ⚠️ code-ready, **not yet enabled by Sloan**. The teams-core step removed the old `/github/webhook`; the teams-mirror step reintroduced it against the new team-branch model -- see [Teams](../../platform/guides/meetings-and-teams/teams.md), "The live mirror" -- and the competitions step added two more events. Nobody has done the dashboard half yet:
 
 - **Payload URL:** `{BASE_URL}/github/webhook`, production's URL only -- staging never receives webhooks, see "Why does staging get a second App" below.
 - **Content type:** `application/json`.
 - **Secret:** 32+ random characters, matching `env.ts`'s `GH_WEBHOOK_SECRET`. Push it (`pnpm backstage env push --target production`), then paste the SAME value into this field -- the route verifies `X-Hub-Signature-256` against it (`server/github/webhookSignature.ts`).
-- **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`, `Projects v2 item`, `Issues`, `Pull request`. See [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for what the three Projects/Issues/PR events drive.
+- **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`, `Projects v2 item`, `Issues`, `Pull request`. See [Competitions](../../platform/guides/meetings-and-teams/competitions.md) for what the three Projects/Issues/PR events drive.
 - **Active:** checked.
 
 Every event above except `Projects v2 item`/`Issues` is covered by `Members` and `Contents`, already listed next; those two need the **Projects** organization permission added below.

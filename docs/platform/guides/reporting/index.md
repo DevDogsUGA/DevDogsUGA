@@ -9,7 +9,7 @@ section: guides
 
 Every DevDogs app shares one Supabase project, with a Postgres schema per app, so reporting is not an HTTP API and there is no SDK that owns it. **The contract is three `platform` functions plus the row-level security around them**, reached over PostgREST. TypeScript and Dart call the same functions with the same arguments.
 
-Read this before adding a "Report" affordance anywhere. If what you need is to make one of your own tables reportable, that is [Moderation](/docs/platform/guides/moderation) instead. If you already know the contract, skip to [Integrating an app](/docs/platform/guides/reporting/integrating).
+Read this before adding a "Report" affordance anywhere. If what you need is to make one of your own tables reportable, that is [Moderation](../moderation/index.md) instead. If you already know the contract, skip to [Integrating an app](./integrating.md).
 
 ## Three surfaces
 

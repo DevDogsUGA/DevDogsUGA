@@ -8,7 +8,7 @@ section: infrastructure
 # Hosted databases
 
 The contributor-facing half — sessions, `db push`, `db reset`, types — is
-[Running the database](/docs/toolkit/guides/devtools-db). This page is the
+[Running the database](../guides/devtools-db.md). This page is the
 rest: the commands that operate on a hosted Supabase project (staging or
 production) rather than the local Docker stack, and that a maintainer or
 officer runs, not a contributor working on a feature.
@@ -54,7 +54,7 @@ CI pushes staging and production with `backstage deploy migrate
 --include-seed`, so the seed files a tier has not recorded run right after its
 migrations, and then `backstage deploy avatars` uploads any seeded headshot the
 bucket lacks without replacing existing ones (see
-[Migrations](/docs/platform/guides/migrations)'s "Seeds"). Production sits
+[Migrations](../../platform/guides/migrations.md)'s "Seeds"). Production sits
 behind two dry runs (`backstage deploy plan --include-seed`): `production-plan`
 prints the plan, seeds included, on every merge to `main` under the read-only
 `migration_planner` role, and the `production` job recomputes it seconds before

@@ -46,8 +46,8 @@ credentials, which is why it isn't part of `pnpm test`. It signs personas in
 for real with `signInWithPassword` rather than hand-signed JWTs, asserts
 **both an allow and a deny** for every policy, and runs single-threaded
 because the personas share one database. See
-[Supabase](/docs/platform/guides/stack/supabase)'s "The RLS persona suite" for
-more, and [Integrating your own app](/docs/platform/guides/moderation/integrating)
+[Supabase](../../_shared/guides/stack/supabase.md)'s "The RLS persona suite" for
+more, and [Integrating your own app](./moderation/integrating.md)
 for why it's the step that actually proves a moderation integration works.
 
 ## What CI runs

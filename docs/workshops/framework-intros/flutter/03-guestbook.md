@@ -18,7 +18,7 @@ checkpoint: "01-flutter-intro/03-guestbook"
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
 
-**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](/docs/workshops/getting-started/prerequisites#git-and-a-github-account).
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](../../../_shared/getting-started/prerequisites.md#git-and-a-github-account).
 
 ```bash cwd=~/Mobile-Workshops
 git fetch origin --tags
@@ -223,13 +223,13 @@ The placeholder becomes the real `Guestbook`, imported at the top.
 Hot reload, open the Guestbook tab, and sign it a few times. Then press `R` for a hot restart. The entries are gone: they only ever lived in the screen's state, in memory.
 
 > [!NOTE]
-> The [Supabase workshop](/docs/workshops/supabase/flutter/setup) gives them somewhere to live, starting from exactly this code.
+> The [Supabase workshop](../../supabase/flutter/setup.md) gives them somewhere to live, starting from exactly this code.
 
 ## Keep Going
 
 1. [Flutter's docs](https://docs.flutter.dev), from first app to publishing
 1. [The widget catalog](https://docs.flutter.dev/ui/widgets), every built-in widget by category
 1. [A tour of Dart](https://dart.dev/language), the language under it all
-1. Ready to contribute? Start with DogPack's [Your first contribution](/docs/study-group-finder/getting-started/first-contribution)
+1. Ready to contribute? Start with DogPack's [Your first contribution](../../../study-group-finder/getting-started/first-contribution.md)
 
 <!-- prettier-ignore-end -->

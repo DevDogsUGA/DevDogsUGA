@@ -55,5 +55,5 @@ schema and applies the PostgREST role grants, nothing more), so
 `types:db` currently produces nothing. Once the first tables land in a
 migration, running it will populate `lib/generated/`, and the models regenerate
 from the database the same way — the schema is always the source, the Dart is
-always output. See [Schema change loop](/docs/study-group-finder/guides/schema-change-loop)
+always output. See [Schema change loop](./schema-change-loop.md)
 for adding that first table.

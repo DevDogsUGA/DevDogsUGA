@@ -92,4 +92,4 @@ shows up as a diff about the template rather than about whichever fixture values
 happened to be used. There is no preview server.
 
 Every export is in the generated
-[`@devdogsuga/email`](/docs/toolkit/reference/api/email) reference.
+[`@devdogsuga/email`](../reference/api/email.md) reference.

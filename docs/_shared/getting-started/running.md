@@ -8,7 +8,7 @@ mount: [platform, schedule-builder, study-group-finder]
 
 # Running the project
 
-This picks up right after [Prerequisites](./prerequisites) — toolchain, Git,
+This picks up right after [Prerequisites](./prerequisites.md) — toolchain, Git,
 and (for study-group-finder) Flutter already installed.
 
 ## Clone and install
@@ -31,13 +31,17 @@ database for local development.** A local Docker stack is fully supported
 too, and some contributors prefer it once they're set up, but hosted needs no
 Docker at all and is what these steps walk through first.
 
-:::only{os="windows"}
+<details data-os="windows">
+<summary>For Windows (native)</summary>
+
 Native Windows has no local Docker path documented — hosted Supabase is your
 only option here.
-:::
 
-:::tabs{group="supabase"}
-::tab{value="hosted"}
+</details>
+
+<details name="supabase" data-value="hosted">
+<summary>Hosted</summary>
+
 **Create a project.** Go to [supabase.com](https://supabase.com), sign up,
 and create a new project (Dashboard → New Project). Pick any region; note
 the database password it asks you to set, in case you need it later — day to
@@ -89,7 +93,7 @@ By hand, if you'd rather not run the wizard or it fails partway:
 Free Supabase accounts get **2 active projects**, and a project **pauses
 after about a week of inactivity** — opening the dashboard or hitting the API
 resumes it, but the first request after a pause can be slow or fail. See
-[Supabase paused](./troubleshooting#supabase-paused) if your app suddenly
+[Supabase paused](./troubleshooting.md#supabase-paused) if your app suddenly
 can't reach the database.
 
 > [!WARNING]
@@ -97,7 +101,11 @@ can't reach the database.
 > targets, including a hosted project — it is not local-only. Point it at
 > the right one before you run it; there is no undo.
 
-::tab{value="local"}
+</details>
+
+<details name="supabase" data-value="local">
+<summary>Local (Docker)</summary>
+
 A full Supabase stack in Docker on your own machine, no account or network
 needed.
 
@@ -107,7 +115,7 @@ Docker needs to actually be running first:
 docker info   # confirms the daemon is actually reachable
 ```
 
-If that hangs or errors, see [Docker not running](./troubleshooting#docker-not-running).
+If that hangs or errors, see [Docker not running](./troubleshooting.md#docker-not-running).
 
 ```bash
 pnpm devtools supabase start             # boots the Docker containers, writes .env.generated
@@ -131,7 +139,8 @@ migrations into containers still holding the old config.
 Nothing switches between a local stack and a hosted project by flag: the app
 probes for a running local stack on every start, and uses it when present,
 falling back to whatever hosted project `.env` names otherwise.
-:::
+
+</details>
 
 ## Sign-in
 
@@ -166,15 +175,19 @@ allow list if you haven't already — Dashboard → Authentication → URL
 Configuration → Redirect URLs, add `http://localhost:<port>/**` (3000 for
 platform, 3001 for schedule-builder). Signing in without this configured
 fails at the provider's redirect step — see
-[Redirect URL missing](./troubleshooting#redirect-url-missing).
+[Redirect URL missing](./troubleshooting.md#redirect-url-missing).
 
-:::only{project="study-group-finder"}
+<details data-project="study-group-finder">
+<summary>For Study Group Finder</summary>
+
 study-group-finder is a mobile app, so it has no `localhost` URL to add. Its
 return address is a URL scheme instead; see [Mobile sign-in](#mobile-sign-in)
 below.
-:::
 
-:::only{project="study-group-finder"}
+</details>
+
+<details data-project="study-group-finder">
+<summary>For Study Group Finder</summary>
 
 ### Mobile sign-in
 
@@ -220,11 +233,11 @@ A hosted project of your own doesn't read `config.toml`, so add
 `dev.dogpack://login-callback` to its Redirect URLs by hand (Dashboard →
 Authentication → URL Configuration), next to the web URLs. Without it,
 sign-in fails at the redirect step like
-[Redirect URL missing](./troubleshooting#redirect-url-missing).
+[Redirect URL missing](./troubleshooting.md#redirect-url-missing).
 
 </details>
 
-:::
+</details>
 
 <details>
 <summary>Google sign-in</summary>
@@ -238,16 +251,19 @@ guide under Infrastructure in the platform docs.
 
 ## Run it
 
-:::only{project="platform"}
+<details data-project="platform">
+<summary>For Platform</summary>
 
 ```bash
 pnpm -F platform dev
 ```
 
 Serves on **port 3000**.
-:::
 
-:::only{project="schedule-builder"}
+</details>
+
+<details data-project="schedule-builder">
+<summary>For Schedule Builder</summary>
 
 ```bash
 pnpm -F schedule-builder dev
@@ -273,9 +289,11 @@ pnpm -F schedule-builder populate:courses
 ```
 
 This can take a while on a first run — it pulls every available term.
-:::
 
-:::only{project="study-group-finder"}
+</details>
+
+<details data-project="study-group-finder">
+<summary>For Study Group Finder</summary>
 
 ```bash
 pnpm -F study-group-finder dev
@@ -287,10 +305,11 @@ supplies them — running `flutter run` bare leaves those defines empty, so
 `Supabase.initialize` gets blank credentials. Pick your emulator (or a
 connected device) when Flutter asks.
 
-This needs the Flutter SDK on your `PATH` (see [Prerequisites](./prerequisites)).
+This needs the Flutter SDK on your `PATH` (see [Prerequisites](./prerequisites.md)).
 It uses your local Supabase stack if one is running, and the hosted project
 `.env` names otherwise.
-:::
+
+</details>
 
 You can also start an app from inside its folder (`cd apps/<app> && pnpm dev`).
 Either way, the app's `predev` step regenerates the email templates, the docs
@@ -338,7 +357,7 @@ Supabase project it points at is actually reachable — not as the docs assume
 it is.
 
 Each check that fails links straight to the matching entry in
-[Troubleshooting](./troubleshooting), by the same anchor IDs used throughout
+[Troubleshooting](./troubleshooting.md), by the same anchor IDs used throughout
 these pages, so you land on the cause and the fix instead of a bare error.
 
 ```bash

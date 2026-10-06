@@ -36,7 +36,7 @@ check that its link still resolves.
 from there.
 
 **Fix:** Install through fnm and let `.nvmrc` pin the version — see
-[Prerequisites](./prerequisites#node-through-fnm).
+[Prerequisites](./prerequisites.md#node-through-fnm).
 `node --version` should read 24.x.
 
 ### fnm not found
@@ -87,7 +87,7 @@ like "cannot be loaded because running scripts is disabled on this system."
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-See [Prerequisites](./prerequisites#os-setup).
+See [Prerequisites](./prerequisites.md#os-setup).
 
 ### CRLF line endings
 
@@ -160,10 +160,13 @@ own. Without Windows 11's mirrored networking mode
 (`networkingMode=mirrored` in `.wslconfig`), the emulator and WSL2 can't
 reach each other at all.
 
-:::only{project="study-group-finder"}
-See [Prerequisites](./prerequisites#running-the-sdk-inside-wsl2-against-an-emulator-on-windows)
+<details data-project="study-group-finder">
+<summary>For Study Group Finder</summary>
+
+See [Prerequisites](./prerequisites.md#running-the-sdk-inside-wsl2-against-an-emulator-on-windows)
 for the full setup.
-:::
+
+</details>
 
 ## Environment and Supabase
 
@@ -177,7 +180,7 @@ declares as required — validated at import time on purpose, so a broken env
 fails loudly and immediately.
 
 **Fix:** Re-run `pnpm devtools env init` to append newly declared keys, or
-revisit [Running the project](./running#the-database).
+revisit [Running the project](./running.md#the-database).
 `pnpm devtools doctor` reports exactly which keys are missing.
 
 ### Supabase unreachable
@@ -226,7 +229,7 @@ can't reach it.
 
 **Fix:** Use the **Session pooler** string instead (Settings → Database →
 Connection string → Session pooler, port 5432) — see
-[Running the project](./running#the-database).
+[Running the project](./running.md#the-database).
 
 ### DB URL: transaction pooler
 
@@ -261,7 +264,7 @@ unconfigured provider, rather than reaching DevDogs's login screen.
 **Cause:** `pnpm devtools oauth` was never run against this project, or was
 run against a different one than the app currently points at.
 
-**Fix:** Run [`pnpm devtools oauth`](./running#sign-in)
+**Fix:** Run [`pnpm devtools oauth`](./running.md#sign-in)
 against the project your `.env` points at.
 
 ### Redirect URL missing
@@ -274,7 +277,7 @@ list doesn't include your local dev URL.
 
 **Fix:** Add `http://localhost:<port>/**` there (3001 for schedule-builder,
 3000 for platform) — see
-[Running the project](./running#redirect-url).
+[Running the project](./running.md#redirect-url).
 
 ## Setup night
 

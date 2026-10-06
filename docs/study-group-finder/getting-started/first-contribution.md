@@ -45,10 +45,10 @@ Flutter is out of scope for a change.
 ## Open a pull request
 
 Branch from `main`, keep the commit focused
-(`type(scope): subject` — see [Contributing](/docs/study-group-finder/guides/contributing)
+(`type(scope): subject` — see [Contributing](../../_shared/guides/contributing.md)
 for the full flow and what CI runs), and open a PR against `main`.
 `.github/CODEOWNERS` routes `apps/study-group-finder/**` to
 `@DevDogsUGA/study-group-finder` for review.
 
-From here, [Schema change loop](/docs/study-group-finder/guides/schema-change-loop)
+From here, [Schema change loop](../guides/schema-change-loop.md)
 is the next page once your work needs a new table.

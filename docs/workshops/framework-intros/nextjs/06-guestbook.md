@@ -18,7 +18,7 @@ checkpoint: "01-nextjs-intro/06-guestbook"
 <details>
 <summary>Behind? Catch up to where the last step ended</summary>
 
-**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](/docs/workshops/getting-started/prerequisites#git-and-a-github-account).
+**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. `git commit` needs your name and email set once: see [Git and a GitHub account](../../../_shared/getting-started/prerequisites.md#git-and-a-github-account).
 
 ```bash cwd=~/Web-Workshops
 git fetch origin --tags
@@ -205,13 +205,13 @@ The list renders with `.map`, like the projects did, with the time each entry wa
 Sign the guestbook a few times, then refresh the page. The entries are gone: they only ever lived in the component's state, in that one browser tab.
 
 > [!NOTE]
-> The [Supabase workshop](/docs/workshops/supabase/nextjs/setup) gives them somewhere to live, starting from exactly this code.
+> The [Supabase workshop](../../supabase/nextjs/setup.md) gives them somewhere to live, starting from exactly this code.
 
 ## Keep Going
 
 1. [nextjs.org/learn](https://nextjs.org/learn), a free course covering the whole framework
 1. [The App Router docs](https://nextjs.org/docs/app)
 1. [react.dev/learn](https://react.dev/learn), to learn React or brush up
-1. Ready to contribute? Start with DogDays' [Your first contribution](/docs/schedule-builder/getting-started/first-contribution)
+1. Ready to contribute? Start with DogDays' [Your first contribution](../../../schedule-builder/getting-started/first-contribution.md)
 
 <!-- prettier-ignore-end -->

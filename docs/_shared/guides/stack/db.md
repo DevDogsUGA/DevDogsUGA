@@ -28,7 +28,7 @@ Both packages are pinned to an exact version rather than a range, because the `l
 
 Both apps follow the same workflow: SQL migrations own the schema, and `pnpm -F <app> types:drizzle` (`platform` or `schedule-builder`) pulls the live database back into Drizzle. No script here runs `drizzle-kit push`, and neither app hand-declares its own tables or policies in Drizzle — `src/server/db/schema/generated/schema.ts` is written entirely by that command and never edited by hand.
 
-`types:drizzle` runs two `drizzle-kit pull`s per app — `drizzle-introspection.config.ts` (every schema this app doesn't own, into `src/supabase/drizzle/`) and `drizzle.config.ts` (the app's own schema, into `src/server/db/schema/generated/`) — then applies the fixups covered below. See [Writing a migration](/docs/platform/guides/migrations) for the full change loop: writing the migration, replaying it, and re-introspecting.
+`types:drizzle` runs two `drizzle-kit pull`s per app — `drizzle-introspection.config.ts` (every schema this app doesn't own, into `src/supabase/drizzle/`) and `drizzle.config.ts` (the app's own schema, into `src/server/db/schema/generated/`) — then applies the fixups covered below. See [Writing a migration](../../../platform/guides/migrations.md) for the full change loop: writing the migration, replaying it, and re-introspecting.
 
 `src/server/db/relations.ts` is the one hand-maintained file next to the generated schema — a `defineRelations` call over the generated tables. The two apps introspect different schemas, so neither app's generated module or relations file is interchangeable with the other's.
 

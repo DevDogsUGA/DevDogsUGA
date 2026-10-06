@@ -56,11 +56,11 @@ their own records and cannot write them.
 
 Meeting reflections require active attendance and `countsForCredit` on the
 meeting — the single flag that governs both star credit and EL eligibility;
-see [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards).
+see [Stars & streaks](./stars-and-awards.md).
 Competition reflections require the member's team to have entered
 the competition -- an active membership at the moment the entry (a pull
 request linking the issue) opened, the same rule
-[Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)
+[Stars & streaks](./stars-and-awards.md)
 uses for the competition star -- and the competition's issue to have closed;
 a still-open competition has nothing to reflect on yet.
 
@@ -82,7 +82,7 @@ After a check-in that stands, `/attendance` asks the meeting's survey: every
 member question the person hasn't answered, then the meeting's own questions,
 with their saved member answers folded away underneath to edit. Questions
 are config, authored in `@devdogsuga/events` (see
-[Events](/docs/platform/infrastructure/events#survey-questions)). Nothing in
+[Events](../../infrastructure/events.md#survey-questions)). Nothing in
 the survey affects attendance or credit.
 
 Meeting questions take answers until the meeting's reflection window closes;

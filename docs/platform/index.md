@@ -9,31 +9,31 @@ order: 10
 `apps/platform` is the Next.js app behind the DevDogs site: the public pages, the officer console, these docs, and the OAuth server sibling projects sign in against. Read a guide here when you are working on one of its subsystems.
 
 > [!TIP]
-> New here? Start at [Getting started](/docs/platform/getting-started/prerequisites) — installing the toolchain, a database, and running the app.
+> New here? Start at [Getting started](../_shared/getting-started/prerequisites.md) — installing the toolchain, a database, and running the app.
 
 ## Architecture, briefly
 
 One Next.js app on Cloudflare Workers (vinext, not OpenNext), owning the
 `platform` schema in the shared Supabase project. It is the only app that
 talks to GitHub — provisioning teams, granting branch access, mirroring
-competitions — through the GitHub App in [Identity](/docs/platform/guides/identity), documented in [Toolkit](/docs/toolkit/infrastructure/github-app).
+competitions — through the GitHub App in [Identity](./guides/identity/index.md), documented in [Toolkit](../toolkit/infrastructure/github-app.md).
 Sibling apps never call GitHub or the shared database directly; they can let
 a member sign in with their DevDogs account through the OAuth server this app
-also runs — see [Getting started: Running](/docs/platform/getting-started/running).
+also runs — see [Getting started: Running](../_shared/getting-started/running.md).
 
 ## Glossary
 
-- **Team** — a persistent group, not per-competition. See [Teams](/docs/platform/guides/meetings-and-teams/teams).
-- **Competition** — a labeled GitHub issue, mirrored into a private Project; entering is opening a linked pull request, merging it is winning. See [Competitions](/docs/platform/guides/meetings-and-teams/competitions).
-- **Meeting** — a general body meeting or workshop, authored as config in Backstage and reconciled here. See [Events](/docs/platform/infrastructure/events).
-- **Attendance** — a member's authoritative meeting check-in, the input every star and streak derives from. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
-- **Star / streak** — a derived participation passport, not a stored score: one per credit-eligible meeting attended, one per competition entered, decorated by a win. See [Stars & Streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards).
-- **Moderation report** — a complaint against member-written content, resolved into a quarantine or a sanction. See [Reporting](/docs/platform/guides/reporting) and [Moderation](/docs/platform/guides/moderation).
+- **Team** — a persistent group, not per-competition. See [Teams](./guides/meetings-and-teams/teams.md).
+- **Competition** — a labeled GitHub issue, mirrored into a private Project; entering is opening a linked pull request, merging it is winning. See [Competitions](./guides/meetings-and-teams/competitions.md).
+- **Meeting** — a general body meeting or workshop, authored as config in Backstage and reconciled here. See [Events](./infrastructure/events.md).
+- **Attendance** — a member's authoritative meeting check-in, the input every star and streak derives from. See [Attendance](./guides/meetings-and-teams/attendance.md).
+- **Star / streak** — a derived participation passport, not a stored score: one per credit-eligible meeting attended, one per competition entered, decorated by a win. See [Stars & Streaks](./guides/meetings-and-teams/stars-and-awards.md).
+- **Moderation report** — a complaint against member-written content, resolved into a quarantine or a sanction. See [Reporting](./guides/reporting/index.md) and [Moderation](./guides/moderation/index.md).
 
 ## Guides
 
-[Where things live](/docs/platform/guides/where-things-live) for a path table, [Testing](/docs/platform/guides/testing) for the suites, and [Meetings & Teams](/docs/platform/guides/meetings-and-teams), [Reporting](/docs/platform/guides/reporting), [Moderation](/docs/platform/guides/moderation), and [Navigation](/docs/platform/guides/navigation) for the domain model and the contracts other apps build against.
+[Where things live](./guides/where-things-live.md) for a path table, [Testing](./guides/testing.md) for the suites, and [Meetings & Teams](./guides/meetings-and-teams/index.md), [Reporting](./guides/reporting/index.md), [Moderation](./guides/moderation/index.md), and [Navigation](./guides/navigation.md) for the domain model and the contracts other apps build against.
 
 ## Infrastructure
 
-Maintainer and officer-only material: [Identity](/docs/platform/guides/identity) (the OAuth server), [Writing a migration](/docs/platform/guides/migrations) (the migration loop), and [Events](/docs/platform/infrastructure/events) (club config).
+Maintainer and officer-only material: [Identity](./guides/identity/index.md) (the OAuth server), [Writing a migration](./guides/migrations.md) (the migration loop), and [Events](./infrastructure/events.md) (club config).

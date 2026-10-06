@@ -53,7 +53,7 @@ pnpm devtools doctor
 local database next steps in order: start Supabase, build the database from the
 migrations, regenerate the types, create the storage buckets, `oauth`, then the
 dev server for the app you picked. Every step is the real tool or a package
-script, so each can be re-run alone. [Running the database](/docs/toolkit/guides/devtools-db)
+script, so each can be re-run alone. [Running the database](./devtools-db.md)
 covers that half.
 
 ## Command groups
@@ -106,7 +106,7 @@ These were `preset <name>`; the old spelling is refused with the new one.
 ### Configuration and access
 
 - `env` — `init`, `example` and `reset` for the local env files. Syncing them
-  with Bitwarden and GitHub is `backstage env`; see [Env](/docs/toolkit/guides/env/commands).
+  with Bitwarden and GitHub is `backstage env`; see [Env](./env/commands.md).
 - `roles` — see who holds each role, and grant or revoke one:
 
   ```bash
@@ -136,7 +136,7 @@ pnpm devtools check scripts
 Anything that always needs production secrets, or only your own login, is in
 `@devdogsuga/backstage`: deploys, `env pull|push|audit`, GitHub rulesets, the
 newsletter, club images and QR codes. Inside this repo it is `pnpm backstage …`;
-see [Images](/docs/toolkit/guides/images) and [Environment commands](/docs/toolkit/guides/env/commands).
+see [Images](./images.md) and [Environment commands](./env/commands.md).
 Package scripts own the rest: `types:db`, `types:drizzle`, `types:cf`,
 `fetch:campus-map` and `preview`.
 
@@ -226,6 +226,6 @@ that supplies its own.
 The deployment pipeline uses `pnpm backstage`, not devtools, so CI-only deploy
 steps never appear in the contributor menu.
 
-See [Running the database](/docs/toolkit/guides/devtools-db) and
-[Environment commands](/docs/toolkit/guides/env/commands) for the two largest
+See [Running the database](./devtools-db.md) and
+[Environment commands](./env/commands.md) for the two largest
 command families.

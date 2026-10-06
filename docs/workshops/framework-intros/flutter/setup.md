@@ -19,7 +19,7 @@ order: 0
 - A bar along the bottom to switch between them
 
 > [!IMPORTANT]
-> Install Git, VS Code, the Flutter SDK and an Android emulator first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-flutter-track) cover all of them.
+> Install Git, VS Code, the Flutter SDK and an Android emulator first: the [Prerequisites](../../../_shared/getting-started/prerequisites.md#for-the-flutter-track) cover all of them.
 
 ## What Is Flutter?
 

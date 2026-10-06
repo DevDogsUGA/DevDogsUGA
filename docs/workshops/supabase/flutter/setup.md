@@ -23,7 +23,7 @@ flutter pub get
 ```
 
 > [!NOTE]
-> Skipped [Intro to Flutter](/docs/workshops/framework-intros/flutter/setup)? That's fine: this branch already has its code, guestbook included.
+> Skipped [Intro to Flutter](../../framework-intros/flutter/setup.md)? That's fine: this branch already has its code, guestbook included.
 
 ## Project Setup
 

@@ -13,7 +13,7 @@ change. This one is
 
 ## The problem
 
-[Ingestion](/docs/schedule-builder/guides/ingestion) marks a section
+[Ingestion](../guides/ingestion.md) marks a section
 `cancelled` rather than deleting it, so a course whose _only_ offering this
 term got cancelled was still showing up in course search — just with nothing
 enrollable behind it.

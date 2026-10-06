@@ -48,6 +48,6 @@ Branch from `main`, keep the commit focused
 (`type(scope): subject`, e.g. `fix(platform): add a description to the
 Community nav link`), and open a PR against `main`. `.github/CODEOWNERS`
 routes `apps/platform/**` to `@DevDogsUGA/devops` for review. See the shared
-[Contributing](/docs/platform/guides/contributing) guide for the full flow,
+[Contributing](../../_shared/guides/contributing.md) guide for the full flow,
 including what CI runs and the database migration rules once your work
 touches a schema.

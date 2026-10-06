@@ -12,7 +12,7 @@ order: 1
 Every workshop, and every contribution to a DevDogs project, runs through Git and GitHub.
 
 > [!IMPORTANT]
-> You need Git installed and a GitHub account: see the [Prerequisites](./getting-started/prerequisites#for-everyone).
+> You need Git installed and a GitHub account: see the [Prerequisites](../_shared/getting-started/prerequisites.md#for-everyone).
 
 ## Git in Four Ideas
 

@@ -7,7 +7,7 @@ section: guides
 
 # Integrating an app
 
-There is no package to install and no registration call: an app that can report content just calls the functions. This page is the client half, for whoever is adding the affordance. The SQL half — making your table reportable in the first place — is [Moderation](/docs/platform/guides/moderation/integrating), and nothing here works until that is done. `platform` is already listed in `[api] schemas` in `supabase/config.toml`, so `.schema("platform")` needs no configuration change on either side.
+There is no package to install and no registration call: an app that can report content just calls the functions. This page is the client half, for whoever is adding the affordance. The SQL half — making your table reportable in the first place — is [Moderation](../moderation/integrating.md), and nothing here works until that is done. `platform` is already listed in `[api] schemas` in `supabase/config.toml`, so `.schema("platform")` needs no configuration change on either side.
 
 ## From a Next.js app
 

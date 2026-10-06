@@ -59,7 +59,7 @@ on drift.
   suite (`pnpm --filter @devdogsuga/supabase test:rls`) and `test:db` for
   both `schedule-builder` and `platform`.
 
-See [Ingestion](/docs/schedule-builder/guides/ingestion) for what
+See [Ingestion](./ingestion.md) for what
 `reconcileTerm.db-test.ts` actually exercises, and
-[Schedule-builder schema](/docs/schedule-builder/guides/schema) for the
+[Schedule-builder schema](./schema.md) for the
 schema those tests run against.

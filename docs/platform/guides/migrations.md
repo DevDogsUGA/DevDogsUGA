@@ -7,7 +7,7 @@ section: guides
 
 # Writing a migration
 
-The platform's tables live in the `platform` schema of the shared Supabase Postgres database, built by the one migration history at `supabase/migrations/`. Read this before you add a table, a column, a policy, or a trigger: it covers the change loop, the seeds, how contributors keep out of each other's way, and how a migration reaches the dev project and production. If you only want to _query_ the database, you want [Database (Drizzle)](/docs/platform/guides/stack/db) instead — the client factory, both `drizzle-kit` configs, and the pooler settings that are not optional are all there.
+The platform's tables live in the `platform` schema of the shared Supabase Postgres database, built by the one migration history at `supabase/migrations/`. Read this before you add a table, a column, a policy, or a trigger: it covers the change loop, the seeds, how contributors keep out of each other's way, and how a migration reaches the dev project and production. If you only want to _query_ the database, you want [Database (Drizzle)](../../_shared/guides/stack/db.md) instead — the client factory, both `drizzle-kit` configs, and the pooler settings that are not optional are all there.
 
 ## SQL is the source of truth
 
@@ -70,7 +70,7 @@ A staging or production target never runs `db reset` — that erases everything 
 
 The seed SQL does not upload headshots. `backstage deploy avatars` runs after it and uploads each file in `seed/officers/avatars/` that the `avatars` bucket does not have yet. It never replaces an object, because an officer's own upload lives at the same key. Do not run `supabase seed buckets` against a hosted tier: it overwrites every object it uploads.
 
-There is no seed data for sign-in-able test accounts. Sign in with a second account of your own and give it the role you want to see through, with `pnpm devtools roles grant <email> <role>` (`roles revoke` takes it back). See [Integrating an app](/docs/platform/guides/reporting/integrating)'s "Testing it".
+There is no seed data for sign-in-able test accounts. Sign in with a second account of your own and give it the role you want to see through, with `pnpm devtools roles grant <email> <role>` (`roles revoke` takes it back). See [Integrating an app](./reporting/integrating.md)'s "Testing it".
 
 Seeds are the right home for anything that must never exist in production, precisely because the reset they ride on is never pointed there. Migrations are the wrong home for the same reason.
 
@@ -95,9 +95,9 @@ If `main` grew a newer migration while yours was open, recreate yours with a fre
 | the shared dev project | `pnpm devtools --tier development:remote apply-migrations` |
 | production             | `production-migrate` in `.github/workflows/deploy.yaml`    |
 
-`pnpm devtools --tier development:remote apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then offers to regenerate the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases).
+`pnpm devtools --tier development:remote apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then offers to regenerate the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](../../toolkit/infrastructure/hosted-databases.md).
 
 > [!WARNING]
 > Never run `drizzle-kit push` against a hosted database: it writes the schema with no migration record and no rollback path. No script in this repo runs it, and none should.
 
-For what the session `--tier` flag means and the rest of the `devtools supabase` passthrough, see [devtools](/docs/toolkit/guides/devtools).
+For what the session `--tier` flag means and the rest of the `devtools supabase` passthrough, see [devtools](../../toolkit/guides/devtools.md).

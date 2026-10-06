@@ -7,7 +7,7 @@ section: guides
 
 # Integrating your own app
 
-The SQL half of moderation, for whoever owns an app schema holding member-written content. Read [Moderation](/docs/platform/guides/moderation) first: whether quarantine hides or freezes decides which policy you write here. Wiring a Report button into a client is [Reporting](/docs/platform/guides/reporting/integrating) instead.
+The SQL half of moderation, for whoever owns an app schema holding member-written content. Read [Moderation](./index.md) first: whether quarantine hides or freezes decides which policy you write here. Wiring a Report button into a client is [Reporting](../reporting/integrating.md) instead.
 
 ## The rules every app must add
 

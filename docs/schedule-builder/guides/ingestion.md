@@ -9,7 +9,7 @@ section: guides
 
 The app plans against real UGA registrar data, and that data has to be pulled
 in, parsed, and reconciled into Postgres before the generator has anything to
-work with. Ingestion and [generation](/docs/schedule-builder/guides/generation)
+work with. Ingestion and [generation](./generation.md)
 are two independent pipelines that meet only at the database — the generator
 never scrapes.
 
@@ -104,7 +104,7 @@ serves the app itself), the trigger reuses it instead of starting its own.
 > There used to be a fourth step here refreshing a search materialized view.
 > It's gone — free-text course search was replaced with subject / instructor /
 > CRN filters that read the base tables directly, and the view was dropped
-> with it. See [Schedule-builder schema](/docs/schedule-builder/guides/schema).
+> with it. See [Schedule-builder schema](./schema.md).
 
 ## A different "sync"
 

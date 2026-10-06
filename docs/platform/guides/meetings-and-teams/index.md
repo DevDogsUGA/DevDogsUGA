@@ -13,34 +13,34 @@ DevDogs meets weekly. Each meeting runs one or more **workshops** in parallel, o
 
 ## Four rows, each answering one question
 
-| Row            | Answers                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------- |
-| `meetings`     | when and where the club gathered, and who showed up                                                     |
-| `workshops`    | the teaching slot for one project recommendation at one meeting                                         |
-| `competitions` | a mirror of a GitHub issue -- see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) |
-| `teams`        | a persistent project team -- see [Teams](/docs/platform/guides/meetings-and-teams/teams)                |
+| Row            | Answers                                                             |
+| -------------- | ------------------------------------------------------------------- |
+| `meetings`     | when and where the club gathered, and who showed up                 |
+| `workshops`    | the teaching slot for one project recommendation at one meeting     |
+| `competitions` | a mirror of a GitHub issue -- see [Competitions](./competitions.md) |
+| `teams`        | a persistent project team -- see [Teams](./teams.md)                |
 
-There is no `projects` table any more — a workshop's project is free text on the row (`workshops."project"`, e.g. "DogDays", nullable), not a foreign key. See [Events](/docs/platform/infrastructure/events) for why.
+There is no `projects` table any more — a workshop's project is free text on the row (`workshops."project"`, e.g. "DogDays", nullable), not a foreign key. See [Events](../../infrastructure/events.md) for why.
 
 Attendance attaches to the meeting with the workshop as a dimension, never to a competition — there is nothing in-person to attend about a GitHub issue.
 
-**Neither teams nor competitions hang off a meeting or a workshop any more.** A team is a persistent git branch (`team/<slug>` off `main`) that can enter any number of competitions over its life, and a competition is a GitHub issue with its own asynchronous lifecycle — kicked off whenever an officer converts a draft, closed whenever they close the issue, on no fixed night. See [Teams](/docs/platform/guides/meetings-and-teams/teams) and [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for the current models.
+**Neither teams nor competitions hang off a meeting or a workshop any more.** A team is a persistent git branch (`team/<slug>` off `main`) that can enter any number of competitions over its life, and a competition is a GitHub issue with its own asynchronous lifecycle — kicked off whenever an officer converts a draft, closed whenever they close the issue, on no fixed night. See [Teams](./teams.md) and [Competitions](./competitions.md) for the current models.
 
 One constraint on `workshops` carries most of the remaining meaning: it declares `unique (id, "meetingId")` solely so attendance can declare a composite foreign key and have the database reject a row naming a workshop from another meeting.
 
 ## Where it lives
 
-The meetings/workshops schema is `supabase/migrations/20260829040000_11_platform_events_core.sql`, amended in place for the config-as-code cutover: `meetings.countsTowardProgress` and `elEligible` merged into one `countsForCredit` flag, `meetings.surveyUrl` was added (and `configId` columns, since superseded by the authored slug), `workshops.projectId` and the `projects` table were dropped in favor of `workshops."project"` as free text. That same migration carries the competitions mirror now too -- see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for its shape. `20260829050100_16_platform_team_awards.sql` has `platform.competitionEntries` and the `memberStars` view.
+The meetings/workshops schema is `supabase/migrations/20260829040000_11_platform_events_core.sql`, amended in place for the config-as-code cutover: `meetings.countsTowardProgress` and `elEligible` merged into one `countsForCredit` flag, `meetings.surveyUrl` was added (and `configId` columns, since superseded by the authored slug), `workshops.projectId` and the `projects` table were dropped in favor of `workshops."project"` as free text. That same migration carries the competitions mirror now too -- see [Competitions](./competitions.md) for its shape. `20260829050100_16_platform_team_awards.sql` has `platform.competitionEntries` and the `memberStars` view.
 
 The code is `apps/platform/src/server/` under `teams/`, `github/`, `config/` and `loaders/`. Scheduled passes are routes under `app/(api)/cron/`: the config reconcile (`/cron/config-reconcile`) and the nightly GitHub reconcile for teams and competitions (`/cron/github-reconcile`). `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
 
 ## Read next
 
-- [Teams](/docs/platform/guides/meetings-and-teams/teams) — forming one, joining one, the two caps, the lead, and disbanding.
-- [Competitions](/docs/platform/guides/meetings-and-teams/competitions) — the Competitions Project, kickoff, entries, and closing one out.
-- [Attendance](/docs/platform/guides/meetings-and-teams/attendance) — the ledger and check-in.
-- [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards) — what participation adds up to.
-- [Events](/docs/platform/infrastructure/events) — where meetings and workshops come from.
+- [Teams](./teams.md) — forming one, joining one, the two caps, the lead, and disbanding.
+- [Competitions](./competitions.md) — the Competitions Project, kickoff, entries, and closing one out.
+- [Attendance](./attendance.md) — the ledger and check-in.
+- [Stars & streaks](./stars-and-awards.md) — what participation adds up to.
+- [Events](../../infrastructure/events.md) — where meetings and workshops come from.
 
 Scoring is off-platform (officer scores and live voting, run outside the site). The only per-competition state the platform persists is who won, and it is not a separate record at all — `platform.competitionEntries."mergedAt"` IS the answer, set the moment an officer merges the winning pull request — and the results page collapses to entrants plus that winner, if one has merged.
 
@@ -63,7 +63,7 @@ The general shape of the error: **a table that mixes things you attend with thin
 
 Through the platform redesign's competitions step, a competition WAS a week-long window: `competitions."workshopId"` (unique — a workshop opened at most one) pointed at the meeting that announced the feature, and an authored `judgingStartsAt`/`judgingMeetingId` pair pointed at the meeting judging happened at, usually the following week's. That datetime used to be the authority for a roster lock and a star freeze too — `isLocked`, `lockState.ts`, and a five-minute cron that stamped `teams."competedAt"` once judging began.
 
-All of it is gone. A team stopped being scoped to a competition earlier, in the teams-core step, which already made "this team's roster, locked against ONE competition's clock" unrepresentable — a team active on several competitions has no single clock to lock against. The competitions step finished the job: a competition is a GitHub issue now (see [Competitions](/docs/platform/guides/meetings-and-teams/competitions)), kicked off whenever an officer converts a draft and closed whenever they close the issue, neither pinned to a meeting. `plannedEndAt` is what is left of "when does this end" — display-only, authored on the GitHub Project's date field, never read by any lock or deadline logic — and `closedAt` (the issue's own close) is the one real clock: closing IS the only thing that ever ended a competition's entry window, roster lock or no roster lock.
+All of it is gone. A team stopped being scoped to a competition earlier, in the teams-core step, which already made "this team's roster, locked against ONE competition's clock" unrepresentable — a team active on several competitions has no single clock to lock against. The competitions step finished the job: a competition is a GitHub issue now (see [Competitions](./competitions.md)), kicked off whenever an officer converts a draft and closed whenever they close the issue, neither pinned to a meeting. `plannedEndAt` is what is left of "when does this end" — display-only, authored on the GitHub Project's date field, never read by any lock or deadline logic — and `closedAt` (the issue's own close) is the one real clock: closing IS the only thing that ever ended a competition's entry window, roster lock or no roster lock.
 
 </details>
 

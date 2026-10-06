@@ -34,7 +34,7 @@ exported functions, see the generated
    `owner/repo#123`, or a full issue URL — GitHub's own "Development"
    issue-linking UI writes one of these into the PR body). The platform
    recognizes the entry within moments, over a `pull_request` webhook — see
-   [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)
+   [Stars & streaks](./stars-and-awards.md)
    for `platform.competitionEntries`, the mirror this writes.
 4. **Score off-platform** — a live demo night, officer scores, member voting,
    whatever the club runs that week. The platform holds no rubric, no ballot,
@@ -111,7 +111,7 @@ current, wired from `/github/webhook` after the signature is verified — see
 `server/github/competitionEvents.ts`. `pull_request` webhooks (`opened`,
 `edited`, `reopened`, `closed`) keep `platform.competitionEntries` current
 the same way — see `server/github/prEvent.ts` and
-[Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)
+[Stars & streaks](./stars-and-awards.md)
 for what that table is and who reads it.
 
 The nightly `/cron/github-reconcile` pass is the backstop for all three: it
@@ -119,7 +119,7 @@ pages through the whole Project and re-applies every converted item it
 finds, and re-derives every entry from the repo's own pull request list
 (`reconcileEntries`). The same "GitHub webhooks in near-real-time, a nightly
 pass for what neither reached" shape
-[Teams](/docs/platform/guides/meetings-and-teams/teams) uses for the branch
+[Teams](./teams.md) uses for the branch
 mirror.
 
 ## Followups still open

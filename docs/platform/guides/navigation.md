@@ -13,7 +13,7 @@ Two separate surfaces, not one system: a **top nav** (`src/components/TopNav/`) 
 
 **`src/config/nav.ts`** holds everything hand-curated, as plain exported consts: `PUBLIC_LINKS` (the navbar's own links), `CONSOLE_ITEMS` (the Console dropdown), `PROFILE_ITEMS` (the profile popover), `SEARCH_ONLY_PAGES` (indexed but not shown), and the app-switcher and social entries. The file's types and comments are the reference — `INVOLVEMENT_NETWORK_URL` and its `/events` and `/roster` variants live there too, so every page that sends a member to the Involvement Network imports the URL rather than retyping it.
 
-**The compiled docs data** is the other one. `src/server/docs/queries.ts` reads the bundled `@devdogsuga/docs` module and `src/lib/docsTree.ts` folds its flat `(path, title, order)` rows into the sidebar tree. Both the navbar's Docs menu and the sidebar's project selector come from `getDocsProjects()`; the tree itself comes from `getDocsTree(project)`. Every read is in-memory — see [the docs system](/docs/toolkit/infrastructure/docs-system).
+**The compiled docs data** is the other one. `src/server/docs/queries.ts` reads the bundled `@devdogsuga/docs` module and `src/lib/docsTree.ts` folds its flat `(path, title, order)` rows into the sidebar tree. Both the navbar's Docs menu and the sidebar's project selector come from `getDocsProjects()`; the tree itself comes from `getDocsTree(project)`. Every read is in-memory — see [the docs system](../../toolkit/infrastructure/docs-system/index.md).
 
 Search draws on both: `src/server/search/appEntries.ts` builds entries from the nav config (plus `src/config/pageSections.ts`, so a query can land on `/account#graduation` rather than `/account`), and `docsSearch.ts` queries Postgres for the docs.
 

@@ -10,7 +10,7 @@ section: guides
 This app owns the **`schedule_builder`** Postgres schema on the shared DevDogs
 Supabase project. The monorepo-wide rules — SQL is the source of truth, RLS is
 the isolation boundary — are covered in
-[Writing a migration](/docs/platform/guides/migrations); this page is what is specific to
+[Writing a migration](../../platform/guides/migrations.md); this page is what is specific to
 this app.
 
 ## Where the schema lives
@@ -19,7 +19,7 @@ this app.
 is **introspected from the live database** by `pnpm -F schedule-builder
 types:drizzle` and is never edited by hand; `schema/index.ts` re-exports it,
 and `server/db/relations.ts` holds the hand-written Drizzle relations. See
-[Database (Drizzle)](/docs/schedule-builder/guides/stack/db) for how
+[Database (Drizzle)](../../_shared/guides/stack/db.md) for how
 introspection works and why it needs two `drizzle-kit` configs.
 
 The tables fall into three groups:
@@ -48,7 +48,7 @@ pnpm devtools new-migration --app schedule-builder <description>
 
 writes an empty `supabase/migrations/<timestamp>_schedule_builder_<description>.sql`.
 Put the DDL — and any RLS policies it needs — in it by hand, the same way
-platform does (see [Writing a migration](/docs/platform/guides/migrations)'s "What does a
+platform does (see [Writing a migration](../../platform/guides/migrations.md)'s "What does a
 table with its policies look like in one migration?"). Then replay it and
 re-introspect:
 

@@ -9,7 +9,7 @@ section: guides
 
 Given a set of courses a student wants, the generator returns the best few
 conflict-free schedules. It reads only what
-[ingestion](/docs/schedule-builder/guides/ingestion) has already written to
+[ingestion](./ingestion.md) has already written to
 Postgres; it never scrapes.
 
 The design goal to internalise before changing anything: **a new preference is a

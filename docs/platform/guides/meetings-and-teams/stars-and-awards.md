@@ -16,7 +16,7 @@ so changes are visible on the next read without a backfill.
 - One star is earned for each meeting whose `countsForCredit` flag is
   enabled and that the member attended — the same flag EL reflection
   eligibility reads; see
-  [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
+  [Attendance](./attendance.md).
 - One star is earned for each DevDogs competition the member's team
   participated in — every mirrored (converted) competition counts, no
   separate flag: being a real, kicked-off GitHub issue IS counting.
@@ -35,7 +35,7 @@ exactly one star, not two.
 nightly `/cron/github-reconcile` backstop (`reconcileEntries`). Winning is
 `competitionEntries."mergedAt" is not null` — merging the winning pull
 request IS recording the winner, there is no separate officer step — see
-[Competitions](/docs/platform/guides/meetings-and-teams/competitions).
+[Competitions](./competitions.md).
 
 ## Streaks
 
@@ -47,7 +47,7 @@ current week receives grace until its opportunities have passed.
 Competitions are bucketed by `kickedOffAt` — when the draft converted into an
 issue — not by whenever the entry window happens to close. A competition has
 no fixed night any more (see
-[Competitions](/docs/platform/guides/meetings-and-teams/competitions)), so
+[Competitions](./competitions.md)), so
 kickoff is the one moment every competition star can anchor a streak week to.
 
 The Attendance page shows lifetime meeting/competition volume, current and

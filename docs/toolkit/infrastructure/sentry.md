@@ -34,7 +34,7 @@ A DSN only lets someone send events to a project, so none of these is a secret.
 
 Each name carries its app because a deploy environment holds one value per name: a shared `SENTRY_DSN` would send every app's events to one project. Each `NEXT_PUBLIC_` variable is derived from its server-side partner (`NEXT_PUBLIC_PLATFORM_SENTRY_DSN="$PLATFORM_SENTRY_DSN"`), so you never set it by hand. It is inlined into the browser bundle at build time.
 
-They travel like any other per-environment variable. Fill in the two server-side DSNs in `.env.staging` and `.env.production`, then run `pnpm backstage env push --target <target>`, which stores them in Bitwarden and copies them to the GitHub environment's variables. The next deploy hands the server-side ones to the Worker, expands the two derived ones, and builds those into the bundle. [Secrets and environments](/docs/toolkit/infrastructure/secrets) covers the files.
+They travel like any other per-environment variable. Fill in the two server-side DSNs in `.env.staging` and `.env.production`, then run `pnpm backstage env push --target <target>`, which stores them in Bitwarden and copies them to the GitHub environment's variables. The next deploy hands the server-side ones to the Worker, expands the two derived ones, and builds those into the bundle. [Secrets and environments](./secrets.md) covers the files.
 
 ## Releases and source maps
 

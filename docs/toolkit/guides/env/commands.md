@@ -14,7 +14,7 @@ pnpm backstage env audit --target staging   # compare every store
 ```
 
 `audit` reads only and is safe to run against anything. Read
-[Env](/docs/toolkit/guides/env) first for what the stores are.
+[Env](./index.md) first for what the stores are.
 
 `pull`, `push` and `audit` belong to `@devdogsuga/backstage`, because they
 always need production secrets. Inside this repo they run as `pnpm backstage …`,

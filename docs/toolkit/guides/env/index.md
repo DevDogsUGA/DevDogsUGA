@@ -26,9 +26,9 @@ they are worth checking.
 
 One env file per target, and `push` writes Bitwarden and GitHub in the same
 run — a value in one and not the other is the failure this design has. This
-page is what the pieces are; [the commands](/docs/toolkit/guides/env/commands)
+page is what the pieces are; [the commands](./commands.md)
 is what to run. A contributor filling in their own `.env` wants
-[Secrets and environments](/docs/toolkit/infrastructure/secrets) instead.
+[Secrets and environments](../../infrastructure/secrets.md) instead.
 
 ## One `--target`, one row
 

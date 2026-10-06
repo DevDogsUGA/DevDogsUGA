@@ -9,7 +9,7 @@ section: guides
 
 There is no `devtools db` group any more. The database is driven by the real
 [Supabase CLI](https://supabase.com/docs/reference/cli), which
-[devtools](/docs/toolkit/guides/devtools) runs with the **session's** database
+[devtools](./devtools.md) runs with the **session's** database
 filled in, and by the package scripts that regenerate what is derived from it.
 The session you launched devtools under names the one database every command
 acts on, read from the entered environment's `DB_URL` — the same variable the
@@ -44,7 +44,7 @@ defaults to the _linked_ project, `db reset` to `--local`). Against staging or
 production it asks once before it runs, and `--yes` answers it.
 
 Staging and production operation — pushing `config.toml`, migrating a hosted
-project — is covered in [Hosted databases](/docs/toolkit/infrastructure/hosted-databases).
+project — is covered in [Hosted databases](../infrastructure/hosted-databases.md).
 
 ## Two layers under one tool
 
@@ -104,7 +104,7 @@ pnpm devtools supabase seed buckets
 ```
 
 `db push` is also the command that puts a new migration into your database:
-[Writing a migration](/docs/platform/guides/migrations) is the change loop,
+[Writing a migration](../../platform/guides/migrations.md) is the change loop,
 including the Drizzle introspection below.
 
 ## Checking the state

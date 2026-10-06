@@ -32,6 +32,6 @@ section: guides
 | The Worker entry / cron dispatch (deploy)   | `cloudflare/worker.ts`, `cloudflare/scheduled.ts`                           |
 | Env contract                                | `src/env.ts`                                                                |
 
-See [Schedule generation](/docs/schedule-builder/guides/generation) and
-[Ingestion](/docs/schedule-builder/guides/ingestion) for how the generation and
+See [Schedule generation](./generation.md) and
+[Ingestion](./ingestion.md) for how the generation and
 scraping paths actually work, not just where they live.
