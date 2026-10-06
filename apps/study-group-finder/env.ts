@@ -37,6 +37,7 @@ declare({
         "NEXT_PUBLIC_SUPABASE_URL for the browser.",
       scope: "environment",
       secrecy: "public",
+      build: true,
       localStack: true,
       example: "https://$PROJECT_REF.supabase.co",
     }),
@@ -47,6 +48,7 @@ declare({
         "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Dashboard: Settings > API.",
       scope: "environment",
       secrecy: "public",
+      build: true,
       localStack: true,
     }),
     // The schema default mirrors the scripts' `${NEXT_PUBLIC_AUTH_MODE:-devdogs}`

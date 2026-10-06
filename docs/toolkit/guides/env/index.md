@@ -59,12 +59,13 @@ Two rows are asymmetric, both deliberately:
 
 ## Where a value ends up
 
-| GitHub environment | Bitwarden project | Receives                          | Branch | Reviewers |
-| ------------------ | ----------------- | --------------------------------- | ------ | --------- |
-| `preflight`        | `preflight`       | everything except apply-tier      | `main` | none      |
-| `staging`          | `staging`         | everything but plan and apply     | `main` | none      |
-| `production`       | `production`      | everything, apply-tier included   | `main` | `devops`  |
-| `production-build` | none              | six public variables, set by hand | `main` | none      |
+| GitHub environment | Bitwarden project | Receives                             | Branch | Reviewers |
+| ------------------ | ----------------- | ------------------------------------ | ------ | --------- |
+| `preflight`        | `preflight`       | everything except apply-tier         | `main` | none      |
+| `staging`          | `staging`         | everything but plan and apply        | `main` | none      |
+| `staging-build`    | `staging`         | the `build: true` keys, as variables | `main` | none      |
+| `production`       | `production`      | everything, apply-tier included      | `main` | `devops`  |
+| `production-build` | `production`      | the `build: true` keys, as variables | `main` | none      |
 
 Which keys a project holds is the **tier's** decision, named after the jobs that
 read each key (`EnvTier` in Backstage's `packages/env/src/meta.ts`). `deploy` is the default
@@ -80,8 +81,14 @@ project never lands where a deploy runs unreviewed. (Until October 2026 the gate
 was a split into `production` and a reviewed `production-apply`; `production`
 gained reviewers and the split went away.)
 
-`production-build` holds only the public values the credential-free production
-build bakes in, so it isn't fed by `env push`; set its variables by hand.
+The `*-build` environments hold only the public values the credential-free
+builds bake in, as variables and never secrets. Mark such a key `build: true` in
+its manifest (`EnvMeta.build`; `define()` refuses it on anything but a public,
+per-environment key) and `env push --target staging|production` writes it there
+as well, after its own environment, as a separate confirmation. `env audit`
+checks them too. Nothing is set by hand. `staging-build` exists in Backstage's
+repository, which runs the staging build; push from a checkout of the repository
+you mean to write to.
 
 <details>
 <summary>Which credentials are apply-tier?</summary>

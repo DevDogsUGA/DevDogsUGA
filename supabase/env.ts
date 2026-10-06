@@ -93,6 +93,7 @@ declare({
         "own localhost port in development.",
       scope: "environment",
       secrecy: "public",
+      build: true,
       example: "http://localhost:3000",
     }),
     SCHEDULE_BUILDER_URL: define(z.url(), {

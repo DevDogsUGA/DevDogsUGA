@@ -71,6 +71,7 @@ const server = {
         "own localhost port in development.",
       scope: "environment",
       secrecy: "public",
+      build: true,
       example: "http://localhost:3000",
     },
   ),
@@ -110,6 +111,7 @@ const server = {
       "environment variable.",
     scope: "environment",
     secrecy: "public",
+    build: true,
   }),
   // Derived (.env / .env.generated). `localStack: true` throughout: when the
   // local Docker stack is running, `.env.generated` supplies these and wins
@@ -122,6 +124,7 @@ const server = {
       "for the browser.",
     scope: "environment",
     secrecy: "public",
+    build: true,
     localStack: true,
     example: "https://$PROJECT_REF.supabase.co",
   }),
@@ -156,6 +159,7 @@ const server = {
       "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Dashboard: Settings > API.",
     scope: "environment",
     secrecy: "public",
+    build: true,
     localStack: true,
   }),
   REST_URL: define(z.string(), {
