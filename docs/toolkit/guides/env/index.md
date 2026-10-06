@@ -59,30 +59,32 @@ Two rows are asymmetric, both deliberately:
 
 ## Where a value ends up
 
-| GitHub environment | Bitwarden project | Receives                      | Branch       |
-| ------------------ | ----------------- | ----------------------------- | ------------ |
-| `preflight`        | `preflight`       | everything in the project     | `main`       |
-| `staging`          | `staging`         | everything but plan and apply | `main`       |
-| `production`       | `production`      | everything except apply-tier  | `production` |
-| `production-apply` | `production`      | everything, apply-tier too    | `production` |
+| GitHub environment | Bitwarden project | Receives                          | Branch | Reviewers |
+| ------------------ | ----------------- | --------------------------------- | ------ | --------- |
+| `preflight`        | `preflight`       | everything except apply-tier      | `main` | none      |
+| `staging`          | `staging`         | everything but plan and apply     | `main` | none      |
+| `production`       | `production`      | everything, apply-tier included   | `main` | `devops`  |
+| `production-build` | none              | six public variables, set by hand | `main` | none      |
 
 Which keys a project holds is the **tier's** decision, named after the jobs that
 read each key (`EnvTier` in Backstage's `packages/env/src/meta.ts`). `deploy` is the default
 and reaches staging and production; `plan` reaches the two dry-run jobs in
-preflight and production, and nothing in staging; `apply` reaches
-`production-apply` alone.
+preflight and production, and nothing in staging; `apply` reaches `production`
+alone.
 
-Four GitHub environments, three Bitwarden projects. The last two split one
-project, and **that split is the reviewer gate**: `production` deploys on a push
-with nothing in front of it, `production-apply` has required reviewers. A
-write-capable credential reaching the first would make the second decorative. So
-`env push --target production` writes two GitHub environments in one run —
-`production-apply` receives a superset of `production` — and confirms them
-separately: agreeing to update production's ordinary secrets is not agreeing to
-touch the credentials behind the reviewers.
+**The reviewer gate is `production`'s required reviewers.** Every production
+deploy waits for a `devops` approval, and whoever pushed the change can't give
+it. An environment that receives apply-tier credentials must require reviewers;
+Backstage's tests assert exactly that, so a credential that can rewrite the
+project never lands where a deploy runs unreviewed. (Until October 2026 the gate
+was a split into `production` and a reviewed `production-apply`; `production`
+gained reviewers and the split went away.)
+
+`production-build` holds only the public values the credential-free production
+build bakes in, so it isn't fed by `env push`; set its variables by hand.
 
 <details>
-<summary>Which credentials go to <code>production-apply</code> alone?</summary>
+<summary>Which credentials are apply-tier?</summary>
 
 `SUPABASE_ACCESS_TOKEN` carries full account privileges across both Supabase
 organizations; `supabase config push` needs it, and that is the one mutation
@@ -91,10 +93,9 @@ with no dry run. It is declared `tier: "apply"` in the operator manifest that
 than a workspace member of this repo; `pnpm devtools check env` keeps the registry in agreement), not
 in anything under `apps/*`/`packages/*` here.
 
-Both still live in the `production` Bitwarden project. That is a GitHub routing
-rule, not a Bitwarden one: only a person reads that project, one project per
-environment stays the simplest thing to rotate, and holding them there is what
-lets `audit` compare them at all.
+It lives in the `production` Bitwarden project like every other production key:
+only a person reads that project, one project per environment stays the simplest
+thing to rotate, and holding it there is what lets `audit` compare it at all.
 
 </details>
 
