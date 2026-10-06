@@ -59,6 +59,20 @@ jobs:
       - name: Determine base ref for affected-package detection
         id: base
         uses: ./.github/actions/base-ref
+      # TEMPORARY (TASK-486; removed in TASK-491 when the platform is deleted
+      # from this repo): apps/platform and packages/email are moving to
+      # DevDogsUGA/Backstage, and an edit landing here meanwhile would be lost
+      # in the move. Lives in `validate` because that is a required check.
+      - name: Platform freeze guard (temporary)
+        env:
+          BASE: ${{ steps.base.outputs.ref }}
+        run: |
+          frozen=$(git diff --name-only "$BASE"...HEAD -- apps/platform packages/email)
+          if [ -n "$frozen" ]; then
+            echo "::error::apps/platform and packages/email are frozen while they move to DevDogsUGA/Backstage (TASK-486). Make platform changes in Backstage."
+            echo "$frozen"
+            exit 1
+          fi
       - name: Select affected packages
         id: since
         run: |
@@ -108,6 +122,9 @@ jobs:
         run: |
           pnpm test:patches
           pnpm check:patches
+      # The deploy-PR script's pure plan/body builder (`node --test`, no deps).
+      - name: Deploy PR script tests
+        run: pnpm test:deploy-pr
       # Flutter isn't installed here — the study-group-finder app is validated
       # in the `flutter` job below.
       #
@@ -352,6 +369,64 @@ jobs:
       actions: write
     uses: ./.github/workflows/deploy.yaml
     secrets: inherit
+
+  # A main commit that passed every required check becomes a deploy PR in
+  # DevDogsUGA/Backstage, which pins DevDogsUGA in `devdogsuga.lock` and owns
+  # deployment (TASK-478). Push to main only: the `deploy-pr` environment is
+  # restricted to `main`, and it holds the GitHub App credential, so this is
+  # the one place in this file a secret is in scope.
+  #
+  # `!cancelled()` plus explicit results, not the implicit `success()`: that
+  # one skips this job whenever a needed job was skipped, and `flutter` may be.
+  open-deploy-pr:
+    needs: [validate, database, format, flutter]
+    if: >-
+      !cancelled()
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && needs.validate.result == 'success'
+      && needs.database.result == 'success'
+      && needs.format.result == 'success'
+      && (needs.flutter.result == 'success' || needs.flutter.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: deploy-pr
+    permissions:
+      contents: read
+    # Newest push wins: a superseded run must not overwrite the newer pin.
+    concurrency:
+      group: deploy-pr
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      # create-github-app-token fails on empty inputs too, but with a message
+      # about a missing input; say what is actually wrong.
+      - name: Require the deploy-pr App credentials
+        env:
+          APP_ID: ${{ vars.DEPLOY_PR_APP_ID }}
+          APP_KEY: ${{ secrets.DEPLOY_PR_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APP_ID" ] || [ -z "$APP_KEY" ]; then
+            echo "::error::The deploy-pr environment needs the DEPLOY_PR_APP_ID variable and the DEPLOY_PR_APP_PRIVATE_KEY secret; no deploy PR was opened."
+            exit 1
+          fi
+      - id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.DEPLOY_PR_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_PR_APP_PRIVATE_KEY }}
+          owner: DevDogsUGA
+          repositories: Backstage
+      - name: Open or update the deploy PR in Backstage
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SRC_TOKEN: ${{ github.token }}
+          SRC_REPO: ${{ github.repository }}
+          NEW_SHA: ${{ github.sha }}
+        run: node .github/scripts/deploy-pr.mjs
 
 # Removed from this workflow, and not yet replaced:
 #
