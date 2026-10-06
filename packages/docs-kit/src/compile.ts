@@ -8,6 +8,7 @@ import {
   plainTextOf,
   toTitleCase,
 } from "./parse.js";
+import { linkSourceOf } from "./links.js";
 import { renderBody } from "./render.js";
 import type {
   CompiledPage,
@@ -518,7 +519,10 @@ export async function renderPages(
 ): Promise<DocsPage[]> {
   const pages: DocsPage[] = [];
   for (const { content, variants, ...page } of compiled) {
-    pages.push({ ...page, html: await renderBody(content, variants) });
+    pages.push({
+      ...page,
+      html: await renderBody(content, variants, linkSourceOf(page)),
+    });
   }
   return pages;
 }

@@ -22,7 +22,7 @@ export function toTitleCase(name: string): string {
  * How every module in this package reads markdown. The renderer (`render.ts`)
  * starts from the same three syntax extensions, so a heading, link or command
  * this reader finds is one the reader of the page sees: directives so a
- * `:::tabs` block is a block and not a paragraph of colons, math so a `$` in
+ * `:::copyable` block is a block and not a paragraph of colons, math so a `$` in
  * a formula is not taken for anything else.
  */
 export const markdownReader = unified()

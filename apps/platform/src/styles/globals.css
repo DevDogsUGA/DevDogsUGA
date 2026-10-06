@@ -1153,7 +1153,7 @@
   --alert-accent: var(--destructive);
 }
 
-/* Variants (`:::tabs`, `:::only{os=…}`), rendered by @devdogsuga/docs-kit.
+/* Variants (`<details name=…>` tabs, `<details data-os=…>`), rendered by @devdogsuga/docs-kit.
    Every variant ships in the HTML; the docs layout's wrapper carries the
    reader's choice as `data-os`/`data-supabase` (set by an inline script before
    first paint, see DocsVariants), and these rules hide whatever does not match.

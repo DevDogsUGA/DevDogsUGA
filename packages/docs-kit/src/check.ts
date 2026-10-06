@@ -178,6 +178,8 @@ export function checkDocFile(source: string, file: string): CheckWarning[] {
   let afterBlank = true;
   /** How many `<details>` deep this line sits. */
   let depth = 0;
+  /** Every `<details>` still open, innermost last: true for a variant. */
+  const open: boolean[] = [];
   let opened = 0;
   let closed = 0;
   /** Closing tags that arrived with no collapsible open to close. */
@@ -258,7 +260,14 @@ export function checkDocFile(source: string, file: string): CheckWarning[] {
       summaryAt = null;
     }
 
-    const opens = markup.match(/<details\b/gi)?.length ?? 0;
+    // A variant `<details>` (a tab, or a project/OS block: see `variants.ts`)
+    // is not a collapsible to this lint. Its content is the page's content for
+    // whoever it applies to, so it counts as visible words and may hold
+    // headings; only the pairing of its tags is still checked.
+    const tags = [...markup.matchAll(/<details\b([^>]*)>?/gi)].map((tag) =>
+      /\s(?:name|data-project|data-os|data-supabase)=/i.test(tag[1] ?? ""),
+    );
+    const opens = tags.filter((variant) => !variant).length;
     const closes = markup.match(/<\/details\s*>/gi)?.length ?? 0;
 
     // Verified against `parseDocFile` rather than assumed: a heading inside a
@@ -282,7 +291,8 @@ export function checkDocFile(source: string, file: string): CheckWarning[] {
     words += here;
 
     depth += opens;
-    opened += opens;
+    opened += tags.length;
+    open.push(...tags);
     if (opens > 0 && block === null) block = { line, words: 0 };
 
     if (inside) {
@@ -298,8 +308,11 @@ export function checkDocFile(source: string, file: string): CheckWarning[] {
     // while the unclosed half has already taken the visible word count with it.
     // Two tags that cancel in the count are not two tags that pair up.
     closed += closes;
-    crossed += Math.max(0, closes - depth);
-    depth = Math.max(0, depth - closes);
+    for (let c = 0; c < closes; c += 1) {
+      const variant = open.pop();
+      if (variant === undefined) crossed += 1;
+      else if (!variant) depth -= 1;
+    }
     if (depth === 0 && block !== null) {
       if (block.words > DETAILS_WORD_BUDGET) {
         warn(

@@ -144,6 +144,37 @@ describe("headings inside a collapsible", () => {
     expect(warning.message).toContain('"## Hidden"');
   });
 
+  it("does not treat a variant details as a collapsible", () => {
+    const page = [
+      "# Page",
+      "",
+      '<details data-project="workshops">',
+      "<summary>For Workshops</summary>",
+      "",
+      "## Shown",
+      "",
+      filler(450),
+      "",
+      "</details>",
+    ].join("\n");
+
+    const found = rules(check(page));
+    expect(found).not.toContain("heading-in-details");
+    expect(found).not.toContain("details-length");
+    expect(found).not.toContain("unbalanced-details");
+  });
+
+  it("still pairs a variant details with its closing tag", () => {
+    const page = [
+      '<details name="os" data-value="macos">',
+      "<summary>macOS</summary>",
+      "",
+      "Body.",
+    ].join("\n");
+
+    expect(rules(check(page))).toContain("unbalanced-details");
+  });
+
   it("reads a `#` in a fenced sample the way remark does", () => {
     const page = [
       "<details>",

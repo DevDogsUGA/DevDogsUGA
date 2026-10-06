@@ -35,6 +35,7 @@ import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { docsCodeBlocks, remarkKeepMeta } from "./codeblocks.js";
 import { remarkDiffs } from "./diffs.js";
+import { remarkRewriteLinks, type LinkSource } from "./links.js";
 import { rehypeRefuseScript } from "./sanitize.js";
 import { rehypeCopyableCells } from "./tables.js";
 import { remarkVariants, type VariantContext } from "./variants.js";
@@ -67,6 +68,8 @@ const processor = unified()
   // Before remark-emoji: it puts back the `:word` text directives an emoji
   // shortcode parses as, which remark-emoji then needs to see as text.
   .use(remarkVariants)
+  // Content links pages by relative file path (links.ts); the site wants URLs.
+  .use(remarkRewriteLinks)
   // After the variants, so a diff inside a resolved variant is still nested
   // (and left alone), and before Shiki could ever see the block.
   .use(remarkDiffs)
@@ -98,11 +101,19 @@ const processor = unified()
   .use(rehypeScrollTables)
   .use(rehypeStringify);
 
-/** One emitted copy's body as HTML, variants resolved for its project. */
+/**
+ * One emitted copy's body as HTML, variants resolved for its project and
+ * relative page links rewritten to site URLs. `from` is where the page's
+ * links are resolved from; a body with no internal links can leave it out.
+ */
 export async function renderBody(
   content: string,
   ctx: VariantContext,
+  from: LinkSource = { project: ctx.project, source: `${ctx.project}/index` },
 ): Promise<string> {
-  const file = new VFile({ value: content, data: { variants: ctx } });
+  const file = new VFile({
+    value: content,
+    data: { variants: ctx, link: from },
+  });
   return String(await processor.process(file));
 }

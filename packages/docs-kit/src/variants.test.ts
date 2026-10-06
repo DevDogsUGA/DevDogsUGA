@@ -25,16 +25,21 @@ beforeAll(async () => {
   await renderBody("", ctx());
 }, 60_000);
 
-const tabs = `
-:::tabs{group="os"}
-::tab{value="macos"}
-Use brew.
-::tab{value="linux wsl"}
-Use apt.
-::tab{value="windows"}
-Use winget.
-:::
-`;
+/** One `<details name=… data-value=…>` tab, as an author writes it. */
+function tab(group: string, value: string, body: string): string {
+  return `<details name="${group}" data-value="${value}">\n<summary>${value}</summary>\n\n${body}\n\n</details>\n`;
+}
+
+/** One `<details data-…>` block, as an author writes it. */
+function only(attributes: string, body: string): string {
+  return `<details ${attributes}>\n<summary>Only</summary>\n\n${body}\n\n</details>\n`;
+}
+
+const tabs = [
+  tab("os", "macos", "Use brew."),
+  tab("os", "linux wsl", "Use apt."),
+  tab("os", "windows", "Use winget."),
+].join("\n");
 
 describe("tabs", () => {
   it("renders a strip of every offered value and one panel per tab", async () => {
@@ -66,7 +71,7 @@ describe("tabs", () => {
       /unknown os value "mac"/,
     );
     expect(() =>
-      parseBody(tabs.replace('group="os"', 'group="shell"'), ctx()),
+      parseBody(tabs.replaceAll('name="os"', 'name="shell"'), ctx()),
     ).toThrow(DocsBuildError);
   });
 
@@ -77,7 +82,7 @@ describe("tabs", () => {
 
   it("drops the chrome when one tab covers every value", async () => {
     const html = await renderBody(
-      ':::tabs{group="os"}\n::tab{value="macos linux wsl"}\nSame everywhere.\n:::\n',
+      tab("os", "macos linux wsl", "Same everywhere."),
       ctx(),
     );
     expect(html).toBe("<p>Same everywhere.</p>");
@@ -116,12 +121,7 @@ describe("only", () => {
   const page = `
 # Setup
 
-:::only{project="study-group-finder"}
-## Flutter
-
-Install Flutter.
-:::
-
+${only('data-project="study-group-finder"', "## Flutter\n\nInstall Flutter.")}
 Done.
 `;
 
@@ -144,13 +144,104 @@ Done.
 
   it("hides an os block at runtime rather than dropping it", async () => {
     const html = await renderBody(
-      ':::only{os="windows"}\nEnable Developer Mode.\n:::\n',
+      only('data-os="windows"', "Enable Developer Mode."),
       sgf,
     );
     expect(html).toContain(
       'class="docs-only" data-group="os" data-values="windows"',
     );
-    expect(await renderBody(':::only{os="windows"}\nx\n:::\n', ctx())).toBe("");
+    expect(await renderBody(only('data-os="windows"', "x"), ctx())).toBe("");
+  });
+});
+
+describe("details syntax", () => {
+  it("renders an os tab group the same as a bare block of tabs", async () => {
+    const html = await renderBody(tabs, sgf);
+    expect(html).not.toContain("<details");
+    expect(html).not.toContain("<summary");
+  });
+
+  it("groups only consecutive details that share a name", async () => {
+    const html = await renderBody(
+      [
+        tab("os", "macos linux wsl", "Everywhere."),
+        tab("supabase", "hosted", "Hosted."),
+        tab("supabase", "local", "Local."),
+      ].join("\n"),
+      ctx(),
+    );
+    expect(html.match(/class="docs-tabs"/g)).toHaveLength(1);
+    expect(html).toContain('data-group="supabase"');
+  });
+
+  it("leaves a plain collapsible alone", async () => {
+    const html = await renderBody(
+      "<details>\n<summary>More</summary>\n\nBody.\n\n</details>\n",
+      ctx(),
+    );
+    expect(html).toContain("<details>");
+    expect(html).toContain("<summary>More</summary>");
+  });
+
+  it("nests a plain collapsible and a block inside a variant", () => {
+    const inner = "<details>\n<summary>More</summary>\n\nBody.\n\n</details>";
+    const nested = only(
+      'data-project="platform"',
+      `${only('data-project="platform"', "Inner.")}\n${inner}`,
+    );
+    expect(plainTextOf(parseBody(nested, ctx()))).toContain("Inner.");
+    expect(plainTextOf(parseBody(nested, sgf))).not.toContain("Inner.");
+  });
+
+  it("fails on body text glued to the summary", () => {
+    expect(() =>
+      parseBody(
+        '<details data-project="platform">\n<summary>x</summary>\nText\n\n</details>\n',
+        ctx(),
+      ),
+    ).toThrow(/blank line/);
+  });
+
+  it("fails on a variant details with no summary", () => {
+    expect(() =>
+      parseBody(
+        '<details data-project="platform">\n\nText\n\n</details>\n',
+        ctx(),
+      ),
+    ).toThrow(/summary/);
+  });
+
+  it("fails on a details that is never closed", () => {
+    expect(() =>
+      parseBody(
+        '<details data-project="platform">\n<summary>x</summary>\n\nText\n',
+        ctx(),
+      ),
+    ).toThrow(/never closed/);
+  });
+
+  it("fails on an unknown attribute or an unknown group", () => {
+    expect(() =>
+      parseBody(only('data-project="platform" data-flavor="x"', "x"), ctx()),
+    ).toThrow(/data-flavor/);
+    expect(() => parseBody(tab("shell", "bash", "x"), ctx())).toThrow(
+      /name must be/,
+    );
+  });
+
+  it("refuses a heading inside an os block", () => {
+    expect(() =>
+      parseBody(only('data-os="windows"', "## Windows\n\nx"), sgf),
+    ).toThrow(/heading/);
+  });
+
+  it("no longer reads the directive syntax", () => {
+    expect(() =>
+      parseBody(':::only{project="platform"}\nx\n:::\n', ctx()),
+    ).toThrow(/unknown directive :::only/);
+    expect(() => parseBody('::tab{value="macos"}\n', ctx())).toThrow(
+      /unknown directive ::tab/,
+    );
   });
 });
 
