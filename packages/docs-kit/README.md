@@ -29,8 +29,10 @@ dev server runs it after every docs change.
 get a generated reference.
 
 The bare mode (and so `build`) also runs two checks that DO fail the build: broken
-internal links (`/docs/<project>/<path>#anchor` and relative `*.md` links have
-to resolve, mounting from `docs/_shared/**` included) and a documented
+internal links (a link to another page is a relative path to its `*.md` file,
+or to a folder ending in `/`, which GitHub follows too; the build rewrites it
+to the site URL. It has to resolve, mounting from `docs/_shared/**` included,
+and an absolute `/docs/…` URL or an extensionless link is itself an error) and a documented
 `pnpm devtools …` / `pnpm backstage …` / `pnpm --filter … <script>` /
 `pnpm run <script>` that does not match a real command or script. Opt a fenced
 sample out with a `nocheck` fence-info word (` ```sh nocheck `).
@@ -47,20 +49,31 @@ along with its headings and search text.
 
 ## Variants
 
-A page can differ by project and by the reader's setup, written as
-`remark-directive` blocks:
+A page can differ by project and by the reader's setup, written as `<details>`
+elements (GitHub renders them as labelled collapsibles; docs-kit reads their
+attributes). Keep a blank line after the `<summary>` and before `</details>`:
 
 ````md
-:::only{project="study-group-finder"}
-Build for Android first.
-:::
+<details data-project="study-group-finder">
+<summary>For Study Group Finder</summary>
 
-:::tabs{group="os"}
-::tab{value="macos"}
+Build for Android first.
+
+</details>
+
+<details name="os" data-value="macos">
+<summary>macOS</summary>
+
 Install Homebrew.
-::tab{value="linux wsl"}
+
+</details>
+
+<details name="os" data-value="linux wsl">
+<summary>Linux and Windows (WSL2)</summary>
+
 Use apt.
-:::
+
+</details>
 
 ```bash os=macos
 brew install fnm
@@ -71,9 +84,9 @@ curl -fsSL https://fnm.vercel.app/install | bash
 ```
 ````
 
-`only{project=…}` is settled per mounted copy at build time. `tabs` and
-`only{os=…}`/`only{supabase=…}` ship every variant, and the site shows the
-reader's pick. Groups are `os` (`macos`, `linux`, `wsl`, `windows`) and
+`data-project` is settled per mounted copy at build time. Consecutive details
+sharing a `name` (tabs) and `data-os`/`data-supabase` ship every variant, and
+the site shows the reader's pick. Groups are `os` (`macos`, `linux`, `wsl`, `windows`) and
 `supabase` (`hosted`, `local`). `windows` means native Windows and only exists
 in a project whose `index.md` lists it under `os:`. The build fails when a
 tab set leaves a value uncovered, covers one twice, or puts a heading inside

@@ -7,7 +7,7 @@ section: infrastructure
 
 # Local Preview
 
-There is no separate preview tool. Docs are compiled into the platform app, so **the dev server is the preview** — `/docs/...` renders your working copy through the exact pipeline that ships. Read this when you are editing a page and want to see it. Search is the one thing the dev server does not pick up on its own, and the second half of this page is about that. For what to put in the page, see [writing docs](/docs/toolkit/infrastructure/docs-system/writing).
+There is no separate preview tool. Docs are compiled into the platform app, so **the dev server is the preview** — `/docs/...` renders your working copy through the exact pipeline that ships. Read this when you are editing a page and want to see it. Search is the one thing the dev server does not pick up on its own, and the second half of this page is about that. For what to put in the page, see [writing docs](./writing.md).
 
 ## The loop
 

@@ -7,7 +7,7 @@ section: infrastructure
 
 # Writing Docs
 
-Every page under `docs/` follows the same contract: front matter that names and places it, a length budget it stays under, and collapsibles used for the four things collapsibles are for. Read this before adding or editing one. For how the markdown becomes a page, see [the docs system](/docs/toolkit/infrastructure/docs-system); to see your change rendered, [local preview](/docs/toolkit/infrastructure/docs-system/preview).
+Every page under `docs/` follows the same contract: front matter that names and places it, a length budget it stays under, and collapsibles used for the four things collapsibles are for. Read this before adding or editing one. For how the markdown becomes a page, see [the docs system](./index.md); to see your change rendered, [local preview](./preview.md).
 
 ## Where the file goes
 
@@ -65,9 +65,14 @@ When a page is _mostly_ shared but has one app-specific section — a setup step
 
 Each emitted copy carries `mountedFrom: "_shared/<path>"` (relative to `docs/_shared/`, no `.md`) in its parsed data — `null` on every page that isn't a mounted copy. It's how an edit link on a mounted page points back at the one file that's actually source, and how the link and command checks label an error against `_shared/<path>.md` instead of the project path it happened to fail under.
 
-**Link a shared page to another page relatively, never with an absolute `/docs/<project>/...` URL naming one project.** A page under `_shared` has no single project to hard-code — it's mounted into several, and an absolute link naming one of them is wrong in every other. Write `./troubleshooting`, `../guides/contributing`, or `./troubleshooting#some-anchor` instead: the link check resolves a relative link from the _emitted_ path, once per project the page mounts into, exactly the way a browser resolves a relative URL — so the same `./troubleshooting` in the one source file is checked (and correctly resolves) against `schedule-builder`'s copy, `study-group-finder`'s copy, and `platform`'s copy in turn.
+**Links name the file, not the URL.** A link to another docs page is a relative path to its Markdown file, extension included, so it works on github.com too; the compiler rewrites it to the site URL. A folder link ends in `/`. The path is resolved against the file's real location under `docs/`, so `../../platform/guides/migrations.md#some-anchor` reaches another project's page. An absolute `/docs/…` URL, or a relative path with no extension, fails the build: neither works on GitHub.
 
-That only works for another page also reachable from every one of this page's mounts — another `_shared` page mounted at least as widely, or a shared page one directory over. A shared page must not link to a page that exists in only one of its mount targets (a project-specific guide, an app's own overview); there is no path that resolves in the others. Either avoid the link and describe it in prose ("see the identity guide under your project's Infrastructure section"), or reach it generally — from `/docs/<project>/getting-started/x`, `../` always lands on that project's own `getting-started` overview and `../../` on the project's own `index.md`, which do exist in every mount.
+A `_shared` page is mounted into several projects, and its links have to mean the right thing in each:
+
+- A link from one shared page to another (`./troubleshooting.md#some-anchor`) lands on the same mount: `schedule-builder`'s copy links `schedule-builder`'s troubleshooting page. The check resolves it once per mount.
+- A project's own page links a mounted page by its shared file, since a mounted copy has no file of its own: `../_shared/getting-started/prerequisites.md` from `docs/workshops/index.md` lands on the workshops copy. The mounted path would 404 on GitHub, so the check refuses it and names the `_shared` path to use.
+- `?project=<slug>` names a specific project's copy: `../_shared/guides/stack/db.md?project=platform`. GitHub ignores the query.
+- A shared page must not link to a page that exists in only one of its mounts. Describe it in prose, or put the link in a `data-project` block ([Variants](./variants.md)) so it only exists in the copy that can reach it.
 
 ## How long a page gets to be
 
@@ -166,7 +171,7 @@ Anyone with the **Preview docs** permission can read scheduled pages early at `/
 
 Standard GitHub Flavored Markdown renders — headings, tables, task lists, blockquotes, code fences, autolinks. Beyond that:
 
-**Code blocks** take a language tag — `typescript`, `bash`, `sql` — and are highlighted by [Shiki](https://shiki.style). An unregistered language falls back to plain text silently rather than failing the build, so check the block rendered. A fence tagged with the extra word `nocheck` (for example ` ```bash nocheck `) is skipped by the command check described in [the docs system](/docs/toolkit/infrastructure/docs-system#checks) — use it for example output or a command from a tool this repo doesn't have, never to silence a check on a command that really should exist.
+**Code blocks** take a language tag — `typescript`, `bash`, `sql` — and are highlighted by [Shiki](https://shiki.style). An unregistered language falls back to plain text silently rather than failing the build, so check the block rendered. A fence tagged with the extra word `nocheck` (for example ` ```bash nocheck `) is skipped by the command check described in [the docs system](./index.md#checks) — use it for example output or a command from a tool this repo doesn't have, never to silence a check on a command that really should exist.
 
 **File diffs**: a top-level ` ```diff file=<path> ` fence around a unified diff renders as a diff viewer.
 
@@ -188,10 +193,10 @@ Standard GitHub Flavored Markdown renders — headings, tables, task lists, bloc
 
 **Raw HTML** is passed through. Prefer markdown where it can say the same thing.
 
-**Links** between docs pages use **site paths**, not file paths — the `.md` extension is not part of the URL, and a link into a mounted page names the destination project, not `_shared`:
+**Links** between docs pages are relative `.md` paths, as [Shared pages](#shared-pages) describes. External URLs and anything in a code fence are left alone:
 
 ```md
-See the [local preview](/docs/toolkit/infrastructure/docs-system/preview) page.
+See the [local preview](./preview.md) page, or the [migrations guide](../../../platform/guides/migrations.md#some-anchor).
 ```
 
 Anchor links work; heading ids are GitHub-style slugs of the heading text.
@@ -205,7 +210,7 @@ Rendering used to happen in the platform, per request, through `react-markdown` 
 
 ## Variants
 
-Tabs and blocks that differ by project, platform or Supabase setup have their own page: [Variants](./variants).
+Tabs and blocks that differ by project, platform or Supabase setup are `<details>` elements: [Variants](./variants.md).
 
 ## Why it's like this
 

@@ -7,7 +7,7 @@ section: infrastructure
 
 # The Docs System
 
-Everything under `docs/` is compiled into the platform site at build time, so a docs change ships with a deploy like any other change. Read this if you want to know where your markdown ends up and why nothing has to be invalidated. If you only want to write a page, go straight to [Writing docs](/docs/toolkit/infrastructure/docs-system/writing); for the local loop, [Local preview](/docs/toolkit/infrastructure/docs-system/preview). Nothing here is something you need to know to add a page.
+Everything under `docs/` is compiled into the platform site at build time, so a docs change ships with a deploy like any other change. Read this if you want to know where your markdown ends up and why nothing has to be invalidated. If you only want to write a page, go straight to [Writing docs](./writing.md); for the local loop, [Local preview](./preview.md). Nothing here is something you need to know to add a page.
 
 ## From markdown to page
 
@@ -15,7 +15,7 @@ Everything under `docs/` is compiled into the platform site at build time, so a 
 
 Rendering happens **in the compiler, at build time** — Shiki for code, KaTeX for math, GitHub alerts, the whole markdown-to-HTML pass — not in the platform app at request time. Each page in the emitted module already carries its rendered `html` string alongside its headings and search text; `DocPageContent` drops that string in with `dangerouslySetInnerHTML`, safe only because nothing a visitor wrote ever reaches it. The platform holds no markdown renderer of its own.
 
-Being a package is what makes the rest work. The platform depends on it, so pnpm's dependency-ordered recursive runs produce the artifact before `build`, `dev`, `typecheck`, `lint` or `test` runs against anything that needs it. There is no bespoke file watcher; see [Local preview](/docs/toolkit/infrastructure/docs-system/preview) for the manual re-run this takes instead.
+Being a package is what makes the rest work. The platform depends on it, so pnpm's dependency-ordered recursive runs produce the artifact before `build`, `dev`, `typecheck`, `lint` or `test` runs against anything that needs it. There is no bespoke file watcher; see [Local preview](./preview.md) for the manual re-run this takes instead.
 
 The docs routes import that module and render from memory:
 
@@ -43,9 +43,9 @@ Every page other than a project's own `index.md` carries a `section` in its fron
 
 `docs-kit check` runs two kinds of check over the hand-written pages, and they disagree on purpose about whether to fail the build.
 
-Prose checks — page length, collapsible defects, missing descriptions — **warn and never fail**; see [Writing docs](/docs/toolkit/infrastructure/docs-system/writing#why-its-like-this) for why. The bare `docs-kit` run prints the count on its summary line; `docs-kit check` prints the detail.
+Prose checks — page length, collapsible defects, missing descriptions — **warn and never fail**; see [Writing docs](./writing.md#why-its-like-this) for why. The bare `docs-kit` run prints the count on its summary line; `docs-kit check` prints the detail.
 
-Link and command checks are the opposite: they **fail the build**. Every link between docs pages is resolved against the pages that actually exist, and every `pnpm`/`devtools` command inside a fenced code block is checked against the real command tree, so a renamed page, a moved mount, or a removed CLI subcommand breaks the build the same day it happens rather than going stale until someone notices. A code block that isn't a command to run — example output, a hypothetical invocation, a snippet from another tool — opts out with a `nocheck` fence-info-string suffix:
+Link and command checks are the opposite: they **fail the build**. Every link between docs pages (a relative `.md` path, see [Writing docs](./writing.md#supported-syntax); an absolute `/docs/…` URL or an extensionless link is itself an error) is resolved against the pages that actually exist, and every `pnpm`/`devtools` command inside a fenced code block is checked against the real command tree, so a renamed page, a moved mount, or a removed CLI subcommand breaks the build the same day it happens rather than going stale until someone notices. A code block that isn't a command to run — example output, a hypothetical invocation, a snippet from another tool — opts out with a `nocheck` fence-info-string suffix:
 
 ````md
 ```bash nocheck
@@ -68,7 +68,7 @@ Heading ids are slugged with `github-slugger` — the same slugger `rehype-slug`
 
 Search is the one part that still uses Postgres, because it is the one part whose cost scales with how much documentation exists. `platform."docsPages"` holds `path`, `title`, `description` and `plainText` alongside a generated `tsvector` weighting title `A`, description `B` and body `C` — so page bodies are searchable, and a title match outranks a body match. `searchDocs` queries it with `websearch_to_tsquery`, ranks with `ts_rank`, and builds snippets with `ts_headline`.
 
-The build does not write that index. `pnpm -F @devdogsuga/docs populate:search` (`docs-kit index`) pushes the compiled artifact into the database through `platform.replace_docs_index`, and the dev server runs it after every docs change. The deploy workflow runs it after the platform Worker deploys — see [Local preview](/docs/toolkit/infrastructure/docs-system/preview) for pointing it at your own stack.
+The build does not write that index. `pnpm -F @devdogsuga/docs populate:search` (`docs-kit index`) pushes the compiled artifact into the database through `platform.replace_docs_index`, and the dev server runs it after every docs change. The deploy workflow runs it after the platform Worker deploys — see [Local preview](./preview.md) for pointing it at your own stack.
 
 <details>
 <summary>Why Postgres rather than an in-memory JS index?</summary>
