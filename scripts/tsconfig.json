@@ -1,0 +1,10 @@
+{
+  "extends": "@devdogsuga/config/tsconfig/lib.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"]
+  },
+  "include": ["patch-audit.ts", "patch-audit.test.ts", "../vitest.config.ts"]
+}

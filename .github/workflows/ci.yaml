@@ -97,6 +97,17 @@ jobs:
       # everywhere.
       - name: Package scripts use the shared vocabulary
         run: pnpm devtools check scripts
+      # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
+      # and the files in patches/ (a mismatch fails here), then each patch's
+      # upstream PRs/issues and the npm release that carries the fix. The
+      # upstream half only warns (`::warning::` annotations when a patch can be
+      # dropped, or when GitHub/npm can't be reached); it never fails the job.
+      - name: Patches are documented, and flagged when upstream fixes them
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          pnpm test:patches
+          pnpm check:patches
       # Flutter isn't installed here — the study-group-finder app is validated
       # in the `flutter` job below.
       #

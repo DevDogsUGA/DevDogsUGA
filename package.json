@@ -13,6 +13,8 @@
     "lint": "pnpm -r -F '!study-group-finder' run lint",
     "lint:fix": "pnpm -r -F '!study-group-finder' run lint:fix",
     "test": "pnpm -r -F '!study-group-finder' run test",
+    "check:patches": "tsx scripts/patch-audit.ts",
+    "test:patches": "vitest run",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore"
   },
@@ -28,6 +30,7 @@
     "supabase": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
+    "vitest": "catalog:",
     "zod": "catalog:"
   },
   "packageManager": "pnpm@11.8.0"
