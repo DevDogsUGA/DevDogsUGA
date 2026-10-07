@@ -19,6 +19,6 @@
     "@devdogsuga/docs-kit": "workspace:*"
   },
   "devDependencies": {
-    "@devdogsuga/env": "^0.1.4"
+    "@devdogsuga/env": "^0.1.8"
   }
 }

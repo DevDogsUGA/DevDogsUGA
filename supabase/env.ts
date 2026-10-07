@@ -15,7 +15,7 @@
  * value: the CLI matches it anchored. That is why the callbacks are their
  * own variables rather than `"env(BASE_URL)/auth/callback"`.
  */
-import { declare, define, type EnvMeta } from "@devdogsuga/env";
+import { declare, define, type DefineMeta } from "@devdogsuga/env";
 import { z } from "zod";
 
 /**
@@ -28,7 +28,7 @@ import { z } from "zod";
  * `ProjectConfigParseError`, hence `.optional()` rather than a default.
  */
 const provider = (name: string, idExample?: string) => {
-  const id: EnvMeta = {
+  const id: DefineMeta = {
     doc: `OAuth client id for the ${name} provider in config.toml. Unset disables the provider locally; an EMPTY value makes the Supabase CLI fail with ProjectConfigParseError.`,
     scope: "environment",
     secrecy: "public",

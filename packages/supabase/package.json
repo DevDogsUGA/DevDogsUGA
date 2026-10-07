@@ -32,7 +32,7 @@
   "devDependencies": {
     "@devdogsuga/config": "^0.1.1",
     "@devdogsuga/db": "^0.1.1",
-    "@devdogsuga/env": "^0.1.4",
+    "@devdogsuga/env": "^0.1.8",
     "@supabase/supabase-js": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

@@ -31,7 +31,7 @@
   "dependencies": {
     "@devdogsuga/brand": "^0.1.9",
     "@devdogsuga/db": "^0.1.1",
-    "@devdogsuga/env": "^0.1.4",
+    "@devdogsuga/env": "^0.1.8",
     "@devdogsuga/headers": "0.1.1",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "^0.1.1",
@@ -70,7 +70,7 @@
     "@cloudflare/vite-plugin": "^1.57.1",
     "@cloudflare/workers-types": "^5.20260820.1",
     "@devdogsuga/config": "^0.1.1",
-    "@devdogsuga/env": "^0.1.4",
+    "@devdogsuga/env": "^0.1.8",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "catalog:",

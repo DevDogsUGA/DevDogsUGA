@@ -8,13 +8,11 @@
     "devtools": "pnpm --config.ignore-scripts=true dlx @devdogsuga/devtools",
     "backstage": "pnpm --config.ignore-scripts=true dlx @devdogsuga/backstage",
     "build": "pnpm -r -F './apps/**' -F '!study-group-finder' run build",
-    "dev": "echo 'Start one app: pnpm -F <app> dev, or cd apps/<app> && pnpm dev (apps: platform, schedule-builder)'",
+    "dev": "echo 'Start one app: pnpm -F <app> dev, or cd apps/<app> && pnpm dev (app: schedule-builder)'",
     "typecheck": "pnpm -r -F '!study-group-finder' run typecheck",
     "lint": "pnpm -r -F '!study-group-finder' run lint",
     "lint:fix": "pnpm -r -F '!study-group-finder' run lint:fix",
     "test": "pnpm -r -F '!study-group-finder' run test",
-    "check:patches": "tsx scripts/patch-audit.ts",
-    "test:patches": "vitest run",
     "test:deploy-pr": "node --test \".github/scripts/*.test.mjs\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore"
@@ -24,14 +22,13 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.1",
-    "@devdogsuga/env": "^0.1.4",
+    "@devdogsuga/env": "^0.1.8",
     "@types/node": "catalog:",
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "supabase": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "zod": "catalog:"
   },
   "packageManager": "pnpm@11.8.0"
