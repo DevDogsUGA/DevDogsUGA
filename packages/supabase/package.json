@@ -22,12 +22,14 @@
     "supabase"
   ],
   "scripts": {
+    "codegen": "tsx scripts/codegen.ts",
+    "pretypecheck": "pnpm run codegen",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p ../../supabase",
+    "pretest": "pnpm run codegen",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rls": "with-env vitest run --config vitest.rls.config.ts",
-    "types:db": "with-env -c 'supabase gen types --db-url \"$DB_URL\" > src/database.types.ts.tmp && mv src/database.types.ts.tmp src/database.types.ts && prettier --write src/database.types.ts'",
-    "types:db:check": "pnpm run types:db && git diff --exit-code -- src/database.types.ts"
+    "pretest:rls": "pnpm run codegen",
+    "test:rls": "with-env vitest run --config vitest.rls.config.ts"
   },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.1",

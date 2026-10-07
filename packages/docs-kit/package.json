@@ -18,9 +18,12 @@
     "src"
   ],
   "scripts": {
+    "pretypecheck": "pnpm --filter @devdogsuga/supabase run codegen",
     "typecheck": "tsc --noEmit",
+    "pretest": "pnpm --filter @devdogsuga/supabase run codegen",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prelint": "pnpm --filter @devdogsuga/supabase run codegen",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src"
   },
