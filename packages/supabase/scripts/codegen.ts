@@ -16,7 +16,13 @@
  *
  * Backstage runs this same script in its DevDogsUGA sibling
  * (`pnpm --filter @devdogsuga/supabase run codegen`), so the script name and
- * the output path are a contract.
+ * the output path are a contract. So is `BACKSTAGE_SUPABASE_TYPES`, which
+ * Backstage's CI sets where there is no database to generate from:
+ *
+ *   skip      generate nothing: the credential-free deploy build, where every
+ *             import of the type is erased (schedule-builder's `prebuild`
+ *             runs this).
+ *   provided  CI restored the file from its cache; use it as it is.
  *
  * Caveat: the stamp covers the migrations, not the database. A stack that was
  * started before you pulled new migrations yields types for the old schema
@@ -67,6 +73,14 @@ function fail(message: string, cleanup?: string): never {
 }
 
 function main(): void {
+  const mode = process.env.BACKSTAGE_SUPABASE_TYPES;
+  if (mode === "skip" || (mode === "provided" && existsSync(output))) {
+    console.log(
+      `database.types.ts: BACKSTAGE_SUPABASE_TYPES=${mode}, not generating.`,
+    );
+    return;
+  }
+
   const hash = hashMigrations(migrationsDir);
   if (
     existsSync(output) &&
