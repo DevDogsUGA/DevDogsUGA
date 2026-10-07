@@ -3,13 +3,15 @@
 // full commit SHA; merging the PR there deploys staging, and production waits
 // for its `production` approval.
 //
-// No dependencies and no Backstage checkout: everything goes through the REST
-// API, so the commit is authored by the GitHub App whose token is in GH_TOKEN.
+// No dependencies and no Backstage checkout: everything in Backstage goes
+// through the REST API, so the commit is authored by the GitHub App whose token
+// is in GH_TOKEN. The change list comes from this repository's own checkout
+// (full history), not the compare API, which stops listing files at 300.
 //
 //   GH_TOKEN    App token for Backstage (contents + pull_requests write)
-//   SRC_TOKEN   token that can read this repository (the workflow's own)
 //   NEW_SHA     the DevDogsUGA commit to deploy (github.sha)
 //   SRC_REPO    DevDogsUGA/DevDogsUGA (github.repository)
+import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 export const TARGET_REPO = "DevDogsUGA/Backstage";
@@ -107,27 +109,31 @@ async function must(token, method, path, body) {
   return res.json;
 }
 
-async function changedFiles(token, srcRepo, oldSha, newSha) {
+/**
+ * Paths changed old..new, from the local checkout, or null when they cannot be
+ * listed (no old pin is [], an old pin missing from this history is null).
+ *
+ * ⚠️ Not the compare API: it lists at most 300 files, alphabetically, so a
+ * large range (removing apps/platform) hid every docs/, packages/ and
+ * supabase/ change, migrations included, and the PR said "nothing".
+ */
+function changedFiles(oldSha, newSha) {
   if (!oldSha) return [];
-  const files = [];
-  for (let page = 1; page <= 10; page++) {
-    const res = await api(
-      token,
-      "GET",
-      `/repos/${srcRepo}/compare/${oldSha}...${newSha}?per_page=100&page=${page}`,
-    );
-    // The old pin can be unreachable (force-pushed away); the PR is still useful.
-    if (!res.ok) return null;
-    const batch = res.json.files ?? [];
-    files.push(...batch.map((f) => f.filename));
-    if (batch.length < 100) return files;
+  try {
+    return execFileSync("git", ["diff", "--name-only", oldSha, newSha], {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    })
+      .split("\n")
+      .filter(Boolean);
+  } catch {
+    return null;
   }
-  return null;
 }
 
 async function run() {
-  const { GH_TOKEN, SRC_TOKEN, NEW_SHA, SRC_REPO } = process.env;
-  for (const [name, value] of Object.entries({ GH_TOKEN, SRC_TOKEN, NEW_SHA, SRC_REPO })) {
+  const { GH_TOKEN, NEW_SHA, SRC_REPO } = process.env;
+  for (const [name, value] of Object.entries({ GH_TOKEN, NEW_SHA, SRC_REPO })) {
     if (!value) throw new Error(`${name} is not set`);
   }
   const newSha = NEW_SHA;
@@ -149,7 +155,7 @@ async function run() {
     return;
   }
 
-  const files = await changedFiles(SRC_TOKEN, SRC_REPO, oldSha, newSha);
+  const files = changedFiles(oldSha, newSha);
   const { title, body } = buildPlan({ srcRepo: SRC_REPO, oldSha, newSha, files });
 
   // One commit on top of Backstage main, authored by the App (no author given).
