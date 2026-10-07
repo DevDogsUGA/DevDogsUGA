@@ -140,10 +140,11 @@ repository and runs from a clone of it:
 ```bash nocheck
 cd Backstage
 pnpm install && pnpm build
-node packages/backstage/bin/backstage.mjs --help
+pnpm backstage --help
 ```
 
-These docs write that as `backstage <command>`. Officers can alias it. Backstage
+These docs write that as `backstage <command>`, meaning `pnpm backstage
+<command>` from the Backstage clone. Backstage
 uses a sibling clone of this repository at `../DevDogsUGA` (set `DEVDOGSUGA_DIR`
 to move it; `pnpm devdogsuga` in Backstage shows where it points), and pins the
 exact commit it deploys in `devdogsuga.lock`. See [Images](./images.md) and
