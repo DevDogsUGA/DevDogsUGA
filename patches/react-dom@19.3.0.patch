@@ -1,5 +1,5 @@
 diff --git a/cjs/react-dom-client.development.js b/cjs/react-dom-client.development.js
-index b9bb0b5bd00886f4ba53a0f3608d04dcc7567320..7942caeed10541a98dcc39170955e6d635b140fb 100644
+index 4dd36a656f3fa9df683b45455831bcf1dedf33f7..e08f189db576cb6efe869a9fba5350b8b6718a4d 100644
 --- a/cjs/react-dom-client.development.js
 +++ b/cjs/react-dom-client.development.js
 @@ -12,6 +12,24 @@
@@ -27,9 +27,9 @@ index b9bb0b5bd00886f4ba53a0f3608d04dcc7567320..7942caeed10541a98dcc39170955e6d6
  "production" !== process.env.NODE_ENV &&
    (function () {
      function findHook(fiber, id) {
-@@ -25625,7 +25643,7 @@
-         _currentRenderer2: null
+@@ -28271,7 +28289,7 @@
        },
+       entangledTransitionTypes = null,
        now = Scheduler.unstable_now,
 -      createTask = console.createTask
 +      createTask = workerdSupportsConsoleCreateTask()
@@ -37,7 +37,7 @@ index b9bb0b5bd00886f4ba53a0f3608d04dcc7567320..7942caeed10541a98dcc39170955e6d6
          : function () {
              return null;
 diff --git a/cjs/react-dom-profiling.development.js b/cjs/react-dom-profiling.development.js
-index dfabf7b22ffe706608e5a34331a020ce0ffc3e5a..a8ffe445f9e16ddf2b5e6fc51e624d6f237cc1e1 100644
+index 2bb86d82c9a19adfcd73a1252bfc5b3feff71ffc..47ab0bb68efcff95a3ddb41350c3929d2e48a98d 100644
 --- a/cjs/react-dom-profiling.development.js
 +++ b/cjs/react-dom-profiling.development.js
 @@ -12,6 +12,24 @@
@@ -65,9 +65,9 @@ index dfabf7b22ffe706608e5a34331a020ce0ffc3e5a..a8ffe445f9e16ddf2b5e6fc51e624d6f
  "production" !== process.env.NODE_ENV &&
    (function () {
      function findHook(fiber, id) {
-@@ -25677,7 +25695,7 @@
-         _currentRenderer2: null
+@@ -28329,7 +28347,7 @@
        },
+       entangledTransitionTypes = null,
        now = Scheduler.unstable_now,
 -      createTask = console.createTask
 +      createTask = workerdSupportsConsoleCreateTask()

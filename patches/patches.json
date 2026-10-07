@@ -10,8 +10,8 @@
     "releasedIn": "@vinext/cloudflare",
     "notes": "Removable once a @vinext/cloudflare release newer than 1.0.1 carries the fix. Added 06673ef3, re-pointed e1877fb1."
   },
-  "react@19.2.8": {
-    "file": "react@19.2.8.patch",
+  "react@19.3.0": {
+    "file": "react@19.3.0.patch",
     "why": "workerd defines console.createTask but it throws, so `vinext dev` 500s. The patch disables createTask when navigator.userAgent is \"Cloudflare-Workers\". Dev-only.",
     "upstream": [
       "https://github.com/cloudflare/vinext/pull/3233",
@@ -23,8 +23,8 @@
     "releasedIn": "vinext",
     "notes": "TASK-294, added cf793e32. Removable when EITHER vinext ships the fallback (PR 3233, in a vinext release) OR workerd implements createTask (issues 6408, 6488). Keep in step with react-dom and react-server-dom-webpack."
   },
-  "react-dom@19.2.8": {
-    "file": "react-dom@19.2.8.patch",
+  "react-dom@19.3.0": {
+    "file": "react-dom@19.3.0.patch",
     "why": "Same createTask guard as the react patch, applied to react-dom: workerd's console.createTask throws, so `vinext dev` 500s. Dev-only.",
     "upstream": [
       "https://github.com/cloudflare/vinext/pull/3233",

@@ -40,7 +40,7 @@ Shared versions live in the `catalog:` block of `pnpm-workspace.yaml`.
 | Layer           | Technology                                            | Version                          |
 | --------------- | ----------------------------------------------------- | -------------------------------- |
 | Framework       | Next.js, App Router, built by vinext                  | 16.3.2, vinext 1.0.0-beta.11     |
-| UI              | React / React DOM                                     | 19.2.8                           |
+| UI              | React / React DOM                                     | 19.3.0                           |
 | Styling         | Tailwind CSS                                          | 4.3.3                            |
 | Hosting         | Cloudflare Workers, `@cloudflare/vite-plugin`         | wrangler ^4.136.3                |
 | Data            | Supabase — Postgres 17, `supabase-js`                 | 2.112.3, CLI 2.115.0             |
