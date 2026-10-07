@@ -39,7 +39,7 @@ nothing to break.
 
 ## Run it
 
-```bash
+```bash nocheck
 pnpm -F platform dev
 ```
 
@@ -48,7 +48,7 @@ need to be signed in — `PUBLIC_LINKS` is, as the name says, public.
 
 ## Check it
 
-```bash
+```bash nocheck
 pnpm --filter platform lint
 pnpm --filter platform typecheck
 pnpm --filter platform test

@@ -9,9 +9,12 @@ section: guides
 
 The `platform` commands below run from a [Backstage](https://github.com/DevDogsUGA/Backstage) clone, where the app lives; the RLS suite runs here.
 
-```bash
+```bash nocheck
 pnpm --filter platform test        # vitest, unit — no database
 pnpm --filter platform test:db     # vitest against a live database
+```
+
+```bash
 pnpm --filter @devdogsuga/supabase test:rls   # the RLS persona suite
 ```
 
