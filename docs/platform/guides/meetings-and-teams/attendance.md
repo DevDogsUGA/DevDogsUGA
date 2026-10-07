@@ -42,7 +42,7 @@ unique, so retries and duplicate scans return the existing receipt.
 `platform.attendance` stores one row per member and meeting. `method` records
 `qr` or `manual_code` for a member's own check-in, or `import` for a row an
 officer added with the CLI. Check-in is the only writer from the platform. The
-one other writer is `pnpm backstage import attendance --meeting <date> --file
+one other writer is `backstage import attendance --meeting <date> --file
 <csv>`, which an officer runs from a sign-in form or sheet for a meeting where
 members could not check in. Imported rows carry method `import`, stamped with
 the meeting's start, so they stay distinguishable: re-running the import with
@@ -97,9 +97,9 @@ Officers download a CSV snapshot of stars, attendance, or reflections with the
 officer CLI, not from the platform:
 
 ```sh
-pnpm backstage export stars --from 2026-08-17 --to 2026-12-12
-pnpm backstage export attendance --meeting 2026-09-09
-pnpm backstage export reflections --from 2026-08-17
+backstage export stars --from 2026-08-17 --to 2026-12-12
+backstage export attendance --meeting 2026-09-09
+backstage export reflections --from 2026-08-17
 ```
 
 Each takes `--from`/`--to`; `attendance` also takes `--meeting <date>` to
@@ -115,7 +115,7 @@ attendance in elsewhere: a Bevy attendee import for the GDG event page
 (`involvement`). Pick several at once; each file is audited separately:
 
 ```sh
-pnpm backstage export attendance --meeting 2026-09-09 --format platform,bevy,involvement
+backstage export attendance --meeting 2026-09-09 --format platform,bevy,involvement
 ```
 
 `--from`/`--to` are Eastern days (`--to` inclusive) and filter stars and

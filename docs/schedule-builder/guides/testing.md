@@ -28,12 +28,12 @@ the generated schema's query validity. Start with a database first:
 ```bash
 pnpm devtools supabase start
 pnpm devtools supabase db reset
-pnpm -F @devdogsuga/supabase types:db
+pnpm --filter @devdogsuga/supabase run codegen
 ```
 
 ## Cloudflare preview, not `next dev`
 
-The app deploys to Workers through vinext, and a preview build behaves
+The app deploys to Workers through vinext (by [Backstage](https://github.com/DevDogsUGA/Backstage), not from this repository), and a preview build behaves
 differently from `next dev` (it runs on `workerd`, the same runtime as
 production). Copy `.dev.vars.example` to `.dev.vars`, then:
 
@@ -54,10 +54,10 @@ on drift.
   `schedule-builder` included, alongside lint, typecheck and the workspace
   build.
 - **`database`** is unconditional, not gated on what changed. It starts a
-  local Supabase stack on an empty runner volume, checks the committed
-  `database.types.ts` against a fresh regeneration, runs the RLS persona
-  suite (`pnpm --filter @devdogsuga/supabase test:rls`) and `test:db` for
-  both `schedule-builder` and `platform`.
+  local Supabase stack on an empty runner volume, generates the database
+  types from it, then runs the RLS persona suite
+  (`pnpm --filter @devdogsuga/supabase test:rls`) and `test:db` for
+  `schedule-builder`.
 
 See [Ingestion](./ingestion.md) for what
 `reconcileTerm.db-test.ts` actually exercises, and

@@ -7,11 +7,11 @@ section: infrastructure
 
 # Cloudflare
 
-Everything here deploys to Cloudflare Workers: two Next.js apps (`platform`, `schedule-builder`) built by **vinext** `1.0.0-beta.11`. wrangler is `^4.136.3`. Read this before deploying, adding a binding, or picking a library that speaks HTTP: the restrictions here are unusual and the failures quiet. [Cloudflare's docs](https://developers.cloudflare.com/workers/) teach Workers; this does not.
+Everything deploys to Cloudflare Workers: two Next.js apps built by **vinext** `1.0.0-beta.11`. `schedule-builder` is in this repository; `platform` is in the officers' [Backstage](https://github.com/DevDogsUGA/Backstage) repository, and so is every deploy. wrangler is `^4.136.3`. Read this before adding a binding or picking a library that speaks HTTP: the restrictions here are unusual and the failures quiet. [Cloudflare's docs](https://developers.cloudflare.com/workers/) teach Workers; this does not.
 
 ## Building with vinext
 
-Each Next app's `vite.config.ts` calls `vinext()` and `cloudflare()` (`@cloudflare/vite-plugin`) as Vite plugins. There is no `open-next.config.ts` in this repo any more — vinext compiles the app with Vite directly rather than wrapping a Next build with a separate adapter.
+Each Next app's `vite.config.ts` calls `vinext()` and `cloudflare()` (`@cloudflare/vite-plugin`) as Vite plugins. There is no `open-next.config.ts` in either repo any more — vinext compiles the app with Vite directly rather than wrapping a Next build with a separate adapter.
 
 Both apps keep a **custom Worker entry**, `cloudflare/worker.ts`, named by wrangler's `main`, instead of deploying straight from vinext's own `vinext/server/app-router-entry` handler (the path vinext expects when there is nothing else to add). The custom entry exists to compose two things that entry doesn't cover on its own:
 
@@ -35,7 +35,7 @@ A `(site)` page is served from the Workers Cache, shared by every visitor, only 
 - **It declares a policy.** A page with no `revalidate` export is never written to the cache. Public pages export one: `false` for pages built from the repo (docs, changelog, legal), a number of seconds for ones that read the database (the homepage and competitions every minute, `/events` every five).
 - **Nothing in its render reads the request.** `cookies()`, `headers()`, `connection()` or `searchParams` anywhere in the tree, root layout included, makes it dynamic. That's why the navbar's user comes from `GET /me` on the client ([navigation](../../platform/guides/navigation.md)).
 - **Middleware leaves the request alone.** vinext skips the shared cache whenever middleware forwards request headers (`NextResponse.next({ request })`). The platform's middleware forwards them only on `/tools` and when a session's tokens rotate.
-- **No CSP nonce at render.** vinext won't cache HTML rendered under a request nonce. Pages render with none, and the Worker entry (`apps/platform/cloudflare/nonce.ts`) stamps a fresh one onto every `<script>` of every HTML response with `HTMLRewriter`, cache hits included, and sends the matching policy. That trusts every script in the HTML, so the docs compiler fails the build on a `<script>`, an `on*` attribute or a `javascript:` URL in a page.
+- **No CSP nonce at render.** vinext won't cache HTML rendered under a request nonce. Pages render with none, and the Worker entry (`apps/platform/cloudflare/nonce.ts` in Backstage) stamps a fresh one onto every `<script>` of every HTML response with `HTMLRewriter`, cache hits included, and sends the matching policy. That trusts every script in the HTML, so the docs compiler fails the build on a `<script>`, an `on*` attribute or a `javascript:` URL in a page.
 
 `wrangler dev` doesn't emulate the Workers Cache, so a local preview renders every request and never shows `X-Vinext-Cache`; check that header on staging. Entries are keyed by the deployment's version, so a deploy starts from an empty cache. `@vinext/cloudflare` is patched (see `pnpm-workspace.yaml`) because its cached stage followed redirects inside the Worker, which turned every redirecting page into a 500 once pages started using it.
 
@@ -66,14 +66,12 @@ Staging's `triggers.crons` is empty on purpose rather than merely omitted: stagi
 
 ## Deploying
 
-`.github/workflows/deploy-app.yaml` is the reusable deploy job both `staging-deploy` and `production-deploy` call. For each of `platform` and `schedule-builder`, in a matrix:
+Nothing in this repository deploys. A push to `main` here, once CI is green, opens or updates a deploy pull request in [Backstage](https://github.com/DevDogsUGA/Backstage) that moves its `devdogsuga.lock` to the new commit; merging it deploys staging, and production waits behind the `production` environment for a `devops` reviewer. Backstage's `.github/workflows/deploy.yaml` runs, for each of `platform` and `schedule-builder`:
 
 ```bash
 DEPLOY_ENV=<staging|production> pnpm -F <app> build  # with-env vinext build, env validation enforced
 ```
 
-Workspace packages export TypeScript source, so there is no package build step. The `prebuild` script runs codegen before the build.
+then `backstage deploy` subcommands: `write-env` composes the env file, `preflight` classifies the project as paused (skip) or broken (fail), `plan` and `migrate` dry-run and apply the migrations, `<app>` checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file and runs `wrangler deploy`, and `smoke` and `reconcile` check the result and reconcile the platform's config. `backstage deploy --help` lists them. The platform's docs search index is refreshed after its Worker deploys with `pnpm -F @devdogsuga/docs populate:search`. `schedule-builder` is built from this repository's commit pinned in the lock, so Backstage's deploy checks it out beside its own code.
 
-Every other deploy step is a `pnpm backstage deploy` subcommand, run through `dlx` at the latest published version: `write-env` composes the env file, `preflight` classifies the project as paused (skip) or broken (fail), `plan` and `migrate` dry-run and apply the migrations, `<app>` checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file and runs `wrangler deploy`, and `smoke` and `reconcile` check the result and reconcile the platform's config. `pnpm backstage deploy --help` lists them. The platform's docs search index is refreshed after its Worker deploys with `pnpm -F @devdogsuga/docs populate:search`.
-
-The `Compose .env.<tier>` step is the only step in the whole workflow that reads the `secrets` and `vars` GitHub Actions contexts — after it runs, the checkout looks like a contributor's laptop with a filled-in env file, and every later step is a command you could run by hand.
+The `Compose .env.<tier>` step is the only step in the workflow that reads the `secrets` and `vars` GitHub Actions contexts — after it runs, the checkout looks like a contributor's laptop with a filled-in env file, and every later step is a command you could run by hand. The workflow, its environments and its secrets are documented in Backstage's README.

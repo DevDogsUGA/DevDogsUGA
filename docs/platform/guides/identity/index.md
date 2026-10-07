@@ -9,13 +9,13 @@ section: guides
 
 Two things in this repository are called "the DevDogs identity", and they point in opposite directions. Read the row that matches what you are doing and skip the other.
 
-|              | [Sign in with DevDogs](../../../_shared/getting-started/running.md) | [The DevDogs GitHub App](../../../toolkit/infrastructure/github-app.md) |
-| ------------ | ------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| What it is   | DevDogs Auth acting as an OAuth 2.1 / OIDC provider                 | the machine account `apps/platform` authenticates as on GitHub          |
-| Direction    | **inbound** — another project signs a DevDogs member in             | **outbound** — the platform administers the `DevDogsUGA` organization   |
-| Who needs it | a sibling project adding a sign-in button                           | whoever deploys or operates the platform                                |
-| Credential   | a client id and secret, per project, from `/tools/oauth`            | `GH_APP_ID`, `GH_APP_INSTALLATION_ID` and `GH_APP_PRIVATE_KEY`          |
-| Set up by    | `pnpm devtools oauth`, run in the consuming project                 | by hand in GitHub's UI, once, then `pnpm backstage env push`            |
+|              | [Sign in with DevDogs](../../../_shared/getting-started/running.md) | [The DevDogs GitHub App](../../../toolkit/infrastructure/github-app.md)                    |
+| ------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| What it is   | DevDogs Auth acting as an OAuth 2.1 / OIDC provider                 | the machine account the platform (`apps/platform` in Backstage) authenticates as on GitHub |
+| Direction    | **inbound** — another project signs a DevDogs member in             | **outbound** — the platform administers the `DevDogsUGA` organization                      |
+| Who needs it | a sibling project adding a sign-in button                           | whoever deploys or operates the platform                                                   |
+| Credential   | a client id and secret, per project, from `/tools/oauth`            | `GH_APP_ID`, `GH_APP_INSTALLATION_ID` and `GH_APP_PRIVATE_KEY`                             |
+| Set up by    | `pnpm devtools oauth`, run in the consuming project                 | by hand in GitHub's UI, once, then `backstage env push`                                    |
 
 The difference that matters: one issues identity to other people's apps, the other is an identity the platform holds. Neither authenticates the other.
 

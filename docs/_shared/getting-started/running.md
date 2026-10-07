@@ -120,7 +120,7 @@ If that hangs or errors, see [Docker not running](./troubleshooting.md#docker-no
 ```bash
 pnpm devtools supabase start             # boots the Docker containers, writes .env.generated
 pnpm devtools supabase db reset          # migrations, then seeds
-pnpm -F @devdogsuga/supabase types:db    # regenerate the committed database types
+pnpm --filter @devdogsuga/supabase run codegen   # generate the (gitignored) database types
 pnpm devtools supabase seed buckets      # create the storage buckets
 ```
 
@@ -253,6 +253,10 @@ guide under Infrastructure in the platform docs.
 
 <details data-project="platform">
 <summary>For Platform</summary>
+
+The platform app lives in [Backstage](https://github.com/DevDogsUGA/Backstage), not in this repository. Clone it
+next to this one, as [Your first contribution](../../platform/getting-started/first-contribution.md)
+describes, and run this from there:
 
 ```bash
 pnpm -F platform dev

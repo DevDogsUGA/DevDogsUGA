@@ -76,7 +76,7 @@ pnpm -F @devdogsuga/docs codegen          # cached: `docs-kit gen && docs-kit`
 pnpm -F @devdogsuga/docs codegen --force  # bypass the cache
 ```
 
-The platform's `codegen` runs it for you, so `pnpm -F platform dev`, `build`,
+The platform's `codegen` (in Backstage) runs it for you, so `pnpm -F platform dev`, `build`,
 `lint`, `typecheck` and `test` all start from a current artifact.
 
 The search index is a separate step because it writes to a database, not to
@@ -87,8 +87,8 @@ whichever database your session points at:
 pnpm -F @devdogsuga/docs populate:search
 ```
 
-The platform's dev server runs it after every docs change, and the deploy
-workflow runs it after the platform Worker deploys. To run the other modes
+The platform's dev server runs it after every docs change, and Backstage's
+deploy workflow runs it after the platform Worker deploys. To run the other modes
 directly instead, from `docs/`:
 
 ```bash

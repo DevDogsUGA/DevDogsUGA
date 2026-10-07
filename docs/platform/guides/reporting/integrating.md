@@ -29,7 +29,7 @@ const { data, error } = await supabase.schema("platform").rpc("file_report", {
 
 Argument names and result shapes both come from `supabase gen types`, so the compiler checks them against the actual functions. `supabase` is your app's ordinary client, scoped to your own schema; `.schema("platform")` is the hop. The labels come free too: `Database["platform"]["Enums"]["reportReason"]` as a union, `Constants.platform.Enums.reportReason` as a runtime array, both from `@devdogsuga/supabase`.
 
-There is also a `<ReportDialog>` in `apps/platform/src/components/moderation/`, themed by `--dd-*` custom properties through its `theme` and `classNames` props — the full prop list is in `apps/platform/src/components/moderation/ReportDialog.tsx`. An app outside this repository copies it; nothing here is published.
+There is also a `<ReportDialog>` in `apps/platform/src/components/moderation/` in [Backstage](https://github.com/DevDogsUGA/Backstage), themed by `--dd-*` custom properties through its `theme` and `classNames` props — the full prop list is in `ReportDialog.tsx` beside it. An app outside Backstage copies it; nothing here is published.
 
 ```tsx
 import { ReportDialog } from "~/components/moderation";

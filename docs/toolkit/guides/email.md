@@ -7,7 +7,7 @@ section: guides
 
 # email
 
-`@devdogsuga/email` is one call in almost every case:
+`@devdogsuga/email` lives in the [Backstage](https://github.com/DevDogsUGA/Backstage) repository at `packages/email`, beside the platform that sends with it; run the commands below from there. It is one call in almost every case:
 
 ```ts
 import { render } from "@devdogsuga/email";
@@ -91,4 +91,4 @@ like, and read it in review: because the sentinels survive, a design change
 shows up as a diff about the template rather than about whichever fixture values
 happened to be used. There is no preview server.
 
-The package lives in the Backstage repository, which generates its API reference.
+Every export is in `packages/email/src` in Backstage.

@@ -90,8 +90,7 @@ Common jobs that take a few tool calls in a row:
 - `restart-stack` — stop and start the local stack, which is how a changed
   `config.toml` lands.
 - `new-migration` — create an empty migration for an app's schema.
-- `apply-migrations` — push new migrations to the session's database, then ask
-  about `types:db`.
+- `apply-migrations` — push new migrations to the session's database.
 - `push-config` — show the diff, then push `config.toml` to the session's
   hosted project.
 
@@ -120,10 +119,9 @@ These were `preset <name>`; the old spelling is refused with the new one.
 
 ### Checks
 
-`check migrations|env|workers|scripts` are what CI runs over the checkout:
+`check migrations|env|scripts` are what CI runs over the checkout:
 migrations are timestamped after the base branch's, every env variable is
-declared, `workers.json` agrees with `wrangler.jsonc` and `deploy-app.yaml`, and
-package scripts use the shared vocabulary. They read the checkout and nothing
+declared, and package scripts use the shared vocabulary. They read the checkout and nothing
 else — no tier, no env file.
 
 ```bash
@@ -134,11 +132,24 @@ pnpm devtools check scripts
 ### What lives elsewhere
 
 Anything that always needs production secrets, or only your own login, is in
-`@devdogsuga/backstage`: deploys, `env pull|push|audit`, GitHub rulesets, the
-newsletter, club images and QR codes. Inside this repo it is `pnpm backstage …`;
-see [Images](./images.md) and [Environment commands](./env/commands.md).
-Package scripts own the rest: `types:db`, `types:drizzle`, `types:cf`,
-`fetch:campus-map` and `preview`.
+the officer CLI, `backstage`: deploys, `env pull|push|audit`, GitHub rulesets,
+the newsletter, club images and QR codes, and the member data imports and
+exports. It is not published. It lives in the [Backstage](https://github.com/DevDogsUGA/Backstage)
+repository and runs from a clone of it:
+
+```bash nocheck
+cd Backstage
+pnpm install && pnpm build
+node packages/backstage/bin/backstage.mjs --help
+```
+
+These docs write that as `backstage <command>`. Officers can alias it. Backstage
+uses a sibling clone of this repository at `../DevDogsUGA` (set `DEVDOGSUGA_DIR`
+to move it; `pnpm devdogsuga` in Backstage shows where it points), and pins the
+exact commit it deploys in `devdogsuga.lock`. See [Images](./images.md) and
+[Environment commands](./env/commands.md).
+Package scripts own the rest: `codegen` for the database types, `types:drizzle`
+and `types:cf` (both in Backstage's platform app), `fetch:campus-map` and `preview`.
 
 ## Running background jobs
 
@@ -223,7 +234,7 @@ no menu and no banner, the tier must be named (`--tier` or `DEPLOY_ENV`), and
 every confirmation needs `--yes`. `--no-env` skips loading env files, for a job
 that supplies its own.
 
-The deployment pipeline uses `pnpm backstage`, not devtools, so CI-only deploy
+The deployment pipeline, which runs in Backstage, uses `backstage`, not devtools, so CI-only deploy
 steps never appear in the contributor menu.
 
 See [Running the database](./devtools-db.md) and

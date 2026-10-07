@@ -32,7 +32,7 @@ One constraint on `workshops` carries most of the remaining meaning: it declares
 
 The meetings/workshops schema is `supabase/migrations/20260829040000_11_platform_events_core.sql`, amended in place for the config-as-code cutover: `meetings.countsTowardProgress` and `elEligible` merged into one `countsForCredit` flag, `meetings.surveyUrl` was added (and `configId` columns, since superseded by the authored slug), `workshops.projectId` and the `projects` table were dropped in favor of `workshops."project"` as free text. That same migration carries the competitions mirror now too -- see [Competitions](./competitions.md) for its shape. `20260829050100_16_platform_team_awards.sql` has `platform.competitionEntries` and the `memberStars` view.
 
-The code is `apps/platform/src/server/` under `teams/`, `github/`, `config/` and `loaders/`. Scheduled passes are routes under `app/(api)/cron/`: the config reconcile (`/cron/config-reconcile`) and the nightly GitHub reconcile for teams and competitions (`/cron/github-reconcile`). `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
+The code is in Backstage, at `apps/platform/src/server/` under `teams/`, `github/`, `config/` and `loaders/`. Scheduled passes are routes under `app/(api)/cron/`: the config reconcile (`/cron/config-reconcile`) and the nightly GitHub reconcile for teams and competitions (`/cron/github-reconcile`). `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
 
 ## Read next
 

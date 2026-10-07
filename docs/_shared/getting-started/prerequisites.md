@@ -28,7 +28,7 @@ after that, you only need the section for your track.
 
 > [!NOTE]
 > This is the workshop subset. Contributing to the monorepo's projects (DogDays,
-> DogPack, the platform) also needs Docker for the local database, Git
+> DogPack) also needs Docker for the local database, Git
 > line-ending settings, and a few other things: follow the full
 > [Prerequisites](./prerequisites.md?project=schedule-builder) in that
 > project's docs instead.

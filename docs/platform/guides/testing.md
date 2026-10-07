@@ -7,6 +7,8 @@ section: guides
 
 # Testing
 
+The `platform` commands below run from a [Backstage](https://github.com/DevDogsUGA/Backstage) clone, where the app lives; the RLS suite runs here.
+
 ```bash
 pnpm --filter platform test        # vitest, unit — no database
 pnpm --filter platform test:db     # vitest against a live database
@@ -15,7 +17,7 @@ pnpm --filter @devdogsuga/supabase test:rls   # the RLS persona suite
 
 ## `test`
 
-Plain Vitest, no database involved. This is what `pnpm test` at the repo root
+Plain Vitest, no database involved. This is what `pnpm test` at the Backstage root
 runs for every package that has it.
 
 ## `test:db`
@@ -35,7 +37,7 @@ Before running it locally:
 ```bash
 pnpm devtools supabase start
 pnpm devtools supabase db reset
-pnpm -F @devdogsuga/supabase types:db
+pnpm --filter @devdogsuga/supabase run codegen
 ```
 
 ## The RLS persona suite
@@ -54,14 +56,18 @@ for why it's the step that actually proves a moderation integration works.
 
 `.github/workflows/ci.yaml` splits this across two jobs:
 
-- **`validate`** runs `pnpm test` (no database) for every affected package,
-  `platform` included, alongside lint, typecheck and the workspace build.
+- **`validate`** runs `pnpm test` (no database) for every affected package
+  alongside lint, typecheck and the workspace build.
 - **`database`** is unconditional — not gated on what changed, because
   migrations and RLS are the highest-consequence things in the repo. It
   starts a local Supabase stack on an empty runner volume (which doubles as
-  the "every migration still applies from scratch" check), checks the
-  committed `database.types.ts` against a fresh regeneration, then runs the
-  RLS suite and `test:db` for both `platform` and `schedule-builder`.
+  the "every migration still applies from scratch" check), generates the
+  database types from it, then runs the RLS suite and `test:db` for
+  `schedule-builder`.
+
+The platform app's own `test` and `test:db` suites run in
+[Backstage](https://github.com/DevDogsUGA/Backstage), against a stack started from the DevDogsUGA commit its
+`devdogsuga.lock` pins.
 
 Every credential CI test suite uses is the well-known local-stack constant
 Supabase publishes in its own docs — nothing in CI can reach a real project,

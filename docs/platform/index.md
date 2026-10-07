@@ -6,10 +6,10 @@ order: 10
 
 # Platform
 
-`apps/platform` is the Next.js app behind the DevDogs site: the public pages, the officer console, these docs, and the OAuth server sibling projects sign in against. Read a guide here when you are working on one of its subsystems.
+The platform is the Next.js app behind the DevDogs site: the public pages, the officer console, these docs, and the OAuth server sibling projects sign in against. Its source (`apps/platform`) lives in the officers' [Backstage](https://github.com/DevDogsUGA/Backstage) repository, which also holds every deploy. Its database (migrations, seeds, `config.toml`), tests for that database, and these docs live here in DevDogsUGA. Read a guide here when you are working on one of its subsystems.
 
 > [!TIP]
-> New here? Start at [Getting started](../_shared/getting-started/prerequisites.md) — installing the toolchain, a database, and running the app.
+> New here? Start at [Getting started](../_shared/getting-started/prerequisites.md) — installing the toolchain, a database, and running the app. Platform code changes are pull requests against Backstage; [Your first contribution](./getting-started/first-contribution.md) sets up both repos side by side.
 
 ## Architecture, briefly
 

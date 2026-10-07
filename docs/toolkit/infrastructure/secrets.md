@@ -7,7 +7,7 @@ section: infrastructure
 
 # Secrets and environments
 
-There is one env file per **target**, not one file with modes. This page is the map: which file is which, how your own gets filled, and what to run when one is missing. If you are a contributor working on a feature, the first two sections are all you need — the rest matters to whoever holds the deploy credentials.
+There is one env file per **target**, not one file with modes. `.env` and `.env.generated` are in the repository you are working in; `.env.preflight`, `.env.staging` and `.env.production` are officer files that live at the root of a [Backstage](https://github.com/DevDogsUGA/Backstage) clone, next to the deploys that read them. This page is the map: which file is which, how your own gets filled, and what to run when one is missing. If you are a contributor working on a feature, the first two sections are all you need — the rest matters to whoever holds the deploy credentials.
 
 ## Your file
 
@@ -39,11 +39,11 @@ The order above — least dangerous to most — is the order the interactive pic
 `with-env` refuses and names the command that materialises it:
 
 - `.env` → `pnpm devtools setup`
-- any other target → `pnpm backstage env pull --target <target>`
+- any other target → `backstage env pull --target <target>`, from a Backstage clone
 
 ## Where the detail lives
 
-`pnpm backstage env --help` lists the three that touch Bitwarden and GitHub (`pull`, `push`, `audit`) and `pnpm devtools env --help` the three local ones (`init`, `example`, `reset`), with the options each takes; either command with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](../guides/env/index.md) is the reference for how the two are kept in step, and [the commands](../guides/env/commands.md) is what `audit` compares.
+`backstage env --help` lists the three that touch Bitwarden and GitHub (`pull`, `push`, `audit`) and `pnpm devtools env --help` the three local ones (`init`, `example`, `reset`), with the options each takes; either command with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](../guides/env/index.md) is the reference for how the two are kept in step, and [the commands](../guides/env/commands.md) is what `audit` compares.
 
 After a manifest declares a new variable, run `pnpm devtools env init --target
 staging` and then `--target production`. Re-running `init` appends only missing

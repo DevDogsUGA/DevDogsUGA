@@ -18,5 +18,5 @@ Stuck, or something in the docs is wrong? Ask in [Discord](https://devdogsuga.or
 - Keep it small and focused on one change.
 - Link the issue it closes.
 - Update docs if you changed behavior.
-- If you added or changed a migration, give it a fresh timestamp and regenerate types (`pnpm -F @devdogsuga/supabase types:db`).
+- If you added or changed a migration, give it a fresh timestamp. The database types are generated locally (`pnpm --filter @devdogsuga/supabase run codegen`), not committed.
 - Make sure `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass locally.

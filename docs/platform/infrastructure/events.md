@@ -10,8 +10,8 @@ section: infrastructure
 **Meetings and workshops are authored as data, not typed into a base.**
 `@devdogsuga/events` holds a Zod schema, a publishability validator, and the
 data itself — `src/data/meetings.json` today, one file per term if that ever
-stops being enough. It is a published package, and its source lives in the
-sibling **Backstage** repository, not here: officers propose a change as a
+stops being enough. It is a package in the **Backstage** workspace, imported by the platform
+app that lives beside it, not by anything here: officers propose a change as a
 pull request against `packages/events/src/data/meetings.json` there, and
 Backstage's own CI (`pnpm -F @devdogsuga/events check:events`) blocks the merge
 if it does not parse or fails a publishability rule. There is no runtime
@@ -44,7 +44,7 @@ and the validator and throws a readable `ClubConfigError` if either fails;
 
 ## The reconcile
 
-`apps/platform/src/server/config/reconcile.ts`, in this repo, is the consumer:
+`apps/platform/src/server/config/reconcile.ts`, in the same [Backstage](https://github.com/DevDogsUGA/Backstage) repository, is the consumer:
 upsert a meeting by `slug` and a workshop by its title within its meeting,
 soft-archive a live row the config no longer lists (`deletedAt` is set;
 attendance survives), and un-archive one that reappears. Every meeting is the
@@ -53,10 +53,10 @@ meeting, and the old one is archived with its attendance. Read its header for th
 per-row refusals**. A config file either validates whole, or the reconcile
 aborts the ENTIRE run and reports to Sentry rather than applying part of it.
 There is no "officer is mid-edit" state to protect against here, because
-`@devdogsuga/events` is an installed npm dependency: nothing reaches this
-function until Backstage's own CI has already approved the file that produced
-it, and a validation failure this late means that package shipped a bug, not
-something this repo caused. The same is true of an empty config — zero
+`@devdogsuga/events` is built into the platform from the same Backstage commit:
+nothing reaches this function until Backstage's own CI has already approved the
+file that produced it, and a validation failure this late means that package shipped a bug, not
+something the platform caused. The same is true of an empty config — zero
 meetings aborts rather than archiving the entire schedule.
 
 ## Survey questions
@@ -84,7 +84,7 @@ Two paths reach the reconcile, both through
 other cron route):
 
 - **The deploy pipeline**, immediately after each deploy of `platform`
-  (`.github/workflows/deploy-app.yaml`'s "Reconcile meetings/workshops from
+  (Backstage's `.github/workflows/deploy.yaml`, "Reconcile meetings/workshops from
   @devdogsuga/events" step, via `backstage deploy reconcile`).
   This is the primary trigger: a promoted config lands the moment its own
   build goes live, because the `@devdogsuga/events` version reconciled
@@ -125,11 +125,12 @@ the reconcile, and the reconcile is a platform route rather than a
 devtools-side function (it needs the app's Drizzle client, relations and
 Sentry wiring, none of which belong in devtools). `supabase db reset` no
 longer calls that route, so on a fresh development database, start the
-platform app (`pnpm -F platform dev`) and fire the cron once, the same
+platform app (`pnpm -F platform dev`, from your Backstage clone) and fire the cron once, the same
 unauthenticated request the schedule sends, to `http://localhost:3000` by
 default:
 
 ```bash
+# from the Backstage clone
 pnpm devtools jobs run --app platform --cron '*/15 * * * *' --yes
 ```
 

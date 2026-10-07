@@ -78,13 +78,13 @@ from that refusal so they can report the very state that needs fixing.
 ## Migrate and reset
 
 `supabase db push` applies migrations that have not run yet. It erases nothing.
-`pnpm devtools apply-migrations` runs it and then asks whether to
-regenerate `packages/supabase/src/database.types.ts`, which is the
-`types:db` script:
+`pnpm devtools apply-migrations` runs it. The types in
+`packages/supabase/src/database.types.ts` are generated from your local stack,
+not committed, and `apply-migrations` does not touch them:
 
 ```bash
 pnpm devtools apply-migrations
-pnpm -F @devdogsuga/supabase types:db
+pnpm --filter @devdogsuga/supabase run codegen   # local stack only
 ```
 
 Against anything but your local stack it names the target — tier and host,
@@ -99,7 +99,7 @@ separate steps now:
 
 ```bash
 pnpm devtools supabase db reset
-pnpm -F @devdogsuga/supabase types:db
+pnpm --filter @devdogsuga/supabase run codegen
 pnpm devtools supabase seed buckets
 ```
 

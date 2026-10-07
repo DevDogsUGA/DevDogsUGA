@@ -7,6 +7,8 @@ section: guides
 
 # Where things live
 
+Paths are relative to `apps/platform` in the [Backstage repository](https://github.com/DevDogsUGA/Backstage/tree/main/apps/platform), except `supabase/` and `docs/`, which are in DevDogsUGA.
+
 | I want to change...                              | Path                                                    |
 | ------------------------------------------------ | ------------------------------------------------------- |
 | A public site page or route                      | `src/app/(site)/`                                       |
@@ -30,6 +32,8 @@ section: guides
 | Transactional email                              | `src/server/email/`                                     |
 | Discord integration                              | `src/server/discord/`                                   |
 | Env contract                                     | `src/env.ts`                                            |
+| Migrations, seeds, RLS tests (DevDogsUGA)        | `supabase/`, `packages/supabase/`                       |
+| These docs (DevDogsUGA)                          | `docs/platform/`                                        |
 | The Worker entry / cron dispatch (deploy)        | `cloudflare/worker.ts`, `cloudflare/scheduled.ts`       |
 
 See [Identity](./identity/index.md) for the OAuth server and the GitHub App, [Moderation](./moderation/index.md) and [Reporting](./reporting/index.md) for the content-safety subsystem, and [Meetings & Teams](./meetings-and-teams/index.md) for the domain model `src/server/github/` and `src/server/attendance/` build against.

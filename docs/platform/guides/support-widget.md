@@ -14,7 +14,7 @@ widget. It is an inbox, not a live chat: the panel says replies usually take a
 few hours, and a visitor who leaves finds the reply waiting when they come
 back.
 
-The code lives in `apps/platform/src/server/support` (server),
+The code lives in [Backstage](https://github.com/DevDogsUGA/Backstage), at `apps/platform/src/server/support` (server),
 `apps/platform/src/components/SupportWidget` (client) and the route handlers
 under `apps/platform/src/app/(api)/support`.
 

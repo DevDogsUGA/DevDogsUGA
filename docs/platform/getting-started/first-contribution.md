@@ -14,7 +14,23 @@ database.
 
 ## Make the change
 
-Open `apps/platform/src/config/nav.ts`. `PUBLIC_LINKS` is a plain exported
+The platform's code is in [Backstage](https://github.com/DevDogsUGA/Backstage), not in this repository, so
+this change is a pull request there. Clone it next to DevDogsUGA and install
+both, DevDogsUGA first (Backstage links to its packages, `supabase/` and docs):
+
+```bash
+cd .. && git clone https://github.com/DevDogsUGA/Backstage.git
+pnpm install          # in DevDogsUGA, if you haven't
+cd ../Backstage && pnpm install
+```
+
+Backstage finds the clone at `../DevDogsUGA`; set `DEVDOGSUGA_DIR` if yours
+lives elsewhere, and run `pnpm devdogsuga` to see where it points. Copy `.env` and
+`.env.generated` from DevDogsUGA's root into Backstage's, and again after the
+local Supabase stack restarts. The stack itself is still started from
+DevDogsUGA.
+
+Open `apps/platform/src/config/nav.ts` in Backstage. `PUBLIC_LINKS` is a plain exported
 array of `NavItem`s — label, href, icon, and an optional `description` — that
 becomes the navbar's left-aligned links. Pick an entry that has no
 `description` yet and add one, or tighten the wording on an existing one.
@@ -44,10 +60,12 @@ typegen` generates the framework's own route type stubs first.
 
 ## Open a pull request
 
-Branch from `main`, keep the commit focused
+Branch from `main` in Backstage, keep the commit focused
 (`type(scope): subject`, e.g. `fix(platform): add a description to the
-Community nav link`), and open a PR against `main`. `.github/CODEOWNERS`
-routes `apps/platform/**` to `@DevDogsUGA/devops` for review. See the shared
+Community nav link`), and open a PR against `main`. Backstage's
+`.github/CODEOWNERS` routes everything to `@DevDogsUGA/devops` for review. A
+change that also needs a migration is a second PR in DevDogsUGA, which
+owns `supabase/`. See the shared
 [Contributing](../../_shared/guides/contributing.md) guide for the full flow,
-including what CI runs and the database migration rules once your work
+including what CI runs in this repository and the database migration rules once your work
 touches a schema.

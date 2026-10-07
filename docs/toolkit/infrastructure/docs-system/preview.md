@@ -7,7 +7,7 @@ section: infrastructure
 
 # Local Preview
 
-There is no separate preview tool. Docs are compiled into the platform app, so **the dev server is the preview** — `/docs/...` renders your working copy through the exact pipeline that ships. Read this when you are editing a page and want to see it. Search is the one thing the dev server does not pick up on its own, and the second half of this page is about that. For what to put in the page, see [writing docs](./writing.md).
+There is no separate preview tool. Docs are compiled into the platform app, so **the dev server is the preview**, and the platform lives in [Backstage](https://github.com/DevDogsUGA/Backstage). Clone it next to this repository ([first contribution](../../../platform/getting-started/first-contribution.md) has the setup) and run the commands below from there; it reads `docs/` straight from your DevDogsUGA clone — `/docs/...` renders your working copy through the exact pipeline that ships. Read this when you are editing a page and want to see it. Search is the one thing the dev server does not pick up on its own, and the second half of this page is about that. For what to put in the page, see [writing docs](./writing.md).
 
 ## The loop
 
@@ -17,7 +17,7 @@ The platform's dev server watches `docs/`. Save a page and it re-runs `codegen` 
 pnpm -F platform dev
 ```
 
-`cd apps/platform && pnpm dev` does the same. Then open <http://localhost:3000/docs>.
+`cd apps/platform && pnpm dev` does the same. Without a Backstage clone, `pnpm -F @devdogsuga/docs build` and `docs-kit check` in this repository compile and lint the pages, which is what CI runs. Then open <http://localhost:3000/docs>.
 
 The watcher lives in the platform's `vite.config.ts` and only calls package scripts, so the same step is available by hand when the dev server is not running:
 
@@ -48,9 +48,9 @@ Because the dev server uses the same parser and the same renderer as production,
 - The page appears in the sidebar, under the right project **and section**, with the title you expect.
 - A mounted `_shared` page appears under every project you listed in `mount`, at the path you expected.
 - Code blocks are highlighted — an unregistered language falls back to plain text silently.
-- Links between docs pages use site paths (`/docs/toolkit/infrastructure/docs-system/writing`), not file paths. `pnpm -F @devdogsuga/docs exec docs-kit check` fails the build on a broken one rather than warning.
+- Links between docs pages are relative `.md` paths (`./writing.md`), not site URLs. `pnpm -F @devdogsuga/docs exec docs-kit check` fails the build on a broken one rather than warning.
 - Every command in a fenced code block is a real one, or the fence is tagged `nocheck` on purpose.
 - The table of contents on the right lists the headings you intended, and no heading you buried in a `<details>`.
 - `pnpm dev` printed no budget warnings for your page. `pnpm -F @devdogsuga/docs exec docs-kit check` prints the detail behind that count.
 
-Per-branch documentation URLs do not exist. To share docs changes before merge, use a preview deployment of the branch — it serves the whole site, docs included, built from that branch.
+Per-branch documentation URLs do not exist. To share docs changes before merge, point a Backstage preview at your branch — it serves the whole site, docs included.

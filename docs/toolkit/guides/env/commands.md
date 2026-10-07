@@ -8,21 +8,20 @@ section: guides
 # The commands
 
 ```bash
-pnpm backstage env pull  --target staging   # Bitwarden → .env.staging, in place
-pnpm backstage env push  --target staging   # .env.staging → Bitwarden → GitHub
-pnpm backstage env audit --target staging   # compare every store
+backstage env pull  --target staging   # Bitwarden → .env.staging, in place
+backstage env push  --target staging   # .env.staging → Bitwarden → GitHub
+backstage env audit --target staging   # compare every store
 ```
 
 `audit` reads only and is safe to run against anything. Read
 [Env](./index.md) first for what the stores are.
 
-`pull`, `push` and `audit` belong to `@devdogsuga/backstage`, because they
-always need production secrets. Inside this repo they run as `pnpm backstage …`,
-which fetches the latest published version through `dlx` every time. Outside it:
-
-```bash nocheck
-pnpm --config.minimum-release-age=0 --config.dlx-cache-max-age=0 dlx @devdogsuga/backstage env audit --target staging
-```
+`pull`, `push` and `audit` belong to the officer CLI (`backstage`), because they
+always need production secrets. It lives in the [Backstage](https://github.com/DevDogsUGA/Backstage) repository
+and runs from a clone of it; see
+[devtools](../devtools.md#what-lives-elsewhere) for the invocation, written as
+`backstage …` here. The files a target implies are at Backstage's root, and `push` writes
+Backstage's GitHub environments, since that is where the deploys run.
 
 `audit --json` prints the findings for a script, and `audit --prune` deletes the
 Worker secrets no app declares (it asks first without `--yes`).
@@ -171,7 +170,7 @@ it adds or updates those values in place. Neither command removes stale keys.
 checks it (`--check` verifies without writing); `pnpm devtools env reset` blanks
 every value in `.env` while keeping each one commented out beside its blank
 line. `pnpm devtools env --help` lists those three, and
-`pnpm backstage env --help` the three that touch Bitwarden and GitHub.
+`backstage env --help` the three that touch Bitwarden and GitHub.
 
 ## Rare paths
 
@@ -179,10 +178,10 @@ line. `pnpm devtools env --help` lists those three, and
 <summary>Rotating a secret</summary>
 
 ```bash
-pnpm backstage env pull  --target production   # start from what is live
+backstage env pull  --target production   # start from what is live
 $EDITOR .env.production                       # change the one value
-pnpm backstage env push  --target production   # → Bitwarden AND GitHub
-pnpm backstage env audit --target production   # must report no drift
+backstage env push  --target production   # → Bitwarden AND GitHub
+backstage env audit --target production   # must report no drift
 ```
 
 No `export` step: the access token is found for you. `push` does both stores in

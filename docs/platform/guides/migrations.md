@@ -11,7 +11,7 @@ The platform's tables live in the `platform` schema of the shared Supabase Postg
 
 ## SQL is the source of truth
 
-`supabase/migrations/*.sql` owns the schema. `apps/platform/src/server/db/schema/generated/schema.ts` is introspected **from the live database** by `drizzle-kit pull` and is never edited by hand. The only file written by hand beside it is `src/server/db/relations.ts`, a `defineRelations` call over those generated tables.
+`supabase/migrations/*.sql` owns the schema, and every migration, platform ones included, is authored in this repository. `apps/platform/src/server/db/schema/generated/schema.ts`, in [Backstage](https://github.com/DevDogsUGA/Backstage), is introspected **from the live database** by `drizzle-kit pull` and is never edited by hand. The only file written by hand beside it is `src/server/db/relations.ts`, a `defineRelations` call over those generated tables.
 
 So a schema change is a SQL change, and the TypeScript follows it. RLS policies, triggers, functions, and storage policies all sit in the migration file next to the table DDL — there is no workaround layer to route around, because Drizzle does not own any of it.
 
@@ -27,17 +27,20 @@ asks which app/schema the migration belongs to (`platform`, `schedule_builder`, 
 alter table "platform"."profile" add column "website" text;
 ```
 
-Then replay it, and regenerate the two type artifacts it can affect:
+Then replay it and regenerate the types:
 
 ```bash
-pnpm devtools supabase db reset       # drop, replay every migration, run the seeds
-pnpm -F @devdogsuga/supabase types:db # regenerate the Database types
+pnpm devtools supabase db reset                       # drop, replay every migration, run the seeds
+pnpm --filter @devdogsuga/supabase run codegen        # the Database types (gitignored)
+```
+
+`codegen` writes `packages/supabase/src/database.types.ts`, the `Database` types `supabase-js` uses, from the running local stack. Nothing to commit: the file is generated and gitignored. It does not touch the Drizzle schema, which belongs to the platform app. From a [Backstage](https://github.com/DevDogsUGA/Backstage) clone next to this one, with the same stack running:
+
+```bash
 pnpm -F platform types:drizzle        # re-introspect the Drizzle schema
 ```
 
-`types:db` rewrites `packages/supabase/src/database.types.ts`, the `Database` types `supabase-js` uses. It does not touch the Drizzle schema — that is `types:drizzle`, which runs both configs and then the fixups in `scripts/drizzle-pull.ts`. If you added tables or foreign keys, add the matching relations to `src/server/db/relations.ts` by hand.
-
-Commit the migration, the regenerated types, and the relations change together. CI regenerates `database.types.ts` against your migrations and fails on any diff.
+`types:drizzle` runs both `drizzle-kit` configs and then the fixups in `scripts/drizzle-pull.ts`. If you added tables or foreign keys, add the matching relations to `src/server/db/relations.ts` by hand. Commit the migration in a DevDogsUGA pull request and the Drizzle schema and relations in a Backstage one, and merge the DevDogsUGA one first: Backstage's `devdogsuga.lock` moves to it when the deploy pull request lands.
 
 <details>
 <summary>What does a table with its policies look like in one migration?</summary>
@@ -85,19 +88,19 @@ pnpm devtools supabase db reset
 
 **One migration per pull request**, covering every schema change in it. If two branches generate migrations from the same baseline and touch the same tables, whoever merges second reconciles by hand; a `pnpm devtools supabase db reset` after the merge surfaces it immediately. CI's `database` job starts a stack on an empty volume for every pull request, so "every migration still applies from scratch" is checked whether or not you thought to.
 
-If `main` grew a newer migration while yours was open, recreate yours with a fresh timestamp rather than rebasing the old one in place — CI fails a pull request whose new migration timestamps older than `main`'s latest. Regenerate types with `pnpm -F @devdogsuga/supabase types:db` afterward; never hand-merge `packages/supabase/src/database.types.ts`, it is generated and any manual edit is overwritten by the next reset anyway.
+If `main` grew a newer migration while yours was open, recreate yours with a fresh timestamp rather than rebasing the old one in place — CI fails a pull request whose new migration timestamps older than `main`'s latest. Run `codegen` again afterward; the types are generated and never hand-edited.
 
 ## Applying a migration
 
-| Target                 | How                                                        |
-| ---------------------- | ---------------------------------------------------------- |
-| your own stack         | `pnpm devtools supabase db reset`                          |
-| the shared dev project | `pnpm devtools --tier development:remote apply-migrations` |
-| production             | `production-migrate` in `.github/workflows/deploy.yaml`    |
+| Target                 | How                                                              |
+| ---------------------- | ---------------------------------------------------------------- |
+| your own stack         | `pnpm devtools supabase db reset`                                |
+| the shared dev project | `pnpm devtools --tier development:remote apply-migrations`       |
+| staging, production    | Backstage's deploy workflow, after the deploy pull request lands |
 
-`pnpm devtools --tier development:remote apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then offers to regenerate the `Database` types. Staging and production work the same way, with the maintainer-only mechanics — CI's dry runs, `staging-preflight`/`staging-deploy`, and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](../../toolkit/infrastructure/hosted-databases.md).
+`pnpm devtools --tier development:remote apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded. Staging and production work the same way, with the officer-only mechanics — the dry runs, the preflight and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](../../toolkit/infrastructure/hosted-databases.md). This repository never applies a migration to either.
 
 > [!WARNING]
-> Never run `drizzle-kit push` against a hosted database: it writes the schema with no migration record and no rollback path. No script in this repo runs it, and none should.
+> Never run `drizzle-kit push` against a hosted database: it writes the schema with no migration record and no rollback path. No script in either repo runs it, and none should.
 
 For what the session `--tier` flag means and the rest of the `devtools supabase` passthrough, see [devtools](../../toolkit/guides/devtools.md).

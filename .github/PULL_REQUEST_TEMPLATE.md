@@ -9,5 +9,5 @@ Closes #
 ## Checklist
 
 - [ ] Updated docs if behavior changed
-- [ ] Migrations: fresh timestamp, types regenerated
+- [ ] Migrations: fresh timestamp (database types are generated, not committed)
 - [ ] `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass locally

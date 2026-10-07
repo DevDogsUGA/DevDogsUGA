@@ -220,7 +220,7 @@ or fail once.
 
 ### DB URL: direct connection
 
-**Symptom:** `pnpm devtools apply-migrations`/`types:db` (or anything using
+**Symptom:** `pnpm devtools apply-migrations` (or anything using
 `DB_URL`) can't connect, and the connection string doesn't mention "pooler."
 
 **Cause:** `DB_URL` is set to the project's **direct** connection string,
@@ -252,7 +252,7 @@ authenticated (`supabase login`) yet.
 **Fix:** Confirm the ref from the dashboard's URL
 (`app.supabase.com/project/<this part>`), and that `supabase projects list`
 shows the project. Only the project-ref commands need it — the wizard and
-`apply-migrations`/`types:db` don't.
+`apply-migrations` doesn't.
 
 ## Sign-in
 

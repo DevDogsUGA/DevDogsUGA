@@ -7,7 +7,7 @@ section: infrastructure
 
 # The Docs System
 
-Everything under `docs/` is compiled into the platform site at build time, so a docs change ships with a deploy like any other change. Read this if you want to know where your markdown ends up and why nothing has to be invalidated. If you only want to write a page, go straight to [Writing docs](./writing.md); for the local loop, [Local preview](./preview.md). Nothing here is something you need to know to add a page.
+Everything under `docs/` is compiled into the platform site at build time, so a docs change ships with a deploy like any other change. The site is built from [Backstage](https://github.com/DevDogsUGA/Backstage), which links to this repository's `docs/` and `packages/docs-kit` through its sibling clone, so a docs change goes live when the deploy pull request that moves Backstage's `devdogsuga.lock` past it lands. Read this if you want to know where your markdown ends up and why nothing has to be invalidated. If you only want to write a page, go straight to [Writing docs](./writing.md); for the local loop, [Local preview](./preview.md). Nothing here is something you need to know to add a page.
 
 ## From markdown to page
 
@@ -68,7 +68,7 @@ Heading ids are slugged with `github-slugger` — the same slugger `rehype-slug`
 
 Search is the one part that still uses Postgres, because it is the one part whose cost scales with how much documentation exists. `platform."docsPages"` holds `path`, `title`, `description` and `plainText` alongside a generated `tsvector` weighting title `A`, description `B` and body `C` — so page bodies are searchable, and a title match outranks a body match. `searchDocs` queries it with `websearch_to_tsquery`, ranks with `ts_rank`, and builds snippets with `ts_headline`.
 
-The build does not write that index. `pnpm -F @devdogsuga/docs populate:search` (`docs-kit index`) pushes the compiled artifact into the database through `platform.replace_docs_index`, and the dev server runs it after every docs change. The deploy workflow runs it after the platform Worker deploys — see [Local preview](./preview.md) for pointing it at your own stack.
+The build does not write that index. `pnpm -F @devdogsuga/docs populate:search` (`docs-kit index`) pushes the compiled artifact into the database through `platform.replace_docs_index`, and the dev server runs it after every docs change. Backstage's deploy workflow runs it after the platform Worker deploys — see [Local preview](./preview.md) for pointing it at your own stack.
 
 <details>
 <summary>Why Postgres rather than an in-memory JS index?</summary>

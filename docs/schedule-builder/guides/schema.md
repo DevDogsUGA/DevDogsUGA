@@ -54,7 +54,7 @@ re-introspect:
 
 ```bash
 pnpm devtools supabase db reset              # drop, replay every migration, run the seeds
-pnpm -F @devdogsuga/supabase types:db        # regenerate the Database types
+pnpm --filter @devdogsuga/supabase run codegen   # generate the Database types (gitignored)
 pnpm -F schedule-builder types:drizzle       # re-introspect the Drizzle schema
 ```
 

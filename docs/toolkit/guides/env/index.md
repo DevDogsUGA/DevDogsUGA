@@ -42,7 +42,7 @@ Backstage's `packages/env/src/targets.ts`:
 | `staging`     | `.env.staging`    | `staging`         | yes                 |
 | `production`  | `.env.production` | `production`      | yes                 |
 
-`pull`, `push` and `audit` (`pnpm backstage env …`) all default their file from that row, so
+`pull`, `push` and `audit` (`backstage env …`) all default their file from that row, so
 `--target staging` reads and writes `.env.staging` and nothing else.
 
 Two rows are asymmetric, both deliberately:
@@ -96,8 +96,8 @@ you mean to write to.
 `SUPABASE_ACCESS_TOKEN` carries full account privileges across both Supabase
 organizations; `supabase config push` needs it, and that is the one mutation
 with no dry run. It is declared `tier: "apply"` in the operator manifest that
-`@devdogsuga/backstage` ships as its own `env.ts` (consumed as a package rather
-than a workspace member of this repo; `pnpm devtools check env` keeps the registry in agreement), not
+the Backstage CLI ships as its own `env.ts` (in the Backstage repository, not a
+workspace member of this one; `pnpm devtools check env` keeps the registry in agreement), not
 in anything under `apps/*`/`packages/*` here.
 
 It lives in the `production` Bitwarden project like every other production key:
@@ -149,7 +149,7 @@ with a bearer token returns encrypted blobs, so the client-side crypto has to
 come from Bitwarden.
 
 It comes from `@bitwarden/sdk-napi` — the same Rust core the `bws` binary wraps,
-loaded in-process as a dependency of `@devdogsuga/backstage`. Nothing to install, and **values
+loaded in-process as a dependency of the Backstage CLI. Nothing to install, and **values
 never appear in argv**: `bws secret create` took the secret as a positional
 argument, visible to `ps` for the length of the call. The SDK needs one thing
 the binary did not, `BWS_ORG_ID` — the organization's public UUID, set once in

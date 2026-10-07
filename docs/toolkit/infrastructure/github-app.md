@@ -7,7 +7,7 @@ section: infrastructure
 
 # The DevDogs GitHub App
 
-`apps/platform` authenticates as a GitHub App on every call it makes to GitHub. `env.ts` requires `GH_APP_ID`, `GH_APP_INSTALLATION_ID` and `GH_APP_PRIVATE_KEY`, so the platform will not boot without all three — though the placeholders in `.env.example` are enough to run it locally unless you are working on the organization integration.
+The platform (`apps/platform`, in [Backstage](https://github.com/DevDogsUGA/Backstage)) authenticates as a GitHub App on every call it makes to GitHub. Its `env.ts` requires `GH_APP_ID`, `GH_APP_INSTALLATION_ID` and `GH_APP_PRIVATE_KEY`, so the platform will not boot without all three — though the placeholders in `.env.example` are enough to run it locally unless you are working on the organization integration.
 
 Read this if you are creating, installing, rotating or operating that App. If what you want is to let another project sign DevDogs members in, that is [Sign in with DevDogs](../../_shared/getting-started/running.md?project=platform) instead.
 
@@ -62,7 +62,7 @@ The App holds `administration: write`, `contents: write`, `issues: read`, `metad
 
 - **Payload URL:** `{BASE_URL}/github/webhook`, production's URL only -- staging never receives webhooks, see "Why does staging get a second App" below.
 - **Content type:** `application/json`.
-- **Secret:** 32+ random characters, matching `env.ts`'s `GH_WEBHOOK_SECRET`. Push it (`pnpm backstage env push --target production`), then paste the SAME value into this field -- the route verifies `X-Hub-Signature-256` against it (`server/github/webhookSignature.ts`).
+- **Secret:** 32+ random characters, matching `env.ts`'s `GH_WEBHOOK_SECRET`. Push it (`backstage env push --target production`), then paste the SAME value into this field -- the route verifies `X-Hub-Signature-256` against it (`server/github/webhookSignature.ts`).
 - **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`, `Projects v2 item`, `Issues`, `Pull request`. See [Competitions](../../platform/guides/meetings-and-teams/competitions.md) for what the three Projects/Issues/PR events drive.
 - **Active:** checked.
 
@@ -90,7 +90,7 @@ Run this for **each** App — production first, then staging with the reduced pe
 
    The newlines are load-bearing: a key that lost them parses as a string and fails to sign, surfacing as an opaque JWT error at the first team provision rather than at boot. `env.ts` rejects a value that is a file path or an id instead of a PEM, which catches the common version of this.
 
-5. **Push it.** The two ids are GitHub environment **variables** (both appear in any webhook payload); the key is a secret. `pnpm backstage env push --target production`, or `--target staging`. Each target has its own file — `.env.production`, `.env.staging` — and `backstage env pull --target <target>` brings one back.
+5. **Push it.** The two ids are GitHub environment **variables** (both appear in any webhook payload); the key is a secret. `backstage env push --target production`, or `--target staging`. Each target has its own file — `.env.production`, `.env.staging` — and `backstage env pull --target <target>` brings one back.
 6. **Delete the `ghp_` token** under _Settings → Developer settings → Personal access tokens_. Not last for tidiness: until it is revoked, the thing this change removes is still valid.
 7. **Verify the grant matches the intent:**
 
@@ -135,7 +135,7 @@ Separate keys matter for the same reason as separate permissions: sharing produc
 Generate the new key **before** deleting the old one. An App can hold two at once, and that overlap is what keeps the platform running through the change.
 
 ```bash
-pnpm backstage env push --target production   # the new key
+backstage env push --target production   # the new key
 # redeploy, confirm a team provision works
 # then delete the old key in the App's settings
 ```

@@ -6,17 +6,17 @@ order: 50
 
 # Shared packages & tooling
 
-Two things live here: reference-shaped guides to the packages under `packages/*` and the Backstage-published `@devdogsuga/*` tooling every app shares — you meet one because you hit an import or ran a command — and, under **Infrastructure**, the maintainer/officer-only material that spans the whole repo: deploys, secrets, CI, the docs system.
+Two things live here: reference-shaped guides to the packages under `packages/*` and the `@devdogsuga/*` tooling every app shares — you meet one because you hit an import or ran a command — and, under **Infrastructure**, the maintainer/officer-only material that spans both repositories: deploys, secrets, CI, the docs system. Two repositories hold the code: this one is the contributor repo (apps, `supabase/`, docs), and [Backstage](https://github.com/DevDogsUGA/Backstage) is the officer repo (the platform app, `packages/email`, every deploy, the officer CLIs).
 
 ## Which app owns what
 
-| Directory                 | What it is                                                              | Postgres schema      |
-| ------------------------- | ----------------------------------------------------------------------- | -------------------- |
-| `apps/schedule-builder`   | Next.js — course schedule planning ("DogDays")                          | `schedule_builder`   |
-| `apps/study-group-finder` | Flutter — study groups ("Dog Pack"), still a scaffold                   | `study_group_finder` |
-| `apps/platform`           | Next.js — shared OAuth server, plus the DevDogs site, console, and docs | `platform`           |
+| Directory                   | What it is                                                              | Postgres schema      |
+| --------------------------- | ----------------------------------------------------------------------- | -------------------- |
+| `apps/schedule-builder`     | Next.js — course schedule planning ("DogDays")                          | `schedule_builder`   |
+| `apps/study-group-finder`   | Flutter — study groups ("Dog Pack"), still a scaffold                   | `study_group_finder` |
+| `apps/platform` (Backstage) | Next.js — shared OAuth server, plus the DevDogs site, console, and docs | `platform`           |
 
-Schema-per-app is an organizational boundary, not a security one — see [Supabase](../_shared/guides/stack/supabase.md?project=platform) for why Row-Level Security is what actually isolates one app's data from another's. The SQL is not in `packages/`: all three schemas are built by one migration history at the repo root, `supabase/migrations/`.
+Schema-per-app is an organizational boundary, not a security one — see [Supabase](../_shared/guides/stack/supabase.md?project=platform) for why Row-Level Security is what actually isolates one app's data from another's. The SQL is not in `packages/`: all three schemas are built by one migration history at the repo root, `supabase/migrations/`, including the platform's, although the platform app is not in this repository.
 
 ## I need to…
 
@@ -28,7 +28,7 @@ Schema-per-app is an organizational boundary, not a security one — see [Supaba
 | Talk to Postgres from an app         | [**`@devdogsuga/db`**](../_shared/guides/stack/db.md) — the shared postgres-js + Drizzle client factory                                                                |
 | Reach Supabase, or write an RLS test | [**`@devdogsuga/db`** + `@devdogsuga/supabase`](../_shared/guides/stack/supabase.md) — client factories, types, RLS suite                                              |
 | Author a meeting or a workshop       | [**`@devdogsuga/events`**](../platform/infrastructure/events.md) — a PR against Backstage's data                                                                       |
-| Send an email                        | [**`@devdogsuga/email`**](./guides/email.md) — react-email, compiled to typed HTML                                                                                     |
+| Send an email                        | [**`@devdogsuga/email`**](./guides/email.md) — react-email, compiled to typed HTML (in Backstage)                                                                      |
 | Change how docs are built            | [**`@devdogsuga/docs-kit`**](./guides/docs-kit.md) — compiles markdown, generates reference                                                                            |
 | Deploy, rotate a secret, add an app  | **Infrastructure**, below — [Cloudflare](./infrastructure/cloudflare.md), [Secrets](./infrastructure/secrets.md), [Docs system](./infrastructure/docs-system/index.md) |
 
@@ -61,12 +61,12 @@ Four of the catalog's ranges are held back deliberately: ESLint stays on 9.x (`e
 ## Reference
 
 An [API reference](./reference/api/supabase.md) page exists for each
-`packages/*` published with a public surface — `email` and `supabase` today —
+`packages/*` workspace member with a public surface — `supabase` today —
 generated from that package's source on every build, so it never drifts from
 what the code exports. `@devdogsuga/env` is Backstage-published tooling
 rather than a `packages/*` workspace member, so it is documented by hand in
 [Env](./guides/env/index.md) instead. The same goes for the two CLIs:
 [devtools](./guides/devtools.md) is the contributor CLI, and
-`@devdogsuga/backstage` (`pnpm backstage …`) is the officer and production CLI
+`backstage` is the officer and production CLI, run from a Backstage clone,
 whose commands are described where you need them — [Env](./guides/env/commands.md),
 [Images](./guides/images.md), and [Cloudflare](./infrastructure/cloudflare.md).

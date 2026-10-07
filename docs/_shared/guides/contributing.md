@@ -27,9 +27,12 @@ the app running — see Getting started if not.
 5. **Get a review.** `.github/CODEOWNERS` assigns owners per file, and only
    the **last** matching pattern in the file counts — GitHub's own rule.
 
-Merging to `main` deploys staging automatically. Production is a separate
-promotion pull request, opened later, into the `production` branch — not
-something a first contribution needs to think about.
+Merging goes through the merge queue, and nothing in this repository deploys.
+After a green push to `main`, CI opens or updates a deploy pull request in the
+officers' [Backstage](https://github.com/DevDogsUGA/Backstage) repository that
+moves its `devdogsuga.lock` to your commit; staging and production deploy from
+there, and production waits for a reviewer. That is the officers' job, not
+something a contribution needs to think about.
 
 ## Before you push
 
@@ -42,8 +45,8 @@ pnpm format:check
 
 `pnpm lint:fix` and `pnpm format:write` fix most of what those find. A
 checkout, worktree, or CI runner that has never run `vinext dev`/`vinext build`
-needs one extra step before `typecheck`/`lint` pass on `schedule-builder` or
-`platform` — `pnpm --filter <app> exec vinext typegen` (not `next typegen`)
+needs one extra step before `typecheck`/`lint` pass on `schedule-builder` —
+`pnpm --filter schedule-builder exec vinext typegen` (not `next typegen`)
 generates the framework's own route type stubs first. Tests live beside the
 code they cover, as `*.test.ts`/`*.test.tsx`.
 
@@ -60,30 +63,26 @@ It asks for the app and a description if you don't pass them — the app decides
 prefix (`platform`, `schedule_builder`, or `study_group_finder`) in the
 filename `<timestamp>_<schema>_<desc>.sql`.
 
-**Two rules CI enforces:**
+**CI enforces a fresh timestamp.** If `main` has picked up a newer migration
+than yours since you branched, regenerate your file with a new timestamp rather
+than keeping the old one. CI fails outright on a migration timestamped older
+than `main`'s latest — the ordering has to match the order they actually land
+in.
 
-- **Fresh timestamp before merging.** If `main` has picked up a newer
-  migration than yours since you branched, regenerate your file with a new
-  timestamp rather than keeping the old one. CI fails outright on a migration
-  timestamped older than `main`'s latest — the ordering has to match the
-  order they actually land in.
-- **Regenerate types, don't hand-edit them.** After any schema change:
-  ```bash
-  pnpm -F @devdogsuga/supabase types:db
-  ```
-  Never hand-merge `packages/supabase/src/database.types.ts` — it's
-  generated, and a hand merge is the kind of conflict that looks resolved and
-  silently isn't.
+## Generated types
 
-## Typegen conflicts
-
-`database.types.ts` is the file every schema-touching branch regenerates, so
-two branches merged close together commonly conflict on it. Resolve by
-re-running the generator on your own branch after rebasing, not by merging
-the diff by hand:
+`packages/supabase/src/database.types.ts` is generated and gitignored, so there
+is nothing to commit and nothing to conflict on. After any schema change, with
+the local stack running:
 
 ```bash
-git pull --rebase origin main
-pnpm devtools supabase db reset   # or: pnpm devtools apply-migrations, against your branch's migrations
-pnpm -F @devdogsuga/supabase types:db
+pnpm devtools supabase db reset
+pnpm --filter @devdogsuga/supabase run codegen
 ```
+
+The output is cached by a hash of `supabase/migrations`, so it only runs again
+when a migration changes. Never hand-edit the file.
+
+Platform migrations live in this directory too, even though the platform app
+itself is in the officers' [Backstage](https://github.com/DevDogsUGA/Backstage)
+repository. See [Platform migrations](../../platform/guides/migrations.md).
