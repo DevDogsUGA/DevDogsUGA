@@ -102,13 +102,23 @@ function main(): void {
         "-c",
         `supabase gen types --db-url "$DB_URL" > "${relative(process.cwd(), tmp)}"`,
       ],
-      { cwd: process.cwd(), encoding: "utf8", shell: false },
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        shell: false,
+        // The types come from the LOCAL database, whatever else the checkout
+        // holds: with `.env.staging` or `.env.production` beside `.env`,
+        // `with-env` refuses to guess a tier and this failed with a message
+        // about the stack instead.
+        env: { ...process.env, DEPLOY_ENV: "development" },
+      },
     );
     if (gen.status !== 0) {
       process.stderr.write(gen.stderr ?? "");
       fail(
-        "could not generate src/database.types.ts from the local database.\n" +
-          "Start the local stack, then run this again:\n\n" +
+        "could not generate src/database.types.ts from the local database\n" +
+          "(the error above says why). If the local stack is not running, start it\n" +
+          "and run this again:\n\n" +
           "  pnpm devtools supabase start --tier development:local\n\n" +
           "(`with-env` also needs a root .env: `pnpm devtools env init`.)",
         tmp,
