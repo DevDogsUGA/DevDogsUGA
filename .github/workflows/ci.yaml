@@ -1,7 +1,10 @@
 name: CI
 
-# Pull requests run validation only. A push to `main` invokes the reusable
-# deploy workflow after every validation job succeeds.
+# Pull requests run validation only. A push to `main` opens a deploy PR in
+# DevDogsUGA/Backstage after every validation job succeeds; this repository
+# deploys nothing itself (TASK-478). Backstage pins this repo by commit in its
+# `devdogsuga.lock`, checks it out as a sibling, and owns the Workers' deploy
+# workflows, the platform (apps/platform, packages/email) and the patch audit.
 #
 # That is the invariant this file exists to hold: on `pull_request`, GitHub runs
 # the workflow definition FROM THE PULL REQUEST, not from the protected branch.
@@ -10,17 +13,23 @@ name: CI
 # (unlike forks) are handed the repository's secrets. The only safe amount is
 # none.
 #
-# Anything that genuinely needs a credential belongs after the merge gate, in
-# the deploy workflow, or in the Cloudflare cron.
+# Anything that genuinely needs a credential belongs after the merge gate:
+# `open-deploy-pr` below, whose `deploy-pr` environment is restricted to `main`.
+#
+# `merge_group` is what the merge queue on `main` waits for: a queued PR is
+# merged only once the required checks pass on the exact commit the queue
+# built. It has to be here before the queue is turned on, or every queued PR
+# waits forever for checks that never start. `open-deploy-pr` stays push-only.
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
 
 concurrency:
-  # PR updates supersede their older validation runs. Main pushes cannot share
-  # a group: once validation hands a commit to the protected production gate,
-  # a later push must not cancel a deployment that is already running.
+  # PR updates supersede their older validation runs. Main pushes (and
+  # merge-queue runs) cannot share a group: a later push must not cancel the
+  # run that is about to open a deploy PR for an earlier commit.
   group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -40,8 +49,54 @@ env:
 # moving one is how a compromised action reaches every consumer at once. The
 # trailing comment is what lets Dependabot keep them current.
 jobs:
-  # Lint + typecheck + test + build for the JS/TS packages affected by the change.
+  # packages/supabase/src/database.types.ts is not committed: it is generated
+  # from the migrations (`@devdogsuga/supabase`'s `codegen`), which needs a
+  # running database. Only this job starts one for that purpose; it saves the
+  # file and its stamp to the Actions cache under a key derived from the
+  # migrations and the generator (spelled out in each step: `hashFiles` is not
+  # available to workflow-level `env`), and `validate` restores it instead of
+  # starting Docker itself. Most pushes change no migration, so most runs hit the cache (the default
+  # branch's entries are readable from every PR) and finish in seconds.
+  #
+  # Credential-free for the same reason as `database`: the local stack's keys
+  # are the constants Supabase publishes.
+  types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - id: cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            packages/supabase/src/database.types.ts
+            packages/supabase/src/.database.types.hash
+          key: db-types-v1-${{ hashFiles('supabase/migrations/**', 'packages/supabase/scripts/codegen.ts') }}
+      - uses: ./.github/actions/setup-workspace
+        if: steps.cache.outputs.cache-hit != 'true'
+      # `with-env` refuses a missing .env; the local tier's values come from the
+      # stack itself, so the invented ones in ci.env are enough.
+      - name: Seed the env file for wrapped checks
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cp .github/ci.env .env
+      - name: Start the local Supabase stack
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm devtools supabase start --tier development:local
+      - name: Generate the Database types from the migrations
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @devdogsuga/supabase run codegen
+      - name: Save the generated types
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            packages/supabase/src/database.types.ts
+            packages/supabase/src/.database.types.hash
+          key: db-types-v1-${{ hashFiles('supabase/migrations/**', 'packages/supabase/scripts/codegen.ts') }}
+
+  # Lint + typecheck + test for the JS/TS packages affected by the change.
   validate:
+    needs: types
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -54,25 +109,26 @@ jobs:
           # on a push.
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
+      # Typecheck, lint and test run `@devdogsuga/supabase`'s `codegen` first
+      # (their pre-scripts). With the stamp restored it finds the types current
+      # and never needs a database.
+      - name: Restore the generated Database types
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            packages/supabase/src/database.types.ts
+            packages/supabase/src/.database.types.hash
+          key: db-types-v1-${{ hashFiles('supabase/migrations/**', 'packages/supabase/scripts/codegen.ts') }}
+          fail-on-cache-miss: true
       # pnpm's `[<since>]` filter needs the ref named explicitly (turbo used to
       # auto-detect it); the composite action owns how it is computed.
       - name: Determine base ref for affected-package detection
         id: base
         uses: ./.github/actions/base-ref
-      # TEMPORARY (TASK-486; removed in TASK-491 when the platform is deleted
-      # from this repo): apps/platform and packages/email are moving to
-      # DevDogsUGA/Backstage, and an edit landing here meanwhile would be lost
-      # in the move. Lives in `validate` because that is a required check.
-      - name: Platform freeze guard (temporary)
-        env:
-          BASE: ${{ steps.base.outputs.ref }}
-        run: |
-          frozen=$(git diff --name-only "$BASE"...HEAD -- apps/platform packages/email)
-          if [ -n "$frozen" ]; then
-            echo "::error::apps/platform and packages/email are frozen while they move to DevDogsUGA/Backstage (TASK-486). Make platform changes in Backstage."
-            echo "$frozen"
-            exit 1
-          fi
+      # REMOVED: "Platform freeze guard (temporary)" (TASK-486). It rejected
+      # edits to apps/platform and packages/email while they moved to
+      # DevDogsUGA/Backstage; both are gone from this repository now, so there
+      # is nothing left to freeze.
       - name: Select affected packages
         id: since
         run: |
@@ -101,27 +157,20 @@ jobs:
       # Every env variable is declared in a manifest, and the registry agrees.
       - name: Every env variable is declared
         run: pnpm devtools check env
-      # workers.json against the wrangler.jsonc files and deploy-app.yaml's
-      # matrix: a Worker added to one and forgotten in the other fails here
-      # rather than deploying half of itself.
-      - name: workers.json agrees with the Workers and the deploy matrix
-        run: pnpm devtools check workers
+      # REMOVED: "workers.json agrees with the Workers and the deploy matrix"
+      # (`devtools check workers`). The Worker list (workers.json), the deploy
+      # matrix and the smoke-test data all live in Backstage now, which deploys
+      # both apps; with no workers.json here the check has nothing to compare.
       # One script vocabulary across the workspace (dev, build, test:<kind>,
       # types:<source>, ...), so `pnpm -F <app> <task>` means the same thing
       # everywhere.
       - name: Package scripts use the shared vocabulary
         run: pnpm devtools check scripts
-      # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
-      # and the files in patches/ (a mismatch fails here), then each patch's
-      # upstream PRs/issues and the npm release that carries the fix. The
-      # upstream half only warns (`::warning::` annotations when a patch can be
-      # dropped, or when GitHub/npm can't be reached); it never fails the job.
-      - name: Patches are documented, and flagged when upstream fixes them
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          pnpm test:patches
-          pnpm check:patches
+      # REMOVED: "Patches are documented, and flagged when upstream fixes them"
+      # (`pnpm test:patches` + `pnpm check:patches`). The patch audit runs in
+      # Backstage's `toolchain` job, which also fails when patches/ or the
+      # catalog here drift from Backstage's copies. patches/ and the catalog stay
+      # in this repo, byte-for-byte, for exactly that comparison.
       # The deploy-PR script's pure plan/body builder (`node --test`, no deps).
       - name: Deploy PR script tests
         run: pnpm test:deploy-pr
@@ -136,8 +185,8 @@ jobs:
       # remove the requirement. Building the apps needs a database, so it
       # happens in the `database` job, which has one.
       #
-      # Each app's `pretypecheck`/`prelint`/`pretest` runs its own `codegen`
-      # (the email templates, the docs module, and the GENERATED route types:
+      # Each package's `pretypecheck`/`prelint`/`pretest` runs its own `codegen`
+      # (the Database types, the docs module, and the GENERATED route types:
       # the `VinextRouteTypes` namespace and next-env.d.ts's
       # `vinext/types/augmentations` reference, which exist on every laptop
       # that has run `vinext dev` and on no fresh checkout). The workspace
@@ -174,8 +223,7 @@ jobs:
       # that fails its own validator, that is a bug in the published
       # package, not something a check in this repo can catch earlier.
       # .env.example is GENERATED from the env manifests; this regenerates it
-      # in memory and byte-compares -- the same pattern the database job uses
-      # for database.types.ts. Credential-free by construction: the generator
+      # in memory and byte-compares. Credential-free by construction: the generator
       # is registry-only (no Bitwarden token, no network, no Docker).
       #
       # `with-env` reports a missing `.env` and continues rather than
@@ -188,8 +236,9 @@ jobs:
       # otherwise pick up whatever the machine has.
       - name: .env.example agrees with the env manifests
         run: pnpm devtools env example --check --no-env
+      # (The platform's Cloudflare binding types are checked in Backstage.)
       - name: Cloudflare binding types match the Worker configuration
-        run: pnpm --filter platform types:cf:check && pnpm --filter schedule-builder types:cf:check
+        run: pnpm --filter schedule-builder types:cf:check
       # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
       #
       # It existed because `scripts/` was not a workspace package, so the
@@ -261,11 +310,15 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
           } >> .env
-      # Catches a migration that changed the schema without the committed types
-      # being regenerated -- which typechecks fine everywhere until something
-      # reads a column the types still claim exists.
-      - name: Generated Database types match the migrations
-        run: pnpm --filter @devdogsuga/supabase run types:db:check
+      # REMOVED: "Generated Database types match the migrations"
+      # (`types:db:check`, which regenerated the committed file and diffed it).
+      # The file is not committed any more, so there is nothing to drift: every
+      # job gets types generated from the migrations it is testing (the `types`
+      # job, cached on them). This step generates them against this job's own
+      # fresh stack, so a migration that applies but whose types do not
+      # generate fails here too, and the suites below start from a current file.
+      - name: Generate the Database types from the migrations
+        run: pnpm --filter @devdogsuga/supabase run codegen
       # 59 tests. All app schemas share one PostgREST endpoint and one anon key,
       # so RLS -- not the schema boundary -- is what isolates one app's data from
       # another's. This is the only thing that checks it.
@@ -276,18 +329,17 @@ jobs:
       # nothing else can see: a function reachable by every role in the cluster
       # typechecks perfectly.
       # `test:db` runs its app's `codegen` first (`pretest:db`), so there is
-      # nothing to build beforehand.
-      - name: Query validity + privilege surface
-        run: pnpm --filter platform run test:db
+      # nothing to build beforehand. (The platform's own database suite runs in
+      # Backstage, against this repo's migrations at the pinned commit.)
       - name: Query validity + privilege surface (schedule-builder)
         run: pnpm --filter schedule-builder run test:db
       # Validation ENFORCED, unlike everywhere else in this file. That is what
       # makes this worth running: a newly added required variable with no
       # default fails here rather than at deploy time.
       #
-      # Both Next apps. study-group-finder is Flutter and is covered by its own
-      # job.
-      - name: Build both Next apps, with the env schema enforced
+      # schedule-builder, the only Next app here (the platform builds in
+      # Backstage). study-group-finder is Flutter and is covered by its own job.
+      - name: Build the Next app, with the env schema enforced
         env:
           SKIP_ENV_VALIDATION: ""
         run: >-
@@ -357,22 +409,14 @@ jobs:
           flutter analyze
           flutter test
 
-  # A main commit becomes a staging/production candidate only after all four
-  # required checks pass. Keeping this as a reusable workflow preserves the
-  # credential boundary: PR runs never call it, and only this job receives the
-  # Actions write permission needed to supersede older waiting candidates.
-  deploy:
-    needs: [validate, database, format, flutter]
-    if: github.event_name == 'push'
-    permissions:
-      contents: read
-      actions: write
-    uses: ./.github/workflows/deploy.yaml
-    secrets: inherit
+  # REMOVED: `deploy`, which called the reusable deploy.yaml / deploy-app.yaml
+  # workflows (build, migrate, deploy and smoke-test both Workers). Deployment
+  # moved to Backstage with the platform; `open-deploy-pr` below is how a main
+  # commit gets there.
 
   # A main commit that passed every required check becomes a deploy PR in
   # DevDogsUGA/Backstage, which pins DevDogsUGA in `devdogsuga.lock` and owns
-  # deployment (TASK-478). Push to main only: the `deploy-pr` environment is
+  # deployment (TASK-478). Push to main only (never `merge_group` or `pull_request`): the `deploy-pr` environment is
   # restricted to `main`, and it holds the GitHub App credential, so this is
   # the one place in this file a secret is in scope.
   #

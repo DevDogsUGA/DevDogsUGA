@@ -2,7 +2,8 @@ name: Resolve the base ref
 description: >-
   The commit to diff against when finding what a run affected. A pull request
   diffs against the current tip of the branch it targets (its head may be
-  several commits ahead of where it forked); a push compares against the commit
+  several commits ahead of where it forked); a merge-queue run diffs against
+  the base commit the queue built on; a push compares against the commit
   HEAD pointed to before the push landed, falling back to the previous commit
   when that value is unset or unreachable (a repository's first push, or
   history git cannot see for another reason).
@@ -24,10 +25,14 @@ runs:
       env:
         EVENT_NAME: ${{ github.event_name }}
         PR_BASE: ${{ github.event.pull_request.base.sha }}
+        MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
         PUSH_BEFORE: ${{ github.event.before }}
       run: |
         if [ "$EVENT_NAME" = "pull_request" ]; then
           REF="$PR_BASE"
+        elif [ "$EVENT_NAME" = "merge_group" ]; then
+          # The merge queue builds its commit on top of this one.
+          REF="$MERGE_GROUP_BASE"
         else
           REF="$PUSH_BEFORE"
           if [ -z "$REF" ] || [ "$REF" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$REF" 2>/dev/null; then
