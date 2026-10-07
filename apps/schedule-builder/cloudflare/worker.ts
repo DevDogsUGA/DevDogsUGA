@@ -14,7 +14,7 @@
  * Server-side Sentry capture is wired HERE, via `@sentry/cloudflare`'s
  * `withSentry`, and deliberately NOT via `@sentry/nextjs`'s usual
  * `sentry.server.config.ts` / `instrumentation.ts` pattern -- same reasoning
- * as `apps/platform/cloudflare/worker.ts`: that pattern assumes a
+ * as the platform Worker (Backstage's `apps/platform/cloudflare/worker.ts`): that pattern assumes a
  * Vercel/Node/Edge runtime and throws "Cannot call this AsyncLocalStorage
  * bound function outside of the request in which it was created"
  * (getsentry/sentry-javascript#18842) under OpenNext-on-Workers, and the same
@@ -37,8 +37,8 @@ import type { env as scheduleBuilderEnv } from "~/env";
  * `DEPLOY_ENV` is set by wrangler.jsonc's per-env `vars` block and the
  * build step.
  *
- * `SENTRY_RELEASE` is NOT part of `~/env`'s schema -- see `apps/platform/
- * cloudflare/worker.ts`'s `WorkerEnv` for why. It reaches this Worker as a
+ * `SENTRY_RELEASE` is NOT part of `~/env`'s schema -- see the platform Worker's `WorkerEnv`
+ * (apps/platform/cloudflare/worker.ts in Backstage) for why. It reaches this Worker as a
  * `--var` on `wrangler deploy` (see `backstage deploy`), same as platform.
  *
  * `@sentry/cloudflare`'s `withSentry` infers ONE `Env` type parameter shared

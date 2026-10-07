@@ -1,2 +1,0 @@
-# Source maps go to Sentry (deploy-app.yaml's release step), not to visitors.
-*.map

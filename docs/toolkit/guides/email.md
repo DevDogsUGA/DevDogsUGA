@@ -91,5 +91,4 @@ like, and read it in review: because the sentinels survive, a design change
 shows up as a diff about the template rather than about whichever fixture values
 happened to be used. There is no preview server.
 
-Every export is in the generated
-[`@devdogsuga/email`](../reference/api/email.md) reference.
+The package lives in the Backstage repository, which generates its API reference.

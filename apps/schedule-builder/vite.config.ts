@@ -37,7 +37,7 @@ export default defineConfig({
       "~": path.resolve(import.meta.dirname, "src"),
     },
   },
-  // Off by default. deploy-app.yaml's `getsentry/action-release` step uploads
+  // Off by default. Backstage's `getsentry/action-release` step uploads
   // these from `dist/**` so Sentry can resolve stack traces, and
   // `public/.assetsignore` keeps the client ones out of the deployed assets.
   build: {

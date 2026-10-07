@@ -272,8 +272,8 @@ shellEmulator: true
 dlxCacheMaxAge: 0
 
 patchedDependencies:
-  # Why each patch exists and when to drop it: patches/patches.json (verified
-  # by `pnpm check:patches`).
+  # Why each patch exists and when to drop it: patches/patches.json (audited by
+  # Backstage's toolchain job, which owns the patch audit).
   '@vinext/cloudflare@1.0.1': patches/@vinext__cloudflare@1.0.1.patch
   react-dom@19.2.8: patches/react-dom@19.2.8.patch
   react-server-dom-webpack@19.3.0: patches/react-server-dom-webpack@19.3.0.patch
