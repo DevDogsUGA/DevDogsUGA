@@ -45,12 +45,19 @@ export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
   {};
 
 /**
- * The daily registrar scrape's schedule and Sentry Crons monitor slug, read by
- * `./ScrapeWorkflow.ts`'s check-ins. The schedule is kept in step with
- * wrangler.jsonc's production `workflows[].schedules`.
+ * The daily registrar scrape's schedule, kept in step with wrangler.jsonc's
+ * production `workflows[].schedules`.
  */
 export const SCRAPE_SCHEDULE = "5 14 * * *";
-export const SCRAPE_MONITOR_SLUG = "schedule-builder-scrape";
+
+/**
+ * The scrape's row in `platform."jobHeartbeats"`, written by
+ * `./ScrapeWorkflow.ts` when a run succeeds. The platform's fifteen-minute
+ * cron reports it overdue through its own Sentry Crons monitor, so the scrape
+ * has none of its own (Sentry bills a seat per monitor). The name is the
+ * monitor slug the scrape used to check in to.
+ */
+export const SCRAPE_HEARTBEAT_JOB = "schedule-builder-scrape";
 
 /**
  * Cron expression to the natively scheduled Workflow binding and a one-line
@@ -61,19 +68,18 @@ export const SCRAPE_MONITOR_SLUG = "schedule-builder-scrape";
  * metadata only. `devtools cron run` directs operators to `devtools workflows`
  * for manual smoke tests.
  *
- * `monitorSlug` is here, not only in the Workflow, because `backstage deploy
- * prune-monitors` deletes every `schedule-builder-*` Sentry monitor that is
- * not declared in this file's exports.
+ * No `monitorSlug`: `backstage deploy prune-monitors` deletes every
+ * `schedule-builder-*` Sentry monitor not declared in this file's exports,
+ * which is how the scrape's old monitor goes away.
  */
 export const WORKFLOW_CRONS: Record<
   string,
-  { binding: string; label: string; monitorSlug: string }
+  { binding: string; label: string }
 > = {
   [SCRAPE_SCHEDULE]: {
     binding: "SCRAPE_WORKFLOW",
     label:
       "Daily registrar scrape (one retried, checkpointed ScrapeWorkflow step per term)",
-    monitorSlug: SCRAPE_MONITOR_SLUG,
   },
 };
 

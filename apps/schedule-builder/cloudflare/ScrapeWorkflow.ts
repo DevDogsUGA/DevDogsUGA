@@ -27,6 +27,7 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import * as Sentry from "@sentry/cloudflare";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { sql } from "drizzle-orm";
 import {
   detectAvailableTerms,
   fetchPartsOfTerm,
@@ -49,7 +50,7 @@ import type { ResolvedTerm } from "~/lib/parsers/termPartsOfTerm";
 import { createScheduleBuilderDb } from "~/server/db/create";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { resolveWorkflowDatabaseUrl } from "./database-url";
-import { SCRAPE_MONITOR_SLUG, SCRAPE_SCHEDULE } from "./scheduled";
+import { SCRAPE_HEARTBEAT_JOB } from "./scheduled";
 
 /**
  * Opaque -- scheduled and manual instances need no per-instance parameters.
@@ -96,10 +97,16 @@ export type ScrapeWorkflowResult = {
  * `captureException` for free, with no per-attempt/per-retry event of its
  * own. This class therefore only adds what the wrapper does NOT give it:
  * breadcrumbs so a retry's history is visible on whatever event eventually
- * fires, and Sentry Crons check-ins plus a `captureException` for the two
- * failure paths that happen OUTSIDE any `step.do` call (zero terms detected;
- * the aggregate "completed partially" throw at the end) and so are invisible
- * to the wrapper's per-step capture.
+ * fires, and a `captureException` for the two failure paths that happen
+ * OUTSIDE any `step.do` call (zero terms detected; the aggregate "completed
+ * partially" throw at the end) and so are invisible to the wrapper's per-step
+ * capture.
+ *
+ * A run that never happens raises no exception, so a successful one records
+ * itself in `platform."jobHeartbeats"` instead, and the platform's
+ * fifteen-minute cron reports the row overdue through its Sentry Crons
+ * monitor. The scrape no longer checks in to a monitor of its own: Sentry
+ * bills a seat per monitor.
  */
 class ScrapeWorkflowBase extends WorkflowEntrypoint<
   CloudflareEnv,
@@ -109,42 +116,6 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
     _event: Readonly<WorkflowEvent<ScrapeWorkflowParams>>,
     step: WorkflowStep,
   ): Promise<ScrapeWorkflowResult> {
-    // Manual two-phase check-in (not `withMonitor`, which wraps a single
-    // callback): this run spans multiple `step.do` calls and can hibernate
-    // between them, so "in progress" has to be reported before any of that
-    // happens and "ok"/"error" only once the whole thing has settled.
-    // `checkinMargin`/`maxRuntime` are generous, not the five/ten-minute
-    // platform crons' tight ones: a full scrape fans out over every open
-    // term and can run for several minutes.
-    //
-    // Wrapped in its own `step.do` -- everything OUTSIDE a `step.do` call,
-    // including a bare `captureCheckIn`, re-executes from the top of `run()`
-    // on every replay after hibernation/eviction (only `step.do` results are
-    // memoized by the Workflows engine). An unwrapped call here would mint a
-    // brand-new `checkInId` on each resume, orphaning the previous one until
-    // Sentry's own `maxRuntime` timeout marked it a false "missed run."
-    // `step.do` persists and replays its return value instead, so every
-    // resume after the first gets back the SAME `checkInId` without calling
-    // `captureCheckIn` again.
-    //
-    // The slug and schedule are declared in `./scheduled.ts`'s
-    // `WORKFLOW_CRONS`. Only the production environment has this schedule
-    // wired; staging/development instances are triggered by hand (see
-    // wrangler.jsonc), so their check-ins upsert the same monitor config
-    // without a missed-run alert ever firing there -- Sentry Crons issues are
-    // scoped by monitor *and* environment tag, and alert rules are
-    // production-only by the workspace's settled design.
-    const checkInId = await step.do("sentry-checkin-start", async () =>
-      Sentry.captureCheckIn(
-        { monitorSlug: SCRAPE_MONITOR_SLUG, status: "in_progress" },
-        {
-          schedule: { type: "crontab", value: SCRAPE_SCHEDULE },
-          checkinMargin: 30,
-          maxRuntime: 60,
-        },
-      ),
-    );
-
     try {
       // Only the academic period + description survive to the next step --
       // NOT the parsed `.rows`. Step output is persisted/replayed by the
@@ -265,11 +236,21 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
         );
       }
 
-      Sentry.captureCheckIn({
-        checkInId,
-        monitorSlug: SCRAPE_MONITOR_SLUG,
-        status: "ok",
+      // Its own step so a replay after this point does not write it twice,
+      // and so a failed write is retried like any other database call.
+      // Raw SQL: the table is the platform's, outside the `schedule_builder`
+      // schema this Drizzle client is typed for.
+      await step.do("record-heartbeat", async () => {
+        const db = createScheduleBuilderDb(
+          resolveWorkflowDatabaseUrl(this.env),
+        );
+        await db.execute(sql`
+          insert into "platform"."jobHeartbeats" ("job", "succeededAt")
+          values (${SCRAPE_HEARTBEAT_JOB}, now())
+          on conflict ("job") do update set "succeededAt" = excluded."succeededAt"
+        `);
       });
+
       return {
         termResults,
         failedFetches: detection.failedFetches,
@@ -285,15 +266,10 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
       // is a separate, aggregate signal for the run as a whole, not a
       // duplicate of that one.
       Sentry.captureException(err);
-      Sentry.captureCheckIn({
-        checkInId,
-        monitorSlug: SCRAPE_MONITOR_SLUG,
-        status: "error",
-      });
       // `flush` is normally handled per-step by the wrapper, but this throw
       // happens outside any `step.do` call, so nothing else guarantees the
-      // check-in/exception above reach Sentry before the Workflow's isolate
-      // is torn down.
+      // exception above reaches Sentry before the Workflow's isolate is torn
+      // down.
       await Sentry.flush(2000);
       throw err;
     }
