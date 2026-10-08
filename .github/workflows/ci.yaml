@@ -396,11 +396,17 @@ jobs:
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+      # Not subosito/flutter-action: it calls `actions/cache@v5` internally,
+      # by tag, and the org's Actions policy requires every action pinned to
+      # a full commit SHA. GitHub resolves a composite action's inner `uses:`
+      # when the job is set up, whatever its `cache:` input, so the job
+      # failed before running a step. A shallow clone of the stable branch
+      # is the SDK the action installed, uncached.
+      - name: Install Flutter (stable)
         if: steps.affected.outputs.run == 'true'
-        with:
-          channel: stable
-          cache: true
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - name: Analyze + test
         if: steps.affected.outputs.run == 'true'
         working-directory: apps/study-group-finder
