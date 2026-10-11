@@ -4,7 +4,10 @@ The database: `config.toml`, the seeds, and the schema in two forms.
 
 - `migrations/` is the history, and the **baseline** of the declarative
   conversion: migrations 00 to 54, in timestamp order. Production has every one
-  of them applied. Nothing in here changes for the conversion.
+  of them applied. Nothing in here changes for the conversion. After them come
+  hand-written migrations, which exist for changes a generated diff must not
+  make on its own (a destructive one goes through the destructive gate); today
+  that is `20261012000000_drop_teams_and_competitions.sql`.
 - `schemas/` is the declarative schema tree, one file per object, generated from
   production (`supabase db schema declarative generate --db-url <planner URL>
 --strict-coverage --overwrite`, with the read-only `migration_planner`
@@ -37,8 +40,8 @@ tree carries the fix so that the invariant holds:
   says nothing about `anon` and `authenticated`, which a database that loads
   `default_privileges.sql` first gives them. Each file now starts its ACL with
   `REVOKE ALL ON TABLE ... FROM "anon", "authenticated"`.
-- **Column privileges.** `platform.profile` and `platform.teams` grant `UPDATE`
-  or `SELECT` on single columns. The export writes the column grants first and
+- **Column privileges.** `platform.profile` grants `UPDATE` on single
+  columns. The export writes the column grants first and
   then `REVOKE ALL ON TABLE ... FROM <role>`, and PostgreSQL's table-level
   `REVOKE` also revokes the role's column privileges, so the column grants were
   lost. The table-level statements now come first.
