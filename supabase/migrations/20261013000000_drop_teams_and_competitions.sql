@@ -11,8 +11,11 @@
 --
 -- The rows are archived first: `archive/` holds the last state of every table
 -- dropped here, and `archive/manifest.json` records production's row counts
--- (2 teams, 2 members, 3 competitions, 0 entries, 0 requests). Nothing else in
--- the database referenced them: `reflections` held no competition rows.
+-- (at the 2026-10-12 export: 3 teams, 3 members, 2 requests, 3 competitions,
+-- 0 entries; the manifest is the source of truth, and `node
+-- scripts/archive-teams-and-competitions.ts --check` must pass immediately
+-- before this applies). Nothing else in the database referenced them:
+-- `reflections` held no competition rows.
 --
 -- What goes, in order:
 --   1. memberStars loses its competition branch, so the columns that existed

@@ -7,7 +7,7 @@ The database: `config.toml`, the seeds, and the schema in two forms.
   of them applied. Nothing in here changes for the conversion. After them come
   hand-written migrations, which exist for changes a generated diff must not
   make on its own (a destructive one goes through the destructive gate); today
-  that is `20261012000000_drop_teams_and_competitions.sql`.
+  that is `20261013000000_drop_teams_and_competitions.sql`.
 - `schemas/` is the declarative schema tree, one file per object, generated from
   production (`supabase db schema declarative generate --db-url <planner URL>
 --strict-coverage --overwrite`, with the read-only `migration_planner`
