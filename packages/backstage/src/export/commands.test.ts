@@ -12,7 +12,7 @@ import {
   type ExportSource,
   type Sink,
 } from "./commands.js";
-import type { ExportFilters, ExportKind } from "./queries.js";
+import type { ExportFilters, ExportKind } from "@devdogsuga/events/exports";
 
 let stderr: string;
 let events: string[];

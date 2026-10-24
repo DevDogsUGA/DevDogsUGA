@@ -72,6 +72,7 @@ describe("matchTerminalPath", () => {
     ],
     ["/console/data", "/console/data"],
     ["/console/data/imports/", "/console/data/imports"],
+    ["/console/data/exports", "/console/data/exports"],
   ])("%s is %s", (path, pattern) => {
     expect(matchTerminalPath(path)?.pattern).toBe(pattern);
   });
@@ -87,6 +88,7 @@ describe("matchTerminalPath", () => {
     "/changlelog",
     "/console/attendance/abc/present",
     "/console/data/imports/preview",
+    "/console/data/exports/prepare",
     "/tools/oauth/device",
     "/teams",
   ])("passes %s through", (path) => {

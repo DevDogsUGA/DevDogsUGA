@@ -70,3 +70,23 @@ export const consoleImports = terminal(PUBLIC, ({ path }) =>
     ],
   }),
 );
+
+export const consoleExports = terminal(PUBLIC, ({ path }) =>
+  page({
+    banner: "DEVDOGS",
+    accent: "cyan",
+    aside: ["officers only", "sign in required"],
+    command: "console data exports",
+    body: [
+      {
+        type: "notice",
+        notice: {
+          tone: "info",
+          title: "Exports need the browser",
+          text: "Choosing a dataset and format, checking the counts and downloading happen on the page, and each export is recorded in the audit log. Nothing here reads a record.",
+          url: `${SITE}${path}`,
+        },
+      },
+    ],
+  }),
+);
