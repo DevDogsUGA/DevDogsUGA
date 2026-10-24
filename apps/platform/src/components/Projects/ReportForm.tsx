@@ -145,8 +145,8 @@ export default function ReportForm({
           </ul>
         )}
         <p className="prj-meta">
-          Tick at least one from this range. A pull request that is out of range, or
-          already in another report, is refused.
+          Tick at least one from this range. A pull request that is out of
+          range, or already in another report, is refused.
         </p>
       </fieldset>
 
@@ -180,7 +180,11 @@ export default function ReportForm({
         {short > 0 ? ` · ${short} to go` : ""}
       </p>
       <div>
-        <Button type="submit" size="sm" disabled={pending || short > 0 || cited === 0}>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={pending || short > 0 || cited === 0}
+        >
           {values.reportId ? "Resubmit report" : "Submit report"}
         </Button>
       </div>

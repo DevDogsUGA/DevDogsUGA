@@ -17,7 +17,7 @@ export interface ReflectionSettingsActionState {
 // certainly a typo (1000 words is already a long reflection), and a
 // submission window longer than a semester defeats the point of a deadline.
 const MINIMUM_WORD_COUNT_BOUNDS = { min: 100, max: 1000 } as const;
-const SUBMISSION_WINDOW_DAYS_BOUNDS = { min: 1, max: 90 } as const;
+const SUBMISSION_WINDOW_DAYS_BOUNDS = { min: 7, max: 90 } as const;
 
 const inputSchema = z.object({
   minimumWordCount: z.coerce

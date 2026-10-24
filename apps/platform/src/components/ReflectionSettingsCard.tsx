@@ -58,7 +58,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
   const [days, setDays] = useState(saved.days);
 
   const wordsError = check(words, 100, 1000);
-  const daysError = check(days, 1, 90);
+  const daysError = check(days, 7, 90);
 
   const { isSaving } = useSettingsField({
     id: "reflectionSettings",
@@ -89,7 +89,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
     <Panel
       id="reflection-settings"
       title="Reflection settings"
-      help="How many words a submission needs, and how many days after a meeting ends members may still submit one. Applies to new submissions; reflections already in progress keep the rules they started with."
+      help="How many words a submission needs, and how many days (at least 7) after attendance is recorded members may still submit one. Applies to new submissions; reflections already in progress keep the rules they started with."
     >
       <div className="con-fields">
         <Field

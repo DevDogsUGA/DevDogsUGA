@@ -201,7 +201,11 @@ export default async function ProjectConsolePage({
                   <span className="prj-title">{member.name ?? "Member"}</span>
                   {member.handle && (
                     <Link
-                      href={`/console/badges/${member.userId}`}
+                      href={
+                        officer
+                          ? `/console/badges/${member.userId}`
+                          : `/community/@${member.handle}`
+                      }
                       className="prj-meta"
                     >
                       @{member.handle}

@@ -344,5 +344,8 @@ export async function getEligiblePullRequests(
     )
     .orderBy(desc(contributions.mergedAt))
     .limit(200);
-  return rows.map(({ usedBy, ...pr }) => ({ ...pr, selected: usedBy !== null }));
+  return rows.map(({ usedBy, ...pr }) => ({
+    ...pr,
+    selected: usedBy !== null,
+  }));
 }

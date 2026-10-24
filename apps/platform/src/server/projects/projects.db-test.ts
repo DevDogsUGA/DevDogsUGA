@@ -63,6 +63,19 @@ async function cleanup() {
   await db.transaction(async (tx) => {
     await tx.execute(sql`set local session_replication_role = replica`);
     await tx.execute(sql`
+      delete from platform."projectReportContributions"
+      where "reportId" in (
+        select id from platform."projectReports"
+        where "userId" in (${ids})
+           or "projectId" in (select id from platform.projects where name like 'D5 %')
+      )
+    `);
+    await tx.execute(sql`
+      delete from platform."projectMembers"
+      where "userId" in (${ids})
+         or "projectId" in (select id from platform.projects where name like 'D5 %')
+    `);
+    await tx.execute(sql`
       delete from platform."projectReports"
       where "userId" in (${ids})
          or "projectId" in (select id from platform.projects where name like 'D5 %')
@@ -413,11 +426,7 @@ describe("project reports (Q119-Q121)", () => {
   it("keeps leadership out of ordinary reports; their EL is separate (Q125)", async () => {
     const project = await activeProject("D5 Officer", [MEMBER, OFFICER]);
     expect(
-      await submitProjectReport(
-        OFFICER,
-        await cited(OFFICER, project),
-        TODAY,
-      ),
+      await submitProjectReport(OFFICER, await cited(OFFICER, project), TODAY),
     ).toEqual({ status: "leadership_separate" });
     const n = await db.execute<{ n: number }>(
       sql`select count(*)::int as n from platform."projectReports" where "userId" = ${OFFICER}::uuid`,
