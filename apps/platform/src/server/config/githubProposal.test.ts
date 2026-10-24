@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SavedEdit } from "./edits";
 import {
   commitMessage,
+  inlineCode,
   openProposal,
   plainName,
   pullRequestBody,
@@ -32,8 +33,8 @@ interface Meetings {
 }
 
 const officer = {
-  name: "Ada Officer",
-  email: "123+ada@users.noreply.github.com",
+  name: "Test Officer",
+  email: "123+tester@users.noreply.github.com",
 };
 
 const roomEdit: SavedEdit = {
@@ -100,7 +101,7 @@ describe("openProposal", () => {
     );
     expect(commit.parents).toEqual(["basesha"]);
     expect(commit.message).toContain(
-      "Co-authored-by: Ada Officer <123+ada@users.noreply.github.com>",
+      "Co-authored-by: Test Officer <123+tester@users.noreply.github.com>",
     );
     expect(ref).toEqual({
       ref: "refs/heads/config/proposal-1700000000-abcdef12",
@@ -111,7 +112,7 @@ describe("openProposal", () => {
       base: "main",
       draft: false,
     });
-    expect(pull.body).toContain("Proposed by Ada Officer");
+    expect(pull.body).toContain("Proposed by Test Officer");
     expect(pull.body).toContain("Room: `124` -> `200`");
     expect(pull.title).toBe("Config: update 1 meeting");
   });
@@ -251,14 +252,14 @@ describe("openProposal", () => {
 
 describe("text helpers", () => {
   it("strips angle brackets and line breaks from a name", () => {
-    expect(plainName("Ada <evil>\nLovelace")).toBe("Ada evil Lovelace");
+    expect(plainName("Test <evil>\nOfficer")).toBe("Test evil Officer");
     expect(plainName("   ")).toBe("A DevDogs officer");
     expect(plainName("@octocat and @org/team `x`")).not.toMatch(/[@`]/);
   });
 
   it("puts the co-author on its own trailer", () => {
     expect(commitMessage(officer, [])).toMatch(
-      /\n\nCo-authored-by: Ada Officer <123\+ada@users\.noreply\.github\.com>$/,
+      /\n\nCo-authored-by: Test Officer <123\+tester@users\.noreply\.github\.com>$/,
     );
   });
 
@@ -275,5 +276,13 @@ describe("text helpers", () => {
         { collection: "workshop", key: "c", kind: "added", fields: [] },
       ]),
     ).toBe("update 2 meetings, add 1 workshop");
+  });
+});
+
+describe("inlineCode", () => {
+  it("fences a value past its longest backtick run, so nothing in it renders live", () => {
+    expect(inlineCode("plain @team")).toBe("`plain @team`");
+    expect(inlineCode("a ``b`` @team")).toBe("```a ``b`` @team```");
+    expect(inlineCode("`edge`")).toBe("`` `edge` ``");
   });
 });

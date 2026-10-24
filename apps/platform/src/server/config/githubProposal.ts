@@ -134,10 +134,20 @@ function clip(text: string): string {
 }
 
 /** Officer-entered text as inline code, so `@handle` and `#123` never notify or cross-link. */
-function inlineCode(text: string): string {
+/**
+ * Officer text as inline code, so an @mention or #123 in it never notifies
+ * anyone. The fence is one backtick longer than the longest run inside, and a
+ * value that starts or ends with a backtick is padded so it can't merge in.
+ */
+export function inlineCode(text: string): string {
   const flat = text.replace(/[\r\n]+/g, " ");
-  const fence = flat.includes("`") ? "``" : "`";
-  return `${fence}${flat}${fence}`;
+  const longest = Math.max(
+    0,
+    ...(flat.match(/`+/g) ?? []).map((r) => r.length),
+  );
+  const fence = "`".repeat(longest + 1);
+  const pad = flat.startsWith("`") || flat.endsWith("`") ? " " : "";
+  return `${fence}${pad}${flat}${pad}${fence}`;
 }
 
 export function pullRequestBody(

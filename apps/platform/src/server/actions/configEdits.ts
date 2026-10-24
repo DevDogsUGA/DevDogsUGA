@@ -121,6 +121,14 @@ export async function saveConfigEditAction(
   const fields = changedFields(kind, existing, parsed.item);
   delete fields[keyName];
 
+  // The table refuses more than 16 KB of saved fields; say so rather than
+  // letting the check violation surface as a server error.
+  if (new TextEncoder().encode(JSON.stringify(fields)).length > 15_000) {
+    return {
+      ok: false,
+      message: "This edit is too long to save. Shorten the longer fields.",
+    };
+  }
   const result = await saveEdit(userId, {
     collection: kind,
     key,

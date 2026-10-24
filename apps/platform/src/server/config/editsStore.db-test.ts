@@ -43,7 +43,7 @@ beforeEach(async () => {
   await insertMember({
     id: ONE,
     handle: "c2-one",
-    preferredName: "Ada Officer",
+    preferredName: "Test Officer",
     github: null,
   });
   await insertMember({ id: TWO, handle: "c2-two" });
@@ -167,7 +167,7 @@ describe("account deletion (Q168)", () => {
 describe("officerIdentity", () => {
   it("uses the preferred name and, without GitHub, the club's no-reply address", async () => {
     expect(await officerIdentity(ONE)).toEqual({
-      name: "Ada Officer",
+      name: "Test Officer",
       email: "noreply@devdogsuga.org",
     });
   });

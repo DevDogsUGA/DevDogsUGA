@@ -56,7 +56,7 @@ beforeEach(() => {
   mocks.listEdits.mockResolvedValue([roomEdit]);
   mocks.consume.mockResolvedValue(true);
   mocks.insertValues.mockResolvedValue(undefined);
-  mocks.profileName = "Ada Officer";
+  mocks.profileName = "Test Officer";
   mocks.github = [];
   delete process.env.DEPLOY_ENV;
 });
@@ -174,10 +174,10 @@ describe("openConfigPr audit", () => {
 
 describe("officerIdentity", () => {
   it("credits a linked GitHub account by its noreply address", async () => {
-    mocks.github = [{ id: "4242", login: "ada" }];
+    mocks.github = [{ id: "4242", login: "tester" }];
     expect(await officerIdentity(USER)).toEqual({
-      name: "Ada Officer",
-      email: "4242+ada@users.noreply.github.com",
+      name: "Test Officer",
+      email: "4242+tester@users.noreply.github.com",
     });
   });
 
