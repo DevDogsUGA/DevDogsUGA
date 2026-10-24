@@ -17,9 +17,9 @@
  * Survey responses can also be written `wide`: one row per person, one
  * column per question, for one meeting.
  */
-import { getQuestions } from "@devdogsuga/events";
+import { getQuestions } from "../index.js";
 import type { ExportKind } from "./queries.js";
-import { csvRow, LINE_ENDING } from "../csv/write.js";
+import { csvRow, LINE_ENDING } from "./write.js";
 
 export const FORMAT_NAMES = [
   "platform",
@@ -43,6 +43,8 @@ export interface BevySurvey {
   columns: string[];
   /** user id → column → the answer in words. */
   byUser: Map<string, Map<string, string>>;
+  /** People whose answers were left out for missing a required one (user id → the columns they lacked). */
+  withheld?: Map<string, string[]>;
 }
 
 export type Row = Record<string, unknown>;
@@ -53,6 +55,8 @@ export interface FormatWriter {
   page: (rows: readonly Row[]) => { text: string; count: number };
   /** People left out (no address the format can use). */
   skipped: () => number;
+  /** The first row of each person counted by `skipped`, for the report of what was left out. */
+  omitted: () => Row[];
   /** Anything written only once every row is in, such as a wide table. */
   end?: () => { text: string; count: number };
 }
@@ -110,7 +114,7 @@ function oncePer(
   line: (row: Row, key: string) => string,
 ): FormatWriter {
   const seen = new Set<string>();
-  const skipped = new Set<string>();
+  const skipped = new Map<string, Row>();
   return {
     page: (rows) => {
       let out = "";
@@ -118,7 +122,8 @@ function oncePer(
       for (const row of rows) {
         const k = key(row);
         if (k === null) {
-          skipped.add(text(row.user_id));
+          const id = text(row.user_id);
+          if (!skipped.has(id)) skipped.set(id, row);
           continue;
         }
         if (seen.has(k)) continue;
@@ -129,6 +134,7 @@ function oncePer(
       return { text: out, count };
     },
     skipped: () => skipped.size,
+    omitted: () => [...skipped.values()],
   };
 }
 
@@ -162,6 +168,7 @@ export function platformFormat(columns: readonly string[]): Format {
         count: rows.length,
       }),
       skipped: () => 0,
+      omitted: () => [],
     }),
   };
 }
@@ -241,6 +248,7 @@ export const WIDE: Format = {
         return { text: "", count: 0 };
       },
       skipped: () => 0,
+      omitted: () => [],
       end: () => {
         const lead = ["user_id", "preferred_name", "email"];
         let out = csvRow([...lead, ...questions]);
@@ -337,8 +345,13 @@ export function bevySurvey(
     answers.set(column, text(row.answer));
     byUser.set(id, answers);
   }
+  const withheld = new Map<string, string[]>();
   for (const [id, answers] of byUser) {
-    if (required.some((column) => !answers.get(column))) byUser.delete(id);
+    const lacking = required.filter((column) => !answers.get(column));
+    if (lacking.length > 0) {
+      byUser.delete(id);
+      withheld.set(id, lacking);
+    }
   }
-  return { columns: columns.sort(), byUser };
+  return { columns: columns.sort(), byUser, withheld };
 }
