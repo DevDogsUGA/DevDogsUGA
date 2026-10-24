@@ -18,7 +18,7 @@ import { POST } from "./route";
 
 const post = (headers: Record<string, string> = {}, body: unknown = {}) =>
   POST(
-    new Request("http://localhost/console/data/exports", {
+    new Request("http://localhost/console/data/exports/prepare", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -35,7 +35,7 @@ beforeEach(() => {
   prepare.mockReset().mockResolvedValue({ kind: "error", message: "x" });
 });
 
-describe("POST /console/data/exports", () => {
+describe("POST /console/data/exports/prepare", () => {
   it("refuses a cross-site request before anything else", async () => {
     const res = await post({ "Sec-Fetch-Site": "cross-site" });
     expect(res.status).toBe(403);
@@ -45,7 +45,7 @@ describe("POST /console/data/exports", () => {
 
   it("refuses a request that does not say where it came from", async () => {
     const res = await POST(
-      new Request("http://localhost/console/data/exports", {
+      new Request("http://localhost/console/data/exports/prepare", {
         method: "POST",
         body: "{}",
       }),

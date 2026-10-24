@@ -13,7 +13,7 @@ function json(body: unknown, status = 200) {
 }
 
 /**
- * POST /console/data/exports: the console Exports page's one step. Audits the
+ * POST /console/data/exports/prepare: the console Exports page's one step. Audits the
  * export, reads it and returns the files with the counts and the report of who
  * was left out. A route handler (not a server action) so a cross-site POST is
  * refused before anything runs.
