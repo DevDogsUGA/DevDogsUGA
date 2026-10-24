@@ -18,7 +18,6 @@ const base: PublicProfile = {
     avatar: true,
     bio: true,
     links: true,
-    stars: true,
   },
 };
 

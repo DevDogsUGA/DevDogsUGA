@@ -4,14 +4,17 @@
  * may export only async functions, and the settings UI needs the list too.
  */
 
-/** The master switch and the six per-field switches. */
+/**
+ * The master switch and the per-field switches. `showStars` is not here: the
+ * weekly streak replaced the stars section and has no toggle (the column stays
+ * until its drop).
+ */
 export const PUBLIC_PROFILE_FIELDS = [
   "publicProfile",
   "showName",
   "showAvatar",
   "showBio",
   "showLinks",
-  "showStars",
   "showContributions",
 ] as const;
 
@@ -44,11 +47,6 @@ export const PUBLIC_PROFILE_FIELD_OPTIONS: ReadonlyArray<{
     field: "showLinks",
     label: "Links",
     description: "The links you added to your profile.",
-  },
-  {
-    field: "showStars",
-    label: "Stars",
-    description: "Your star totals.",
   },
   {
     field: "showContributions",

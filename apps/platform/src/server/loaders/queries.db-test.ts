@@ -9,7 +9,7 @@ import {
   getMeetingWorkshops,
   getMeetingsInRange,
 } from "./meetings";
-import { getStarsForUser } from "./stars";
+import { getWeeklyParticipation } from "./weeklyParticipation";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
 
@@ -58,8 +58,8 @@ describe("every loader is valid SQL", () => {
     expect(true).toBe(true);
   });
 
-  it("stars", async () => {
-    await getStarsForUser(NIL);
+  it("weekly participation", async () => {
+    await getWeeklyParticipation(NIL);
     expect(true).toBe(true);
   });
 });
