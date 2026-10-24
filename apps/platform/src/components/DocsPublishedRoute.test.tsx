@@ -75,7 +75,7 @@ describe("/docs/<slug> for a published project", () => {
   });
 
   it("sends the project root on to its first page", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(
       element(DocsProjectIndex({ project: "demo", mode: "public" })),
     ).rejects.toThrow("NEXT_REDIRECT /docs/demo/index");
@@ -94,7 +94,7 @@ describe("/docs/<slug> for a published project", () => {
         DocsPageRoute({ project: "nobody", slug: ["index"], mode: "public" }),
       ),
     ).rejects.toThrow("NEXT_NOT_FOUND");
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(
       element(
         DocsPageRoute({ project: "demo", slug: ["missing"], mode: "public" }),
@@ -107,7 +107,7 @@ describe("/docs/<slug> for a published project", () => {
 
   it("404s everything while nothing is published or there is no bucket", async () => {
     bucketRef.current = null;
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(
       element(
         DocsPageRoute({ project: "demo", slug: ["index"], mode: "public" }),

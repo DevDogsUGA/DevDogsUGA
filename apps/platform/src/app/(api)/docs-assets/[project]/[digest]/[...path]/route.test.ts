@@ -52,7 +52,10 @@ describe("GET /docs-assets", () => {
       ["nobody", DIGEST, "pic.svg"],
       ["demo", "f".repeat(64), "pic.svg"],
     ] as const) {
-      expect((await get(...args)).status, args.join("/")).toBe(404);
+      const [project, digest, ...path] = args;
+      expect((await get(project, digest, ...path)).status, args.join("/")).toBe(
+        404,
+      );
     }
   });
 

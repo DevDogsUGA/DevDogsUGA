@@ -69,7 +69,7 @@ describe("readPointer", () => {
 
 describe("listPublishedPointers", () => {
   it("lists usable pointers, skipping reserved slugs and malformed ones", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const bucket = fakeBucket({
       ...publication("demo"),
       ...publication("other"),
@@ -104,7 +104,7 @@ describe("readContent", () => {
   });
 
   it("is null for a page outside the project, and says so", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const stray = content();
     stray.pages[0]!.path = "platform/index";
     const bucket = fakeBucket({
@@ -116,7 +116,7 @@ describe("readContent", () => {
   });
 
   it("is null for content that names another project", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const bucket = fakeBucket({
       [`projects/demo/versions/${DIGEST}/content.json`]: JSON.stringify(
         content("other"),
@@ -127,7 +127,7 @@ describe("readContent", () => {
   });
 
   it("is null for content that isn't JSON", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const bucket = fakeBucket({
       [`projects/demo/versions/${DIGEST}/content.json`]: "<html>",
     });
