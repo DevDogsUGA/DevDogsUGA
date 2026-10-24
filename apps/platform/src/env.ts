@@ -241,6 +241,28 @@ const server = {
     scope: "environment",
     secrecy: "secret",
   }),
+  // The writing GitHub App (devdogs-deploy-pr, renamed "DevDogs config PRs"):
+  // Contents and Pull requests write, installed on DevDogsUGA only. It opens
+  // the console's config pull requests from its own branch. Both are optional:
+  // without them the console reports pull requests as unavailable, and saved
+  // edits and diffs keep working.
+  GH_CONFIG_APP_ID: define(z.string().optional(), {
+    doc:
+      "Id of the GitHub App that opens the console's config pull requests " +
+      "(DevDogs config PRs; Contents and Pull requests write, installed on " +
+      "DevDogsUGA only; a staging twin per environment). Without it, " +
+      "'Open PR' on the console's schedule editor reports itself unavailable.",
+    scope: "environment",
+    secrecy: "public",
+  }),
+  GH_CONFIG_APP_PRIVATE_KEY: define(z.string().optional(), {
+    doc:
+      "The config-PR GitHub App's private key (PEM, PKCS#8 or PKCS#1; " +
+      "literal \\n sequences are accepted). Signs the short-lived JWT the " +
+      "platform exchanges for an installation token scoped to DevDogsUGA.",
+    scope: "environment",
+    secrecy: "secret",
+  }),
   GH_WEBHOOK_SECRET: define(z.string().min(16).optional(), {
     doc:
       "The GitHub App's webhook secret. Verifies X-Hub-Signature-256 on " +

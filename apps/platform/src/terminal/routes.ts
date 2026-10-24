@@ -4,6 +4,7 @@ import { accountDeletion } from "./routes/account";
 import {
   consoleBadges,
   consoleMeeting,
+  consoleMeetings,
   consoleProjects,
 } from "./routes/console";
 import { changelogArchive, changelogIssue } from "./routes/changelog";
@@ -37,6 +38,8 @@ export const TERMINAL_ROUTES = {
   "/preview/kit": kitGallery,
   "/account/deletion": accountDeletion,
   "/console/attendance/:meetingId": consoleMeeting,
+  "/console/meetings": consoleMeetings,
+  "/console/meetings/:collection/:key": consoleMeetings,
   "/console/badges": consoleBadges,
   "/console/badges/:userId": consoleBadges,
   "/console/projects": consoleProjects,

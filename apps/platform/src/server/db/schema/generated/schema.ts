@@ -1138,6 +1138,26 @@ export const projectReportsInPlatform = platform.table.withRLS("projectReports",
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 check("projectReports_approved_shape", sql`(((status = 'approved') = ("approvedHours" IS NOT NULL)) AND ((status = 'submitted') = ("reviewedAt" IS NULL)))`),check("projectReports_approvedHours_range", sql`(("approvedHours" IS NULL) OR (("approvedHours" > (0)::numeric) AND ("approvedHours" <= (200)::numeric)))`),check("projectReports_content_words", sql`(platform.word_count(content) >= 100)`),check("projectReports_dates_order", sql`("endDate" >= "startDate")`),check("projectReports_hours_range", sql`(("hours" > (0)::numeric) AND ("hours" <= (200)::numeric))`),check("projectReports_returned_note", sql`((status <> 'returned') OR (char_length(btrim(COALESCE("reviewNote", ''::text))) > 0))`),check("projectReports_status_choices", sql`(status = ANY (ARRAY['submitted'::text, 'approved'::text, 'returned'::text]))`),]);
 
+export const configEditsInPlatform = platform.table.withRLS("configEdits", {
+	id: uuid().defaultRandom().primaryKey(),
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	collection: text().notNull(),
+	itemKey: text().notNull(),
+	isNew: boolean().default(false).notNull(),
+	fields: jsonb().default({}).notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	unique("configEdits_user_item_key").on(table.userId, table.collection, table.itemKey),
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+check("configEdits_collection_choices", sql`(collection = ANY (ARRAY['meeting'::text, 'workshop'::text, 'venue'::text]))`),check("configEdits_fields_bounded", sql`(pg_column_size(fields) <= 16384)`),check("configEdits_fields_object", sql`(jsonb_typeof(fields) = 'object'::text)`),check("configEdits_itemKey_length", sql`((char_length("itemKey") >= 1) AND (char_length("itemKey") <= 120))`),]);
+
 export const projectReportContributionsInPlatform = platform.table.withRLS("projectReportContributions", {
 	reportId: uuid().notNull().references(() => projectReportsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	contributionId: uuid().notNull().references(() => contributionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -1214,6 +1234,7 @@ export { auditEventSourceInPlatform as auditEventSource };
 export { auditEventsInPlatform as auditEvents };
 export { badgeAwardsInPlatform as badgeAwards };
 export { checkInMethodInPlatform as checkInMethod };
+export { configEditsInPlatform as configEdits };
 export { configReconcileStateInPlatform as configReconcileState };
 export { contentActionInPlatform as contentAction };
 export { contentTypesInPlatform as contentTypes };

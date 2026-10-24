@@ -70,6 +70,12 @@ describe("matchTerminalPath", () => {
       "/console/attendance/6f0c1b0e-0000-4000-8000-000000000001",
       "/console/attendance/:meetingId",
     ],
+    ["/console/meetings", "/console/meetings"],
+    [
+      "/console/meetings/meeting/2026-10-05",
+      "/console/meetings/:collection/:key",
+    ],
+    ["/console/meetings/venue/new", "/console/meetings/:collection/:key"],
     ["/console/badges", "/console/badges"],
     [
       "/console/badges/6f0c1b0e-0000-4000-8000-000000000001",

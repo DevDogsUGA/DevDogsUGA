@@ -1,3 +1,4 @@
+import { z } from "zod";
 import badges from "./data/badges.json" with { type: "json" };
 import meetings from "./data/meetings.json" with { type: "json" };
 import questions from "./data/questions.json" with { type: "json" };
@@ -89,6 +90,69 @@ export function getBadges(): BadgesConfig {
  */
 export function getSemesters(): SemestersConfig {
   return parseSemesters(semesters, getClubConfig().meetings);
+}
+
+/** The five config files a proposal edits, as raw JSON values. */
+export interface AuthoredFiles {
+  meetings: unknown;
+  questions: unknown;
+  series: unknown;
+  workshops: unknown;
+  venues: unknown;
+}
+
+/**
+ * The committed config files exactly as authored (series not applied, ids not
+ * resolved): what the console diffs a proposal against and what a proposal
+ * edits. A fresh deep copy each call, so a caller may change it freely.
+ */
+export function getAuthoredFiles(): AuthoredFiles {
+  return structuredClone({
+    meetings,
+    questions,
+    series,
+    workshops,
+    venues,
+  });
+}
+
+/**
+ * Whether a set of config files would be accepted by CI's `check:events`: the
+ * same parse, series resolution and publishability rules `getClubConfig` runs,
+ * but over in-memory values, returning every problem as a sentence instead of
+ * throwing. A proposal that fails here opens no pull request.
+ */
+export function validateConfigFiles(
+  files: Pick<AuthoredFiles, "meetings" | "series" | "workshops" | "venues"> &
+    Partial<Pick<AuthoredFiles, "questions">>,
+): { ok: true } | { ok: false; errors: string[] } {
+  try {
+    parseConfigFiles(
+      files.meetings,
+      files.questions ?? { questions: [] },
+      files.series,
+      files.workshops,
+      files.venues,
+    );
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ClubConfigError) {
+      return {
+        ok: false,
+        errors: error.issues.map((issue) => `${issue.id}: ${issue.message}`),
+      };
+    }
+    if (error instanceof z.ZodError) {
+      return {
+        ok: false,
+        errors: error.issues.map(
+          (issue) =>
+            `${issue.path.length > 0 ? issue.path.join(".") : "(file)"}: ${issue.message}`,
+        ),
+      };
+    }
+    throw error;
+  }
 }
 
 /** Parses and validates a badges file, throwing a readable error. */

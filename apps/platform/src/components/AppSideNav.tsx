@@ -1,6 +1,7 @@
 import {
   BookOpenIcon,
   CalendarCheckIcon,
+  CalendarDotsIcon,
   FlagIcon,
   FolderSimpleIcon,
   KeyIcon,
@@ -78,6 +79,11 @@ export default async function AppSideNav({ current }: { current?: string }) {
       label: "Reflections",
       href: "/console/reflections",
       icon: <NotePencilIcon />,
+    },
+    user?.isLeader && {
+      label: "Schedule editor",
+      href: "/console/meetings",
+      icon: <CalendarDotsIcon />,
     },
     user?.isLeader && {
       label: "Badges",
