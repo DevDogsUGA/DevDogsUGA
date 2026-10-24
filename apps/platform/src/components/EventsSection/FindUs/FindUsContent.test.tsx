@@ -68,6 +68,22 @@ describe("FindUsContent", () => {
     expect(screen.queryByText("Not verified yet")).toBeNull();
   });
 
+  it("shows a site floor plan but never a protocol-relative one", () => {
+    const withPlan = (floorPlan: string) =>
+      place(
+        { ...dlw, verified: { verifiedOn: "2026-11-02", floorPlan } },
+        "124",
+      );
+    render(<FindUsContent place={withPlan("/floor-plans/dlw.png")} />);
+    expect(screen.getByRole("img", { name: /Floor plan/ })).toHaveAttribute(
+      "src",
+      "/floor-plans/dlw.png",
+    );
+    cleanup();
+    render(<FindUsContent place={withPlan("//example.com/plan.png")} />);
+    expect(screen.queryByRole("img", { name: /Floor plan/ })).toBeNull();
+  });
+
   it("off campus: address and navigation, no map", () => {
     render(
       <FindUsContent

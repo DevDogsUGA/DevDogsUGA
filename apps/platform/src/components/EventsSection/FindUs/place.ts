@@ -1,10 +1,5 @@
 import type { Venue, VenueVerified } from "@devdogsuga/events";
-import {
-  BUILDING_NAME,
-  isMappedBuilding,
-  locationLine,
-  mapUrls,
-} from "./buildings";
+import { isMappedBuilding, locationLine, mapUrls } from "./buildings";
 import type { BuildingKey } from "./campusMapMeta";
 
 /**
@@ -172,7 +167,12 @@ export function describePlace(place: Place): PlaceView {
     };
   }
 
-  const rows: PlaceView["rows"] = [{ label: "Building", value: venue.name }];
+  const rows: PlaceView["rows"] = [
+    {
+      label: venue.kind === "offCampus" ? "Venue" : "Building",
+      value: venue.name,
+    },
+  ];
   if (room !== null) rows.push({ label: "Room", value: room });
   if (address !== undefined) rows.push({ label: "Address", value: address });
   const subtitle = [venue.name, ...(address === undefined ? [] : [address])];
@@ -204,8 +204,8 @@ export function describePlace(place: Place): PlaceView {
   if (mapBuilding !== null) {
     paragraphs.push(
       room === null
-        ? `This meeting is in ${BUILDING_NAME[mapBuilding]}, highlighted on the map.`
-        : `This meeting is in room ${room} of ${BUILDING_NAME[mapBuilding]}, highlighted on the map.`,
+        ? `This meeting is in ${venue.name}, highlighted on the map.`
+        : `This meeting is in room ${room} of ${venue.name}, highlighted on the map.`,
     );
     if (mapBuilding === "DLW") paragraphs.push(DLW_LANDMARKS);
   } else {

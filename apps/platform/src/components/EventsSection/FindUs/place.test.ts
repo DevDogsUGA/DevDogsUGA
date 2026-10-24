@@ -83,6 +83,7 @@ describe("describePlace", () => {
     const view = describePlace(known(morehouse));
     expect(view.title).toBe("Morehouse College, Atlanta");
     expect(view.mapBuilding).toBeNull();
+    expect(view.rows[0]).toEqual({ label: "Venue", value: morehouse.name });
     expect(view.rows).toContainEqual({
       label: "Address",
       value: "Morehouse College, Atlanta, GA",

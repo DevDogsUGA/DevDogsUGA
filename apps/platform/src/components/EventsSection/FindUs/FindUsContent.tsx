@@ -114,7 +114,8 @@ export default function FindUsContent({ place }: Props) {
             ]}
           />
           {verified.floorPlan !== undefined &&
-            verified.floorPlan.startsWith("/") && (
+            verified.floorPlan.startsWith("/") &&
+            !verified.floorPlan.startsWith("//") && (
               // The route above is the same information in words, so the
               // image carries no claim the text does not.
               // eslint-disable-next-line @next/next/no-img-element
