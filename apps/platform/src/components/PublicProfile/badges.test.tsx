@@ -19,7 +19,7 @@ const profile: Profile = {
   linkedinName: null,
   graduationYear: null,
   majors: [],
-  visibility: { name: true, avatar: true, bio: true, links: true, stars: true },
+  visibility: { name: true, avatar: true, bio: true, links: true },
 };
 
 function award(overrides: Partial<AwardRow> & { id: string }): AwardRow {
@@ -41,12 +41,12 @@ function award(overrides: Partial<AwardRow> & { id: string }): AwardRow {
 const render = (rows: AwardRow[]) => {
   const activity: PublicProfileActivity = {
     links: null,
-    stars: null,
+    weekly: { current: 0, longest: 0, semesters: [] },
     contributions: null,
     badges: groupAwards(rows, getBadges(), getWorkshops().workshops),
   };
   return renderToStaticMarkup(
-    <PublicProfile profile={profile} activity={activity} />,
+    <PublicProfile profile={profile} activity={activity} treatment="frost" />,
   );
 };
 

@@ -162,6 +162,7 @@
     align-items: center;
   }
   .cosmic .cm-contributions,
+  .cosmic .cm-streak,
   .cosmic .cm-badges {
     margin-top: var(--space-8);
   }
@@ -170,7 +171,7 @@
     font-size: 20px;
     margin: 0 0 16px;
   }
-  .cosmic .cm-stars h2 {
+  .cosmic .cm-streak h2 {
     font-size: 20px;
     margin: 0 0 16px;
   }

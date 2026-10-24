@@ -82,7 +82,7 @@ describe("setPublicProfileField", () => {
 
   it("revalidates the directory without a profile page when there is no handle", async () => {
     await insertMember({ id: A, handle: null });
-    expect(await setPublicProfileField("showStars", false)).toEqual({
+    expect(await setPublicProfileField("showContributions", false)).toEqual({
       status: "set",
     });
     expect(revalidated).toEqual(["/community", "/settings/profile"]);
@@ -136,12 +136,12 @@ describe("getPublicProfileSettings", () => {
       id: A,
       handle: "ppact-s",
       github: "ppact-s",
-      profile: { showStars: false, showContributions: false },
+      profile: { showLinks: false, showContributions: false },
     });
     const settings = (await getPublicProfileSettings())!;
     expect(settings.isVerified).toBe(true);
     expect(settings.current).toBe("ppact-s");
-    expect(settings.switches.showStars).toBe(false);
+    expect(settings.switches.showLinks).toBe(false);
     expect(settings.switches.showContributions).toBe(false);
     expect(settings.switches.publicProfile).toBe(true);
     expect(settings.options.map((o) => o.handle)).toContain("ppact-s");
@@ -157,9 +157,9 @@ describe("getPublicProfileSettings", () => {
     vi.stubEnv("DEPLOY_ENV", "production");
     try {
       expect(await getPublicProfileSettings()).toBeNull();
-      await expect(setPublicProfileField("showStars", false)).rejects.toThrow(
-        "Public profiles are off",
-      );
+      await expect(
+        setPublicProfileField("showContributions", false),
+      ).rejects.toThrow("Public profiles are off");
     } finally {
       vi.unstubAllEnvs();
     }

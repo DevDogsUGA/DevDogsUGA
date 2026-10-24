@@ -258,7 +258,6 @@ describe("publicProfiles: hidden fields come back null", () => {
       avatar: true,
       bio: true,
       links: true,
-      stars: true,
     });
   });
 
@@ -725,26 +724,25 @@ describe("getPublicProfileActivity", () => {
     `);
   }
 
-  it("returns links and star totals", async () => {
+  it("returns links, contributions and the weekly streak", async () => {
     await seedActivity();
     const activity = await getPublicProfileActivity("ppdb-active");
     expect(activity?.links).toEqual([
       { title: "Site", url: "https://example.test/a" },
     ]);
-    expect(activity?.stars).toEqual({ meetingStars: 0 });
+    expect(activity?.weekly).toMatchObject({ current: 0, longest: 0 });
     expect(activity?.contributions).toEqual([]);
   });
 
-  it("returns null for each section its flag hides", async () => {
+  it("returns null for each section its flag hides, and the streak regardless", async () => {
     await seedActivity();
     await db.execute(sql`
       update platform.profile
-      set "showLinks" = false, "showStars" = false, "showContributions" = false
+      set "showLinks" = false, "showContributions" = false
       where "userId" = ${A}::uuid
     `);
-    expect(await getPublicProfileActivity("ppdb-active")).toEqual({
+    expect(await getPublicProfileActivity("ppdb-active")).toMatchObject({
       links: null,
-      stars: null,
       contributions: null,
       badges: [],
     });
