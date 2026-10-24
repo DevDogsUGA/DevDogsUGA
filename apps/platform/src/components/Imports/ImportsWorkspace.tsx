@@ -342,7 +342,7 @@ export default function ImportsWorkspace({
           }}
         />
       )}
-      <p className="visually-hidden" aria-live="polite">
+      <p className="sr-only" aria-live="polite">
         {busy ? "Working" : modeLabel}
       </p>
     </div>
