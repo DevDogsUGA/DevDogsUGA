@@ -196,7 +196,6 @@ function scan(root: string, limits: UntrustedLimits): Scanned[] {
       }
       if (!stat.isFile()) reject(relPath, "isn't a regular file");
 
-
       const ext = path.extname(name).toLowerCase();
       const isManifest = rel === "" && name === MANIFEST_FILE;
       const isPage = ext === ".md";

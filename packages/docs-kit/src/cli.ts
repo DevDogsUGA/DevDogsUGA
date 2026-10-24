@@ -41,6 +41,7 @@
  * are held to a different standard than page length.
  */
 import * as path from "node:path";
+import type { CandidateContent } from "./candidate.js";
 import { checkDocs, printCheckSummary } from "./check.js";
 import { compileDocs, emitDocsModule } from "./compile.js";
 import { printFailingChecks, runFailingChecks } from "./failing-checks.js";
@@ -84,10 +85,31 @@ if (subcommand === undefined) {
   // environment points at. Needs `with-env`; see search-index.ts.
   const { runIndex } = await import("./search-index.js");
   await runIndex(process.cwd());
+} else if (subcommand === "candidate") {
+  // Compiles a fetched project docs directory as untrusted docs into a
+  // candidate directory (see candidate.ts). No network, no credentials.
+  process.exitCode = await runCandidate(args);
+} else if (subcommand === "verify-candidate") {
+  const [dir, digest] = args;
+  if (dir === undefined) {
+    console.error("[docs-kit] usage: docs-kit verify-candidate <dir> [digest]");
+    process.exitCode = 1;
+  } else {
+    const { verifyCandidate } = await import("./candidate.js");
+    try {
+      const manifest = verifyCandidate(dir, digest);
+      console.log(`[docs-kit] candidate ${manifest.digest} verified`);
+    } catch (error) {
+      console.error(
+        `[docs-kit] ${error instanceof Error ? error.message : String(error)}`,
+      );
+      process.exitCode = 1;
+    }
+  }
 } else {
   console.error(`[docs-kit] unknown command "${subcommand}"`);
   console.error(
-    "[docs-kit] usage: docs-kit | docs-kit build [--force] | docs-kit check | docs-kit gen [--dry-run] | docs-kit index",
+    "[docs-kit] usage: docs-kit | docs-kit build [--force] | docs-kit check | docs-kit gen [--dry-run] | docs-kit index | docs-kit candidate … | docs-kit verify-candidate <dir> [digest]",
   );
   process.exitCode = 1;
 }
@@ -153,4 +175,55 @@ async function generate(dryRun: boolean): Promise<void> {
     docsRoot: path.join(repoRoot, "docs"),
     dryRun,
   });
+}
+
+/** `candidate`: flags in, a candidate directory out. Resolves the exit code. */
+async function runCandidate(argv: string[]): Promise<number> {
+  const flags = new Map<string, string>();
+  for (let i = 0; i < argv.length; i += 2) {
+    const flag = argv[i];
+    const value = argv[i + 1];
+    if (!flag?.startsWith("--") || value === undefined) {
+      console.error(`[docs-kit] candidate: bad arguments near "${flag ?? ""}"`);
+      return 1;
+    }
+    flags.set(flag.slice(2), value);
+  }
+  const need = (name: string): string => {
+    const value = flags.get(name);
+    if (value === undefined)
+      throw new Error(`candidate: --${name} is required`);
+    return value;
+  };
+  try {
+    const { buildCandidate } = await import("./candidate.js");
+    const fs = await import("node:fs");
+    const livePath = flags.get("live");
+    const live =
+      livePath !== undefined && fs.existsSync(livePath)
+        ? (JSON.parse(fs.readFileSync(livePath, "utf-8")) as CandidateContent)
+        : null;
+    const { manifest, changes, checks } = await buildCandidate({
+      docsDir: need("docs"),
+      project: need("project"),
+      outDir: need("out"),
+      live,
+      source: {
+        repository: need("repository"),
+        branch: need("branch"),
+        sha: need("sha"),
+        directory: need("directory"),
+        destination: need("destination"),
+      },
+    });
+    console.log(
+      `[docs-kit] candidate ${manifest.digest}: ${changes.added.length} added, ${changes.changed.length} changed, ${changes.removed.length} removed`,
+    );
+    return checks.every((c) => c.ok) ? 0 : 1;
+  } catch (error) {
+    console.error(
+      `[docs-kit] ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return 1;
+  }
 }
