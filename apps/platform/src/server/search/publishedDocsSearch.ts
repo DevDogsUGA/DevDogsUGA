@@ -107,7 +107,7 @@ export async function searchPublishedDocs(
     }),
   );
   return scored
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => b.score - a.score || a.entry.id.localeCompare(b.entry.id))
     .slice(0, options.limit)
     .map((s) => s.entry);
 }
