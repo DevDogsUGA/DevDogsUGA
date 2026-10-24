@@ -1,5 +1,5 @@
 {
-  "$comment": "Approved project documentation sources. Reviewed in DevDogsUGA pull requests; a project repository cannot edit it. Add an entry like { \"slug\": \"example\", \"repository\": \"DevDogsUGA/example\", \"branch\": \"main\", \"directory\": \"docs\", \"destination\": \"/docs/example\" }. See docs/operations/docs-pipeline/adding-a-project.md.",
+  "$comment": "Approved project documentation sources. Reviewed in DevDogsUGA pull requests; a project repository cannot edit it. Add an entry like { \"slug\": \"example\", \"repository\": \"DevDogsUGA/example\", \"branch\": \"main\", \"directory\": \"docs\", \"destination\": \"/docs/example\" }. See docs/operations/project-docs.md.",
   "version": 1,
   "projects": []
 }

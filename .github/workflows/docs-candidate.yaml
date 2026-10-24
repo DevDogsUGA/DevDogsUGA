@@ -59,8 +59,9 @@ on:
 permissions:
   contents: read
 
-# One docs run per project at a time, in order. Nothing is cancelled: a waiting
-# approval is a decision somebody has not made yet.
+# One docs run per project at a time. A run waiting for approval still holds
+# the group, so the next merge waits as the single pending run; a newer merge
+# replaces that pending run (GitHub cancels it). The newest commit builds next.
 concurrency:
   group: docs-candidate-${{ inputs.project || github.event.client_payload.project }}
   cancel-in-progress: false

@@ -55,17 +55,19 @@ The `publish` job waits in the `docs-publishing` environment. Its required revie
 
 - Approving uploads exactly the candidate artifact. The job re-checks every file against the manifest and the digest the build reported, and writes the new version's pointer last.
 - Rejecting, or a failed upload, changes nothing: the pointer still names the previous version.
-- Approve in order. Two candidates for one project queue (one run per project at a time); the later approval wins, so reject a stale one rather than approving it.
+- One run per project at a time. While a candidate waits for approval, it holds up the project's next merge: that one waits as the
+  single pending run, and a newer merge replaces it (GitHub cancels the older pending run). So a pending approval blocks the next
+  candidate; approve or reject it promptly. Nothing stale is published, because the newest waiting merge is the one that builds next.
 
 Publishing only works from a run of `main`. A candidate built from another branch (to try a map change) stops after the build.
 
 ## Credentials
 
-| Where                          | Name                                                           | Needs                                                                                             |
-| ------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Repository secret              | `DOCS_SOURCE_TOKEN`                                            | Read-only on the mapped repositories: Contents and Metadata. Used by two steps in the build job.  |
-| Repository variable (optional) | `DOCS_LIVE_BASE_URL`                                           | Public base URL of the docs content bucket, for the change summary.                               |
-| `docs-publishing` secrets      | `DOCS_PUBLISH_ACCESS_KEY_ID`, `DOCS_PUBLISH_SECRET_ACCESS_KEY` | An R2 token with Object Read and Write on the docs content bucket only. Not the app deploy token. |
-| `docs-publishing` variables    | `DOCS_PUBLISH_BUCKET`, `DOCS_PUBLISH_ENDPOINT`                 | The bucket name and its S3 endpoint.                                                              |
+| Where                          | Name                                                           | Needs                                                                                                                                                                                                                                                                                                              |
+| ------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Repository secret              | `DOCS_SOURCE_TOKEN`                                            | Read-only on the mapped repositories: Contents and Metadata. Used by two steps in the build job. Because candidates can be built from any branch (to try a map change), anyone with write access to DevDogsUGA could read it through an edited workflow. That exposes read access to the mapped repositories only. |
+| Repository variable (optional) | `DOCS_LIVE_BASE_URL`                                           | Public base URL of the docs content bucket, for the change summary.                                                                                                                                                                                                                                                |
+| `docs-publishing` secrets      | `DOCS_PUBLISH_ACCESS_KEY_ID`, `DOCS_PUBLISH_SECRET_ACCESS_KEY` | An R2 token with Object Read and Write on the docs content bucket only. Not the app deploy token.                                                                                                                                                                                                                  |
+| `docs-publishing` variables    | `DOCS_PUBLISH_BUCKET`, `DOCS_PUBLISH_ENDPOINT`                 | The bucket name and its S3 endpoint.                                                                                                                                                                                                                                                                               |
 
 The build job has no publishing credential. The publish job has no source token and installs nothing.
