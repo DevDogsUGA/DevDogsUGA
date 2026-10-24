@@ -21,6 +21,7 @@ describe("data/*.schema.json", () => {
       "questions",
       "workshops",
       "venues",
+      "semesters",
       "badges",
     ]) {
       const data = JSON.parse(

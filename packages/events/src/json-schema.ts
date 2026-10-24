@@ -2,6 +2,7 @@ import { z } from "zod";
 import { badgesConfigSchema } from "./badges.js";
 import { questionsConfigSchema } from "./questions.js";
 import { clubConfigSchema } from "./schema.js";
+import { semestersConfigSchema } from "./semesters.js";
 import { seriesConfigSchema } from "./series.js";
 import { venuesConfigSchema } from "./venues.js";
 import { workshopsConfigSchema } from "./workshops.js";
@@ -42,6 +43,11 @@ export function jsonSchemas(): Record<string, unknown> {
       badgesConfigSchema,
       "DevDogs badges",
       "The badges members can hold and how each is awarded (Backstage packages/events).",
+    ),
+    "semesters.schema.json": generate(
+      semestersConfigSchema,
+      "DevDogs semesters",
+      "The semesters and the weekly art each draws (Backstage packages/events).",
     ),
     "venues.schema.json": generate(
       venuesConfigSchema,
