@@ -115,6 +115,19 @@ export const TERMINAL_PATHS = [
   },
 
   {
+    pattern: "/console/meetings",
+    regex: /^\/console\/meetings\/?$/,
+    page: "(site)/console/meetings/page.tsx",
+  },
+  {
+    pattern: "/console/meetings/:collection/:key",
+    regex: new RegExp(
+      `^/console/meetings/(?<collection>${SLUG})/(?<key>${SLUG})/?$`,
+    ),
+    page: "(site)/console/meetings/[collection]/[key]/page.tsx",
+  },
+
+  {
     pattern: "/console/badges",
     regex: /^\/console\/badges\/?$/,
     page: "(site)/console/badges/page.tsx",
