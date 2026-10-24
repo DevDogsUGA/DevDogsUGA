@@ -91,12 +91,13 @@ const SEARCH_MEMO_LIMIT = 100;
 export async function getPublishedSearchEntries(
   pointer: PublishedPointer,
 ): Promise<PublishedSearchEntry[]> {
-  const known = searchByDigest.get(pointer.digest);
+  const key = `${pointer.project}/${pointer.digest}`;
+  const known = searchByDigest.get(key);
   if (known) return known;
   const bucket = docsBucket();
   const entries = bucket ? await readSearch(bucket, pointer) : null;
   if (entries === null) return [];
   if (searchByDigest.size >= SEARCH_MEMO_LIMIT) searchByDigest.clear();
-  searchByDigest.set(pointer.digest, entries);
+  searchByDigest.set(key, entries);
   return entries;
 }
