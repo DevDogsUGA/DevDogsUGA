@@ -13,6 +13,7 @@ const base = {
   endDate: "2026-10-14",
   hours: 6.5,
   content: words(100),
+  contributionIds: ["c-1"],
 };
 
 describe("parseRepos", () => {
@@ -53,6 +54,15 @@ describe("reportProblem", () => {
     expect(
       reportProblem({ ...base, content: `  ${words(100)}\n` }, today),
     ).toBeNull();
+  });
+  it("wants at least one cited pull request", () => {
+    expect(reportProblem({ ...base, contributionIds: [] }, today)).toBe(
+      "no_prs",
+    );
+  });
+  it("counts NBSP-separated words as the database does", () => {
+    const nb = Array.from({ length: 100 }, () => "word").join("\u00a0");
+    expect(reportProblem({ ...base, content: nb }, today)).toBeNull();
   });
   it("refuses backwards, future and year-long ranges", () => {
     expect(reportProblem({ ...base, startDate: "2026-10-15" }, today)).toBe(

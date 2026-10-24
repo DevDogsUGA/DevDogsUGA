@@ -374,6 +374,7 @@ export type SubmitResult =
         | "not_found"
         | "not_member"
         | "not_active"
+        | "leadership_separate"
         | "locked"
         | "pr_not_yours"
         | "pr_out_of_range"
@@ -389,6 +390,9 @@ export async function submitProjectReport(
 ): Promise<SubmitResult> {
   const problem = reportProblem(input, easternDay(now));
   if (problem) return { status: "invalid", problem };
+  // Leadership's EL is a separate process (Q125), not an ordinary report that
+  // another officer approves.
+  if (await isOfficer(userId)) return { status: "leadership_separate" };
   const wanted = [...new Set(input.contributionIds)];
 
   try {
@@ -433,7 +437,7 @@ export async function submitProjectReport(
         }
       }
 
-      if (wanted.length > 0) {
+      {
         const prs = await tx
           .select({
             id: contributions.id,
@@ -499,13 +503,9 @@ export async function submitProjectReport(
         if (!created) throw new Error("Report was not created.");
         reportId = created.id;
       }
-      if (wanted.length > 0) {
-        await tx
-          .insert(projectReportContributions)
-          .values(
-            wanted.map((contributionId) => ({ reportId, contributionId })),
-          );
-      }
+      await tx
+        .insert(projectReportContributions)
+        .values(wanted.map((contributionId) => ({ reportId, contributionId })));
       await audit(
         tx,
         userId,

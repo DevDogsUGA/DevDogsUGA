@@ -62,6 +62,21 @@ describe("the report form", () => {
     expect(submit.disabled).toBe(false);
   });
 
+  it("holds Submit until at least one pull request is ticked", () => {
+    form({ pullRequests: [pr("c-1")] });
+    fireEvent.change(screen.getByLabelText(/What you did and learned/), {
+      target: { value: words(100) },
+    });
+    const submit = screen.getByRole<HTMLButtonElement>("button", {
+      name: "Submit report",
+    });
+    expect(submit.disabled).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(submit.disabled).toBe(false);
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(submit.disabled).toBe(true);
+  });
+
   it("offers the eligible pull requests, keeping the ones already cited ticked", () => {
     form();
     const boxes = screen.getAllByRole<HTMLInputElement>("checkbox");

@@ -79,10 +79,17 @@ export interface ReportDraft {
   endDate: string;
   hours: number;
   content: string;
+  /** The merged pull requests the report cites (Q119, Q120). */
+  contributionIds: string[];
 }
 
 export type ReportProblem =
-  "bad_dates" | "future" | "range_too_long" | "bad_hours" | "too_short";
+  | "bad_dates"
+  | "future"
+  | "range_too_long"
+  | "bad_hours"
+  | "too_short"
+  | "no_prs";
 
 /**
  * Why a report cannot be submitted, or null. `today` is the Eastern day the
@@ -116,6 +123,7 @@ export function reportProblem(
   if (reflectionWordCount(draft.content) < REPORT_MINIMUM_WORDS) {
     return "too_short";
   }
+  if (draft.contributionIds.length === 0) return "no_prs";
   return null;
 }
 
@@ -124,6 +132,7 @@ export const REPORT_PROBLEM_MESSAGE: Record<ReportProblem, string> = {
   future: "The date range cannot end in the future.",
   range_too_long: "One report covers at most a year. Split it into two.",
   bad_hours: `Hours must be in quarter-hour steps, above 0 and no more than ${REPORT_MAX_HOURS}.`,
+  no_prs: "Cite at least one of your merged pull requests as evidence.",
   too_short: `Write at least ${REPORT_MINIMUM_WORDS} words about what you did and learned.`,
 };
 
@@ -145,8 +154,10 @@ export interface ReviewActor {
 }
 
 /**
- * Who may review a report (Q119, Q125): the project's advisor or leadership,
- * never the report's own author, so nobody approves their own hours.
+ * Who may review a report (Q119): the project's advisor or leadership, never
+ * the report's own author, so nobody approves their own hours. Leadership's own
+ * EL is a separate process (Q125), so officers do not file ordinary reports
+ * (see `submitProjectReport`); this only lets them review members'.
  */
 export function canReviewReport(
   actor: ReviewActor,

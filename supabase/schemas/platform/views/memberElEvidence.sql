@@ -19,7 +19,7 @@ CREATE VIEW "platform"."memberElEvidence" WITH (security_invoker=on) AS  SELECT 
              JOIN platform.meetings m ON (((m.id = r."meetingId") AND (m."cancelledAt" IS NULL) AND (m."deletedAt" IS NULL))))
              JOIN platform.workshops ws ON (((ws."meetingId" = m.id) AND (ws."definitionId" = r."workshopDefinitionId") AND (ws."deletedAt" IS NULL))))
              CROSS JOIN platform."reflectionSettings" s)
-          WHERE ((r."submittedAt" IS NOT NULL) AND (r."workshopDefinitionId" IS NOT NULL) AND (platform.word_count(r.content) >= GREATEST(s."minimumWordCount", 100)) AND (r."submittedAt" <= (GREATEST(m."endsAt", a."recordedAt") + make_interval(days => s."submissionWindowDays"))))
+          WHERE ((r."submittedAt" IS NOT NULL) AND (r."workshopDefinitionId" IS NOT NULL) AND (platform.word_count(r.content) >= GREATEST(s."minimumWordCount", 100)) AND (r."submittedAt" <= (GREATEST(m."endsAt", a."recordedAt") + make_interval(days => GREATEST(s."submissionWindowDays", 7)))))
           ORDER BY r."userId", r."workshopDefinitionId", m."startsAt", r.id) w
 UNION ALL
  SELECT pr."userId",
@@ -35,7 +35,7 @@ UNION ALL
      JOIN platform.projects p ON ((p.id = pr."projectId")))
   WHERE ((pr.status = 'approved'::text) AND (pr."approvedHours" IS NOT NULL));
 
-COMMENT ON VIEW "platform"."memberElEvidence" IS 'Server-only. The EL (experiential learning) evidence the club can vouch for, one row per item: a workshop (the member attended a meeting that ran it, submitted a qualifying reflection naming it, at least 100 words and inside the window of one week from when attendance was recorded or the meeting ended, whichever is later; hours are the workshop definition''s elHours copied onto platform.workshops) or an approved project report (hours the reviewer confirmed). A workshop counts once per member even if it ran on several nights. Read by the /attendance summary and by the officers'' EL evidence export, so both agree on what is verified. Account deletion: the view holds nothing of its own; it empties as the member''s reflections, attendance and reports go.';
+COMMENT ON VIEW "platform"."memberElEvidence" IS 'Server-only. The EL (experiential learning) evidence the club can vouch for, one row per item: a workshop (the member attended a meeting that ran it, submitted a qualifying reflection naming it, at least 100 words and inside a window of at least one week (never less, whatever the setting) from when attendance was recorded or the meeting ended, whichever is later; hours are the workshop definition''s elHours copied onto platform.workshops) or an approved project report (hours the reviewer confirmed). A workshop counts once per member even if it ran on several nights. Read by the /attendance summary and by the officers'' EL evidence export, so both agree on what is verified. Account deletion: the view holds nothing of its own; it empties as the member''s reflections, attendance and reports go.';
 
 REVOKE ALL ON TABLE "platform"."memberElEvidence" FROM "anon", "authenticated";
 

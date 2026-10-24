@@ -93,6 +93,9 @@
     font-size: 13.5px;
     font-variant-numeric: tabular-nums;
   }
+  .cosmic .prj-count-n.is-short {
+    color: var(--warn);
+  }
   .cosmic .prj-note {
     margin: 0;
     padding: 8px 10px;

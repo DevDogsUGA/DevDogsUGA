@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
   contributions,
@@ -312,6 +312,7 @@ export async function getEligiblePullRequests(
   project: { repos: string[] },
   reportId: string | null,
 ): Promise<EligiblePullRequest[]> {
+  const repos = project.repos.map((repo) => repo.toLowerCase());
   const rows = await db
     .select({
       id: contributions.id,
@@ -327,12 +328,21 @@ export async function getEligiblePullRequests(
       projectReportContributions,
       eq(projectReportContributions.contributionId, contributions.id),
     )
-    .where(eq(contributions.userId, userId))
+    .where(
+      and(
+        eq(contributions.userId, userId),
+        repos.length === 0
+          ? undefined
+          : inArray(sql`lower(${contributions.repo})`, repos),
+        reportId === null
+          ? isNull(projectReportContributions.reportId)
+          : or(
+              isNull(projectReportContributions.reportId),
+              eq(projectReportContributions.reportId, reportId),
+            ),
+      ),
+    )
     .orderBy(desc(contributions.mergedAt))
     .limit(200);
-  const repos = new Set(project.repos.map((repo) => repo.toLowerCase()));
-  return rows
-    .filter((row) => repos.size === 0 || repos.has(row.repo.toLowerCase()))
-    .filter((row) => row.usedBy === null || row.usedBy === reportId)
-    .map(({ usedBy, ...pr }) => ({ ...pr, selected: usedBy !== null }));
+  return rows.map(({ usedBy, ...pr }) => ({ ...pr, selected: usedBy !== null }));
 }

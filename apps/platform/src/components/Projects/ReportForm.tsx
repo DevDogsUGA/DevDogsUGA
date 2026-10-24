@@ -61,6 +61,9 @@ export default function ReportForm({
     initialState,
   );
   const [words, setWords] = useState(reflectionWordCount(values.content));
+  const [cited, setCited] = useState(
+    pullRequests.filter((pr) => pr.selected).length,
+  );
   const countId = useId();
   const short = Math.max(0, REPORT_MINIMUM_WORDS - words);
   return (
@@ -114,8 +117,9 @@ export default function ReportForm({
         <legend className="label">Merged pull requests</legend>
         {pullRequests.length === 0 ? (
           <p className="prj-meta">
-            No unclaimed merged pull requests of yours in {projectName}. They
-            are optional evidence; a pull request can back only one report.
+            No unclaimed merged pull requests of yours in {projectName}. A
+            report needs at least one as evidence, and a pull request can back
+            only one report.
           </p>
         ) : (
           <ul className="prj-prs">
@@ -125,6 +129,10 @@ export default function ReportForm({
                   name="contributionId"
                   value={pr.id}
                   defaultChecked={pr.selected}
+                  onChange={(event) => {
+                    const on = event.currentTarget.checked;
+                    setCited((n) => n + (on ? 1 : -1));
+                  }}
                   label={
                     <span>
                       {pr.repo}#{pr.number} {pr.title}{" "}
@@ -137,7 +145,7 @@ export default function ReportForm({
           </ul>
         )}
         <p className="prj-meta">
-          Tick the ones from this range. A pull request that is out of range, or
+          Tick at least one from this range. A pull request that is out of range, or
           already in another report, is refused.
         </p>
       </fieldset>
@@ -163,7 +171,7 @@ export default function ReportForm({
       </Field>
       <p className="prj-count" id={countId}>
         {short > 0 ? (
-          <b style={{ color: "var(--warn)" }}>
+          <b className={cn("prj-count-n", "is-short")}>
             {words} of {REPORT_MINIMUM_WORDS} words
           </b>
         ) : (
@@ -172,7 +180,7 @@ export default function ReportForm({
         {short > 0 ? ` · ${short} to go` : ""}
       </p>
       <div>
-        <Button type="submit" size="sm" disabled={pending || short > 0}>
+        <Button type="submit" size="sm" disabled={pending || short > 0 || cited === 0}>
           {values.reportId ? "Resubmit report" : "Submit report"}
         </Button>
       </div>

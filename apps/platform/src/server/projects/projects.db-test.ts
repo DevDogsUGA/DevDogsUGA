@@ -164,9 +164,23 @@ const report = (projectId: string, over: Record<string, unknown> = {}) => ({
   endDate: "2026-10-14",
   hours: 6.5,
   content: words(100),
-  contributionIds: [] as string[],
+  // A report must cite a PR (Q119); this stands in where the test is about
+  // something that fails before the PRs are read.
+  contributionIds: [id(96)],
   ...over,
 });
+
+let prCounter = 1000;
+/** A report whose cited PR is real: merged by `userId` inside the range. */
+async function cited(
+  userId: string,
+  projectId: string,
+  over: Record<string, unknown> = {},
+) {
+  prCounter += 1;
+  const pr = await merge(userId, prCounter);
+  return report(projectId, { contributionIds: [pr], ...over });
+}
 
 async function auditActions(): Promise<string[]> {
   const rows = await db.execute<{ action: string }>(sql`
@@ -381,6 +395,70 @@ describe("project reports (Q119-Q121)", () => {
     ).rejects.toThrow();
   });
 
+  it("refuses a report that cites no pull request (Q119, Q120)", async () => {
+    const project = await activeProject();
+    expect(
+      await submitProjectReport(
+        MEMBER,
+        report(project, { contributionIds: [] }),
+        TODAY,
+      ),
+    ).toEqual({ status: "invalid", problem: "no_prs" });
+    const n = await db.execute<{ n: number }>(
+      sql`select count(*)::int as n from platform."projectReports" where "userId" = ${MEMBER}::uuid`,
+    );
+    expect(n[0]!.n).toBe(0);
+  });
+
+  it("keeps leadership out of ordinary reports; their EL is separate (Q125)", async () => {
+    const project = await activeProject("D5 Officer", [MEMBER, OFFICER]);
+    expect(
+      await submitProjectReport(
+        OFFICER,
+        await cited(OFFICER, project),
+        TODAY,
+      ),
+    ).toEqual({ status: "leadership_separate" });
+    const n = await db.execute<{ n: number }>(
+      sql`select count(*)::int as n from platform."projectReports" where "userId" = ${OFFICER}::uuid`,
+    );
+    expect(n[0]!.n).toBe(0);
+  });
+
+  it("counts words the way the app does, NBSP included", async () => {
+    const nbsp = Array.from({ length: 100 }, () => "word").join("\u00a0");
+    const [row] = await db.execute<{ n: number; blank: number }>(
+      sql`select platform.word_count(${nbsp}) as n, platform.word_count(${"\u00a0 \n"}) as blank`,
+    );
+    expect(row).toEqual({ n: 100, blank: 0 });
+    const project = await activeProject("D5 Nbsp");
+    const sent = await submitProjectReport(
+      MEMBER,
+      await cited(MEMBER, project, { content: nbsp }),
+      TODAY,
+    );
+    expect(sent.status).toBe("submitted");
+  });
+
+  it("keeps the picker's PRs past the first 200 older ones", async () => {
+    await activeProject("D5 Picker");
+    const mine = await merge(MEMBER, 1, "2026-10-01T16:00:00Z");
+    await db.execute(sql`
+      insert into platform.contributions
+        (repo, "prNumber", title, url, "mergedAt", "authorGithubId", "authorLogin", "userId")
+      select ${`${REPO}-other`}, n, 'x', 'https://github.com/x/y/pull/' || n,
+             '2026-10-12T16:00:00Z'::timestamptz + make_interval(mins => n),
+             'd5-gh-bulk', 'd5', ${MEMBER}::uuid
+      from generate_series(1, 210) n
+    `);
+    const eligible = await getEligiblePullRequests(
+      MEMBER,
+      { repos: [REPO] },
+      null,
+    );
+    expect(eligible.map((p) => p.id)).toEqual([mine]);
+  });
+
   it("cites only the author's own PRs, merged in the range, in the project's repositories", async () => {
     const project = await activeProject();
     const inRange = await merge(MEMBER, 1);
@@ -445,7 +523,11 @@ describe("project reports (Q119-Q121)", () => {
 describe("reviewing a report (Q119, Q125)", () => {
   async function submitted(projectMembers: string[] = [MEMBER]) {
     const project = await activeProject("D5 Review", projectMembers);
-    const sent = await submitProjectReport(MEMBER, report(project), TODAY);
+    const sent = await submitProjectReport(
+      MEMBER,
+      await cited(MEMBER, project),
+      TODAY,
+    );
     if (sent.status !== "submitted") throw new Error("not submitted");
     return { project, reportId: sent.reportId };
   }
@@ -467,7 +549,11 @@ describe("reviewing a report (Q119, Q125)", () => {
 
   it("refuses a reviewer's own report even when they are the advisor or leadership", async () => {
     const project = await activeProject("D5 Own", [MEMBER, ADVISOR]);
-    const own = await submitProjectReport(ADVISOR, report(project), TODAY);
+    const own = await submitProjectReport(
+      ADVISOR,
+      await cited(ADVISOR, project),
+      TODAY,
+    );
     if (own.status !== "submitted") throw new Error("not submitted");
     expect(
       await reviewProjectReport(ADVISOR, own.reportId, {
@@ -546,7 +632,7 @@ describe("reviewing a report (Q119, Q125)", () => {
 
     const again = await submitProjectReport(
       MEMBER,
-      { ...report(project, { hours: 7 }), reportId },
+      { ...(await cited(MEMBER, project, { hours: 7 })), reportId },
       TODAY,
     );
     expect(again).toEqual({ status: "submitted", reportId });
@@ -649,6 +735,31 @@ describe("the EL evidence view (Q28, Q109, Q171)", () => {
     expect(await evidence()).toEqual([]);
   });
 
+  it("keeps the window at one week even if the setting says one day", async () => {
+    await workshopNight(MEETING_A, 4);
+    await reflect(MEETING_A, words(100), 1);
+    await db.execute(
+      sql`update platform."reflectionSettings" set "submissionWindowDays" = 1`,
+    );
+    try {
+      expect(await evidence()).toHaveLength(1);
+    } finally {
+      await db.execute(
+        sql`update platform."reflectionSettings" set "submissionWindowDays" = 7`,
+      );
+    }
+  });
+
+  it("counts NBSP-separated words", async () => {
+    await workshopNight(MEETING_A, 3);
+    await reflect(
+      MEETING_A,
+      Array.from({ length: 100 }, () => "word").join("\u00a0"),
+      2,
+    );
+    expect(await evidence()).toHaveLength(1);
+  });
+
   it("counts a workshop once even when it ran on two nights", async () => {
     await workshopNight(MEETING_A, 6);
     await workshopNight(MEETING_B, 3);
@@ -671,7 +782,11 @@ describe("account deletion (Q168)", () => {
       report(project, { contributionIds: [pr] }),
       TODAY,
     );
-    const theirs = await submitProjectReport(OTHER, report(project), TODAY);
+    const theirs = await submitProjectReport(
+      OTHER,
+      await cited(OTHER, project),
+      TODAY,
+    );
     if (sent.status !== "submitted" || theirs.status !== "submitted") {
       throw new Error("not submitted");
     }
@@ -713,7 +828,11 @@ describe("account deletion (Q168)", () => {
 
   it("leaves a project without an advisor when its advisor is deleted, not without a record", async () => {
     const project = await activeProject("D5 Advisorless");
-    const sent = await submitProjectReport(MEMBER, report(project), TODAY);
+    const sent = await submitProjectReport(
+      MEMBER,
+      await cited(MEMBER, project),
+      TODAY,
+    );
     if (sent.status !== "submitted") throw new Error("not submitted");
     await reviewProjectReport(ADVISOR, sent.reportId, {
       action: "approve",
@@ -749,7 +868,11 @@ describe("account deletion (Q168)", () => {
 
   it("keeps the evidence view empty for a deleted member", async () => {
     const project = await activeProject("D5 Evidence");
-    const sent = await submitProjectReport(MEMBER, report(project), TODAY);
+    const sent = await submitProjectReport(
+      MEMBER,
+      await cited(MEMBER, project),
+      TODAY,
+    );
     if (sent.status !== "submitted") throw new Error("not submitted");
     await reviewProjectReport(ADVISOR, sent.reportId, {
       action: "approve",

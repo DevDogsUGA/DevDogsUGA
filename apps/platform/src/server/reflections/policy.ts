@@ -13,12 +13,20 @@ export function reflectionWordCount(content: string): number {
   return normalized === "" ? 0 : normalized.split(/\s+/u).length;
 }
 
+/** Q28: a full one-week window at least, whatever the settings row says. */
+export const REFLECTION_MINIMUM_WINDOW_DAYS = 7;
+
+export function effectiveWindowDays(configured: number): number {
+  return Math.max(REFLECTION_MINIMUM_WINDOW_DAYS, configured);
+}
+
 export function reflectionDeadline(
   activityEndsAt: Date,
   submissionWindowDays: number,
 ): Date {
   return new Date(
-    activityEndsAt.getTime() + submissionWindowDays * 24 * 60 * 60 * 1000,
+    activityEndsAt.getTime() +
+      effectiveWindowDays(submissionWindowDays) * 24 * 60 * 60 * 1000,
   );
 }
 

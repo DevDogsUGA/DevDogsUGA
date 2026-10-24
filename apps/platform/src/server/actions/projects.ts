@@ -272,6 +272,8 @@ const SUBMIT_MESSAGES = {
   not_found: "That project or report was not found.",
   not_member: "You are not on this project's member list. Ask its advisor.",
   not_active: "That project is not active.",
+  leadership_separate:
+    "Leadership's EL hours are handled separately, not through project reports.",
   locked: "An approved report cannot be changed.",
   pr_not_yours: "One of those pull requests is not yours.",
   pr_out_of_range: "A pull request was merged outside your date range.",
