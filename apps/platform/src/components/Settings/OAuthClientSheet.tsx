@@ -69,6 +69,9 @@ export default function OAuthClientSheet({
   const [acknowledged, setAcknowledged] = useState<string | null>(null);
   const revealed = secret !== null && secret !== acknowledged ? secret : null;
   const published = client?.status === "in_production";
+  // Q178: a member's published app keeps its branding until an officer returns
+  // it to Testing. An officer editing a DevDogs app is not locked out.
+  const brandingLocked = published && !devDogsApp;
 
   return (
     <Sheet
@@ -209,12 +212,18 @@ export default function OAuthClientSheet({
                   ? "Shown on the consent screen. The app can be published only once it has a logo, a homepage and a privacy policy."
                   : "Shown on the consent screen. All three are optional while your app is in Testing, but an officer can publish it only once it has a logo, a homepage and a privacy policy."}
               </p>
-              <AppLogoField
-                clientId={client.clientId}
-                label={client.label}
-                logoUrl={client.logoUrl}
-              />
-              <AppLinksForm client={client} />
+              {brandingLocked ? (
+                <LockedBranding client={client} />
+              ) : (
+                <>
+                  <AppLogoField
+                    clientId={client.clientId}
+                    label={client.label}
+                    logoUrl={client.logoUrl}
+                  />
+                  <AppLinksForm client={client} />
+                </>
+              )}
 
               {!devDogsApp && (
                 <>
@@ -315,6 +324,54 @@ export const REDIRECT_RULE_HELP =
 function formText(formData: FormData, name: string): string {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";
+}
+
+/** The logo, homepage and privacy policy of a published app, read-only (Q178). */
+function LockedBranding({ client }: { client: OAuthClientSummary }) {
+  return (
+    <>
+      <Callout tone="info" title="Locked while in production">
+        The logo, homepage and privacy policy can&rsquo;t change while{" "}
+        {client.label} is in production. Ask an officer to return it to Testing
+        first.
+      </Callout>
+      <div className="field">
+        <span className="label">Logo</span>
+        {client.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={client.logoUrl}
+            alt={`${client.label} logo`}
+            width={64}
+            height={64}
+            className="size-16 rounded-md object-cover"
+          />
+        ) : (
+          <p className="small muted" style={{ margin: 0 }}>
+            No logo.
+          </p>
+        )}
+      </div>
+      <div className="field">
+        <span className="label">Homepage</span>
+        <Input
+          mono
+          readOnly
+          value={client.homepageUrl ?? ""}
+          aria-label="Homepage"
+        />
+      </div>
+      <div className="field">
+        <span className="label">Privacy policy</span>
+        <Input
+          mono
+          readOnly
+          value={client.privacyPolicyUrl ?? ""}
+          aria-label="Privacy policy"
+        />
+      </div>
+    </>
+  );
 }
 
 /** The homepage and privacy policy, saved together. */

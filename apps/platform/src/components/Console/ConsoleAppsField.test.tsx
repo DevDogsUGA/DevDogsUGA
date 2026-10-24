@@ -73,17 +73,36 @@ describe("ConsoleAppsField", () => {
     expect(screen.getByRole("button", { name: "Publish Ready" })).toBeEnabled();
   });
 
-  it("publishes through setStatus", async () => {
+  it("asks before publishing, naming the app and the sign-out; confirming publishes", async () => {
     const user = userEvent.setup();
     mocks.setStatus.mockResolvedValue({ changed: true, counts: null });
     render(<ConsoleAppsField apps={[app({ status: "testing" })]} />);
     await user.click(screen.getByRole("button", { name: "Publish Lab" }));
+    expect(mocks.setStatus).not.toHaveBeenCalled();
+    expect(await screen.findByText("Publish Lab?")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /signs out every member who is signed in through its test accounts/,
+      ),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Publish" }));
     await waitFor(() =>
       expect(mocks.setStatus).toHaveBeenCalledWith(
         "11111111-1111-4111-8111-111111111111",
         "in_production",
       ),
     );
+  });
+
+  it("Cancel on the Publish dialog changes nothing", async () => {
+    const user = userEvent.setup();
+    render(<ConsoleAppsField apps={[app({ status: "testing" })]} />);
+    await user.click(screen.getByRole("button", { name: "Publish Lab" }));
+    await user.click(await screen.findByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByText("Publish Lab?")).not.toBeInTheDocument(),
+    );
+    expect(mocks.setStatus).not.toHaveBeenCalled();
   });
 
   it("confirms Back to Testing, explains the sign-out and shows the counts after", async () => {
