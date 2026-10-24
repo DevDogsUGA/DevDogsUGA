@@ -1,12 +1,17 @@
 import type { TerminalRoute } from "./define";
 import type { TerminalPattern } from "./paths";
 import { accountDeletion } from "./routes/account";
-import { consoleBadges, consoleMeeting } from "./routes/console";
+import {
+  consoleBadges,
+  consoleMeeting,
+  consoleProjects,
+} from "./routes/console";
 import { changelogArchive, changelogIssue } from "./routes/changelog";
 import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
 import { communityDirectory, communityProfile } from "./routes/community";
 import { directions, eventDetail, eventsSchedule } from "./routes/events";
 import { home } from "./routes/home";
+import { projectReport, projects } from "./routes/projects";
 import { docs, help, helpThread, kitGallery } from "./routes/misc";
 
 /**
@@ -34,6 +39,10 @@ export const TERMINAL_ROUTES = {
   "/console/attendance/:meetingId": consoleMeeting,
   "/console/badges": consoleBadges,
   "/console/badges/:userId": consoleBadges,
+  "/console/projects": consoleProjects,
+  "/console/projects/:projectId": consoleProjects,
+  "/projects": projects,
+  "/projects/:projectId/report": projectReport,
   "/help": help,
   "/help/:threadId": helpThread,
 } as const satisfies Record<TerminalPattern, TerminalRoute>;
