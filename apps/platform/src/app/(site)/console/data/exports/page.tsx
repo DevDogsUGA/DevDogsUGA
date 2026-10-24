@@ -38,7 +38,9 @@ const formats = Object.fromEntries(
  */
 export default async function ExportsPage() {
   await requirePermission(canUserManageAttendance);
-  const meetings = await listImportableMeetings();
+  // Exports keep the CLI's reach (Q76): any past meeting, not only the
+  // newest 80 the import picker lists.
+  const meetings = await listImportableMeetings(new Date(), 1000);
   return (
     <ConsoleShell current="/console/data/exports">
       <PageHeading
