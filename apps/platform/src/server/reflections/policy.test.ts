@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  effectiveMinimumWords,
   reflectionDeadline,
   reflectionWindowStart,
   reflectionWordCount,
@@ -28,5 +29,11 @@ describe("reflection policy", () => {
     expect(
       reflectionDeadline(reflectionWindowStart(end, late), 7).toISOString(),
     ).toBe("2026-09-19T10:00:00.000Z");
+  });
+
+  it("never lets the settings row lower the 100-word minimum", () => {
+    expect(effectiveMinimumWords(5)).toBe(100);
+    expect(effectiveMinimumWords(100)).toBe(100);
+    expect(effectiveMinimumWords(150)).toBe(150);
   });
 });

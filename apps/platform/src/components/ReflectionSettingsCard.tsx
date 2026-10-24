@@ -57,7 +57,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
   const [words, setWords] = useState(saved.words);
   const [days, setDays] = useState(saved.days);
 
-  const wordsError = check(words, 1, 1000);
+  const wordsError = check(words, 100, 1000);
   const daysError = check(days, 1, 90);
 
   const { isSaving } = useSettingsField({
@@ -95,7 +95,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
         <Field
           label="Minimum words"
           htmlFor="minimumWordCount"
-          description="1 to 1000."
+          description="100 to 1000. The UGAHacks EL rule is 100."
           error={shownWords.error}
         >
           <InputGroup>
@@ -108,7 +108,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
               onBlur={shownWords.onBlur}
               disabled={isSaving}
               aria-invalid={shownWords.error ? true : undefined}
-              min={1}
+              min={100}
               max={1000}
               step={1}
               required
@@ -119,7 +119,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
         <Field
           label="Submission window"
           htmlFor="submissionWindowDays"
-          description="1 to 90. Counted from the end of the meeting."
+          description="1 to 90. Counted from when attendance was recorded (or the meeting's end, if later)."
           error={shownDays.error}
         >
           <InputGroup>

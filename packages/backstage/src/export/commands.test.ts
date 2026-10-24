@@ -184,7 +184,7 @@ describe("export", () => {
 
   it("refuses an export nobody can be named for, before writing anything", async () => {
     officers = [];
-    await runExport(["stars"], deps());
+    await runExport(["evidence"], deps());
     expect(process.exitCode).toBe(1);
     expect(stderr).toContain(
       "No platform account has linked the GitHub login sloanfinger",
@@ -194,14 +194,14 @@ describe("export", () => {
   });
 
   it("discards the partial file when a read fails partway", async () => {
-    await runExport(["stars"], deps(true));
+    await runExport(["evidence"], deps(true));
     expect(process.exitCode).toBe(1);
     expect(file?.discarded).toBe(true);
     expect(events).not.toContain("finish:audit-1:1");
   });
 
   it("takes --meeting only for attendance and responses", async () => {
-    await runExport(["stars", "--meeting", "2026-09-09"], deps());
+    await runExport(["evidence", "--meeting", "2026-09-09"], deps());
     expect(stderr).toContain(
       "--meeting only applies to the attendance and responses exports",
     );
@@ -317,11 +317,11 @@ describe("export", () => {
   it("asks where to save the other exports too, without asking for a format", async () => {
     const asked: string[] = [];
     await runExport(
-      ["stars"],
+      ["evidence"],
       deps(false, {
         interactive: true,
         pickFormats: async () => {
-          throw new Error("stars has one format");
+          throw new Error("evidence has one format");
         },
         askPath: async (_message, suggested) => {
           asked.push(suggested);
@@ -329,7 +329,7 @@ describe("export", () => {
         },
       }),
     );
-    expect(asked).toEqual(["stars.csv"]);
+    expect(asked).toEqual(["evidence.csv"]);
   });
 
   it("puts several files in an --out folder, and refuses one file name for several", async () => {
@@ -369,8 +369,8 @@ describe("export", () => {
   it("refuses an unknown format, and a format an export lacks", async () => {
     await runExport(["attendance", "--format", "excel"], deps());
     expect(stderr).toContain('Unknown format "excel"');
-    await runExport(["stars", "--format", "bevy"], deps());
-    expect(stderr).toContain("The stars export has one format");
+    await runExport(["evidence", "--format", "bevy"], deps());
+    expect(stderr).toContain("The evidence export has one format");
   });
 
   it("discards every partial file when a read fails partway", async () => {

@@ -13,10 +13,10 @@ export interface ReflectionSettingsActionState {
   message: string;
 }
 
-// Bounds are sanity limits, not policy: a word count above this is almost
+// The 100-word floor is policy (the UGAHacks EL rule, Q28); the rest are sanity limits: a word count above this is almost
 // certainly a typo (1000 words is already a long reflection), and a
 // submission window longer than a semester defeats the point of a deadline.
-const MINIMUM_WORD_COUNT_BOUNDS = { min: 1, max: 1000 } as const;
+const MINIMUM_WORD_COUNT_BOUNDS = { min: 100, max: 1000 } as const;
 const SUBMISSION_WINDOW_DAYS_BOUNDS = { min: 1, max: 90 } as const;
 
 const inputSchema = z.object({

@@ -12,6 +12,7 @@ import {
   reflections,
 } from "~/server/db/schema";
 import {
+  effectiveMinimumWords,
   reflectionDeadline,
   reflectionWindowStart,
   reflectionWordCount,
@@ -81,6 +82,7 @@ async function writeReflection(
       minimumWordCount: 100,
       submissionWindowDays: 7,
     };
+    const minimumWords = effectiveMinimumWords(policy.minimumWordCount);
     const eligibility = await eligibleActivity(tx, userId, input);
     if (!eligibility)
       throw new ReflectionError("You are not eligible for this reflection.");
@@ -95,10 +97,10 @@ async function writeReflection(
     }
     if (
       input.intent === "submit" &&
-      reflectionWordCount(input.content) < policy.minimumWordCount
+      reflectionWordCount(input.content) < minimumWords
     ) {
       throw new ReflectionError(
-        `Submitted reflections require at least ${policy.minimumWordCount} words.`,
+        `Submitted reflections require at least ${minimumWords} words.`,
       );
     }
 
