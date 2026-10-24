@@ -270,6 +270,26 @@ describe("attendance confirm", () => {
     if (res.kind === "result") expect(res.result.status).toBe("partial");
   });
 
+  it("audits a stop when the meeting goes between planning and the write", async () => {
+    const f = fake({ accounts: [account("u1", "ab12345@uga.edu")] });
+    f.deps.writeAttendance = async () => ({ status: "invalid_meeting" });
+    const req = attendance(SHEET);
+    const preview = await previewOf(req, f);
+    const res = await confirmImport(
+      req,
+      { fingerprint: preview.fingerprint, skipInvalid: true },
+      OFFICER,
+      f.deps,
+    );
+    if (res.kind === "result") expect(res.result.status).toBe("stopped");
+    expect(f.audits).toHaveLength(1);
+    expect(f.audits[0]!.metadata).toMatchObject({
+      outcome: "stopped",
+      reason: "meeting",
+      accountsCreated: 1,
+    });
+  });
+
   it("requires the skipped-rows acknowledgement when rows are invalid", async () => {
     const f = fake();
     const req = attendance(SHEET);

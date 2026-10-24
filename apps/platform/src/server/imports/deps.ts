@@ -122,6 +122,11 @@ export async function writeAttendance(
   write: AttendanceWrite,
   audit: AuditDraft,
 ): Promise<AttendanceWriteResult> {
+  // `notInArray(x, [])` matches every row: replacing with nobody would remove
+  // every imported check-in. The callers never ask for that; refuse it here too.
+  if (write.replace && write.userIds.length === 0) {
+    throw new Error("A replace import needs at least one attendee");
+  }
   return db.transaction(async (tx) => {
     // Share-locked so a cancellation cannot land between this check and the
     // writes below (the same rule as the console's other attendance writes).
@@ -194,6 +199,10 @@ export async function writeRoster(
   write: RosterWrite,
   audit: AuditDraft,
 ): Promise<{ written: number; cleared: number }> {
+  // As above: a snapshot of nobody would clear every member's verification.
+  if (write.snapshot && write.members.length === 0) {
+    throw new Error("A roster snapshot needs at least one member");
+  }
   return db.transaction(async (tx) => {
     const at = new Date();
     for (const rows of chunks(write.members)) {

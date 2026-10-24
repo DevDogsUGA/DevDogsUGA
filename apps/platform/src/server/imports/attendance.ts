@@ -316,6 +316,11 @@ export async function applyAttendance(
     draft({ outcome: failures.length > 0 ? "partial" : "done" }),
   );
   if (written.status === "invalid_meeting") {
+    // Accounts may have been made before the meeting went, so this is audited
+    // like every other stop.
+    await deps.audit(
+      draft({ outcome: "stopped", reason: "meeting", recorded: 0, removed: 0 }),
+    );
     return result(
       req,
       a,

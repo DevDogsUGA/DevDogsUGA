@@ -236,6 +236,25 @@ describe("writeAttendance", () => {
     expect(e?.n).toBe(0);
   });
 
+  it("refuses a replace with no attendees and a snapshot with no members", async () => {
+    await expect(
+      writeAttendance(
+        {
+          meetingId: IDS.cancelled,
+          recordedAt: startsAt,
+          profiles: [],
+          userIds: [],
+          replace: true,
+          now: new Date(),
+        },
+        audit("import.attendance"),
+      ),
+    ).rejects.toThrow(/at least one attendee/);
+    await expect(
+      writeRoster({ members: [], snapshot: true }, audit("import.roster")),
+    ).rejects.toThrow(/at least one member/);
+  });
+
   it("rolls the check-ins back when the audit row cannot be written", async () => {
     await expect(
       writeAttendance(
