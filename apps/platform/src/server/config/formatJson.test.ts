@@ -21,7 +21,7 @@ describe("formatJson", () => {
     const index = data.meetings.findIndex(
       (m: Record<string, unknown>) => "room" in m && "venue" in m,
     );
-    const before = data.meetings[index];
+    const before = data.meetings[index]!;
     data.meetings[index] = applyFields("meeting", before, {
       room: "ZZ-edited",
     });
