@@ -157,6 +157,37 @@ describe("compileUntrustedDocs", () => {
     await expect(compile({ maxTotalBytes: 20 })).rejects.toThrow(/total limit/);
   });
 
+  it("counts directories toward the file limit", async () => {
+    write("index.md", "# Demo\n");
+    for (let i = 0; i < 6; i++) fs.mkdirSync(path.join(docs, `empty${i}`));
+    await expect(compile({ maxFiles: 4 })).rejects.toThrow(
+      /limit of 4 files and directories/,
+    );
+    // The same tree passes when the allowance covers them.
+    await expect(compile({ maxFiles: 7 })).resolves.toBeDefined();
+  });
+
+  it("counts nested directories, not only a flat listing", async () => {
+    write("index.md", "# Demo\n");
+    for (let i = 0; i < 3; i++) {
+      fs.mkdirSync(path.join(docs, `d${i}`, "inner"), { recursive: true });
+    }
+    // 1 file + 3 dirs + 3 inner dirs = 7 entries.
+    await expect(compile({ maxFiles: 6 })).rejects.toThrow(/limit of 6/);
+  });
+
+  it("prefixes the table of contents ids to match the page", async () => {
+    write("index.md", "# Demo\n\n## Location\n\n[go](#location)\n");
+    const result = await compile();
+    const page = result.pages.find((p) => p.path === "demo/index");
+    expect(page?.headings.map((h) => h.id)).toEqual([
+      "pd-demo--demo",
+      "pd-demo--location",
+    ]);
+    expect(page?.html).toContain('id="pd-demo--location"');
+    expect(page?.html).toContain('href="#pd-demo--location"');
+  });
+
   it("rejects folders nested too deep", async () => {
     write("index.md", "# Demo\n");
     write("a/b/c/d.md", "# d\n");
