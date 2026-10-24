@@ -127,7 +127,15 @@ function changeLines(changes: readonly ItemChange[]): string[] {
 }
 
 function clip(text: string): string {
-  return text.length > 100 ? `${text.slice(0, 97)}...` : text;
+  const short = text.length > 100 ? `${text.slice(0, 97)}...` : text;
+  return inlineCode(short);
+}
+
+/** Officer-entered text as inline code, so `@handle` and `#123` never notify or cross-link. */
+function inlineCode(text: string): string {
+  const flat = text.replace(/[\r\n]+/g, " ");
+  const fence = flat.includes("`") ? "``" : "`";
+  return `${fence}${flat}${fence}`;
 }
 
 export function pullRequestBody(
@@ -258,15 +266,22 @@ export async function openProposal(
       },
     });
     if (input.staging) {
-      // The label may already exist (422); a failed label never undoes the PR.
+      // The label may already exist (422); any other failure is logged, and
+      // never undoes the PR.
       await call("/labels", {
         method: "POST",
         body: { name: "staging", color: "fbca04" },
-      }).catch(() => undefined);
+      }).catch((error: unknown) => {
+        if (!(error instanceof GithubApiError && error.status === 422)) {
+          console.error("Could not create the staging label:", error);
+        }
+      });
       await call(`/issues/${pull.number}/labels`, {
         method: "POST",
         body: { labels: ["staging"] },
-      }).catch(() => undefined);
+      }).catch((error: unknown) => {
+        console.error(`Could not label PR #${pull.number} staging:`, error);
+      });
     }
     return {
       status: "opened",

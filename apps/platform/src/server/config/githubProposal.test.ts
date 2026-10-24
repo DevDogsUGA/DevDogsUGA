@@ -112,7 +112,7 @@ describe("openProposal", () => {
       draft: false,
     });
     expect(pull.body).toContain("Proposed by Ada Officer");
-    expect(pull.body).toContain("Room: 124 -> 200");
+    expect(pull.body).toContain("Room: `124` -> `200`");
     expect(pull.title).toBe("Config: update 1 meeting");
   });
 

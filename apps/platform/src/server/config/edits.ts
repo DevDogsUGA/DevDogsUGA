@@ -104,11 +104,30 @@ export function applyFields(
 ): Item {
   const unset = unsettableFields(collection);
   const next: Item = { ...official };
+  const added: string[] = [];
   for (const [name, value] of Object.entries(fields)) {
     if (value === null && unset.has(name)) delete next[name];
-    else next[name] = value;
+    else {
+      if (!(name in next)) added.push(name);
+      next[name] = value;
+    }
   }
-  return orderKeys(collection, next);
+  // Existing keys keep the official file's order so the PR diff touches only
+  // the lines that changed; new keys follow in schema order.
+  const order = keyOrder(collection);
+  const rank = (name: string) => {
+    const i = order.indexOf(name);
+    return i === -1 ? order.length : i;
+  };
+  const fresh = added
+    .filter((name) => name in next)
+    .sort((a, b) => rank(a) - rank(b));
+  const result: Item = {};
+  for (const name of Object.keys(next)) {
+    if (!fresh.includes(name)) result[name] = next[name];
+  }
+  for (const name of fresh) result[name] = next[name];
+  return result;
 }
 
 export interface Orphan {

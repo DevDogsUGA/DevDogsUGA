@@ -220,7 +220,7 @@ const server = {
       secrecy: "secret",
     },
   ),
-  // The read-only GitHub App (devdogs-platform, and its staging twin) that
+  // The read-only GitHub App (devdogs-platform, with a staging twin) that
   // feeds merged pull requests into platform.contributions. All three are
   // optional so a deploy or a local run without them boots: the webhook then
   // answers 503 and the backfill refuses to run, both loudly and harmlessly.
@@ -250,7 +250,8 @@ const server = {
     doc:
       "Id of the GitHub App that opens the console's config pull requests " +
       "(DevDogs config PRs; Contents and Pull requests write, installed on " +
-      "DevDogsUGA only; a staging twin per environment). Without it, " +
+      "DevDogsUGA only; the same app and values in staging and production, " +
+      "where staging is told apart by a draft PR labelled staging). Without it, " +
       "'Open PR' on the console's schedule editor reports itself unavailable.",
     scope: "environment",
     secrecy: "public",

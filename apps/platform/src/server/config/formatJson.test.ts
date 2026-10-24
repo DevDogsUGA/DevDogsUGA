@@ -14,6 +14,23 @@ describe("formatJson", () => {
     },
   );
 
+  it("changes only the edited line of a committed meeting", async () => {
+    const { applyFields } = await import("./edits");
+    const text = readFileSync(join(DATA, "meetings.json"), "utf8");
+    const data = JSON.parse(text);
+    const index = data.meetings.findIndex(
+      (m: Record<string, unknown>) => "room" in m && "venue" in m,
+    );
+    const before = data.meetings[index];
+    data.meetings[index] = applyFields("meeting", before, { room: "ZZ-edited" });
+    const a = text.split("\n");
+    const b = formatJson(data).split("\n");
+    expect(b.length).toBe(a.length);
+    expect(b.filter((line, i) => line !== a[i])).toEqual([
+      expect.stringContaining("ZZ-edited"),
+    ]);
+  });
+
   it("keeps short scalar arrays on one line and breaks long ones", () => {
     expect(formatJson({ a: ["x", "y"], b: [] })).toBe(
       '{\n  "a": ["x", "y"],\n  "b": []\n}\n',

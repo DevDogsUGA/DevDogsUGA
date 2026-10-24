@@ -59,13 +59,19 @@ describe("applyFields", () => {
     });
   });
 
-  it("writes keys in schema order", () => {
+  it("keeps the official key order and appends new keys in schema order", () => {
     const out = applyFields(
       "meeting",
       { room: "1", startsAt: "a", slug: "s" },
-      { title: "T" },
+      { title: "T", summary: "S" },
     );
-    expect(Object.keys(out)).toEqual(["slug", "title", "room", "startsAt"]);
+    expect(Object.keys(out)).toEqual([
+      "room",
+      "startsAt",
+      "slug",
+      "title",
+      "summary",
+    ]);
   });
 });
 
