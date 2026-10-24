@@ -42,7 +42,7 @@ export default async function ProjectReportPage({
       ? await getReport(requested)
       : null;
   const editing =
-    existing && existing.authorId === userId && existing.projectId === projectId
+    existing?.authorId === userId && existing.projectId === projectId
       ? existing
       : null;
   const locked = editing?.status === "approved";
@@ -55,7 +55,10 @@ export default async function ProjectReportPage({
   return (
     <SettingsShell current="/projects">
       <PageHeading
-        crumbs={[{ label: "Projects", href: "/projects" }, { label: project.name }]}
+        crumbs={[
+          { label: "Projects", href: "/projects" },
+          { label: project.name },
+        ]}
         title={editing ? "Edit your report" : "Write a report"}
         description={`What you did on ${project.name}, for EL credit. Hours are your actual participation; the project's advisor or leadership confirms them.`}
       />

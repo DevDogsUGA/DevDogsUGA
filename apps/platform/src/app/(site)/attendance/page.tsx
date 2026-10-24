@@ -247,10 +247,10 @@ export default async function AttendancePage({
             <h2 id="el-h">Your EL hours</h2>
             <p className="muted small">
               Hours the club can vouch for: a workshop you attended and
-              reflected on (at least 100 words, within a week of your
-              attendance being recorded), plus project reports a reviewer
-              approved. Officers pass these on to UGAHacks; the platform does
-              not submit anything for you.
+              reflected on (at least 100 words, within a week of your attendance
+              being recorded), plus project reports a reviewer approved.
+              Officers pass these on to UGAHacks; the platform does not submit
+              anything for you.
             </p>
             <StatTiles>
               <StatTile

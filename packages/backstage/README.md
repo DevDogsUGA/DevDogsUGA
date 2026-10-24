@@ -62,26 +62,26 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 
 ## Commands
 
-| Command                                            | What it does                                                                           |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `deploy <app> --tier <t>`                          | Checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file, deploys, removes it.  |
-| `deploy write-env`                                 | Composes `.env.<DEPLOY_ENV>` from the GitHub environment.                              |
-| `deploy preflight`                                 | Classifies the project: paused (skip) or broken (fail).                                |
-| `deploy plan`, `deploy migrate [--include-seed]`   | Dry-run the migrations (and new seed files) into the job summary; apply them.          |
-| `deploy avatars`                                   | Uploads seeded headshots the bucket lacks; never replaces one (`SECRET_KEY`).          |
-| `deploy smoke --tier <t> [--app]`                  | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
-| `deploy reconcile --tier <t>`                      | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
-| `deploy prune-monitors --tier <t> [--app]`         | Deletes the app's Sentry Crons monitors it no longer declares (production only).       |
-| `env pull\|push\|audit --target <t>`               | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
-| `planner status\|create\|reset-password\|drop`     | The `migration_planner` role the preflight tier holds.                                 |
-| `graphics [graphic…]`                              | Club images from `@devdogsuga/sdk/brand`: `brand/*`, `app/*`, `event/*`.               |
-| `qr <text>`                                        | QR codes with every option of `/console/qr`.                                           |
-| `github rulesets\|settings`                        | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
-| `newsletter render\|draft\|send <series> <issue…>` | Changelog or GDGC issues as files, mailbox drafts, or a send.                          |
-| `creds send\|add\|renew\|list\|report`             | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
-| `import involvement --file <csv>`                  | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
-| `import attendance --meeting <day> --file <csv>`   | Records a meeting's attendance from a sign-in sheet (method `import`).                 |
-| `import contributions [--repo] [--since]`          | Backfills merged pull requests from the organization's repositories (GitHub App).      |
+| Command                                               | What it does                                                                           |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `deploy <app> --tier <t>`                             | Checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file, deploys, removes it.  |
+| `deploy write-env`                                    | Composes `.env.<DEPLOY_ENV>` from the GitHub environment.                              |
+| `deploy preflight`                                    | Classifies the project: paused (skip) or broken (fail).                                |
+| `deploy plan`, `deploy migrate [--include-seed]`      | Dry-run the migrations (and new seed files) into the job summary; apply them.          |
+| `deploy avatars`                                      | Uploads seeded headshots the bucket lacks; never replaces one (`SECRET_KEY`).          |
+| `deploy smoke --tier <t> [--app]`                     | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
+| `deploy reconcile --tier <t>`                         | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
+| `deploy prune-monitors --tier <t> [--app]`            | Deletes the app's Sentry Crons monitors it no longer declares (production only).       |
+| `env pull\|push\|audit --target <t>`                  | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
+| `planner status\|create\|reset-password\|drop`        | The `migration_planner` role the preflight tier holds.                                 |
+| `graphics [graphic…]`                                 | Club images from `@devdogsuga/sdk/brand`: `brand/*`, `app/*`, `event/*`.               |
+| `qr <text>`                                           | QR codes with every option of `/console/qr`.                                           |
+| `github rulesets\|settings`                           | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
+| `newsletter render\|draft\|send <series> <issue…>`    | Changelog or GDGC issues as files, mailbox drafts, or a send.                          |
+| `creds send\|add\|renew\|list\|report`                | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
+| `import involvement --file <csv>`                     | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
+| `import attendance --meeting <day> --file <csv>`      | Records a meeting's attendance from a sign-in sheet (method `import`).                 |
+| `import contributions [--repo] [--since]`             | Backfills merged pull requests from the organization's repositories (GitHub App).      |
 | `export evidence\|attendance\|reflections\|responses` | Member data as CSV, each export audited under the officer's gh login.                  |
 
 `smoke` and `reconcile` replace DevDogsUGA's `packages/deploy-checks`. The

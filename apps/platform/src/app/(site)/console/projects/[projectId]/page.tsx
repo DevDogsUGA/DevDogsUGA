@@ -198,9 +198,7 @@ export default async function ProjectConsolePage({
             {members.map((member) => (
               <li key={member.userId} className="prj-item">
                 <div className="prj-head">
-                  <span className="prj-title">
-                    {member.name ?? "Member"}
-                  </span>
+                  <span className="prj-title">{member.name ?? "Member"}</span>
                   {member.handle && (
                     <Link
                       href={`/console/badges/${member.userId}`}

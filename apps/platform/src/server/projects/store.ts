@@ -168,7 +168,8 @@ export async function decideProject(
       .where(eq(projects.id, projectId))
       .for("update");
     if (!project) return { status: "not_found" } as const;
-    if (project.status !== "proposed") return { status: "not_proposed" } as const;
+    if (project.status !== "proposed")
+      return { status: "not_proposed" } as const;
 
     if (decision.action === "decline") {
       await tx
@@ -264,22 +265,21 @@ export type ManageResult =
   | { status: "forbidden" | "not_found" | "not_active" | "unknown_member" }
   | { status: "repos_invalid"; message: string };
 
-/** Leadership, or the project's advisor. Returns the project row or a refusal. */
+/** Leadership, or the project's advisor, on an active project; else why not. */
 async function projectForManager(tx: Tx, actorId: string, projectId: string) {
   const [project] = await tx
-    .select({
-      status: projects.status,
-      advisorId: projects.advisorId,
-    })
+    .select({ status: projects.status, advisorId: projects.advisorId })
     .from(projects)
     .where(eq(projects.id, projectId))
     .for("update");
-  if (!project) return { refusal: "not_found" as const };
-  if (project.status !== "active") return { refusal: "not_active" as const };
-  if (project.advisorId !== actorId && !(await isOfficer(actorId))) {
-    return { refusal: "forbidden" as const };
+  if (!project) return { ok: false, refusal: "not_found" } as const;
+  if (project.status !== "active") {
+    return { ok: false, refusal: "not_active" } as const;
   }
-  return { project };
+  if (project.advisorId !== actorId && !(await isOfficer(actorId))) {
+    return { ok: false, refusal: "forbidden" } as const;
+  }
+  return { ok: true } as const;
 }
 
 export async function addProjectMember(
@@ -289,7 +289,7 @@ export async function addProjectMember(
 ): Promise<ManageResult> {
   return db.transaction(async (tx) => {
     const found = await projectForManager(tx, actorId, projectId);
-    if ("refusal" in found) return { status: found.refusal } as const;
+    if (!found.ok) return { status: found.refusal } as const;
     if (!(await memberExists(tx, userId))) {
       return { status: "unknown_member" } as const;
     }
@@ -314,7 +314,7 @@ export async function removeProjectMember(
 ): Promise<ManageResult> {
   return db.transaction(async (tx) => {
     const found = await projectForManager(tx, actorId, projectId);
-    if ("refusal" in found) return { status: found.refusal } as const;
+    if (!found.ok) return { status: found.refusal } as const;
     const removed = await tx
       .delete(projectMembers)
       .where(
@@ -342,7 +342,7 @@ export async function updateProjectRepos(
   if (!repos.ok) return { status: "repos_invalid", message: repos.message };
   return db.transaction(async (tx) => {
     const found = await projectForManager(tx, actorId, projectId);
-    if ("refusal" in found) return { status: found.refusal } as const;
+    if (!found.ok) return { status: found.refusal } as const;
     await tx
       .update(projects)
       .set({ repos: repos.repos, updatedAt: new Date() })
@@ -426,7 +426,8 @@ export async function submitProjectReport(
           )
           .for("update");
         if (!existing) return { status: "not_found" } as const;
-        if (existing.status === "approved") return { status: "locked" } as const;
+        if (existing.status === "approved")
+          return { status: "locked" } as const;
         if (existing.projectId !== input.projectId) {
           return { status: "not_found" } as const;
         }
@@ -501,16 +502,25 @@ export async function submitProjectReport(
       if (wanted.length > 0) {
         await tx
           .insert(projectReportContributions)
-          .values(wanted.map((contributionId) => ({ reportId, contributionId })));
+          .values(
+            wanted.map((contributionId) => ({ reportId, contributionId })),
+          );
       }
-      await audit(tx, userId, "projectReport.submitted", "projectReport", reportId, {
-        projectId: input.projectId,
-        hours: input.hours,
-        startDate: input.startDate,
-        endDate: input.endDate,
-        pullRequests: wanted.length,
-        resubmitted: Boolean(input.reportId),
-      });
+      await audit(
+        tx,
+        userId,
+        "projectReport.submitted",
+        "projectReport",
+        reportId,
+        {
+          projectId: input.projectId,
+          hours: input.hours,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          pullRequests: wanted.length,
+          resubmitted: Boolean(input.reportId),
+        },
+      );
       return { status: "submitted", reportId } as const;
     });
   } catch (error) {
@@ -527,7 +537,10 @@ export async function deleteProjectReport(
 ): Promise<"deleted" | "not_found" | "locked"> {
   return db.transaction(async (tx) => {
     const [report] = await tx
-      .select({ status: projectReports.status, projectId: projectReports.projectId })
+      .select({
+        status: projectReports.status,
+        projectId: projectReports.projectId,
+      })
       .from(projectReports)
       .where(
         and(eq(projectReports.id, reportId), eq(projectReports.userId, userId)),
@@ -536,9 +549,16 @@ export async function deleteProjectReport(
     if (!report) return "not_found" as const;
     if (report.status === "approved") return "locked" as const;
     await tx.delete(projectReports).where(eq(projectReports.id, reportId));
-    await audit(tx, userId, "projectReport.deleted", "projectReport", reportId, {
-      projectId: report.projectId,
-    });
+    await audit(
+      tx,
+      userId,
+      "projectReport.deleted",
+      "projectReport",
+      reportId,
+      {
+        projectId: report.projectId,
+      },
+    );
     return "deleted" as const;
   });
 }
@@ -565,8 +585,7 @@ export async function reviewProjectReport(
   actorId: string,
   reportId: string,
   decision:
-    | { action: "approve"; hours: number }
-    | { action: "return"; note: string },
+    { action: "approve"; hours: number } | { action: "return"; note: string },
 ): Promise<ReviewResult> {
   const note = decision.action === "return" ? decision.note.trim() : "";
   if (decision.action === "return") {
@@ -616,12 +635,19 @@ export async function reviewProjectReport(
           updatedAt: new Date(),
         })
         .where(eq(projectReports.id, reportId));
-      await audit(tx, actorId, "projectReport.approved", "projectReport", reportId, {
-        authorId: report.userId,
-        projectId: report.projectId,
-        claimedHours: Number(report.hours),
-        approvedHours: decision.hours,
-      });
+      await audit(
+        tx,
+        actorId,
+        "projectReport.approved",
+        "projectReport",
+        reportId,
+        {
+          authorId: report.userId,
+          projectId: report.projectId,
+          claimedHours: Number(report.hours),
+          approvedHours: decision.hours,
+        },
+      );
       return { status: "approved", authorId: report.userId } as const;
     }
     await tx
@@ -635,12 +661,18 @@ export async function reviewProjectReport(
         updatedAt: new Date(),
       })
       .where(eq(projectReports.id, reportId));
-    await audit(tx, actorId, "projectReport.returned", "projectReport", reportId, {
-      authorId: report.userId,
-      projectId: report.projectId,
-      note,
-    });
+    await audit(
+      tx,
+      actorId,
+      "projectReport.returned",
+      "projectReport",
+      reportId,
+      {
+        authorId: report.userId,
+        projectId: report.projectId,
+        note,
+      },
+    );
     return { status: "returned", authorId: report.userId } as const;
   });
 }
-

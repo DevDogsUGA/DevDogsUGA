@@ -72,7 +72,9 @@ export default async function ProjectsPage() {
                 <div className="prj-head">
                   <span className="prj-title">{project.name}</span>
                   <Badge
-                    variant={project.status === "active" ? "success" : "default"}
+                    variant={
+                      project.status === "active" ? "success" : "default"
+                    }
                   >
                     {STATUS_LABEL[project.status]}
                   </Badge>

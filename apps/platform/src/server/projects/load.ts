@@ -57,7 +57,9 @@ export interface ProjectReportView {
 }
 
 const name = (userId: ReturnType<typeof sql>) =>
-  sql<string | null>`(select p."preferredName" from platform.profile p where p."userId" = ${userId})`;
+  sql<
+    string | null
+  >`(select p."preferredName" from platform.profile p where p."userId" = ${userId})`;
 
 const summaryColumns = {
   id: projects.id,
@@ -79,9 +81,9 @@ function asSummary(row: {
 }
 
 /** Projects the member belongs to, advises or proposed. */
-export async function getMyProjects(userId: string): Promise<
-  (ProjectSummary & { isAdvisor: boolean })[]
-> {
+export async function getMyProjects(
+  userId: string,
+): Promise<(ProjectSummary & { isAdvisor: boolean })[]> {
   const rows = await db
     .select(summaryColumns)
     .from(projects)

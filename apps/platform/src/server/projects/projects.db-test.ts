@@ -67,9 +67,7 @@ async function cleanup() {
       where "userId" in (${ids})
          or "projectId" in (select id from platform.projects where name like 'D5 %')
     `);
-    await tx.execute(
-      sql`delete from platform.projects where name like 'D5 %'`,
-    );
+    await tx.execute(sql`delete from platform.projects where name like 'D5 %'`);
     await tx.execute(
       sql`delete from platform.contributions where repo like ${`${REPO}%`}`,
     );
@@ -187,7 +185,8 @@ describe("proposing and approving a project (Q123)", () => {
     const result = await proposeProject(MEMBER, {
       name: "  D5   Study  Buddy ",
       description: "",
-      repos: "https://github.com/DevDogsUGA/d5-dbtest.git, devdogsuga/D5-DBTEST",
+      repos:
+        "https://github.com/DevDogsUGA/d5-dbtest.git, devdogsuga/D5-DBTEST",
     });
     expect(result.status).toBe("proposed");
     const [row] = await db.execute<{
@@ -195,7 +194,9 @@ describe("proposing and approving a project (Q123)", () => {
       status: string;
       repos: string[];
       advisorId: string | null;
-    }>(sql`select name, status, repos, "advisorId" from platform.projects where name like 'D5 %'`);
+    }>(
+      sql`select name, status, repos, "advisorId" from platform.projects where name like 'D5 %'`,
+    );
     expect(row).toMatchObject({
       name: "D5 Study Buddy",
       status: "proposed",
@@ -220,7 +221,11 @@ describe("proposing and approving a project (Q123)", () => {
         repos: "nope",
       }),
     ).toMatchObject({ status: "repos_invalid" });
-    await proposeProject(MEMBER, { name: "D5 One", description: "", repos: "" });
+    await proposeProject(MEMBER, {
+      name: "D5 One",
+      description: "",
+      repos: "",
+    });
     expect(
       await proposeProject(OTHER, {
         name: "d5 one",
@@ -228,10 +233,22 @@ describe("proposing and approving a project (Q123)", () => {
         repos: "",
       }),
     ).toEqual({ status: "name_taken" });
-    await proposeProject(MEMBER, { name: "D5 Two", description: "", repos: "" });
-    await proposeProject(MEMBER, { name: "D5 Three", description: "", repos: "" });
+    await proposeProject(MEMBER, {
+      name: "D5 Two",
+      description: "",
+      repos: "",
+    });
+    await proposeProject(MEMBER, {
+      name: "D5 Three",
+      description: "",
+      repos: "",
+    });
     expect(
-      await proposeProject(MEMBER, { name: "D5 Four", description: "", repos: "" }),
+      await proposeProject(MEMBER, {
+        name: "D5 Four",
+        description: "",
+        repos: "",
+      }),
     ).toEqual({ status: "too_many_open" });
   });
 
@@ -265,13 +282,18 @@ describe("proposing and approving a project (Q123)", () => {
       status: string;
       advisorId: string;
       approvedBy: string;
-    }>(sql`select status, "advisorId", "approvedBy" from platform.projects where id = ${proposed.projectId}::uuid`);
+    }>(
+      sql`select status, "advisorId", "approvedBy" from platform.projects where id = ${proposed.projectId}::uuid`,
+    );
     expect(row).toEqual({
       status: "active",
       advisorId: ADVISOR,
       approvedBy: OFFICER,
     });
-    expect(await auditActions()).toEqual(["project.proposed", "project.approved"]);
+    expect(await auditActions()).toEqual([
+      "project.proposed",
+      "project.approved",
+    ]);
   });
 
   it("declines a proposal, and lets leadership replace the advisor", async () => {
@@ -326,9 +348,9 @@ describe("project reports (Q119-Q121)", () => {
     expect(await submitProjectReport(OTHER, report(project), TODAY)).toEqual({
       status: "not_member",
     });
-    expect(
-      await submitProjectReport(MEMBER, report(id(98)), TODAY),
-    ).toEqual({ status: "not_found" });
+    expect(await submitProjectReport(MEMBER, report(id(98)), TODAY)).toEqual({
+      status: "not_found",
+    });
   });
 
   it("takes 100 words, a sane range and quarter hours, in code and in the database", async () => {
@@ -364,7 +386,12 @@ describe("project reports (Q119-Q121)", () => {
     const inRange = await merge(MEMBER, 1);
     const early = await merge(MEMBER, 2, "2026-09-01T16:00:00Z");
     const theirs = await merge(OTHER, 3);
-    const elsewhere = await merge(MEMBER, 4, "2026-10-10T16:00:00Z", `${REPO}-other`);
+    const elsewhere = await merge(
+      MEMBER,
+      4,
+      "2026-10-10T16:00:00Z",
+      `${REPO}-other`,
+    );
     const submit = (contributionIds: string[]) =>
       submitProjectReport(MEMBER, report(project, { contributionIds }), TODAY);
     expect(await submit([theirs])).toEqual({ status: "pr_not_yours" });
@@ -451,15 +478,18 @@ describe("reviewing a report (Q119, Q125)", () => {
     const queue = await getReviewQueue(ADVISOR, false);
     expect(queue.map((r) => r.id)).not.toContain(own.reportId);
     // Leadership can review it.
-    expect(
-      (await getReviewQueue(OFFICER, true)).map((r) => r.id),
-    ).toContain(own.reportId);
+    expect((await getReviewQueue(OFFICER, true)).map((r) => r.id)).toContain(
+      own.reportId,
+    );
   });
 
   it("approves with adjusted hours, which are what the evidence counts", async () => {
     const { project, reportId } = await submitted();
     expect(
-      await reviewProjectReport(ADVISOR, reportId, { action: "approve", hours: 0 }),
+      await reviewProjectReport(ADVISOR, reportId, {
+        action: "approve",
+        hours: 0,
+      }),
     ).toEqual({ status: "bad_hours" });
     expect(
       await reviewProjectReport(OFFICER, reportId, {
@@ -476,15 +506,23 @@ describe("reviewing a report (Q119, Q125)", () => {
     const evidence = await db.execute<{
       evidenceType: string;
       hours: string;
-    }>(sql`select "evidenceType", hours::text from platform."memberElEvidence" where "userId" = ${MEMBER}::uuid`);
-    expect(evidence).toEqual([{ evidenceType: "project_report", hours: "5.25" }]);
+    }>(
+      sql`select "evidenceType", hours::text from platform."memberElEvidence" where "userId" = ${MEMBER}::uuid`,
+    );
+    expect(evidence).toEqual([
+      { evidenceType: "project_report", hours: "5.25" },
+    ]);
     expect(await getElSummary(MEMBER)).toMatchObject({
       projectHours: 5.25,
       totalHours: 5.25,
     });
     // An approved report is locked and cannot be withdrawn.
     expect(
-      await submitProjectReport(MEMBER, { ...report(project), reportId }, TODAY),
+      await submitProjectReport(
+        MEMBER,
+        { ...report(project), reportId },
+        TODAY,
+      ),
     ).toEqual({ status: "locked" });
     expect(await deleteProjectReport(MEMBER, reportId)).toBe("locked");
     expect(await auditActions()).toContain("projectReport.approved");
@@ -493,7 +531,10 @@ describe("reviewing a report (Q119, Q125)", () => {
   it("returns with a note, counts for nothing, and takes a resubmission", async () => {
     const { project, reportId } = await submitted();
     expect(
-      await reviewProjectReport(ADVISOR, reportId, { action: "return", note: " " }),
+      await reviewProjectReport(ADVISOR, reportId, {
+        action: "return",
+        note: " ",
+      }),
     ).toEqual({ status: "note_required" });
     expect(
       await reviewProjectReport(ADVISOR, reportId, {
@@ -514,7 +555,9 @@ describe("reviewing a report (Q119, Q125)", () => {
       approvedHours: string | null;
       reviewedAt: Date | null;
       hours: string;
-    }>(sql`select status, "approvedHours", "reviewedAt", hours::text from platform."projectReports" where id = ${reportId}::uuid`);
+    }>(
+      sql`select status, "approvedHours", "reviewedAt", hours::text from platform."projectReports" where id = ${reportId}::uuid`,
+    );
     expect(row).toMatchObject({
       status: "submitted",
       approvedHours: null,
@@ -637,20 +680,30 @@ describe("account deletion (Q168)", () => {
     const count = async (query: ReturnType<typeof sql>) =>
       (await db.execute(query)).length;
     expect(
-      await count(sql`select 1 from platform."projectReports" where id = ${sent.reportId}::uuid`),
+      await count(
+        sql`select 1 from platform."projectReports" where id = ${sent.reportId}::uuid`,
+      ),
     ).toBe(0);
     expect(
-      await count(sql`select 1 from platform."projectReportContributions" where "reportId" = ${sent.reportId}::uuid`),
+      await count(
+        sql`select 1 from platform."projectReportContributions" where "reportId" = ${sent.reportId}::uuid`,
+      ),
     ).toBe(0);
     expect(
-      await count(sql`select 1 from platform."projectMembers" where "userId" = ${MEMBER}::uuid`),
+      await count(
+        sql`select 1 from platform."projectMembers" where "userId" = ${MEMBER}::uuid`,
+      ),
     ).toBe(0);
     // Other members' work is untouched, and the project stays.
     expect(
-      await count(sql`select 1 from platform."projectReports" where id = ${theirs.reportId}::uuid`),
+      await count(
+        sql`select 1 from platform."projectReports" where id = ${theirs.reportId}::uuid`,
+      ),
     ).toBe(1);
     expect(
-      await count(sql`select 1 from platform."projectMembers" where "projectId" = ${project}::uuid and "userId" = ${OTHER}::uuid`),
+      await count(
+        sql`select 1 from platform."projectMembers" where "projectId" = ${project}::uuid and "userId" = ${OTHER}::uuid`,
+      ),
     ).toBe(1);
     const [row] = await db.execute<{ proposedBy: string | null }>(
       sql`select "proposedBy" from platform.projects where id = ${project}::uuid`,
@@ -672,7 +725,9 @@ describe("account deletion (Q168)", () => {
       status: string;
       advisorId: string | null;
       name: string;
-    }>(sql`select status, "advisorId", name from platform.projects where id = ${project}::uuid`);
+    }>(
+      sql`select status, "advisorId", name from platform.projects where id = ${project}::uuid`,
+    );
     expect(row).toEqual({
       status: "active",
       advisorId: null,
@@ -680,7 +735,10 @@ describe("account deletion (Q168)", () => {
     });
     // The approved report stays, with no reviewer to name, and leadership can
     // appoint a new advisor.
-    const [kept] = await db.execute<{ status: string; reviewedBy: string | null }>(
+    const [kept] = await db.execute<{
+      status: string;
+      reviewedBy: string | null;
+    }>(
       sql`select status, "reviewedBy" from platform."projectReports" where id = ${sent.reportId}::uuid`,
     );
     expect(kept).toEqual({ status: "approved", reviewedBy: null });

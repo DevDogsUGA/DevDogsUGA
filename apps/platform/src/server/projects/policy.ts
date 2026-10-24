@@ -60,7 +60,10 @@ export function parseRepos(input: string): RepoParse {
 }
 
 export function isQuarterHours(hours: number): boolean {
-  return Number.isFinite(hours) && Math.abs(hours / HOUR_STEP - Math.round(hours / HOUR_STEP)) < 1e-9;
+  return (
+    Number.isFinite(hours) &&
+    Math.abs(hours / HOUR_STEP - Math.round(hours / HOUR_STEP)) < 1e-9
+  );
 }
 
 export function isDay(value: string): boolean {
@@ -79,11 +82,7 @@ export interface ReportDraft {
 }
 
 export type ReportProblem =
-  | "bad_dates"
-  | "future"
-  | "range_too_long"
-  | "bad_hours"
-  | "too_short";
+  "bad_dates" | "future" | "range_too_long" | "bad_hours" | "too_short";
 
 /**
  * Why a report cannot be submitted, or null. `today` is the Eastern day the
@@ -101,7 +100,10 @@ export function reportProblem(
     return "bad_dates";
   }
   if (draft.endDate > today) return "future";
-  if (dayNumber(draft.endDate) - dayNumber(draft.startDate) >= REPORT_MAX_DAYS) {
+  if (
+    dayNumber(draft.endDate) - dayNumber(draft.startDate) >=
+    REPORT_MAX_DAYS
+  ) {
     return "range_too_long";
   }
   if (

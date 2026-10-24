@@ -149,7 +149,9 @@ describe("the report card", () => {
     );
     expect(screen.getByText("Returned")).toBeTruthy();
     expect(screen.getByText(/Grace says/)).toBeTruthy();
-    expect(screen.getByText("Say what you built.", { exact: false })).toBeTruthy();
+    expect(
+      screen.getByText("Say what you built.", { exact: false }),
+    ).toBeTruthy();
     expect(screen.getByText("Approved")).toBeTruthy();
     expect(screen.getByText(/Ada · Oct 1, 2026 to Oct 14, 2026/)).toBeTruthy();
     expect(screen.getByText(/5 h approved/)).toBeTruthy();
@@ -186,9 +188,9 @@ describe("the report card", () => {
 describe("the review form", () => {
   it("starts from the claimed hours and offers approve or return", () => {
     render(<ReviewForm reportId="r-1" claimedHours={6.5} />);
-    expect(screen.getByLabelText<HTMLInputElement>(/Hours to approve/).value).toBe(
-      "6.5",
-    );
+    expect(
+      screen.getByLabelText<HTMLInputElement>(/Hours to approve/).value,
+    ).toBe("6.5");
     const approve = screen.getByRole<HTMLButtonElement>("button", {
       name: "Approve",
     });

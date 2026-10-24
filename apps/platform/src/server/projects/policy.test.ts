@@ -21,7 +21,10 @@ describe("parseRepos", () => {
       parseRepos(
         "DevDogsUGA/DogDays, https://github.com/DevDogsUGA/DogPack.git\ndevdogsuga/dogdays",
       ),
-    ).toEqual({ ok: true, repos: ["DevDogsUGA/DogDays", "DevDogsUGA/DogPack"] });
+    ).toEqual({
+      ok: true,
+      repos: ["DevDogsUGA/DogDays", "DevDogsUGA/DogPack"],
+    });
   });
   it("allows none", () => {
     expect(parseRepos("  ")).toEqual({ ok: true, repos: [] });
@@ -47,18 +50,20 @@ describe("reportProblem", () => {
     expect(reportProblem({ ...base, content: words(99) }, today)).toBe(
       "too_short",
     );
-    expect(reportProblem({ ...base, content: `  ${words(100)}\n` }, today)).toBeNull();
+    expect(
+      reportProblem({ ...base, content: `  ${words(100)}\n` }, today),
+    ).toBeNull();
   });
   it("refuses backwards, future and year-long ranges", () => {
-    expect(
-      reportProblem({ ...base, startDate: "2026-10-15" }, today),
-    ).toBe("bad_dates");
+    expect(reportProblem({ ...base, startDate: "2026-10-15" }, today)).toBe(
+      "bad_dates",
+    );
     expect(reportProblem({ ...base, endDate: "2026-10-25" }, today)).toBe(
       "future",
     );
-    expect(
-      reportProblem({ ...base, startDate: "2025-10-01" }, today),
-    ).toBe("range_too_long");
+    expect(reportProblem({ ...base, startDate: "2025-10-01" }, today)).toBe(
+      "range_too_long",
+    );
     expect(reportProblem({ ...base, endDate: "nope" }, today)).toBe(
       "bad_dates",
     );

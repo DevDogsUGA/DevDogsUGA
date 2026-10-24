@@ -59,10 +59,7 @@ export default async function ProjectsConsolePage() {
           <ul className="prj-list">
             {queue.map((report) => (
               <ReportCard key={report.id} report={report} showAuthor>
-                <ReviewForm
-                  reportId={report.id}
-                  claimedHours={report.hours}
-                />
+                <ReviewForm reportId={report.id} claimedHours={report.hours} />
               </ReportCard>
             ))}
           </ul>

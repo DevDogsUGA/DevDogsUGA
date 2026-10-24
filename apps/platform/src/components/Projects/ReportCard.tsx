@@ -68,8 +68,7 @@ export default function ReportCard({
       {report.reviewNote && report.status === "returned" && (
         <p className="prj-note">
           <b>
-            {report.reviewedByName ? `${report.reviewedByName} says` : "Note"}
-            :
+            {report.reviewedByName ? `${report.reviewedByName} says` : "Note"}:
           </b>{" "}
           {report.reviewNote}
         </p>

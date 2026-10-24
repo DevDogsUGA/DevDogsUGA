@@ -90,7 +90,10 @@ export async function proposeProjectAction(
 }
 
 const DECIDE_MESSAGES: Record<
-  Exclude<DecideResult["status"], "approved" | "declined" | "archived" | "advisor_set">,
+  Exclude<
+    DecideResult["status"],
+    "approved" | "declined" | "archived" | "advisor_set"
+  >,
   string
 > = {
   forbidden: "Only leadership can do that.",
@@ -163,7 +166,11 @@ export async function setProjectAdvisorAction(
   if (!parsed.success) return invalid;
   const officerId = await expectSession();
   return decided(
-    await setProjectAdvisor(officerId, parsed.data.projectId, parsed.data.advisorId),
+    await setProjectAdvisor(
+      officerId,
+      parsed.data.projectId,
+      parsed.data.advisorId,
+    ),
     "Advisor assigned.",
     parsed.data.projectId,
   );
@@ -233,7 +240,11 @@ export async function removeProjectMemberAction(
   if (!parsed.success) return invalid;
   const actorId = await expectSession();
   return managed(
-    await removeProjectMember(actorId, parsed.data.projectId, parsed.data.userId),
+    await removeProjectMember(
+      actorId,
+      parsed.data.projectId,
+      parsed.data.userId,
+    ),
     "Member removed.",
     parsed.data.projectId,
   );
@@ -269,7 +280,8 @@ const SUBMIT_MESSAGES = {
 } as const;
 
 function submitMessage(result: SubmitResult): string {
-  if (result.status === "invalid") return REPORT_PROBLEM_MESSAGE[result.problem];
+  if (result.status === "invalid")
+    return REPORT_PROBLEM_MESSAGE[result.problem];
   if (result.status === "submitted") return "Report submitted for review.";
   return SUBMIT_MESSAGES[result.status];
 }
