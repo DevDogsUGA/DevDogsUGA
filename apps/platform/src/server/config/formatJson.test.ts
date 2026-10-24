@@ -22,7 +22,9 @@ describe("formatJson", () => {
       (m: Record<string, unknown>) => "room" in m && "venue" in m,
     );
     const before = data.meetings[index];
-    data.meetings[index] = applyFields("meeting", before, { room: "ZZ-edited" });
+    data.meetings[index] = applyFields("meeting", before, {
+      room: "ZZ-edited",
+    });
     const a = text.split("\n");
     const b = formatJson(data).split("\n");
     expect(b.length).toBe(a.length);
