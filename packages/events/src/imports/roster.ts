@@ -9,7 +9,8 @@
  * took `Organization Roster` for the header and found no rows.
  */
 
-import { parseCsv } from "../csv/read.js";
+import { parseCsv } from "./csv.js";
+import { MissingColumnsError } from "./errors.js";
 
 export interface InvolvementMember {
   /** Lowercased campus (MyID) address. */
@@ -29,9 +30,24 @@ export interface ParsedRoster {
   skippedLines: number[];
   /** Emails listed under two different names; the first name is kept. */
   conflictingNames: string[];
+  /** With `ugaOnly`: rows left out for a non-UGA address, by line number. */
+  notUga: { email: string; line: number }[];
+  /** The header row's cells, for a column picker. */
+  headers: string[];
+  /** The header cells read as first name, last name and email. */
+  columns: { firstName: string; lastName: string; email: string };
 }
 
-export class RosterFormatError extends Error {
+/** Header cells to read instead of the usual names, matched ignoring case. */
+export interface RosterOptions {
+  columns?: { firstName?: string; lastName?: string; email?: string };
+  /** Report addresses outside `@uga.edu` as `notUga` instead of keeping them. */
+  ugaOnly?: boolean;
+}
+
+const UGA = /@uga\.edu$/i;
+
+export class RosterFormatError extends MissingColumnsError {
   override name = "RosterFormatError";
 }
 
@@ -58,27 +74,46 @@ function clean(value: string | undefined): string {
   return v === "(Hidden)" ? "" : v;
 }
 
-export function parseRoster(text: string): ParsedRoster {
+/** The names to look for: the picked column alone, else the usual ones. */
+function wanted(
+  picked: string | undefined,
+  usual: readonly string[],
+): readonly string[] {
+  const name = picked?.trim().toLowerCase();
+  return name ? [name] : usual;
+}
+
+export function parseRoster(
+  text: string,
+  options: RosterOptions = {},
+): ParsedRoster {
   const rows = parseCsv(text);
+  const names = {
+    firstName: wanted(options.columns?.firstName, COLUMNS.firstName),
+    lastName: wanted(options.columns?.lastName, COLUMNS.lastName),
+    email: wanted(options.columns?.email, COLUMNS.email),
+  };
   const headerAt = rows.findIndex(
     (r) =>
-      columnIndex(r, COLUMNS.firstName) >= 0 &&
-      columnIndex(r, COLUMNS.lastName) >= 0 &&
-      columnIndex(r, COLUMNS.email) >= 0,
+      columnIndex(r, names.firstName) >= 0 &&
+      columnIndex(r, names.lastName) >= 0 &&
+      columnIndex(r, names.email) >= 0,
   );
   if (headerAt < 0) {
     throw new RosterFormatError(
-      'No header row with "First Name", "Last Name" and "Campus Email". ' +
-        "Export the roster from the Involvement Network's Roster page " +
-        "(Export → Organization Roster) and pass that file.",
+      options.columns
+        ? "No header row has all three picked columns."
+        : 'No header row with "First Name", "Last Name" and "Campus Email". ' +
+            "Export the roster from the Involvement Network's Roster page " +
+            "(Export → Organization Roster) and pass that file.",
     );
   }
 
   const header = rows[headerAt]!;
   const at = {
-    firstName: columnIndex(header, COLUMNS.firstName),
-    lastName: columnIndex(header, COLUMNS.lastName),
-    email: columnIndex(header, COLUMNS.email),
+    firstName: columnIndex(header, names.firstName),
+    lastName: columnIndex(header, names.lastName),
+    email: columnIndex(header, names.email),
     organization: columnIndex(header, COLUMNS.organization),
     position: columnIndex(header, COLUMNS.position),
   };
@@ -87,6 +122,7 @@ export function parseRoster(text: string): ParsedRoster {
   const organizations = new Set<string>();
   const skippedLines: number[] = [];
   const conflicting = new Set<string>();
+  const notUga: { email: string; line: number }[] = [];
 
   rows.slice(headerAt + 1).forEach((row, i) => {
     if (row.every((cell) => cell.trim() === "")) return;
@@ -95,6 +131,10 @@ export function parseRoster(text: string): ParsedRoster {
     const lastName = clean(row[at.lastName]);
     if (!email.includes("@") || !firstName || !lastName) {
       skippedLines.push(headerAt + i + 2);
+      return;
+    }
+    if (options.ugaOnly && !UGA.test(email)) {
+      notUga.push({ email, line: headerAt + i + 2 });
       return;
     }
     if (at.organization >= 0) {
@@ -125,5 +165,12 @@ export function parseRoster(text: string): ParsedRoster {
     organizations: [...organizations],
     skippedLines,
     conflictingNames: [...conflicting],
+    notUga,
+    headers: header.map((h) => h.trim()),
+    columns: {
+      firstName: header[at.firstName]!.trim(),
+      lastName: header[at.lastName]!.trim(),
+      email: header[at.email]!.trim(),
+    },
   };
 }

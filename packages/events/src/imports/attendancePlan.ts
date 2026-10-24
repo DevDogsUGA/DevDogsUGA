@@ -7,7 +7,7 @@
  * `import`, so `--replace` can find exactly the rows an earlier import wrote
  * and remove the ones the corrected sheet no longer lists.
  */
-import { accountFinder, type AccountRow } from "../production/accounts.js";
+import { accountFinder, type AccountRow } from "./accounts.js";
 import type { Attendee } from "./sheet.js";
 
 /** A check-in already on the meeting. */

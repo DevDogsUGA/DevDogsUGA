@@ -12,8 +12,8 @@
  * A roster email finds its account the way `production/accounts.ts` says:
  * the profile's `ugaEmail` first, then the sign-in address.
  */
-import { accountFinder, type AccountRow } from "../production/accounts.js";
-import type { InvolvementMember } from "./csv.js";
+import { accountFinder, type AccountRow } from "./accounts.js";
+import type { InvolvementMember } from "./roster.js";
 
 export type { AccountRow };
 

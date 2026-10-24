@@ -1,4 +1,4 @@
-import { UsageError } from "@devdogsuga/cli-core/ui";
+import { ImportInputError, MissingColumnsError } from "./errors.js";
 import { describe, expect, it } from "vitest";
 import { parseSheet } from "./sheet.js";
 
@@ -78,6 +78,20 @@ describe("parseSheet", () => {
       parseSheet("Email,Name\nab12345@uga.edu,Ada\n", {
         nameColumn: "Full name",
       }),
-    ).toThrow(UsageError);
+    ).toThrow(ImportInputError);
+  });
+
+  it("reads no names when told the name column is none", () => {
+    const sheet = parseSheet("Email,Name\nab12345@uga.edu,Ada\n", {
+      nameColumn: null,
+    });
+    expect(sheet.attendees[0]!.name).toBeNull();
+    expect(sheet.headers).toEqual(["Email", "Name"]);
+  });
+
+  it("raises MissingColumnsError when no column holds addresses", () => {
+    expect(() => parseSheet("Name,Notes\nAda,hello\n")).toThrow(
+      MissingColumnsError,
+    );
   });
 });
