@@ -25,3 +25,48 @@ export const consoleMeeting = terminal(PUBLIC, ({ path }) =>
     ],
   }),
 );
+
+/**
+ * Data tools: a CSV upload, a preview and a confirmation, none of which a curl
+ * request can do, and every one behind a session. So the terminal names the
+ * page and points at the browser, and shows nothing about members or files.
+ */
+export const consoleData = terminal(PUBLIC, ({ path }) =>
+  page({
+    banner: "DEVDOGS",
+    accent: "cyan",
+    aside: ["officers only", "sign in required"],
+    command: "console data",
+    body: [
+      {
+        type: "notice",
+        notice: {
+          tone: "info",
+          title: "Data tools live in the browser",
+          text: "Officers with the attendance permission import attendance sheets and the Involvement roster here after signing in.",
+          url: `${SITE}${path}`,
+        },
+      },
+    ],
+  }),
+);
+
+export const consoleImports = terminal(PUBLIC, ({ path }) =>
+  page({
+    banner: "DEVDOGS",
+    accent: "cyan",
+    aside: ["officers only", "sign in required"],
+    command: "console data imports",
+    body: [
+      {
+        type: "notice",
+        notice: {
+          tone: "info",
+          title: "Imports need the browser",
+          text: "Uploading a CSV, checking the preview and confirming happen on the page. Use the browser: nothing here reads or changes a record.",
+          url: `${SITE}${path}`,
+        },
+      },
+    ],
+  }),
+);
