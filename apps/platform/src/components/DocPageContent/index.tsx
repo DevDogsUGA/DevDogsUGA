@@ -28,6 +28,12 @@ interface Props {
   footer?: ReactNode;
   /** Above the article: the preview's "Scheduled" mark. */
   notice?: ReactNode;
+  /**
+   * A page from a project's own repository (published through the docs
+   * pipeline) rather than this one: never offers the VS Code handoff, which
+   * opens a path in the club's checkout.
+   */
+  external?: boolean;
 }
 
 export default function DocPageContent({
@@ -39,9 +45,11 @@ export default function DocPageContent({
   githubUrl,
   footer,
   notice,
+  external = false,
 }: Props) {
   // Only a local build shows the "Review in VS Code" links.
-  const vscode = (process.env.DEPLOY_ENV ?? "development") === "development";
+  const vscode =
+    !external && (process.env.DEPLOY_ENV ?? "development") === "development";
   const toc: TOCItem[] = headings.map((h) => ({
     title: h.title,
     url: `#${h.id}`,
@@ -92,8 +100,11 @@ export default function DocPageContent({
                 vscode={vscode ? part.vscode : undefined}
               />
             ) : (
-              // Our own repo's markdown, compiled at build time; nothing a
-              // visitor wrote reaches this string. `contents`, so the
+              // Markdown compiled ahead of time: this repo's at build time, or
+              // a project's (`external`) by the docs pipeline, which refuses
+              // script, handlers, styles, classes and external images before a
+              // reviewer ever sees it. Nothing a visitor wrote reaches this
+              // string, and it is not processed again here. `contents`, so the
               // prose styles see its elements as the article's own.
               <div
                 key={i}
