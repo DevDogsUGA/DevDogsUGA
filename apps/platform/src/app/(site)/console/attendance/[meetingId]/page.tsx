@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PresentationIcon } from "@phosphor-icons/react/ssr";
+import { PresentationIcon, UploadSimpleIcon } from "@phosphor-icons/react/ssr";
 import { notFound } from "next/navigation";
 import OpenDisplayLink from "~/components/AttendanceDisplay/OpenDisplayLink";
 import ConsoleShell from "~/components/Console/ConsoleShell";
@@ -24,6 +24,7 @@ import { PageHeading } from "~/ui/app-shell";
 import Badge from "~/ui/badge";
 import Callout from "~/ui/callout";
 import { Card } from "~/ui/card";
+import LinkButton from "~/ui/link-button";
 import { Table, TBody, Td, Th, THead, Tr } from "~/ui/table";
 
 export const metadata: Metadata = {
@@ -109,6 +110,15 @@ export default async function MeetingDetailPage({
         description={`${formatEventSpan(meeting.startsAt, meeting.endsAt)} · ${formatAttendanceCount(detail.counts)}`}
         actions={
           <>
+            {editable && (
+              <LinkButton
+                href={`/console/data/imports?kind=attendance&meeting=${meeting.id}`}
+                variant="outline"
+              >
+                <UploadSimpleIcon weight="bold" aria-hidden />
+                Import a sign-in sheet
+              </LinkButton>
+            )}
             {!canceled && (
               <OpenDisplayLink
                 href={`/console/attendance/${meeting.id}`}

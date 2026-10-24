@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCsv } from "./read.js";
+import { parseCsv } from "./csv.js";
 
 describe("parseCsv", () => {
   it("handles quotes, escaped quotes, embedded commas and newlines", () => {

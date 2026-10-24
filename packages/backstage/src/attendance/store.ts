@@ -11,7 +11,10 @@ import {
   withConnection,
   type Sql,
 } from "../production/access.js";
-import { IMPORT_METHOD, type ExistingCheckIn } from "./plan.js";
+import {
+  IMPORT_METHOD,
+  type ExistingCheckIn,
+} from "@devdogsuga/events/imports";
 
 export async function readCheckIns(
   sql: Sql,

@@ -43,3 +43,20 @@ export function parseCsv(text: string): string[][] {
   }
   return rows;
 }
+
+/**
+ * The row most likely to be the header when none has the usual names: the
+ * widest row among the first ten. Lets a column picker offer something to
+ * choose from for an export the parser does not recognize.
+ */
+export function guessHeaderRow(text: string): string[] {
+  const rows = parseCsv(text).slice(0, 10);
+  let best: string[] = [];
+  for (const row of rows) {
+    if (
+      row.filter((c) => c.trim()).length > best.filter((c) => c.trim()).length
+    )
+      best = row;
+  }
+  return best.map((c) => c.trim());
+}
