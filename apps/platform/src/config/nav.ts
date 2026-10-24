@@ -37,8 +37,11 @@ export interface NavItem {
 }
 
 export interface ConsoleItem extends NavItem {
-  /** The permission flag that reveals this item. */
-  permission: keyof ResolvedPermissions;
+  /**
+   * The permission flag that reveals this item, or `isLeader` for pages any
+   * officer (holder of a leadership role) may open.
+   */
+  permission: keyof ResolvedPermissions | "isLeader";
 }
 
 export interface SwitcherEntry {
@@ -140,6 +143,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
     icon: "NotePencilIcon",
     permission: "canManageAttendance",
     description: "Set the word minimum and submission window for reflections.",
+  },
+  {
+    label: "Badges",
+    href: "/console/badges",
+    icon: "SealCheckIcon",
+    permission: "isLeader",
+    description:
+      "Award Workshop Host, Guide Author, Mentor and Event Organizer badges with a public citation, or withdraw one.",
   },
   {
     label: "QR Codes",
@@ -315,7 +326,10 @@ export const SOCIAL_LINKS: SwitcherEntry[] = [
 /** Filters CONSOLE_ITEMS down to what the caller may see. */
 export function visibleConsoleItems(
   permissions: ResolvedPermissions | null,
+  isLeader = false,
 ): ConsoleItem[] {
   if (!permissions) return [];
-  return CONSOLE_ITEMS.filter((item) => permissions[item.permission]);
+  return CONSOLE_ITEMS.filter((item) =>
+    item.permission === "isLeader" ? isLeader : permissions[item.permission],
+  );
 }

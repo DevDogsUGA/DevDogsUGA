@@ -46,3 +46,8 @@ CREATE POLICY "own_select" ON "platform"."attendance"
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE "platform"."attendance" TO "anon", "authenticated", "postgres", "service_role";
 
 COMMENT ON TABLE "platform"."attendance" IS 'One row per member per meeting. Check-in is the only writer from the platform (method qr or manual_code). The one other writer is `backstage import attendance`, which an officer runs from a sign-in form or sheet for a meeting where members could not check in; its rows carry method import so they stay distinguishable and can be replaced. An import never overwrites a member''s own check-in. An officer can also add or remove a row from the console meeting page (method officer for an add; a removal is a hard delete with an attendance.removed audit event).';
+
+CREATE TRIGGER attendance_sync_badges
+  AFTER INSERT OR DELETE ON platform.attendance
+  FOR EACH ROW
+  EXECUTE FUNCTION platform.badges_after_attendance();

@@ -1,0 +1,53 @@
+{
+  "$schema": "./badges.schema.json",
+  "badges": [
+    {
+      "id": "workshop-completed",
+      "name": "Workshop completed",
+      "description": "Attended a workshop and submitted a reflection naming it. Awarded once per workshop, however many nights it runs.",
+      "kind": "automatic",
+      "repeatable": false,
+      "perWorkshop": true
+    },
+    {
+      "id": "first-merge",
+      "name": "First Merge",
+      "description": "Had a first pull request merged into a DevDogs repository.",
+      "kind": "automatic",
+      "repeatable": false,
+      "perWorkshop": false
+    },
+    {
+      "id": "workshop-host",
+      "name": "Workshop Host",
+      "description": "Delivered a workshop. Co-hosts qualify.",
+      "kind": "manual",
+      "repeatable": true,
+      "perWorkshop": false
+    },
+    {
+      "id": "guide-author",
+      "name": "Guide Author",
+      "description": "Wrote a published club tutorial or substantive learning guide.",
+      "kind": "manual",
+      "repeatable": true,
+      "perWorkshop": false
+    },
+    {
+      "id": "mentor",
+      "name": "Mentor",
+      "description": "Helped a member reach a concrete learning or project milestone.",
+      "kind": "manual",
+      "repeatable": true,
+      "perWorkshop": false
+    },
+    {
+      "id": "event-organizer",
+      "name": "Event Organizer",
+      "description": "Took on a substantial organizing responsibility for a club event.",
+      "kind": "manual",
+      "repeatable": true,
+      "perWorkshop": false
+    }
+  ]
+}

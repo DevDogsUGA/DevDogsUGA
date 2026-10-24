@@ -29,13 +29,15 @@ export async function GET(request: Request) {
   if (!query) return NextResponse.json([]);
 
   const userId = await expectSession().catch(() => null);
-  const permissions = userId
-    ? await getCallerContext(userId)
-        .then((ctx) => ctx.resolvedPermissions)
-        .catch(() => null)
+  const caller = userId
+    ? await getCallerContext(userId).catch(() => null)
     : null;
 
-  const appEntries = buildAppSearchEntries(permissions, userId !== null);
+  const appEntries = buildAppSearchEntries(
+    caller?.resolvedPermissions ?? null,
+    userId !== null,
+    caller?.isLeader ?? false,
+  );
 
   const pages = matchEntries(appEntries, query, 8);
   const [docs, forum] = await Promise.all([

@@ -19,6 +19,8 @@ import type { MeResponse, VerificationData } from "./NavUserProvider";
 export interface NavUser {
   profile: typeof profiles.$inferSelect;
   permissions: ResolvedPermissions | null;
+  /** Holds a leadership role (any officer). */
+  isLeader: boolean;
   highestRole: HighestRankingRole;
   verification: VerificationData | null;
   /** The linked GitHub account's login, or null when none is linked. */
@@ -47,6 +49,7 @@ export const getNavUser = cache(async (): Promise<NavUser | null> => {
   return {
     profile: user.profile,
     permissions: callerContext?.resolvedPermissions ?? null,
+    isLeader: callerContext?.isLeader ?? false,
     highestRole: highestRole ?? { title: "Member", color: null },
     verification: verificationStatus
       ? {
@@ -78,6 +81,6 @@ export function toMeResponse(user: NavUser | null): MeResponse {
     },
     verification: user.verification,
     githubLogin: user.githubLogin,
-    consoleItems: visibleConsoleItems(user.permissions),
+    consoleItems: visibleConsoleItems(user.permissions, user.isLeader),
   };
 }

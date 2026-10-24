@@ -199,6 +199,15 @@ export async function canUserDeleteAccounts(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canDeleteAccounts);
 }
 
+/**
+ * Whether the user is an officer: holds a role marked `isLeadership`. Gates
+ * the badge console. Not a `ResolvedPermissions` flag (those are inherited
+ * per-capability booleans), so it reads the `isLeader` trait directly.
+ */
+export async function isOfficer(userId: string): Promise<boolean> {
+  return getCallerContext(userId).then((ctx) => ctx.isLeader);
+}
+
 // ── Shared guards ─────────────────────────────────────────────────────────────
 
 export async function requireManageRoles(): Promise<{

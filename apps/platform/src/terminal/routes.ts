@@ -1,7 +1,7 @@
 import type { TerminalRoute } from "./define";
 import type { TerminalPattern } from "./paths";
 import { accountDeletion } from "./routes/account";
-import { consoleMeeting } from "./routes/console";
+import { consoleBadges, consoleMeeting } from "./routes/console";
 import { changelogArchive, changelogIssue } from "./routes/changelog";
 import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
 import { communityDirectory, communityProfile } from "./routes/community";
@@ -32,6 +32,8 @@ export const TERMINAL_ROUTES = {
   "/preview/kit": kitGallery,
   "/account/deletion": accountDeletion,
   "/console/attendance/:meetingId": consoleMeeting,
+  "/console/badges": consoleBadges,
+  "/console/badges/:userId": consoleBadges,
   "/help": help,
   "/help/:threadId": helpThread,
 } as const satisfies Record<TerminalPattern, TerminalRoute>;

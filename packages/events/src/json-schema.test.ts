@@ -21,6 +21,7 @@ describe("data/*.schema.json", () => {
       "questions",
       "workshops",
       "venues",
+      "badges",
     ]) {
       const data = JSON.parse(
         readFileSync(new URL(`./data/${file}.json`, import.meta.url), "utf8"),

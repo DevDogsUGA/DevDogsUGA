@@ -4,6 +4,7 @@ import { Fragment, Suspense } from "react";
 import { EyeIcon } from "@phosphor-icons/react/ssr";
 import AcademicFields from "~/components/AcademicFields";
 import AvatarField from "~/components/AvatarField";
+import BadgeVisibility from "~/components/Badges/BadgeVisibility";
 import BioField from "~/components/BioField";
 import {
   discordUserName,
@@ -22,6 +23,7 @@ import { Skeleton } from "~/ui/skeleton";
 import { profilePath } from "~/lib/profilePath";
 import { publicProfilesEnabled } from "~/server/features";
 import { getProfilePageData } from "~/server/loaders/console";
+import { getOwnBadges } from "~/server/loaders/badges";
 import { getHandleOptions } from "~/server/loaders/publicProfiles";
 import Badge from "~/ui/badge";
 import Field from "~/ui/field";
@@ -47,6 +49,7 @@ async function ProfileContent() {
   const handleChoices = publicProfilesEnabled()
     ? await getHandleOptions(data.id)
     : null;
+  const ownBadges = handleChoices ? await getOwnBadges(data.id) : [];
 
   // Set by a moderator resolving a report with `quarantine`. Everything under
   // it is refused by RLS regardless; this is what stops the page pretending
@@ -191,6 +194,25 @@ async function ProfileContent() {
               ]}
             />
           </Fields>
+        </Panel>
+      )}
+
+      {handleChoices && (
+        <Panel
+          id="badges"
+          title="Badges"
+          help="Badges you have earned show on your public profile. Hide any of them: the record is kept, and a hidden badge hides its citation too."
+        >
+          <BadgeVisibility
+            items={ownBadges.map((badge) => ({
+              key: badge.key,
+              name: badge.name,
+              badgeId: badge.badgeId,
+              workshopDefinitionId: badge.workshopDefinitionId,
+              hidden: badge.hidden,
+              count: badge.count,
+            }))}
+          />
         </Panel>
       )}
 

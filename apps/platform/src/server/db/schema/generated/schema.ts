@@ -200,6 +200,34 @@ export const accountDeletionsInPlatform = platform.table.withRLS("accountDeletio
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
 
+export const badgeAwardsInPlatform = platform.table.withRLS("badgeAwards", {
+	id: uuid().defaultRandom().primaryKey(),
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	badgeId: text().notNull(),
+	workshopDefinitionId: text(),
+	method: text().notNull(),
+	repeatable: boolean().notNull(),
+	awardedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	awardedBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	citation: text(),
+	meetingId: uuid().references(() => meetingsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	contributionId: uuid().references(() => contributionsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	withdrawnAt: timestamp({ withTimezone: true }),
+	withdrawnReason: text(),
+	hidden: boolean().default(false).notNull(),
+}, (table) => [
+	index("badgeAwards_meetingId_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("meetingId" IS NOT NULL)`),
+	uniqueIndex("badgeAwards_one_live_key").using("btree", table.userId.asc().nullsLast(), table.badgeId.asc().nullsLast(), sql`(COALESCE("workshopDefinitionId", ''::text))`).where(sql`(("withdrawnAt" IS NULL) AND (NOT repeatable))`),
+	index("badgeAwards_userId_awardedAt_idx").using("btree", table.userId.asc().nullsLast(), table.awardedAt.desc().nullsFirst()),
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+]);
+
 export const contributionsInPlatform = platform.table.withRLS("contributions", {
 	id: uuid().defaultRandom().primaryKey(),
 	repo: text().notNull(),
@@ -661,6 +689,7 @@ export const reflectionsInPlatform = platform.table.withRLS("reflections", {
 	submittedAt: timestamp({ withTimezone: true }),
 	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	workshopDefinitionId: text(),
 }, (table) => [
 	uniqueIndex("reflections_userId_meetingId_key").using("btree", table.userId.asc().nullsLast(), table.meetingId.asc().nullsLast()).where(sql`("meetingId" IS NOT NULL)`),
 	index("reflections_userId_updatedAt_idx").using("btree", table.userId.asc().nullsLast(), table.updatedAt.desc().nullsFirst()),
@@ -1100,6 +1129,7 @@ export { attendanceInPlatform as attendance };
 export { attendanceInvitesInPlatform as attendanceInvites };
 export { auditEventSourceInPlatform as auditEventSource };
 export { auditEventsInPlatform as auditEvents };
+export { badgeAwardsInPlatform as badgeAwards };
 export { checkInMethodInPlatform as checkInMethod };
 export { configReconcileStateInPlatform as configReconcileState };
 export { contentActionInPlatform as contentAction };

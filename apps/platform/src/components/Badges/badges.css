@@ -1,0 +1,94 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
+/* The badge list on a public profile, in Settings and in the console. Every selector hangs off a `bdg-` class. */
+@layer cosmic {
+  .cosmic .bdg-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cosmic .bdg-item {
+    border: 1px solid var(--border, currentColor);
+    border-radius: var(--radius-2, 8px);
+    padding: 12px 14px;
+  }
+  .cosmic .bdg-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+  }
+  .cosmic .bdg-name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .bdg-multiplier {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-2);
+  }
+  .cosmic .bdg-desc {
+    margin: 4px 0 0;
+    font-size: 13.5px;
+    color: var(--text-2);
+  }
+  .cosmic .bdg-dates {
+    margin-top: 8px;
+    font-size: 13.5px;
+  }
+  .cosmic .bdg-dates summary {
+    cursor: pointer;
+    color: var(--text-2);
+  }
+  .cosmic .bdg-awards {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cosmic .bdg-award time {
+    font-weight: 600;
+  }
+  .cosmic .bdg-citation {
+    margin: 2px 0 0;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .bdg-by,
+  .cosmic .bdg-withdrawn {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: var(--text-3);
+  }
+  .cosmic .bdg-empty {
+    margin: 0;
+    color: var(--text-2);
+  }
+  .cosmic .bdg-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+  }
+  .cosmic .bdg-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 560px;
+  }
+  .cosmic .bdg-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .cosmic .bdg-status {
+    margin: 0;
+    font-size: 13.5px;
+  }
+}

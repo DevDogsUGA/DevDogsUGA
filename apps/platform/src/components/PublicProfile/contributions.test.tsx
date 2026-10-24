@@ -24,7 +24,13 @@ const render = (activity: Partial<PublicProfileActivity>) =>
   renderToStaticMarkup(
     <PublicProfile
       profile={profile}
-      activity={{ links: null, stars: null, contributions: null, ...activity }}
+      activity={{
+        links: null,
+        stars: null,
+        contributions: null,
+        badges: [],
+        ...activity,
+      }}
     />,
   );
 

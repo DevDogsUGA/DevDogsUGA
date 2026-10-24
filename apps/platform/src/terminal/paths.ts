@@ -114,6 +114,17 @@ export const TERMINAL_PATHS = [
     page: "(site)/console/attendance/[meetingId]/page.tsx",
   },
 
+  {
+    pattern: "/console/badges",
+    regex: /^\/console\/badges\/?$/,
+    page: "(site)/console/badges/page.tsx",
+  },
+  {
+    pattern: "/console/badges/:userId",
+    regex: new RegExp(`^/console/badges/(?<userId>${SLUG})/?$`),
+    page: "(site)/console/badges/[userId]/page.tsx",
+  },
+
   { pattern: "/help", regex: /^\/help\/?$/, page: null },
   {
     pattern: "/help/:threadId",

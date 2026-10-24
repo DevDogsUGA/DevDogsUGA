@@ -746,6 +746,7 @@ describe("getPublicProfileActivity", () => {
       links: null,
       stars: null,
       contributions: null,
+      badges: [],
     });
   });
 

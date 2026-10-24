@@ -74,12 +74,13 @@ function toEntries(item: NavItem, breadcrumbs: string[] = []): SearchEntry[] {
 export function buildAppSearchEntries(
   permissions: ResolvedPermissions | null,
   signedIn: boolean,
+  isLeader = false,
 ): SearchEntry[] {
   return [
     ...PUBLIC_LINKS.flatMap((item) => toEntries(item)),
     ...SEARCH_ONLY_PAGES.flatMap((item) => toEntries(item)),
     ...(signedIn ? PROFILE_ITEMS.flatMap((item) => toEntries(item)) : []),
-    ...visibleConsoleItems(permissions).flatMap((item) =>
+    ...visibleConsoleItems(permissions, isLeader).flatMap((item) =>
       toEntries(item, ["Console"]),
     ),
   ];

@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { type z } from "zod";
+import badgesFile from "./data/badges.json" with { type: "json" };
 import meetingsFile from "./data/meetings.json" with { type: "json" };
 import seriesFile from "./data/series.json" with { type: "json" };
 import questionsFile from "./data/questions.json" with { type: "json" };
 import venuesFile from "./data/venues.json" with { type: "json" };
 import workshopsFile from "./data/workshops.json" with { type: "json" };
+import { badgesConfigSchema, validateBadges } from "./badges.js";
 import { ClubConfigError } from "./index.js";
 import { questionsConfigSchema } from "./questions.js";
 import { resolveMeetings } from "./resolve.js";
@@ -43,6 +45,8 @@ function main(): number {
   const questions = questionsConfigSchema.safeParse(questionsFile);
   const workshops = workshopsConfigSchema.safeParse(workshopsFile);
   const venues = venuesConfigSchema.safeParse(venuesFile);
+  const badges = badgesConfigSchema.safeParse(badgesFile);
+  if (!badges.success) shapeErrors("badges.json", badges.error);
   if (!workshops.success) shapeErrors("workshops.json", workshops.error);
   if (!venues.success) shapeErrors("venues.json", venues.error);
   if (!meetings.success) shapeErrors("meetings.json", meetings.error);
@@ -53,8 +57,19 @@ function main(): number {
     !series.success ||
     !questions.success ||
     !workshops.success ||
-    !venues.success
+    !venues.success ||
+    !badges.success
   ) {
+    return 1;
+  }
+
+  const badgeIssues = validateBadges(badges.data);
+  if (badgeIssues.length > 0) {
+    for (const issue of badgeIssues) {
+      process.stderr.write(
+        `events: badges.json [${issue.id}] ${issue.message}\n`,
+      );
+    }
     return 1;
   }
 

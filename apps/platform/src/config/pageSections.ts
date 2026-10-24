@@ -84,6 +84,9 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
     // draft state between them, so the page source has no `<Field>` to mirror.
     // The panel anchor still lands search on the section.
     { id: "publicProfileSettings", label: "Public profile" },
+    // No fields: the switches are rendered by BadgeVisibility, one per badge
+    // the member holds, so the page source has no `<Field>` to mirror.
+    { id: "badges", label: "Badges" },
     {
       id: "roles",
       label: "Roles",
