@@ -10,6 +10,8 @@ const APP = "11111111-1111-4111-8111-111111111111";
 const OWNER = "22222222-2222-4222-8222-222222222222";
 const OTHER = "33333333-3333-4333-8333-333333333333";
 const HOLDER = "44444444-4444-4444-8444-444444444444";
+const OTHER_APP = "55555555-5555-4555-8555-555555555555";
+const LOGO_VERSION = "66666666-6666-4666-8666-666666666666";
 
 const mocks = vi.hoisted(() => ({
   session: "",
@@ -147,6 +149,17 @@ describe("saveAppDetails", () => {
     expect(mocks.audits).toEqual([]);
   });
 
+  it("refuses to clear a published DevDogs app's links", async () => {
+    mocks.app = { userId: null, status: "in_production", label: "DogDays" };
+    mocks.session = HOLDER;
+    const result = await saveAppDetails(APP, {
+      homepageUrl: "",
+      privacyPolicyUrl: "https://dogdays.dev/p",
+    });
+    expect(result).toMatchObject({ ok: false });
+    expect(mocks.updates).toEqual([]);
+  });
+
   it("audits a holder's change to a published DevDogs app", async () => {
     mocks.app = { userId: null, status: "in_production", label: "DogDays" };
     mocks.session = HOLDER;
@@ -199,10 +212,14 @@ describe("saveAppDetails", () => {
 });
 
 describe("logo upload", () => {
-  it("signs an upload to the one path the app's logo may have", async () => {
+  it("signs each upload to a fresh path in the app's folder", async () => {
     const result = await createAppLogoUploadToken(APP);
-    expect(result.path).toBe(`apps/${APP}.webp`);
-    expect(mocks.signedPaths).toEqual([`apps/${APP}.webp`]);
+    const again = await createAppLogoUploadToken(APP);
+    expect(result.path).toMatch(
+      new RegExp(`^apps/${APP}/[0-9a-f-]{36}\\.webp$`),
+    );
+    expect(again.path).not.toBe(result.path);
+    expect(mocks.signedPaths).toEqual([result.path, again.path]);
     expect(result.maxBytes).toBe(256 * 1024);
   });
 
@@ -215,14 +232,26 @@ describe("logo upload", () => {
   });
 
   it("records the path only after the object exists", async () => {
+    const path = `apps/${APP}/${LOGO_VERSION}.webp`;
     mocks.objectExists = false;
-    const missing = await saveAppLogo(APP);
+    const missing = await saveAppLogo(APP, path);
     expect(missing.ok).toBe(false);
     expect(mocks.updates).toEqual([]);
 
     mocks.objectExists = true;
-    await expect(saveAppLogo(APP)).resolves.toEqual({ ok: true });
-    expect(mocks.updates).toEqual([{ logoPath: `apps/${APP}.webp` }]);
+    await expect(saveAppLogo(APP, path)).resolves.toEqual({ ok: true });
+    expect(mocks.updates).toEqual([{ logoPath: path }]);
+  });
+
+  it("records only a path in this app's own folder", async () => {
+    for (const path of [
+      `apps/${APP}.webp`,
+      `apps/${OTHER_APP}/${LOGO_VERSION}.webp`,
+      `${OWNER}.webp`,
+    ]) {
+      expect(await saveAppLogo(APP, path)).toMatchObject({ ok: false });
+    }
+    expect(mocks.updates).toEqual([]);
   });
 
   it("refuses a logo token and a logo save while the owner's app is published", async () => {
@@ -231,16 +260,14 @@ describe("logo upload", () => {
       /locked while an app is in production/,
     );
     expect(mocks.signedPaths).toEqual([]);
-    const saved = await saveAppLogo(APP);
+    const saved = await saveAppLogo(APP, `apps/${APP}/${LOGO_VERSION}.webp`);
     expect(saved).toMatchObject({ ok: false });
     expect(mocks.updates).toEqual([]);
   });
 
   it("allows both again in Testing", async () => {
     mocks.app = { userId: OWNER, status: "testing", label: "Lab" };
-    await expect(createAppLogoUploadToken(APP)).resolves.toMatchObject({
-      path: `apps/${APP}.webp`,
-    });
-    await expect(saveAppLogo(APP)).resolves.toEqual({ ok: true });
+    const { path } = await createAppLogoUploadToken(APP);
+    await expect(saveAppLogo(APP, path)).resolves.toEqual({ ok: true });
   });
 });

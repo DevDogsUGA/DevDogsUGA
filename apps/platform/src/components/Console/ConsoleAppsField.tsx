@@ -163,8 +163,13 @@ export default function ConsoleAppsField({ apps }: { apps: ConsoleApp[] }) {
                   <ConfirmDestructiveAction
                     action={() =>
                       run(app, async () => {
-                        await setStatus(app.clientId, "in_production");
-                        return `${app.label} is in production`;
+                        const result = await setStatus(
+                          app.clientId,
+                          "in_production",
+                        );
+                        return result.counts
+                          ? `${app.label} is in production. ${countsMessage(result.counts)}`
+                          : `${app.label} is in production`;
                       })
                     }
                     title={`Publish ${app.label}?`}

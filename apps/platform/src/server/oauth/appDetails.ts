@@ -7,9 +7,23 @@
 export const APP_LOGO_PREFIX = "apps/";
 export const APP_LOGO_MAX_BYTES = 256 * 1024;
 
-/** The one path an app's logo is written to; uploading again replaces it. */
-export function appLogoPath(clientId: string): string {
-  return `${APP_LOGO_PREFIX}${clientId}.webp`;
+/**
+ * Each upload gets its own path under the app's folder. Only the path the
+ * server records is ever shown, so an upload token signed while the app was in
+ * Testing can't change a published app's logo (Q178).
+ */
+export function appLogoPath(clientId: string, version: string): string {
+  return `${APP_LOGO_PREFIX}${clientId}/${version}.webp`;
+}
+
+const LOGO_VERSION =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** Whether `path` is one of this app's upload paths (and nothing else). */
+export function isAppLogoPath(clientId: string, path: string): boolean {
+  const prefix = `${APP_LOGO_PREFIX}${clientId}/`;
+  if (!path.startsWith(prefix) || !path.endsWith(".webp")) return false;
+  return LOGO_VERSION.test(path.slice(prefix.length, -".webp".length));
 }
 
 /** The same shape the database check accepts: https, a host, no credentials. */
