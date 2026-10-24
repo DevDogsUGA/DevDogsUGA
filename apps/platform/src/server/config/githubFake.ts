@@ -33,6 +33,8 @@ export const BASE_FILE_NAMES = [
   "venues",
   "series",
   "questions",
+  "semesters",
+  "badges",
 ] as const;
 
 /** The committed config as the files on the base branch would hold it. */

@@ -2,6 +2,7 @@ import { getClubConfig, getVenues, getWorkshops } from "@devdogsuga/events";
 import type { Metadata } from "next";
 import Link from "next/link";
 import ChangeList from "~/components/ConfigEditor/ChangeList";
+import OrphanReset from "~/components/ConfigEditor/OrphanReset";
 import ProposalActions from "~/components/ConfigEditor/ProposalActions";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import { formatEventDateTime } from "~/lib/eventTime";
@@ -98,9 +99,14 @@ export default async function ScheduleEditorPage() {
     title: v.name,
     meta: v.kind,
   }));
-  const created = (collection: Collection): Row[] =>
+  const created = (collection: Collection, official: Row[]): Row[] =>
     preview.edits
-      .filter((e) => e.isNew && e.collection === collection)
+      .filter(
+        (e) =>
+          e.isNew &&
+          e.collection === collection &&
+          !official.some((row) => row.key === e.key),
+      )
       .map((e) => ({
         key: e.key,
         title: label(e.fields.title) ?? label(e.fields.name) ?? e.key,
@@ -152,11 +158,20 @@ export default async function ScheduleEditorPage() {
         )}
         {preview.orphans.length > 0 && (
           <Callout tone="warning" title="Some saved edits no longer apply">
-            {preview.orphans
-              .map((o) => `${o.edit.collection} ${o.edit.key}`)
-              .join(", ")}{" "}
-            changed in the official config since you saved them. Open each and
-            reset it.
+            These edits no longer fit the official config, because the item was
+            removed or added there since you saved them. They are left out of
+            your pull request; reset each one.
+            <ul className="cfg-errors">
+              {preview.orphans.map((o) => (
+                <li key={`${o.edit.collection}:${o.edit.key}`}>
+                  {o.edit.collection} {o.edit.key}{" "}
+                  <OrphanReset
+                    collection={o.edit.collection}
+                    editKey={o.edit.key}
+                  />
+                </li>
+              ))}
+            </ul>
           </Callout>
         )}
         <ProposalActions
@@ -174,7 +189,7 @@ export default async function ScheduleEditorPage() {
         </p>
         <List
           collection="meeting"
-          rows={[...created("meeting"), ...meetings]}
+          rows={[...created("meeting", meetings), ...meetings]}
           edited={edited}
           empty="No meetings"
         />
@@ -189,7 +204,7 @@ export default async function ScheduleEditorPage() {
         </p>
         <List
           collection="workshop"
-          rows={[...created("workshop"), ...workshops]}
+          rows={[...created("workshop", workshops), ...workshops]}
           edited={edited}
           empty="No workshops"
         />
@@ -204,7 +219,7 @@ export default async function ScheduleEditorPage() {
         </p>
         <List
           collection="venue"
-          rows={[...created("venue"), ...venues]}
+          rows={[...created("venue", venues), ...venues]}
           edited={edited}
           empty="No venues"
         />

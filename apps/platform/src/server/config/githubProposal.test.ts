@@ -253,6 +253,7 @@ describe("text helpers", () => {
   it("strips angle brackets and line breaks from a name", () => {
     expect(plainName("Ada <evil>\nLovelace")).toBe("Ada evil Lovelace");
     expect(plainName("   ")).toBe("A DevDogs officer");
+    expect(plainName("@octocat and @org/team `x`")).not.toMatch(/[@`]/);
   });
 
   it("puts the co-author on its own trailer", () => {

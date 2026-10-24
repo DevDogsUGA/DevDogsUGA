@@ -69,12 +69,14 @@ const BASE_FILES = [
   "venues",
   "series",
   "questions",
+  "semesters",
+  "badges",
 ] as const;
 
 /** A name safe on a trailer or a heading: no angle brackets or line breaks. */
 export function plainName(name: string): string {
   const cleaned = name
-    .replace(/[<>\r\n]+/g, " ")
+    .replace(/[<>\r\n@#`*_~\[\]()|\\]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   return cleaned === "" ? "A DevDogs officer" : cleaned;

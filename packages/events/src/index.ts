@@ -99,6 +99,8 @@ export interface AuthoredFiles {
   series: unknown;
   workshops: unknown;
   venues: unknown;
+  semesters: unknown;
+  badges: unknown;
 }
 
 /**
@@ -113,6 +115,8 @@ export function getAuthoredFiles(): AuthoredFiles {
     series,
     workshops,
     venues,
+    semesters,
+    badges,
   });
 }
 
@@ -124,16 +128,21 @@ export function getAuthoredFiles(): AuthoredFiles {
  */
 export function validateConfigFiles(
   files: Pick<AuthoredFiles, "meetings" | "series" | "workshops" | "venues"> &
-    Partial<Pick<AuthoredFiles, "questions">>,
+    Partial<Pick<AuthoredFiles, "questions" | "semesters" | "badges">>,
 ): { ok: true } | { ok: false; errors: string[] } {
   try {
-    parseConfigFiles(
+    const parsed = parseConfigFiles(
       files.meetings,
       files.questions ?? { questions: [] },
       files.series,
       files.workshops,
       files.venues,
     );
+    // The rest of CI's check:events: the badges, and the semesters' weekly art
+    // against the meetings the proposal leaves (a new last meeting needs art
+    // for its week).
+    parseBadges(files.badges ?? badges);
+    parseSemesters(files.semesters ?? semesters, parsed.meetings.meetings);
     return { ok: true };
   } catch (error) {
     if (error instanceof ClubConfigError) {
@@ -151,6 +160,7 @@ export function validateConfigFiles(
         ),
       };
     }
+    if (error instanceof Error) return { ok: false, errors: [error.message] };
     throw error;
   }
 }

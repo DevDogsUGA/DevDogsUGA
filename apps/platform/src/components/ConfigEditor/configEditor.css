@@ -2,6 +2,9 @@
 @layer theme, base, cosmic, components, utilities;
 /* The console's schedule editor: item lists, the edit form and the diff. Every selector hangs off a `cfg-` class. */
 @layer cosmic {
+  .cosmic .cfg-inline {
+    display: inline-block;
+  }
   .cosmic .cfg-stack {
     display: flex;
     flex-direction: column;

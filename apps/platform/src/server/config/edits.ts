@@ -29,6 +29,8 @@ export interface ConfigFiles {
 export interface AuthoredConfig extends ConfigFiles {
   series: unknown;
   questions: unknown;
+  semesters?: unknown;
+  badges?: unknown;
 }
 
 export interface SavedEdit {
@@ -273,7 +275,12 @@ export function effectiveEdits(
       continue;
     }
     const base = findItem(official, edit.collection, edit.key);
-    if (!base) continue;
+    if (!base) {
+      // Its official item is gone: kept so the preview reports it as an orphan
+      // the officer can reset, rather than hiding a row they cannot reach.
+      out.push(edit);
+      continue;
+    }
     const merged = applyFields(edit.collection, base, edit.fields);
     const fields = changedFields(edit.collection, base, merged);
     if (Object.keys(fields).length > 0) out.push({ ...edit, fields });

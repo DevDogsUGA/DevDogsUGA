@@ -39,6 +39,27 @@ describe("validateConfigFiles", () => {
     if (!result.ok) expect(result.errors.join("\n")).toContain("nowhere");
   });
 
+  it("refuses a meeting beyond the semester's art, as CI's semesters check does", () => {
+    const files = getAuthoredFiles();
+    const list = (files.meetings as { meetings: Record<string, unknown>[] })
+      .meetings;
+    list.push({
+      slug: "2026-12-02",
+      series: "merge-monday",
+      startsAt: "2026-12-02T23:00:00.000Z",
+      endsAt: "2026-12-03T01:00:00.000Z",
+      rsvpUrl: null,
+      cancelledAt: null,
+      cancellationReason: null,
+      surveyUrl: null,
+      questions: ["how_did_you_learn"],
+      agenda: [],
+    });
+    const result = validateConfigFiles(files);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join("\n")).toContain("no region");
+  });
+
   it("reports every problem, not just the first", () => {
     const files = getAuthoredFiles();
     const list = (files.meetings as { meetings: { summary?: string }[] })

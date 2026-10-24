@@ -177,7 +177,7 @@ describe("diffConfig", () => {
 });
 
 describe("effectiveEdits", () => {
-  it("drops fields that now equal the official value and edits left with nothing", () => {
+  it("drops fields that now equal the official value and edits left with nothing, keeping gone items", () => {
     const edits: SavedEdit[] = [
       {
         collection: "meeting",
@@ -205,6 +205,19 @@ describe("effectiveEdits", () => {
         isNew: false,
         fields: { title: "Renamed" },
       },
+      {
+        collection: "venue",
+        key: "missing",
+        isNew: false,
+        fields: { name: "x" },
+      },
     ]);
+  });
+
+  it("keeps an edit whose item is gone, so the preview can report it", () => {
+    const kept = effectiveEdits(official(), [
+      { collection: "venue", key: "gone", isNew: false, fields: { name: "x" } },
+    ]);
+    expect(applyEdits(official(), kept).orphans).toHaveLength(1);
   });
 });

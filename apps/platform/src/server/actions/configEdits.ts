@@ -175,7 +175,7 @@ const OPEN_MESSAGES = {
   unavailable:
     "Opening pull requests is not set up in this environment. Your saved edits and the diff still work.",
   rate_limited:
-    "You have opened three pull requests in the last hour. Try again later.",
+    "You have made three pull request attempts in the last hour. Try again later.",
   nothing_to_propose: "Nothing differs from the official config.",
 } as const;
 

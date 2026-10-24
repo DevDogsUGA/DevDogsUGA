@@ -17,7 +17,7 @@ describe("formatJson", () => {
   it("changes only the edited line of a committed meeting", async () => {
     const { applyFields } = await import("./edits");
     const text = readFileSync(join(DATA, "meetings.json"), "utf8");
-    const data = JSON.parse(text);
+    const data = JSON.parse(text) as { meetings: Record<string, unknown>[] };
     const index = data.meetings.findIndex(
       (m: Record<string, unknown>) => "room" in m && "venue" in m,
     );
