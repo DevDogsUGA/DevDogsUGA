@@ -319,7 +319,7 @@ describe("untrusted links and assets", () => {
       "![logo](../img/logo.png) ![s](./shot.png) [next](./other.md#a)\n",
     );
     expect(html).toContain('src="../img/logo.png"');
-    expect(html).toContain('href="/docs/proj/guides/other#a"');
+    expect(html).toContain('href="/docs/proj/guides/other#pd-proj--a"');
   });
 
   it.each([
@@ -386,5 +386,66 @@ describe("svg assets", () => {
     ["not an svg", "<html><body>hi</body></html>"],
   ])("rejects %s", (_label, text) => {
     expect(() => checkSvgAsset(text, "a.svg")).toThrow(DocsBuildError);
+  });
+});
+
+describe("untrusted ids", () => {
+  it("prefixes heading ids and their autolinks per project", async () => {
+    const html = await render("## Location\n\n## Cookie\n");
+    expect(html).toContain('id="pd-proj--location"');
+    expect(html).toContain('href="#pd-proj--location"');
+    expect(html).toContain('id="pd-proj--cookie"');
+    expect(html).not.toMatch(/id="(location|cookie)"/);
+  });
+
+  it("rewrites same-page #refs in markdown and HTML links", async () => {
+    const html = await render(
+      '## Setup\n\n[up](#setup) <a href="#setup">again</a>\n',
+    );
+    expect(html.match(/href="#pd-proj--setup"/g)?.length).toBe(3);
+    expect(html).not.toContain('href="#setup"');
+  });
+
+  it("prefixes svg ids and rewrites href and url() references", async () => {
+    const html = await render(
+      '<svg viewBox="0 0 4 4"><defs><linearGradient id="g"><stop offset="0"/></linearGradient><clipPath id="c"><rect width="2" height="2"/></clipPath><circle id="dot" r="1"/></defs><use href="#dot"/><rect width="4" height="4" fill="url(#g)" clipPath="url(#c)" clip-path="url( \'#c\' )"/></svg>',
+    );
+    expect(html).toContain('id="pd-proj--g"');
+    expect(html).toContain('id="pd-proj--c"');
+    expect(html).toContain('href="#pd-proj--dot"');
+    expect(html).toContain('fill="url(#pd-proj--g)"');
+    expect(html).toMatch(/clip-path="url\((&#x27;)?#pd-proj--c/);
+    expect(html).not.toMatch(/id="(g|c|dot)"/);
+  });
+
+  it("prefixes footnote ids and refs, and cross-page heading fragments", async () => {
+    const html = await render(
+      "A note[^1] and [other](./other.md#deep-part).\n\n[^1]: the note\n",
+    );
+    expect(html).toMatch(/id="pd-proj--user-content-fn-1"/);
+    expect(html).toMatch(/href="#pd-proj--user-content-fn-1"/);
+    expect(html).toContain("/docs/proj/guides/other#pd-proj--deep-part");
+  });
+
+  it("leaves the club's own docs' ids alone", async () => {
+    const html = await render("## Location\n", { trust: "trusted" });
+    expect(html).toContain('id="location"');
+    expect(html).not.toContain("pd-proj");
+  });
+});
+
+describe("event-handler errors", () => {
+  it.each([
+    ["onerror", '<img src="x.png" onerror="alert(1)">'],
+    ["onclick", '<a href="https://example.com" onclick="1">x</a>'],
+    ["onmouseover", '<span onmouseover="1">x</span>'],
+    ["onload", '<svg onload="1"></svg>'],
+  ])("names %s as written", async (attribute, markup) => {
+    const error = await render(markup).then(
+      () => null,
+      (e: unknown) => e as Error,
+    );
+    expect(error?.message).toContain(`\`${attribute}\``);
+    expect(error?.message).not.toContain("on-");
   });
 });

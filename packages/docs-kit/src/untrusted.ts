@@ -31,11 +31,11 @@ import * as path from "node:path";
 import { compileDocs, renderPages } from "./compile.js";
 import { DocsBuildError } from "./errors.js";
 import { parseDocFile } from "./parse.js";
-import { checkSvgAsset, type RenderPolicy } from "./sanitize.js";
+import { checkSvgAsset, idPrefixFor, type RenderPolicy } from "./sanitize.js";
 import type { DocsFolder, DocsPage, DocsProject } from "./types.js";
 
 export interface UntrustedLimits {
-  /** Files of any kind, including the manifest. */
+  /** Files of any kind, including the manifest, plus directories. */
   maxFiles: number;
   /** Markdown pages. */
   maxPages: number;
@@ -138,6 +138,9 @@ function scan(root: string, limits: UntrustedLimits): Scanned[] {
   if (!rootStat.isDirectory()) reject("", "the docs path isn't a directory");
 
   const found: Scanned[] = [];
+  // Files and directories both count: a tree of a million empty folders costs
+  // the scan as much as a million files.
+  let entries = 0;
   let total = 0;
   let pages = 0;
 
@@ -145,7 +148,25 @@ function scan(root: string, limits: UntrustedLimits): Scanned[] {
     if (depth > limits.maxDepth) {
       reject(rel, `is nested deeper than ${limits.maxDepth} folders`);
     }
-    for (const name of fs.readdirSync(dir).sort()) {
+    // Read at most the allowance (not the whole listing) so a directory with
+    // millions of entries is refused without being loaded.
+    const names: string[] = [];
+    const handle = fs.opendirSync(dir);
+    try {
+      for (let entry = handle.readSync(); entry; entry = handle.readSync()) {
+        names.push(entry.name);
+        if (entries + names.length > limits.maxFiles) {
+          reject(
+            rel,
+            `exceeds the limit of ${limits.maxFiles} files and directories`,
+          );
+        }
+      }
+    } finally {
+      handle.closeSync();
+    }
+    entries += names.length;
+    for (const name of names.sort()) {
       const relPath = rel === "" ? name : `${rel}/${name}`;
       const full = path.join(dir, name);
 
@@ -175,9 +196,6 @@ function scan(root: string, limits: UntrustedLimits): Scanned[] {
       }
       if (!stat.isFile()) reject(relPath, "isn't a regular file");
 
-      if (found.length >= limits.maxFiles) {
-        reject(relPath, `exceeds the limit of ${limits.maxFiles} files`);
-      }
 
       const ext = path.extname(name).toLowerCase();
       const isManifest = rel === "" && name === MANIFEST_FILE;
@@ -436,6 +454,12 @@ export async function compileUntrustedDocs(
       const pages = await renderPages(compiled.pages, policyFor);
       const root = compiled.projects[0];
       if (!root) throw new DocsBuildError("docs: no project was produced");
+      // The pages' ids carry a per-project prefix (rehypePrefixIds); the
+      // table of contents links to them, so it carries the same one.
+      const prefix = idPrefixFor(project);
+      for (const page of pages) {
+        for (const heading of page.headings) heading.id = prefix + heading.id;
+      }
       if (manifest?.name !== undefined) root.name = manifest.name;
       if (manifest?.description !== undefined)
         root.description = manifest.description;

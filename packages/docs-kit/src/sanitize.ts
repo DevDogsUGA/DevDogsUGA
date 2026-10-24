@@ -163,6 +163,75 @@ export function rehypeExternalLinks() {
   };
 }
 
+/** The prefix an untrusted project's ids and fragment references get. */
+export function idPrefixFor(project: string): string {
+  return `pd-${project}--`;
+}
+
+/** `url(#a)` inside a presentation attribute value, rewritten to `url(#<prefix>a)`. */
+function prefixUrlRefs(value: string, prefix: string): string {
+  return value.replace(
+    /url\(\s*(["']?)#([^)"'\s]*)\1\s*\)/gi,
+    (_all, quote: string, id: string) => `url(${quote}#${prefix}${id}${quote})`,
+  );
+}
+
+/**
+ * Untrusted docs: every `id` in the page, the generated ones (headings,
+ * footnotes) and an author's SVG ones alike, gets a per-project prefix, and
+ * every reference to one is rewritten to match: same-page `#ref` links, SVG
+ * `href="#ref"` and `url(#ref)` values, `aria-labelledby`-style id lists, and
+ * links to another heading of this project's docs (`/docs/<project>/x#ref`).
+ * Without it a page could set `id="location"` or a heading named "Cookie" and
+ * shadow a property of `document` or `window` that the site's scripts read
+ * (DOM clobbering). Runs right after `rehype-slug` so the heading links
+ * `rehype-autolink-headings` builds from the ids come out prefixed already.
+ */
+export function rehypePrefixIds() {
+  return (tree: HastRoot, file: VFile) => {
+    const policy = policyOf(file);
+    if (policy.trust !== "untrusted" || policy.untrusted === undefined) return;
+    const { project } = policy.untrusted;
+    const prefix = idPrefixFor(project);
+    const home = `/docs/${project}`;
+
+    visit(tree, "element", (node: Element) => {
+      const props = node.properties;
+      for (const [name, raw] of Object.entries(props)) {
+        if (name === "id" && typeof raw === "string") {
+          props[name] = prefix + raw;
+        } else if (name === "href" && typeof raw === "string") {
+          if (raw.startsWith("#")) {
+            props[name] = `#${prefix}${raw.slice(1)}`;
+          } else if (raw.startsWith(home)) {
+            const hash = raw.indexOf("#");
+            const head = hash === -1 ? raw : raw.slice(0, hash);
+            if (head === home || head.startsWith(`${home}/`)) {
+              props[name] =
+                hash === -1 ? raw : `${head}#${prefix}${raw.slice(hash + 1)}`;
+            }
+          }
+        } else if (
+          (name === "ariaLabelledBy" || name === "ariaDescribedBy") &&
+          raw !== undefined &&
+          raw !== null
+        ) {
+          const ids = (Array.isArray(raw) ? raw : String(raw).split(/\s+/))
+            .map(String)
+            .filter((id) => id !== "");
+          props[name] = ids.map((id) => prefix + id);
+        } else if (typeof raw === "string") {
+          props[name] = prefixUrlRefs(raw, prefix);
+        } else if (Array.isArray(raw)) {
+          props[name] = raw.map((part) =>
+            typeof part === "string" ? prefixUrlRefs(part, prefix) : part,
+          );
+        }
+      }
+    });
+  };
+}
+
 /**
  * Checks a standalone `.svg` asset against the same allowlist as inline SVG.
  * The file is parsed as HTML foreign content (what a browser does with an

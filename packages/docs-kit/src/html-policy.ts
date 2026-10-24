@@ -274,7 +274,10 @@ export function attributeName(property: string): string {
   if (property === "htmlFor") return "for";
   if (property === "xLinkHref") return "xlink:href";
   if (/^xml[A-Z]/.test(property)) return property.replace(/^xml/, "xml:");
-  if (/^(aria|data|on)[A-Z]/.test(property) || /^on[a-z]/.test(property)) {
+  // Event handlers are one lowercase word in HTML (`onerror`), whatever case
+  // hast keeps the property in (`onError`).
+  if (/^on[A-Za-z]/.test(property)) return property.toLowerCase();
+  if (/^(aria|data)[A-Z]/.test(property)) {
     return property.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
   }
   return property;
