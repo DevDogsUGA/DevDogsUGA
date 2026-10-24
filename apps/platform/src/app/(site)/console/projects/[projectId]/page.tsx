@@ -84,7 +84,7 @@ export default async function ProjectConsolePage({
             : "No advisor assigned"}
           {project.proposedByName && ` · proposed by ${project.proposedByName}`}
         </p>
-        {active && (
+        {active && officer && (
           <ProjectActionForm
             action={updateProjectReposAction}
             fields={{ projectId }}

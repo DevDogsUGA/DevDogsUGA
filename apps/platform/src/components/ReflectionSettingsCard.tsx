@@ -119,7 +119,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
         <Field
           label="Submission window"
           htmlFor="submissionWindowDays"
-          description="1 to 90. Counted from when attendance was recorded (or the meeting's end, if later)."
+          description="7 to 90 (at least a week for EL credit). Counted from when attendance was recorded (or the meeting's end, if later)."
           error={shownDays.error}
         >
           <InputGroup>
@@ -132,7 +132,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
               onBlur={shownDays.onBlur}
               disabled={isSaving}
               aria-invalid={shownDays.error ? true : undefined}
-              min={1}
+              min={7}
               max={90}
               step={1}
               required

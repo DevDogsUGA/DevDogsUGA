@@ -338,6 +338,9 @@ export async function updateProjectRepos(
   projectId: string,
   input: string,
 ): Promise<ManageResult> {
+  // Leadership sets the scope at registration (Q123); the advisor keeps only
+  // the member list, so the repositories that bound the evidence are officers'.
+  if (!(await isOfficer(actorId))) return { status: "forbidden" };
   const repos = parseRepos(input);
   if (!repos.ok) return { status: "repos_invalid", message: repos.message };
   return db.transaction(async (tx) => {
