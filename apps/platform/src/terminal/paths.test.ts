@@ -75,6 +75,16 @@ describe("matchTerminalPath", () => {
       "/console/badges/6f0c1b0e-0000-4000-8000-000000000001",
       "/console/badges/:userId",
     ],
+    ["/projects", "/projects"],
+    [
+      "/projects/6f0c1b0e-0000-4000-8000-000000000001/report",
+      "/projects/:projectId/report",
+    ],
+    ["/console/projects", "/console/projects"],
+    [
+      "/console/projects/6f0c1b0e-0000-4000-8000-000000000001",
+      "/console/projects/:projectId",
+    ],
   ])("%s is %s", (path, pattern) => {
     expect(matchTerminalPath(path)?.pattern).toBe(pattern);
   });

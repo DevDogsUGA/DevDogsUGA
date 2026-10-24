@@ -125,6 +125,28 @@ export const TERMINAL_PATHS = [
     page: "(site)/console/badges/[userId]/page.tsx",
   },
 
+  {
+    pattern: "/console/projects",
+    regex: /^\/console\/projects\/?$/,
+    page: "(site)/console/projects/page.tsx",
+  },
+  {
+    pattern: "/console/projects/:projectId",
+    regex: new RegExp(`^/console/projects/(?<projectId>${SLUG})/?$`),
+    page: "(site)/console/projects/[projectId]/page.tsx",
+  },
+
+  {
+    pattern: "/projects",
+    regex: /^\/projects\/?$/,
+    page: "(site)/projects/page.tsx",
+  },
+  {
+    pattern: "/projects/:projectId/report",
+    regex: new RegExp(`^/projects/(?<projectId>${SLUG})/report/?$`),
+    page: "(site)/projects/[projectId]/report/page.tsx",
+  },
+
   { pattern: "/help", regex: /^\/help\/?$/, page: null },
   {
     pattern: "/help/:threadId",

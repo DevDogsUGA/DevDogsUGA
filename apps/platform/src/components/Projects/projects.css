@@ -1,0 +1,126 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
+/* Projects and project reports, for members and in the console. Every selector hangs off a `prj-` class. */
+@layer cosmic {
+  .cosmic .prj-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .cosmic .prj-fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+  .cosmic .prj-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cosmic .prj-item {
+    border: 1px solid var(--border, currentColor);
+    border-radius: var(--radius-2, 8px);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cosmic .prj-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+  }
+  .cosmic .prj-title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .prj-meta {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--text-2);
+    overflow-wrap: anywhere;
+  }
+  .cosmic .prj-text {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .prj-prs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13.5px;
+  }
+  .cosmic .prj-pr {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .prj-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 640px;
+  }
+  .cosmic .prj-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  .cosmic .prj-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+  }
+  .cosmic .prj-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cosmic .prj-count {
+    margin: 0;
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .cosmic .prj-count-n.is-short {
+    color: var(--warn);
+  }
+  .cosmic .prj-note {
+    margin: 0;
+    padding: 8px 10px;
+    border-left: 3px solid var(--warn, currentColor);
+    background: var(--surface-2, transparent);
+    overflow-wrap: anywhere;
+  }
+  .cosmic .prj-status {
+    margin: 0;
+    font-size: 13.5px;
+  }
+  .cosmic .prj-status.ok {
+    color: var(--ok, inherit);
+  }
+  .cosmic .prj-status.bad {
+    color: var(--bad, inherit);
+  }
+  .cosmic .prj-el {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+  }
+  @media (max-width: 640px) {
+    .cosmic .prj-form {
+      max-width: none;
+    }
+  }
+}

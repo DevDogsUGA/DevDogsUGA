@@ -25,10 +25,13 @@ import {
   emptyWeekTreatment,
   getWeeklyParticipation,
 } from "~/server/loaders/weeklyParticipation";
+import { formatHours } from "~/server/el/format";
+import { getElSummary } from "~/server/el/summary";
 import { getReflectionActivities } from "~/server/reflections/load";
 import { getSurvey } from "~/server/survey/load";
 import Callout, { type CalloutTone } from "~/ui/callout";
 import { Card } from "~/ui/card";
+import { StatTile, StatTiles } from "~/ui/stat-tile";
 import { TextLink } from "~/ui/text-link";
 
 export const metadata: Metadata = {
@@ -129,7 +132,7 @@ export default async function AttendancePage({
   // attendance row itself, so a hand-edited URL shows nothing.
   const surveyMeetingId =
     receipt?.good && requestedMeeting ? requestedMeeting : null;
-  const [weekly, reflectionData, survey, contributions] = userId
+  const [weekly, reflectionData, survey, contributions, el] = userId
     ? await Promise.all([
         getWeeklyParticipation(userId),
         getReflectionActivities(userId),
@@ -137,8 +140,9 @@ export default async function AttendancePage({
           ? getSurvey(userId, surveyMeetingId)
           : null,
         getContributionsForUser(userId, { publicOnly: false }),
+        getElSummary(userId),
       ])
-    : [null, null, null, null];
+    : [null, null, null, null, null];
   const selected = meetings.some((meeting) => meeting.id === requestedMeeting)
     ? requestedMeeting
     : meetings[0]?.id;
@@ -236,6 +240,34 @@ export default async function AttendancePage({
               note="A week lights when you attend a workshop night or have a pull request merged. Monday counts for the week before. A week with no meetings is a Streak Freeze: it never breaks a streak."
             />
           </div>
+        )}
+
+        {el && (
+          <section className="att-sect" aria-labelledby="el-h">
+            <h2 id="el-h">Your EL hours</h2>
+            <p className="muted small">
+              Hours the club can vouch for: a workshop you attended and
+              reflected on (at least 100 words, within a week of your attendance
+              being recorded), plus project reports a reviewer approved.
+              Officers pass these on to UGAHacks; the platform does not submit
+              anything for you.
+            </p>
+            <StatTiles>
+              <StatTile
+                label="Workshops attended"
+                value={el.workshopsAttended}
+                sub={`${el.workshopsVerified} with a qualifying reflection`}
+              />
+              <StatTile
+                label="Verified EL hours"
+                value={formatHours(el.totalHours)}
+                sub={`${formatHours(el.workshopHours)} workshop, ${formatHours(el.projectHours)} project`}
+              />
+            </StatTiles>
+            <p className="muted small">
+              <TextLink href="/projects">Projects and reports</TextLink>
+            </p>
+          </section>
         )}
 
         {contributions && (
