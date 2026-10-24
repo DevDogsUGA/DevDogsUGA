@@ -23,10 +23,14 @@ pnpm backstage import badges             # previews, then asks (--yes answers wi
 
 ## What it never does
 
-- It never touches an officer-awarded badge or reopens a withdrawn one: a member or pair with any existing row is reported as already held.
+- It never touches an officer-awarded badge or reopens a withdrawn one: a member or pair with any existing row, live or withdrawn, is reported as already held (for Workshop completed that is every row for the member and workshop).
 - It never turns stars or pull-request counts into EL hours.
 - Streaks and the weekly art are computed on read from attendance at workshop meetings and from contributions, so there is nothing to backfill for them.
 
 ## Rerunning
 
 It is idempotent: a second run finds everything held and changes nothing. Each real run writes one `badge.backfill` audit event with the counts awarded and skipped.
+
+## Effect on EL evidence
+
+Recording the single workshop onto an old reflection has a side effect: the EL hours evidence counts a reflection only when its workshop matches one the meeting ran, so those defaulted reflections now count as workshop evidence on `/attendance` and in the officer EL export. No hours come from stars or pull-request counts. The edit writes no reflection revision; the `badge.backfill` audit event holds the counts.

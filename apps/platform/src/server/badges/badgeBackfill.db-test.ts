@@ -30,6 +30,7 @@ const MANUAL_MEMBER = id(4); // officer-awarded Workshop completed
 const MERGER = id(5); // matched contribution
 const WITHDRAWN_MERGER = id(6); // First Merge withdrawn by an officer
 const NO_ATTENDANCE = id(7); // reflection, never checked in: skipped
+const WITHDRAWN_WORKSHOP = id(8); // officer withdrew an automatic Workshop completed
 const ALL = [
   SOLO_MEMBER,
   PICKED_MEMBER,
@@ -38,6 +39,7 @@ const ALL = [
   MERGER,
   WITHDRAWN_MERGER,
   NO_ATTENDANCE,
+  WITHDRAWN_WORKSHOP,
 ] as const;
 const MEETING_SOLO = id(11);
 const MEETING_MULTI = id(12);
@@ -121,6 +123,13 @@ async function seed() {
     await attend(MANUAL_MEMBER, MEETING_SOLO);
     await reflect(MANUAL_MEMBER, MEETING_SOLO, WS_SOLO);
     await reflect(NO_ATTENDANCE, MEETING_SOLO, WS_SOLO);
+    await attend(WITHDRAWN_WORKSHOP, MEETING_SOLO);
+    await reflect(WITHDRAWN_WORKSHOP, MEETING_SOLO, WS_SOLO);
+    await tx.execute(sql`
+      insert into platform."badgeAwards"
+        ("userId", "badgeId", "workshopDefinitionId", "method", "repeatable", "withdrawnAt", "withdrawnReason")
+      values (${WITHDRAWN_WORKSHOP}::uuid, 'workshop-completed', ${WS_SOLO}, 'automatic', false, now(), 'withdrawn by an officer')
+    `);
     await tx.execute(sql`
       insert into platform."badgeAwards"
         ("userId", "badgeId", "workshopDefinitionId", "method", "repeatable", "citation", "awardedBy")
@@ -169,7 +178,7 @@ describe("import badges (Q105, Q29)", () => {
     await seed();
     const read = readEvidenceFor(env.DB_URL);
     const apply = applyBadgesFor(env.DB_URL);
-    expect(await awards()).toHaveLength(2); // the manual and the withdrawn row
+    expect(await awards()).toHaveLength(3); // the manual and the two withdrawn rows
 
     const auditsBefore = (await backfillAudits()).length;
     const plan = planBadges(await read());
@@ -197,6 +206,7 @@ describe("import badges (Q105, Q29)", () => {
         `${SOLO_MEMBER}|workshop-completed|${WS_SOLO}|automatic|live`,
         `${PICKED_MEMBER}|workshop-completed|${WS_A}|automatic|live`,
         `${MANUAL_MEMBER}|workshop-completed|${WS_SOLO}|manual|live`,
+        `${WITHDRAWN_WORKSHOP}|workshop-completed|${WS_SOLO}|automatic|withdrawn`,
         `${MERGER}|first-merge||automatic|live`,
         `${WITHDRAWN_MERGER}|first-merge||automatic|withdrawn`,
       ].sort(),

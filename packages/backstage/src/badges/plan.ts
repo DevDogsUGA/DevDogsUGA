@@ -41,7 +41,7 @@ export interface WorkshopAward {
 
 export interface WorkshopPlan {
   awards: WorkshopAward[];
-  /** Pairs that already hold a live award of any kind. */
+  /** Pairs that already have a row: live, manual or withdrawn. */
   alreadyAwarded: number;
   skipped: Record<WorkshopSkipReason, number>;
 }
@@ -58,9 +58,10 @@ export const pairKey = (userId: string, definitionId: string) =>
   `${userId}|${definitionId}`;
 
 /**
- * `liveAwards` holds `pairKey`s of every live Workshop completed award,
- * manual ones included: an officer's award is never touched, and a pair that
- * has one is not handed to the sync.
+ * `liveAwards` holds `pairKey`s of every Workshop completed row, manual and
+ * withdrawn ones included: an officer's award or withdrawal is never touched
+ * (the sync would insert a fresh award past a withdrawn row), and a pair that
+ * has any row is not handed to the sync.
  */
 export function planWorkshops(
   evidence: readonly ReflectionEvidence[],

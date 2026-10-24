@@ -78,7 +78,7 @@ function parse(argv: readonly string[]): Values {
 
 export function planBadges(evidence: Evidence): BadgesPlan {
   return {
-    workshop: planWorkshops(evidence.reflections, evidence.liveWorkshopAwards),
+    workshop: planWorkshops(evidence.reflections, evidence.heldWorkshopAwards),
     firstMerge: planFirstMerge(
       evidence.contributors,
       evidence.firstMergeHolders,

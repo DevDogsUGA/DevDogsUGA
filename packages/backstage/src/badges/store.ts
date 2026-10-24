@@ -9,8 +9,8 @@ import { pairKey, type BadgesPlan, type ReflectionEvidence } from "./plan.js";
 
 export interface Evidence {
   reflections: ReflectionEvidence[];
-  /** `pairKey`s of live Workshop completed awards, any method. */
-  liveWorkshopAwards: Set<string>;
+  /** `pairKey`s of every Workshop completed row: live or withdrawn, any method. */
+  heldWorkshopAwards: Set<string>;
   /** Members with at least one matched contribution. */
   contributors: string[];
   /** Members with any First Merge row, withdrawn or not. */
@@ -41,7 +41,7 @@ export function readEvidenceFor(url: string): ReadEvidence {
              and exists (select 1 from "auth"."users" u where u."id" = r."userId")`,
         sql`
           select "userId", "workshopDefinitionId" from "platform"."badgeAwards"
-           where "badgeId" = 'workshop-completed' and "withdrawnAt" is null`,
+           where "badgeId" = 'workshop-completed'`,
         sql`
           select distinct "userId" from "platform"."contributions"
            where "userId" is not null`,
@@ -60,7 +60,7 @@ export function readEvidenceFor(url: string): ReadEvidence {
           attended: r.attended === true,
           meetingLive: r.live === true,
         })),
-        liveWorkshopAwards: new Set(
+        heldWorkshopAwards: new Set(
           awards.map((a) =>
             pairKey(String(a.userId), String(a.workshopDefinitionId)),
           ),
@@ -121,6 +121,10 @@ export function applyBadgesFor(url: string): ApplyBadges {
                   ${tx.json({
                     ...result,
                     workshopSkipped: plan.workshop.skipped,
+                    reflectionsDefaulted: plan.workshop.awards.reduce(
+                      (n, a) => n + a.assign.length,
+                      0,
+                    ),
                     workshopAlreadyAwarded: plan.workshop.alreadyAwarded,
                     firstMergeAlreadyHeld: plan.firstMerge.alreadyHeld,
                   })})`;

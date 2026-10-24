@@ -80,6 +80,18 @@ describe("planWorkshops", () => {
   });
 });
 
+describe("withdrawn workshop awards", () => {
+  it("never plans a pair whose award an officer withdrew", () => {
+    // Withdrawn rows are in the held set, so the sync is not called.
+    const plan = planWorkshops(
+      [evidence("r1")],
+      new Set([pairKey("u1", "ws-a")]),
+    );
+    expect(plan.awards).toEqual([]);
+    expect(plan.alreadyAwarded).toBe(1);
+  });
+});
+
 describe("planFirstMerge", () => {
   it("skips members who ever held the badge", () => {
     expect(planFirstMerge(["a", "b", "b", "c"], new Set(["c"]))).toEqual({
@@ -113,7 +125,7 @@ describe("runBadges", () => {
         offered: ["a", "b"],
       }),
     ],
-    liveWorkshopAwards: new Set(),
+    heldWorkshopAwards: new Set(),
     contributors: ["u1"],
     firstMergeHolders: new Set(),
   };
@@ -148,7 +160,7 @@ describe("runBadges", () => {
     await runBadges(["--yes"], {
       evidence: async () => ({
         ...data,
-        liveWorkshopAwards: new Set([pairKey("u1", "ws-a")]),
+        heldWorkshopAwards: new Set([pairKey("u1", "ws-a")]),
         firstMergeHolders: new Set(["u1"]),
       }),
       apply,
