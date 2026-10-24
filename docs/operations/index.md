@@ -38,6 +38,10 @@ Everyone else works from a fork. Nobody but the people above, and the `team-*` t
 - [Product repository CI](./repositories/product-ci.md): the caller job names the product rulesets require.
 - [Owner-only actions](./repositories/owner-actions.md)
 
+**Project documentation**
+
+- [Project documentation](./project-docs.md): the central map, candidates, and approval.
+
 **Credentials** (one page per service, with owner, admins and recovery): [overview](./credentials/index.md).
 
 **Incidents and triage**

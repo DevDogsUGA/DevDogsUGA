@@ -1,0 +1,241 @@
+name: Docs candidate
+
+# Project documentation, from a project's own repository to the website, in two
+# jobs that share nothing but one immutable artifact (Q147-Q152 in
+# devdogs-plan/project-documentation-decisions.md).
+#
+#   candidate  Trigger: `workflow_dispatch` (a person) or `repository_dispatch`
+#              of type `docs-candidate` with { project, sha } (the platform's
+#              GitHub webhook, on a merge in the project repository; stage D1).
+#              Checks the project is in .github/docs-projects.json and the sha is
+#              on the mapped branch, fetches ONLY the docs directory of that exact
+#              commit with a read-only token (no scripts, no installs, no
+#              submodules, no LFS, no plugins), compiles it with this
+#              repository's pinned docs-kit under the untrusted policy, and
+#              uploads the candidate: an immutable artifact to publish, a
+#              preview, and a run summary with the change summary against the
+#              live version and the check results. It has no publishing
+#              credential, and the source token is visible only to the two steps
+#              that talk to the project's repository.
+#   publish    `needs: candidate`, in the `docs-publishing` environment
+#              (required reviewers). Downloads that artifact, verifies every
+#              file against the manifest and the digest the first job reported,
+#              and uploads exactly it with a credential that can write only to
+#              the docs content bucket. The pointer is written last, so a failed
+#              upload, a failed build or a rejected approval leaves the last good
+#              version live.
+#
+# Sending the dispatch (stage D1 does this from the platform's webhook handler):
+#   POST /repos/DevDogsUGA/DevDogsUGA/dispatches
+#   { "event_type": "docs-candidate",
+#     "client_payload": { "project": "<slug>", "sha": "<40-char merge commit>" } }
+# with a token that can write to this repository's contents. By hand:
+#   gh workflow run docs-candidate.yaml -f project=<slug> -f sha=<sha>
+#
+# Configuration (nothing here is a secret unless it says so):
+#   repository secret    DOCS_SOURCE_TOKEN: read-only access to the mapped
+#                        project repositories (Contents: read, Metadata: read).
+#   repository variable  DOCS_LIVE_BASE_URL (optional): public base URL of the
+#                        docs content bucket, for the change summary.
+#   environment `docs-publishing` (required reviewers):
+#     secrets    DOCS_PUBLISH_ACCESS_KEY_ID, DOCS_PUBLISH_SECRET_ACCESS_KEY
+#     variables  DOCS_PUBLISH_BUCKET, DOCS_PUBLISH_ENDPOINT
+# Operations page: docs/operations/project-docs.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Project slug, as in .github/docs-projects.json
+        required: true
+        type: string
+      sha:
+        description: Full commit id on the project's mapped branch
+        required: true
+        type: string
+  repository_dispatch:
+    types: [docs-candidate]
+
+permissions:
+  contents: read
+
+# One docs run per project at a time, in order. Nothing is cancelled: a waiting
+# approval is a decision somebody has not made yet.
+concurrency:
+  group: docs-candidate-${{ inputs.project || github.event.client_payload.project }}
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      project: ${{ steps.resolve.outputs.project }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      digest: ${{ steps.build.outputs.digest }}
+      artifact: ${{ steps.name.outputs.candidate }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Check the project and the commit against the central map
+        id: resolve
+        env:
+          PROJECT: ${{ inputs.project || github.event.client_payload.project }}
+          SHA: ${{ inputs.sha || github.event.client_payload.sha }}
+          GH_TOKEN: ${{ secrets.DOCS_SOURCE_TOKEN }}
+        run: node .github/scripts/docs-projects.mjs resolve
+
+      - name: Name the artifacts
+        id: name
+        env:
+          PROJECT: ${{ steps.resolve.outputs.project }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          echo "candidate=docs-candidate-$PROJECT-${SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          echo "preview=docs-preview-$PROJECT-${SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
+      # The only other step that sees the source token. A sparse, blob-less
+      # fetch of the one commit: git never runs a project hook or filter here
+      # (hooks live in .git, which is created empty; no filter drivers are
+      # configured), submodules are not followed, and LFS is not smudged.
+      - name: Fetch the docs directory of that exact commit
+        env:
+          TOKEN: ${{ secrets.DOCS_SOURCE_TOKEN }}
+          REPOSITORY: ${{ steps.resolve.outputs.repository }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+          DIRECTORY: ${{ steps.resolve.outputs.directory }}
+          GIT_TERMINAL_PROMPT: "0"
+          GIT_LFS_SKIP_SMUDGE: "1"
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/docs-source"
+          rm -rf "$work"
+          mkdir -p "$work"
+          cd "$work"
+          auth="$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          git init -q .
+          git config gc.auto 0
+          git config core.hooksPath /dev/null
+          git remote add origin "https://github.com/$REPOSITORY.git"
+          header="http.https://github.com/.extraheader=AUTHORIZATION: basic $auth"
+          git -c "$header" fetch -q --depth=1 --filter=blob:none --no-tags --no-recurse-submodules origin "$SHA"
+          git sparse-checkout set --no-cone "/$DIRECTORY/"
+          git -c "$header" -c advice.detachedHead=false checkout -q --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$SHA"
+          test -d "$work/$DIRECTORY"
+          echo "Fetched $REPOSITORY@$SHA, directory $DIRECTORY"
+
+      - name: Fetch the live version for the change summary
+        env:
+          DOCS_LIVE_BASE_URL: ${{ vars.DOCS_LIVE_BASE_URL }}
+          PROJECT: ${{ steps.resolve.outputs.project }}
+        run: node .github/scripts/docs-publish.mjs fetch-live "$RUNNER_TEMP/live/content.json" --project "$PROJECT"
+
+      # No token and no publishing credential in this step's environment, and
+      # none at job level: it runs the platform's pinned compiler on bytes that
+      # came from a project, and nothing else.
+      - name: Compile the candidate
+        id: build
+        env:
+          PROJECT: ${{ steps.resolve.outputs.project }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+          REPOSITORY: ${{ steps.resolve.outputs.repository }}
+          BRANCH: ${{ steps.resolve.outputs.branch }}
+          DIRECTORY: ${{ steps.resolve.outputs.directory }}
+          DESTINATION: ${{ steps.resolve.outputs.destination }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/candidate/out"
+          mkdir -p "$RUNNER_TEMP/candidate"
+          if ! node packages/docs-kit/bin/docs-kit.mjs candidate \
+            --docs "$RUNNER_TEMP/docs-source/$DIRECTORY" --project "$PROJECT" --out "$out" \
+            --repository "$REPOSITORY" --branch "$BRANCH" --sha "$SHA" \
+            --directory "$DIRECTORY" --destination "$DESTINATION" \
+            --live "$RUNNER_TEMP/live/content.json" 2>&1 | tee "$RUNNER_TEMP/candidate/build.log"; then
+            exit 1
+          fi
+          node packages/docs-kit/bin/docs-kit.mjs verify-candidate "$out"
+          echo "digest=$(node -p "JSON.parse(require('fs').readFileSync('$out/manifest.json','utf8')).digest")" >> "$GITHUB_OUTPUT"
+
+      - name: Report to the run summary
+        if: always()
+        env:
+          PROJECT: ${{ steps.resolve.outputs.project }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          out="$RUNNER_TEMP/candidate/out"
+          if [ -f "$out/review/summary.md" ]; then
+            cat "$out/review/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## Docs candidate refused: ${PROJECT:-unknown} @ ${SHA:-unknown}"
+              echo
+              echo "The last good version stays live. Fix the docs in the project repository and merge again."
+              echo
+              echo '```'
+              cat "$RUNNER_TEMP/candidate/build.log" 2>/dev/null || echo "The build did not start; see the earlier steps."
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # What gets published: the manifest and content/, nothing else.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.name.outputs.candidate }}
+          path: |
+            ${{ runner.temp }}/candidate/out/manifest.json
+            ${{ runner.temp }}/candidate/out/content
+          if-no-files-found: error
+          retention-days: 30
+      # What a reviewer reads: open preview/index.html, and summary.md.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.name.outputs.preview }}
+          path: ${{ runner.temp }}/candidate/out/review
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: candidate
+    # Candidates can be built from any branch of this repository (to try a map
+    # change in a pull request); only main's workflow and map can publish.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: docs-publishing
+    steps:
+      # Only the publish scripts: no install, no project code, no compiler.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ needs.candidate.outputs.artifact }}
+          path: ${{ runner.temp }}/candidate
+      - name: Publish exactly that candidate
+        env:
+          PROJECT: ${{ needs.candidate.outputs.project }}
+          SHA: ${{ needs.candidate.outputs.sha }}
+          DIGEST: ${{ needs.candidate.outputs.digest }}
+          DOCS_BUCKET: ${{ vars.DOCS_PUBLISH_BUCKET }}
+          DOCS_ENDPOINT: ${{ vars.DOCS_PUBLISH_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_PUBLISH_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_PUBLISH_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          node .github/scripts/docs-publish.mjs publish "$RUNNER_TEMP/candidate" \
+            --project "$PROJECT" --sha "$SHA" --digest "$DIGEST"
+          {
+            echo "## Published $PROJECT"
+            echo
+            echo "- Commit: \`$SHA\`"
+            echo "- Digest: \`$DIGEST\`"
+          } >> "$GITHUB_STEP_SUMMARY"
