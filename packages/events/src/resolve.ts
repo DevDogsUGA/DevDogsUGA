@@ -206,6 +206,7 @@ export function resolveMeetings(
       startsAt: meeting.startsAt,
       endsAt: meeting.endsAt,
       rsvpUrl: meeting.rsvpUrl,
+      joinUrl: meeting.joinUrl ?? null,
       cancelledAt: meeting.cancelledAt,
       cancellationReason: meeting.cancellationReason,
       countsForCredit: meeting.countsForCredit,

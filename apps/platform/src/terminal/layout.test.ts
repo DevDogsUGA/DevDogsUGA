@@ -188,9 +188,26 @@ describe("database-free routes", () => {
     expect(
       await render(directions, "/events/directions", {}, "b=Boyd"),
     ).toContain("Boyd Research Center");
-    expect(
-      await render(directions, "/events/directions", {}, "b=Nowhere"),
-    ).toContain("Dining, Learning");
+    const morehouse = await render(
+      directions,
+      "/events/directions",
+      {},
+      "v=morehouse-college",
+    );
+    expect(morehouse).toContain("Morehouse College");
+    expect(morehouse).not.toContain("Dining, Learning");
+  });
+
+  it("says it does not know a place instead of showing the DLW", async () => {
+    const text = await render(
+      directions,
+      "/events/directions",
+      {},
+      "b=Nowhere",
+    );
+    expect(text).toContain("We don't know that place");
+    expect(text).not.toContain("Dining, Learning");
+    expect(text).not.toContain("124");
   });
 
   it("renders help", async () => {

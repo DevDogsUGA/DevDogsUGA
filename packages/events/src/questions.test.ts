@@ -46,6 +46,7 @@ function meeting(questions?: string[]): Meeting {
     startsAt: "2026-09-14T22:00:00.000Z",
     endsAt: "2026-09-14T23:30:00.000Z",
     rsvpUrl: null,
+    joinUrl: null,
     cancelledAt: null,
     cancellationReason: null,
     countsForCredit: true,

@@ -221,6 +221,13 @@ export const meetingSchema = z
       description:
         "The room or space inside the venue, or \"TBA\" until there is one. Defaults to the series' room (when the venue is the series' too).",
     }),
+    joinUrl: z
+      .url({ protocol: /^https$/ })
+      .optional()
+      .meta({
+        description:
+          "An HTTPS link to join a virtual night. Only for a meeting whose venue is virtual; without it the page says join details are on the event page.",
+      }),
     startsAt: isoInstant.meta({
       description:
         "ISO 8601 instant, e.g. 2026-09-14T22:00:00.000Z (6 PM Eastern).",
@@ -305,6 +312,8 @@ export interface Meeting {
   startsAt: string;
   endsAt: string;
   rsvpUrl: string | null;
+  /** The HTTPS link to join a virtual night, or null. */
+  joinUrl: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
   countsForCredit: boolean;

@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { MapTrifoldIcon } from "@phosphor-icons/react/ssr";
 import FindUsDrawer from "./FindUsDrawer";
 import FindUsContent, { preloadCampusMap } from "./FindUsContent";
-import type { BuildingKey } from "./campusMapMeta";
+import type { Place } from "./place";
 
 /**
  * Every way of showing intent short of clicking. A pointer arriving, a keyboard
@@ -19,24 +19,20 @@ const INTENT_HANDLERS = {
 };
 
 /** A button that opens the directions drawer in place. */
-export default function FindUs({
-  building = "DLW",
-  room = "124",
-}: {
-  building?: BuildingKey;
-  room?: string | null;
-} = {}) {
+export default function FindUs({ place }: { place: Place }) {
   return (
     <FindUsDrawer
-      building={building}
-      room={room}
+      place={place}
       trigger={
         <button type="button" className="btn secondary" {...INTENT_HANDLERS}>
-          <MapTrifoldIcon weight="bold" aria-hidden /> Directions
+          <MapTrifoldIcon weight="bold" aria-hidden />{" "}
+          {place.state === "known" && place.venue.kind === "virtual"
+            ? "Join details"
+            : "Directions"}
         </button>
       }
     >
-      <FindUsContent building={building} room={room} />
+      <FindUsContent place={place} />
     </FindUsDrawer>
   );
 }
@@ -47,12 +43,10 @@ export default function FindUs({
  * behind it, so the reader sees the drawer slide away rather than a navigation.
  */
 export function DirectionsRoute({
-  building = "DLW",
-  room = "124",
+  place,
   children,
 }: {
-  building?: BuildingKey;
-  room?: string | null;
+  place: Place;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -64,8 +58,7 @@ export function DirectionsRoute({
         setOpen(next);
         if (!next) router.replace("/events", { scroll: false });
       }}
-      building={building}
-      room={room}
+      place={place}
     >
       {children}
     </FindUsDrawer>

@@ -20,16 +20,6 @@ import {
 /** Somewhere the map does not draw. The room text carries the detail. */
 export const OTHER_BUILDING = "Other";
 
-/**
- * Where the club meets when nothing says otherwise.
- *
- * Named here rather than typed into the homepage's Directions button and the
- * bare `/events/directions` URL, because those have to agree with the floor
- * plan's own gate or the link on the front door opens a dialog with no floor
- * plan in it.
- */
-export const USUAL_ROOM = "124";
-
 export type MeetingBuilding = BuildingKey | typeof OTHER_BUILDING;
 
 /** Every value config can pick, in the order the picker offers them. */
@@ -167,30 +157,4 @@ export function mapUrls(building: BuildingKey) {
     google: `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
     apple: `https://maps.apple.com/?daddr=${destination}`,
   };
-}
-
-/**
- * Which building and room a `/events/directions?b=…&r=…` link means. Shared
- * by the page and its terminal twin so a pasted link resolves the same way in
- * both.
- *
- * Anything unrecognised falls back to the DLW instead of erroring: this URL
- * gets shared by hand, and a truncated paste should still show somebody a map.
- * A bare link is the club's standing answer to "where are you", so it
- * resolves to the usual room rather than to the DLW with no room, which would
- * drop the floor plan this link mostly exists to reach. A link naming some
- * other building means somewhere else, and gets no room.
- */
-export function directionsTarget(
-  b: string | string[] | null | undefined,
-  r: string | string[] | null | undefined,
-): { building: BuildingKey; room: string | null } {
-  const building = typeof b === "string" && isMappedBuilding(b) ? b : "DLW";
-  const room =
-    typeof r === "string" && r !== ""
-      ? r
-      : building === "DLW"
-        ? USUAL_ROOM
-        : null;
-  return { building, room };
 }
