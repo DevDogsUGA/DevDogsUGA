@@ -189,6 +189,8 @@ describe("resetConfigEditAction and openConfigPrAction", () => {
     mocks.openConfigPr.mockResolvedValueOnce({ status: "unavailable" });
     expect((await openConfigPrAction()).message).toMatch(/not set up/);
     mocks.openConfigPr.mockResolvedValueOnce({ status: "rate_limited" });
-    expect((await openConfigPrAction()).message).toMatch(/three pull request attempts/);
+    expect((await openConfigPrAction()).message).toMatch(
+      /three pull request attempts/,
+    );
   });
 });
