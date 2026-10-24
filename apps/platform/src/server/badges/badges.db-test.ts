@@ -60,49 +60,51 @@ const WS_B = "d2-ws-b";
 const WS_SOLO = "d2-ws-solo";
 
 async function cleanup() {
+  const ids = sql.join(
+    ALL.map((u) => sql`${u}::uuid`),
+    sql`, `,
+  );
+  const meetings = sql`${MEETING_A}::uuid, ${MEETING_B}::uuid, ${MEETING_SOLO}::uuid`;
+  // One transaction with triggers off: a live sweep would fire the badge
+  // triggers and write fresh withdrawal audits after they were deleted. Rows
+  // are found by meeting too, because account deletion nulls attendance's
+  // "userId".
   await db.transaction(async (tx) => {
     await tx.execute(sql`set local session_replication_role = replica`);
-    await tx.execute(sql`
-      delete from platform."auditEvents"
-      where "targetType" = 'badgeAward'
-        and (metadata->>'userId' in (${sql.join(
-          ALL.map((u) => sql`${u}`),
-          sql`, `,
-        )}))
-    `);
+    await tx.execute(
+      sql`delete from platform.contributions where repo like 'DevDogsUGA/badges-dbtest%'`,
+    );
     await tx.execute(sql`
       delete from platform."reflectionRevisions"
-      where "userId" in (${sql.join(
-        ALL.map((u) => sql`${u}::uuid`),
-        sql`, `,
-      )})
+      where "userId" in (${ids}) or "meetingId" in (${meetings})
     `);
     await tx.execute(sql`
+      delete from platform.reflections
+      where "userId" in (${ids}) or "meetingId" in (${meetings})
+    `);
+    await tx.execute(sql`
+      delete from platform.attendance
+      where "userId" in (${ids}) or "meetingId" in (${meetings})
+    `);
+    await tx.execute(
+      sql`delete from platform."badgeAwards" where "userId" in (${ids})`,
+    );
+    await tx.execute(
+      sql`delete from platform.workshops where "meetingId" in (${meetings})`,
+    );
+    await tx.execute(
+      sql`delete from platform.meetings where id in (${meetings})`,
+    );
+    await tx.execute(sql`
       delete from platform."auditEvents"
-      where "actorUserId" in (${sql.join(
-        ALL.map((u) => sql`${u}::uuid`),
-        sql`, `,
-      )})
+      where ("targetType" = 'badgeAward'
+             and metadata->>'userId' in (${sql.join(
+               ALL.map((u) => sql`${u}`),
+               sql`, `,
+             )}))
+         or "actorUserId" in (${ids})
     `);
   });
-  await db.execute(
-    sql`delete from platform.contributions where repo like 'DevDogsUGA/badges-dbtest%'`,
-  );
-  await db.execute(sql`
-    delete from platform.reflections where "userId" in (${sql.join(
-      ALL.map((u) => sql`${u}::uuid`),
-      sql`, `,
-    )})
-  `);
-  await db.execute(sql`
-    delete from platform.attendance where "userId" in (${sql.join(
-      ALL.map((u) => sql`${u}::uuid`),
-      sql`, `,
-    )})
-  `);
-  await db.execute(
-    sql`delete from platform.meetings where id in (${MEETING_A}::uuid, ${MEETING_B}::uuid, ${MEETING_SOLO}::uuid)`,
-  );
   await db.execute(sql`delete from platform.roles where id = ${ROLE}::uuid`);
   await deleteMembers(ALL);
 }
@@ -584,12 +586,13 @@ describe("hiding (Q89, Q107)", () => {
   });
 
   it("reaches a public profile only through the profile loader", async () => {
+    // OTHER is fully verified (MEMBER has no GitHub, so it has no public profile).
     await awardManualBadge(OFFICER, {
-      userId: MEMBER,
+      userId: OTHER,
       badgeId: "event-organizer",
       citation: "Ran the fall social.",
     });
-    const activity = await getPublicProfileActivity("badges-member");
+    const activity = await getPublicProfileActivity("badges-other");
     expect(activity?.badges.map((b) => b.name)).toEqual(["Event Organizer"]);
     expect(await getPublicProfileActivity("badges-nobody")).toBeNull();
   });
