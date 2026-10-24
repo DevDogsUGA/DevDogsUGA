@@ -1,6 +1,6 @@
 ---
 name: Project documentation
-description: How a project's docs reach the website - adding a project to the central map, what a candidate shows, how reviewers approve it, and what to do when it fails.
+description: How a project's docs reach the website - adding a project to the central map, what a candidate shows, how reviewers approve it, how the platform reads a publication, and what to do when it fails.
 order: 9
 section: infrastructure
 ---
@@ -60,6 +60,36 @@ The `publish` job waits in the `docs-publishing` environment. Its required revie
   candidate; approve or reject it promptly. Nothing stale is published, because the newest waiting merge is the one that builds next.
 
 Publishing only works from a run of `main`. A candidate built from another branch (to try a map change) stops after the build.
+
+## How the platform reads a publication
+
+Publishing writes to the R2 bucket `devdogs-project-docs`. The platform reads it through the `PROJECT_DOCS` binding declared in `apps/platform/wrangler.jsonc` (the top level and each environment: R2 bindings aren't inherited). One bucket serves development, staging and production, because the docs are public and the platform only ever reads it.
+
+| Object                                            | Read as                                                                                                                                                                                                      |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `projects/<slug>/current.json`                    | The pointer: `version`, `project`, `digest`, `sha`, `repository`, `destination`, `publishedAt`. It must name the slug it sits under and the destination `/docs/<slug>`; anything else is ignored and logged. |
+| `projects/<slug>/versions/<digest>/content.json`  | The compiled pages (HTML already sanitised and id-prefixed), folders and asset list. Validated against a schema with size limits before use.                                                                 |
+| `projects/<slug>/versions/<digest>/search.json`   | The search entries.                                                                                                                                                                                          |
+| `projects/<slug>/versions/<digest>/assets/<path>` | Images, served at `/docs-assets/<slug>/<digest>/<path>`.                                                                                                                                                     |
+
+What the platform does with it:
+
+- **Pages.** `/docs/<slug>` redirects to the project's first page; `/docs/<slug>/<page>` renders the stored HTML inside the normal docs layout (sidebar, table of contents, step pager). The HTML is put into the page as stored. The only change is to `<img src>` and links to approved assets, which point at the version's asset route; a reference that doesn't resolve to an approved asset loses its URL. Nothing the compiler stripped is allowed back, and the site's Content-Security-Policy is unchanged (images only ever come from the site itself). An unknown slug, an unknown page, or a project that isn't published is a 404. The club's own bundled projects always win a slug, and the early-access preview never shows published projects.
+- **Freshness.** The list of pointers is cached for 30 seconds, and a page that reads it is cached for no longer, so a new publication shows within about a minute with no deploy. A version's content is cached by its digest, for good. A missing or unreadable version is only cached for those 30 seconds.
+- **Search.** Cmd-K folds in each published project's `search.json`, matched in memory and labelled with the project. Nothing is written to the database index; `populate:search` still rebuilds that on each deploy.
+- **Terminal.** `curl devdogsuga.org/docs/<slug>` lists the pages; a page prints its title, description and the start of its text, with the browser URL.
+- **No bucket, no problem.** When the binding is absent (local development, tests, a deployment before the bucket exists) or the bucket is empty, no project is published and every `/docs/<slug>` for one is a 404. Nothing else changes.
+
+The bucket must exist before a deploy that declares it: `wrangler r2 bucket create devdogs-project-docs`.
+
+## Onboard the first project
+
+1. **Map entry.** Add the project to `.github/docs-projects.json` in a DevDogsUGA pull request (see above). Don't add a project whose docs directory doesn't exist yet.
+2. **Source token.** Give `DOCS_SOURCE_TOKEN` read access (Contents and Metadata) to the project's repository. A fine-grained token lists repositories explicitly, so edit the token's repository selection.
+3. **Bucket and publisher.** The bucket, the `docs-publishing` environment with its reviewers, and the publish credential and variables from the table below must exist. Set `DOCS_LIVE_BASE_URL` if the bucket is public, so the change summary can compare against the live version.
+4. **First candidate, by hand.** `gh workflow run docs-candidate.yaml -f project=<slug> -f sha=<merge commit>`. Read the summary and the preview, then approve in the `docs-publishing` environment.
+5. **Check it.** Open `/docs/<slug>` (allow up to a minute), try an image, search for a phrase from a page, and `curl devdogsuga.org/docs/<slug>`.
+6. **Automatic candidates (stage D1).** The platform's GitHub webhook (`/github/webhook`, verified with `GH_WEBHOOK_SECRET`) sees a merge to a mapped repository's branch, looks the repository up in the same map, and sends the `repository_dispatch` of type `docs-candidate` with `{ "project": "<slug>", "sha": "<merge commit>" }` described above. Until D1 ships, ask for candidates by hand. The project repository needs its webhook pointed at the platform once; the dispatch itself only names the project and the commit, never a repository, branch or directory.
 
 ## Credentials
 

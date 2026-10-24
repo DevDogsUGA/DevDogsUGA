@@ -145,6 +145,20 @@
       },
     ],
   },
+  // Published project documentation (docs/operations/project-docs.md): the
+  // bucket the docs-publishing job writes and `server/docs/published` reads.
+  // ONE bucket for every environment, because the publisher writes one and the
+  // docs are public; the platform only ever reads it. The bucket is created
+  // out-of-band (`wrangler r2 bucket create devdogs-project-docs`) and a
+  // deploy fails until it exists. Everything that reads the binding treats
+  // "absent" as "nothing published", so local dev and tests need none.
+  // r2_buckets is not inherited, so every environment repeats it.
+  "r2_buckets": [
+    {
+      "binding": "PROJECT_DOCS",
+      "bucket_name": "devdogs-project-docs",
+    },
+  ],
   "send_email": [
     {
       "name": "EMAIL",
@@ -229,6 +243,13 @@
           },
         ],
       },
+      // Published project docs; see the top-level block.
+      "r2_buckets": [
+        {
+          "binding": "PROJECT_DOCS",
+          "bucket_name": "devdogs-project-docs",
+        },
+      ],
       "send_email": [
         {
           "name": "EMAIL",
@@ -356,6 +377,13 @@
       // observe. Point it at an address you control -- bounces from invented
       // addresses land on the domain's reputation, and the suppression list is
       // not something to fill while testing.
+      // Published project docs; see the top-level block.
+      "r2_buckets": [
+        {
+          "binding": "PROJECT_DOCS",
+          "bucket_name": "devdogs-project-docs",
+        },
+      ],
       "send_email": [
         {
           "name": "EMAIL",

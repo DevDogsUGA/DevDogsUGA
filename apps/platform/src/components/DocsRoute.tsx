@@ -10,6 +10,13 @@ import DocsSidebar from "~/components/DocsSidebar";
 import DocsVariants from "~/components/DocsVariants";
 import "~/components/Docs/docs.css";
 import { DOCS_BRANCH, DOCS_REPO } from "~/config/docs";
+import {
+  loadPublishedFor,
+  PublishedIndex,
+  PublishedLayout,
+  PublishedPageRoute,
+  publishedMetadata,
+} from "~/components/DocsPublishedRoute";
 import { env } from "~/env";
 import {
   DOCS_BASE,
@@ -57,8 +64,15 @@ export async function DocsProjectLayout({
   const projects = await getVisibleDocsProjects(mode);
   const current = projects.find((p) => p.slug === project);
 
-  // Unknown project: let the page render its notFound without docs chrome.
+  // Not one of ours: a project published through the docs pipeline, if there
+  // is one under this slug. Otherwise let the page render its notFound
+  // without docs chrome.
   if (!current) {
+    const published =
+      mode === "public" ? await loadPublishedFor(project) : null;
+    if (published) {
+      return <PublishedLayout project={published}>{children}</PublishedLayout>;
+    }
     return <>{children}</>;
   }
 
@@ -100,6 +114,9 @@ export async function DocsProjectIndex({
   // Projects come from the bundled artifact, so an unrecognised slug is a 404
   // rather than an empty project. So is one with nothing live yet.
   if (!(await getVisibleDocsProjects(mode)).some((p) => p.slug === project)) {
+    const published =
+      mode === "public" ? await loadPublishedFor(project) : null;
+    if (published) return <PublishedIndex project={published} />;
     notFound();
   }
 
@@ -170,6 +187,11 @@ export async function docsPageMetadata({
     return { title: `${folder.name} | DevDogs Docs`, openGraph: card };
   }
 
+  // A published project's page: no link card, since the card route reads the
+  // bundled docs only.
+  const published = await loadPublishedFor(project);
+  if (published) return publishedMetadata(published, slug);
+
   return {};
 }
 
@@ -184,6 +206,12 @@ export async function DocsPageRoute({
 }) {
   const base = baseOf(mode);
   const joined = path.join("/");
+
+  if (mode === "public") {
+    const published = await loadPublishedFor(project);
+    if (published)
+      return <PublishedPageRoute project={published} slug={path} />;
+  }
 
   // A page that is not live yet is not found, exactly as one that does not
   // exist: `getDocsPage` answers null for both.
