@@ -66,6 +66,11 @@ describe("matchTerminalPath", () => {
     ["/events/2026-10-05-workshop", "/events/:slug"],
     ["/community/@sloan", "/community/:handle"],
     ["/docs/platform/getting-started/setup", "/docs/:project/*"],
+    ["/console/graphics", "/console/graphics"],
+    [
+      "/console/attendance/abc/graphics",
+      "/console/attendance/:meetingId/graphics",
+    ],
   ])("%s is %s", (path, pattern) => {
     expect(matchTerminalPath(path)?.pattern).toBe(pattern);
   });

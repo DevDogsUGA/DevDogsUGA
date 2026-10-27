@@ -40,6 +40,26 @@ export interface Format {
 /** Facebook and X both render Open Graph art at 1.91:1. */
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 
+/** Instagram's portrait post: 4:5 is the tallest the feed shows uncropped. */
+export const INSTAGRAM_POST_SIZE = { width: 1080, height: 1350 } as const;
+
+/** Instagram's story, a full phone screen at 9:16. */
+export const INSTAGRAM_STORY_SIZE = { width: 1080, height: 1920 } as const;
+
+/**
+ * The renditions every meeting graphic (a whole night, or one workshop on it)
+ * is offered at. One list so the CLI's registry and the console's graphics
+ * page cannot disagree about what a meeting can be drawn as.
+ */
+export const EVENT_FORMATS = [
+  "og",
+  "gdgc-wide",
+  "gdgc-square",
+  "involvement-network",
+  "instagram-post",
+  "instagram-story",
+] as const;
+
 /** The email signature's aspect: 360x108 at 1x, a common signature column. */
 export const EMAIL_SIGNATURE_ASPECT = 10 / 3;
 
@@ -119,6 +139,20 @@ export const FORMATS: Record<string, Format> = {
     family: "card",
     why: "The cover on the club's SavvyCal scheduling links.",
   },
+  "instagram-post": {
+    name: "instagram-post",
+    ...INSTAGRAM_POST_SIZE,
+    scale: 1,
+    family: "card",
+    why: "Instagram portrait post: 4:5, the tallest a feed shows uncropped.",
+  },
+  "instagram-story": {
+    name: "instagram-story",
+    ...INSTAGRAM_STORY_SIZE,
+    scale: 1,
+    family: "card",
+    why: "Instagram story: 9:16, full screen on a phone.",
+  },
   "email-1x": {
     name: "email-1x",
     ...EMAIL,
@@ -185,20 +219,23 @@ export const CARD_FORMATS = formatsIn("card").map((format) => format.name);
 /**
  * How a card lays itself out at a given aspect.
  *
- * Three shapes rather than one that stretches, because 2560x650 and 1080x1080
+ * Four shapes rather than one that stretches, because 2560x650 and 1080x1080
  * are not the same picture at different sizes — one has room for a column of
  * detail and no height, the other the reverse. The thresholds sit well clear of
- * the three real aspects (1.0, 1.91, 3.94) so a new size lands predictably.
+ * the real aspects (0.56 and 0.8 for Instagram, 1.0, 1.91, 3.94) so a new size lands predictably.
  */
 export function cardLayout(width: number, height: number): CardLayout {
   const aspect = width / height;
   if (aspect >= 3) return "wide";
+  // Instagram's 4:5 post (0.8) and 9:16 story (0.5625). Nothing else the club
+  // draws is taller than it is wide.
+  if (aspect <= 0.9) return "tall";
   if (aspect <= 1.2) return "square";
 
   return "standard";
 }
 
-export type CardLayout = "wide" | "square" | "standard";
+export type CardLayout = "wide" | "square" | "standard" | "tall";
 
 /**
  * The canvas width each layout's sizes are written against.
@@ -213,6 +250,9 @@ export type CardLayout = "wide" | "square" | "standard";
 export const CARD_REFERENCE_WIDTH: Record<CardLayout, number> = {
   standard: 1200,
   square: 1080,
+  // Both Instagram sizes are 1080 wide, so type is the same size on the post
+  // and the story and only the height differs.
+  tall: 1080,
   // Deliberately well under the 2560 it renders at. A banner is read across a
   // room and from a feed, so type sized as if the canvas were 1900 wide comes
   // out about a third larger than the link card's — which is what the extra

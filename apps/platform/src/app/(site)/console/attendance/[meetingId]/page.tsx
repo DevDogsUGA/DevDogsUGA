@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import AttendanceDisplay from "~/components/AttendanceDisplay";
 import { toTitleCardMeeting } from "~/components/AttendanceDisplay/TitleCard";
@@ -35,6 +36,14 @@ export default async function OfficerAttendancePage({
         ]}
         title="Attendance display"
         description={`${title} · ${formatEventSpan(meeting.startsAt, meeting.endsAt)}`}
+        actions={
+          <Link
+            className="btn secondary"
+            href={`/console/attendance/${meeting.id}/graphics`}
+          >
+            Graphics
+          </Link>
+        }
       />
       <AttendanceDisplay
         meetingId={meeting.id}

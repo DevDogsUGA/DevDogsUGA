@@ -2,6 +2,7 @@ import type { StaticImageData } from "next/image";
 import gdgFavicon from "~/assets/favicons/gdg.png";
 import googleFormsFavicon from "~/assets/favicons/google-forms.png";
 import involvementFavicon from "~/assets/favicons/involvement-network.png";
+import { mayUseGraphics } from "~/lib/graphicsAccess";
 import type { ResolvedPermissions } from "~/server/actions/permissions";
 import type * as icons from "./icons";
 import { SOCIALS } from "./socials";
@@ -37,8 +38,11 @@ export interface NavItem {
 }
 
 export interface ConsoleItem extends NavItem {
-  /** The permission flag that reveals this item. */
-  permission: keyof ResolvedPermissions;
+  /**
+   * The permission flag that reveals this item, or `graphics` for the pages
+   * any officer may open (see `mayUseGraphics`).
+   */
+  permission: keyof ResolvedPermissions | "graphics";
 }
 
 export interface SwitcherEntry {
@@ -133,6 +137,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
     permission: "canManageAttendance",
     description:
       "Present live meeting QR codes, numeric codes, and attendance totals.",
+  },
+  {
+    label: "Graphics",
+    href: "/console/graphics",
+    icon: "ImageIcon",
+    permission: "graphics",
+    description:
+      "Club logos, banners and app icons to download. Each meeting's page has its own graphics.",
   },
   {
     label: "Reflections",
@@ -315,7 +327,15 @@ export const SOCIAL_LINKS: SwitcherEntry[] = [
 /** Filters CONSOLE_ITEMS down to what the caller may see. */
 export function visibleConsoleItems(
   permissions: ResolvedPermissions | null,
+  isLeader = false,
 ): ConsoleItem[] {
   if (!permissions) return [];
-  return CONSOLE_ITEMS.filter((item) => permissions[item.permission]);
+  return CONSOLE_ITEMS.filter((item) =>
+    item.permission === "graphics"
+      ? mayUseGraphics({
+          isLeader,
+          canManageAttendance: permissions.canManageAttendance,
+        })
+      : permissions[item.permission],
+  );
 }

@@ -145,6 +145,25 @@ describe("multi-item meetings", () => {
       ),
     ).toBe(true);
   });
+
+  it("offers the Instagram post and story for meetings and each workshop", () => {
+    const graphics = eventGraphics([
+      { slug: "build-night", hint: "Sep 10, 2026", detail, items },
+    ]);
+    expect(graphics.length).toBeGreaterThan(1);
+    for (const graphic of graphics) {
+      expect(graphic.formats).toContain("instagram-post");
+      expect(graphic.formats).toContain("instagram-story");
+    }
+  });
+
+  it("offers Instagram sizes to no brand or app graphic", () => {
+    for (const graphic of registry) {
+      expect(graphic.formats.some((f) => f.startsWith("instagram"))).toBe(
+        false,
+      );
+    }
+  });
 });
 
 describe("the real schedule", () => {

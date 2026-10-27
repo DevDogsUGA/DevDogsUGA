@@ -108,6 +108,17 @@ export const TERMINAL_PATHS = [
     page: "(site)/account/deletion/page.tsx",
   },
 
+  {
+    pattern: "/console/graphics",
+    regex: /^\/console\/graphics\/?$/,
+    page: "(site)/console/graphics/page.tsx",
+  },
+  {
+    pattern: "/console/attendance/:meetingId/graphics",
+    regex: new RegExp(`^/console/attendance/(?<meetingId>${SLUG})/graphics/?$`),
+    page: "(site)/console/attendance/[meetingId]/graphics/page.tsx",
+  },
+
   { pattern: "/help", regex: /^\/help\/?$/, page: null },
   {
     pattern: "/help/:threadId",

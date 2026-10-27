@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
-import { PresentationIcon, ProhibitIcon } from "@phosphor-icons/react/ssr";
+import {
+  ImageIcon,
+  PresentationIcon,
+  ProhibitIcon,
+} from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import OpenDisplayLink from "~/components/AttendanceDisplay/OpenDisplayLink";
 import ConsoleShell from "~/components/Console/ConsoleShell";
@@ -13,6 +17,7 @@ import { formatEventShortDate } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { canUserManageAttendance } from "~/server/actions/permissions";
 import { getOfficerAttendanceMeetings } from "~/server/attendance/getOfficerMeeting";
+import { canUserUseGraphics } from "~/server/graphics/access";
 import { requirePermission } from "~/server/auth/require";
 import { PageHeading } from "~/ui/app-shell";
 import Badge from "~/ui/badge";
@@ -34,7 +39,16 @@ const PAST_PAGE_SIZE = 12;
 
 type Meeting = Awaited<ReturnType<typeof getOfficerAttendanceMeetings>>[number];
 
-function Row({ meeting, past }: { meeting: Meeting; past?: boolean }) {
+function Row({
+  meeting,
+  past,
+  canManage,
+}: {
+  meeting: Meeting;
+  past?: boolean;
+  /** Attendance tools; an officer without them is sent to the graphics. */
+  canManage: boolean;
+}) {
   const kind = meetingCategory(meeting);
   const off = meeting.cancelledAt !== null;
   return (
@@ -43,7 +57,11 @@ function Row({ meeting, past }: { meeting: Meeting; past?: boolean }) {
       kind={kind}
       past={past}
       off={off}
-      href={`/console/attendance/${meeting.id}`}
+      href={
+        canManage
+          ? `/console/attendance/${meeting.id}`
+          : `/console/attendance/${meeting.id}/graphics`
+      }
       date={<DateTile kind={kind} {...tileOf(meeting.startsAt)} />}
       title={meetingTitle(meeting)}
       chip={<Chip kind={kind}>{CATEGORY_LABEL[kind]}</Chip>}
@@ -53,19 +71,30 @@ function Row({ meeting, past }: { meeting: Meeting; past?: boolean }) {
           : timeRange(meeting.startsAt, meeting.endsAt)
       }
       end={
-        off ? undefined : (
-          <OpenDisplayLink
-            href={`/console/attendance/${meeting.id}`}
+        <>
+          <Link
+            href={`/console/attendance/${meeting.id}/graphics`}
             className="btn secondary sm"
           >
-            <PresentationIcon weight="bold" aria-hidden />
-            Open display
-            <span className="sr-only">
-              {" "}
-              for {meetingTitle(meeting)} (opens the projector in a new window)
-            </span>
-          </OpenDisplayLink>
-        )
+            <ImageIcon weight="bold" aria-hidden />
+            Graphics
+            <span className="sr-only"> for {meetingTitle(meeting)}</span>
+          </Link>
+          {off || !canManage ? null : (
+            <OpenDisplayLink
+              href={`/console/attendance/${meeting.id}`}
+              className="btn secondary sm"
+            >
+              <PresentationIcon weight="bold" aria-hidden />
+              Open display
+              <span className="sr-only">
+                {" "}
+                for {meetingTitle(meeting)} (opens the projector in a new
+                window)
+              </span>
+            </OpenDisplayLink>
+          )}
+        </>
       }
       badges={
         off ? (
@@ -84,10 +113,13 @@ export default async function AttendanceDisplaysPage({
 }: {
   searchParams: Promise<{ page?: string | string[] }>;
 }) {
-  await requirePermission(canUserManageAttendance);
-  const [meetings, params] = await Promise.all([
+  // Any officer may open the list for the graphics; the attendance tools on
+  // it still need `canManageAttendance`.
+  const userId = await requirePermission(canUserUseGraphics);
+  const [meetings, params, canManage] = await Promise.all([
     getOfficerAttendanceMeetings(),
     searchParams,
+    canUserManageAttendance(userId),
   ]);
   const now = new Date();
 
@@ -117,7 +149,11 @@ export default async function AttendanceDisplaysPage({
     <ConsoleShell current={PATH}>
       <PageHeading
         title="Meetings"
-        description="Open a meeting's display to put the live QR and rotating code on the projector. Displays stay available for past and future meetings."
+        description={
+          canManage
+            ? "Open a meeting's display to put the live QR and rotating code on the projector, or its graphics to download posters. Both stay available for past and future meetings."
+            : "Open a meeting's graphics to download posters and social images. They stay available for past and future meetings."
+        }
       />
 
       {live.map((meeting) => {
@@ -145,22 +181,32 @@ export default async function AttendanceDisplaysPage({
               </div>
             </div>
             <div className="acts">
-              <OpenDisplayLink
-                href={`/console/attendance/${meeting.id}`}
-                className="btn primary"
-              >
-                <PresentationIcon weight="bold" aria-hidden />
-                Open display
-                <span className="sr-only">
-                  {" "}
-                  (opens the projector in a new window)
-                </span>
-              </OpenDisplayLink>
+              {canManage ? (
+                <>
+                  <OpenDisplayLink
+                    href={`/console/attendance/${meeting.id}`}
+                    className="btn primary"
+                  >
+                    <PresentationIcon weight="bold" aria-hidden />
+                    Open display
+                    <span className="sr-only">
+                      {" "}
+                      (opens the projector in a new window)
+                    </span>
+                  </OpenDisplayLink>
+                  <Link
+                    className="btn secondary"
+                    href={`/console/attendance/${meeting.id}`}
+                  >
+                    Meeting page
+                  </Link>
+                </>
+              ) : null}
               <Link
-                className="btn secondary"
-                href={`/console/attendance/${meeting.id}`}
+                className={canManage ? "btn secondary" : "btn primary"}
+                href={`/console/attendance/${meeting.id}/graphics`}
               >
-                Meeting page
+                Graphics
               </Link>
             </div>
           </Card>
@@ -184,7 +230,7 @@ export default async function AttendanceDisplaysPage({
       ) : (
         <div>
           {upcoming.map((meeting) => (
-            <Row key={meeting.id} meeting={meeting} />
+            <Row key={meeting.id} meeting={meeting} canManage={canManage} />
           ))}
         </div>
       )}
@@ -202,7 +248,12 @@ export default async function AttendanceDisplaysPage({
         <>
           <div>
             {pastShown.map((meeting) => (
-              <Row key={meeting.id} meeting={meeting} past />
+              <Row
+                key={meeting.id}
+                meeting={meeting}
+                past
+                canManage={canManage}
+              />
             ))}
           </div>
           <div className="con-foot">

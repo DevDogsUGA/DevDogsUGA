@@ -1,0 +1,107 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
+/* Console graphics: the preview grid for a meeting's graphics and the brand
+   asset gallery. Every class carries the gfx- prefix. */
+@layer cosmic {
+  .gfx-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 12px 0;
+    background: var(--bg);
+  }
+  .gfx-bar .gfx-count {
+    margin-left: auto;
+    color: var(--text-3);
+    font-size: 13.5px;
+  }
+  .gfx-subject {
+    margin-top: 20px;
+  }
+  .gfx-subject > h2 {
+    font: 800 22px/1.2 var(--font-display);
+    margin: 0 0 4px;
+    color: var(--text);
+    text-shadow: none;
+  }
+  .gfx-grid {
+    display: grid;
+    gap: 20px;
+    margin-top: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    align-items: start;
+  }
+  .gfx-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .gfx-frame {
+    display: block;
+    width: 100%;
+    background: var(--surface-2);
+    outline: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .gfx-frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .gfx-cap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .gfx-name {
+    font-weight: 700;
+    color: var(--text);
+  }
+  .gfx-dims {
+    color: var(--text-3);
+    font-size: 13px;
+  }
+  .gfx-acts {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .gfx-sizes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .gfx-asset-previews {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin: 16px 0;
+  }
+  .gfx-asset-previews .gfx-frame {
+    width: auto;
+    max-width: 100%;
+  }
+  .gfx-asset-previews .gfx-frame img {
+    width: auto;
+    max-width: 100%;
+  }
+  @media (max-width: 720px) {
+    .gfx-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .gfx-bar {
+      position: static;
+    }
+  }
+}

@@ -20,7 +20,7 @@ export const graphicsCommand: CommandNode = {
       flag: "--format",
       value: "<a,b,…>",
       summary:
-        "Sizes to render: og, gdgc-wide, gdgc-square, savvycal, email-*, icon-*.",
+        "Sizes to render: og, gdgc-wide, gdgc-square, instagram-post, instagram-story, savvycal, email-*, icon-*.",
       // Not prompted here: the command asks itself, from the formats the
       // chosen graphics actually support, which a static list cannot know.
     },

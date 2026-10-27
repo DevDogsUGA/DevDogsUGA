@@ -34,6 +34,15 @@ function titleSize(
   title: string,
   { layout, u, contentWidth }: CardContext,
 ): number {
+  if (layout === "tall") {
+    // 904px of column at about 0.54em a character; the story has the height
+    // for three lines, the post for two or three.
+    if (title.length > 60) return 60;
+    if (title.length > 40) return 72;
+    if (title.length > 24) return 88;
+    return 112;
+  }
+
   if (layout === "square") {
     if (title.length > 46) return 36;
     if (title.length > 30) return 44;
@@ -83,13 +92,22 @@ export function EventCard({
   // folded onto the second: "how much else is on" is worth a few words, not a
   // whole row that pushes the club's address off the card. The square layout
   // has the height for a third.
-  const room =
-    context.layout === "square" ? 3 : context.layout === "wide" ? 1 : 2;
+  const tall = context.layout === "tall";
+  const room = tall
+    ? height >= 1800
+      ? 6
+      : 4
+    : context.layout === "square"
+      ? 3
+      : context.layout === "wide"
+        ? 1
+        : 2;
   const items = agenda ?? [];
   const listed = items.slice(0, room);
   const rest = items.length - listed.length;
   const wide = context.layout === "wide";
-  const square = context.layout === "square";
+  // Tall stacks and centres like the square; only its sizes differ.
+  const square = context.layout === "square" || tall;
   const denseWide = wide && listed.length > 0;
 
   return (
@@ -112,7 +130,7 @@ export function EventCard({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: (denseWide ? 12 : wide ? 22 : 18) * u,
+          gap: (denseWide ? 12 : wide ? 22 : tall ? 36 : 18) * u,
           maxWidth: context.contentWidth,
           alignItems: square ? "center" : "stretch",
           textAlign: square ? "center" : "left",
@@ -163,7 +181,7 @@ export function EventCard({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: (denseWide ? 6 : wide ? 12 : 10) * u,
+            gap: (denseWide ? 6 : wide ? 12 : tall ? 18 : 10) * u,
             alignItems: square ? "center" : "stretch",
           }}
         >
@@ -173,6 +191,7 @@ export function EventCard({
             text={date}
             u={u}
             wide={wide}
+            big={tall}
             dense={denseWide}
             centered={square}
           />
@@ -187,6 +206,7 @@ export function EventCard({
               text={time}
               u={u}
               wide={wide}
+              big={tall}
               dense={denseWide}
               centered={square}
             />
@@ -198,6 +218,7 @@ export function EventCard({
               text={location}
               u={u}
               wide={wide}
+              big={tall}
               dense={denseWide}
               centered={square}
             />
@@ -222,7 +243,7 @@ export function EventCard({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 6 * u,
+              gap: (tall ? 12 : 6) * u,
               alignItems: square ? "center" : "stretch",
             }}
           >
@@ -232,7 +253,7 @@ export function EventCard({
                 style={{
                   display: "flex",
                   fontFamily: "Hanken Grotesk",
-                  fontSize: (denseWide ? 21 : wide ? 32 : 26) * u,
+                  fontSize: (denseWide ? 21 : wide ? 32 : tall ? 34 : 26) * u,
                   color: COSMIC["text-3"],
                   textAlign: square ? "center" : "left",
                   textWrap: "balance",
@@ -258,6 +279,7 @@ function Detail({
   wide,
   centered,
   dense,
+  big,
 }: {
   color: string;
   icon: "CalendarDot" | "Clock" | "MapPin";
@@ -266,26 +288,28 @@ function Detail({
   wide: boolean;
   centered?: boolean;
   dense?: boolean;
+  /** The tall formats: type and icon sized for a phone screen. */
+  big?: boolean;
 }) {
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: (dense ? 11 : wide ? 19 : 16) * u,
+        gap: (dense ? 11 : wide ? 19 : big ? 22 : 16) * u,
         justifyContent: centered ? "center" : "flex-start",
       }}
     >
       <Icon
         name={icon}
-        size={(dense ? 28 : wide ? 42 : 34) * u}
+        size={(dense ? 28 : wide ? 42 : big ? 46 : 34) * u}
         color={color}
       />
       <div
         style={{
           fontFamily: "Hanken Grotesk",
           fontWeight: 700,
-          fontSize: (dense ? 26 : wide ? 38 : 30) * u,
+          fontSize: (dense ? 26 : wide ? 38 : big ? 42 : 30) * u,
           color: COSMIC.text,
         }}
       >

@@ -43,6 +43,17 @@ describe("terminal responses", () => {
     expect(await response.text()).toContain("No such page: /nope");
   });
 
+  it.each(["/console/graphics", "/console/attendance/abc/graphics"])(
+    "points %s at the browser rather than rendering a gallery",
+    async (path) => {
+      const response = await get(path);
+      expect(response.status).toBe(200);
+      const text = await response.text();
+      expect(text).toContain("live in the browser");
+      expect(text).toContain(`https://devdogsuga.org${path}`);
+    },
+  );
+
   it("serves the changelog without a database", async () => {
     const response = await get("/changelog");
     expect(response.status).toBe(200);

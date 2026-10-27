@@ -247,3 +247,25 @@ export function meetingCardDetail({
     path: `/events/${meeting.slug}`,
   };
 }
+
+/**
+ * One workshop on a night, as its own card: the night's date, hour, room and
+ * brand under the workshop's name, badged "Workshop" and with no agenda (it IS
+ * the agenda item).
+ *
+ * Shared by `backstage graphics` and the console's graphics page so a workshop
+ * poster means the same thing in both.
+ */
+export function workshopCardDetail(
+  night: EventDetail,
+  label: string,
+): EventDetail {
+  const visual = EVENT_SEGMENT_VISUALS.workshop;
+
+  return {
+    ...night,
+    title: label,
+    agenda: undefined,
+    badge: { label: visual.label, accent: visual.accent },
+  };
+}

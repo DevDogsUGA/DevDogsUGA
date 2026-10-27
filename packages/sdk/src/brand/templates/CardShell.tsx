@@ -1,6 +1,11 @@
 import * as React from "react";
 import type { ReactNode } from "react";
-import { CARD_REFERENCE_WIDTH, cardLayout, OG_SIZE } from "../formats.js";
+import {
+  CARD_REFERENCE_WIDTH,
+  cardLayout,
+  OG_SIZE,
+  type CardLayout,
+} from "../formats.js";
 import { CONTACT, MARK, WORDMARK_ON_DARK } from "../tokens.js";
 import { COSMIC, DEVDOGS, KIND } from "../brand.js";
 import { GdgcCobrand, Icon, Mark, Wordmark } from "../primitives.js";
@@ -176,7 +181,7 @@ export interface CardShellProps {
  * handed over.
  */
 export interface CardContext {
-  layout: "wide" | "square" | "standard";
+  layout: CardLayout;
   /** Multiply every hard-coded size by this. 1 at the 1200x630 reference. */
   u: number;
   /** How much room the content actually has, in layout pixels. */
@@ -200,11 +205,29 @@ const RAIL_WIDTH = 560;
 const SQUARE_HORIZONTAL_PADDING = 192;
 const SQUARE_VERTICAL_PADDING = 64;
 
+/**
+ * Instagram's tall formats. The feed crops nothing from a post, so it only
+ * needs a comfortable margin; a story has the app's own chrome over its top
+ * (profile row) and bottom (reply bar), so the lockup and the address must
+ * clear them. 250px and 340px are the commonly published safe margins on a
+ * 1920px story, rounded down a little since the content is centred anyway.
+ */
+const TALL_HORIZONTAL_PADDING = 88;
+
+function tallPadding(height: number): { top: number; bottom: number } {
+  return height >= 1800 ? { top: 220, bottom: 280 } : { top: 88, bottom: 88 };
+}
+
+function horizontalPadding(layout: CardLayout, u: number): number {
+  if (layout === "square") return SQUARE_HORIZONTAL_PADDING * u;
+  if (layout === "tall") return TALL_HORIZONTAL_PADDING * u;
+  return 64 * u;
+}
+
 export function cardContext(width: number, height: number): CardContext {
   const layout = cardLayout(width, height);
   const u = width / CARD_REFERENCE_WIDTH[layout];
-  const horizontalPad =
-    (layout === "square" ? SQUARE_HORIZONTAL_PADDING : 64) * u;
+  const horizontalPad = horizontalPadding(layout, u);
 
   // The wide card's left column is fixed so the content column is predictable;
   // a column sized by its contents would move every time the club's address
@@ -229,11 +252,18 @@ export function CardShell({
 }: CardShellProps) {
   const { layout, u } = cardContext(width, height);
 
-  const horizontalPad =
-    (layout === "square" ? SQUARE_HORIZONTAL_PADDING : 64) * u;
-  const verticalPad = (layout === "square" ? SQUARE_VERTICAL_PADDING : 64) * u;
+  const horizontalPad = horizontalPadding(layout, u);
+  const tallPad = tallPadding(height);
+  const topPad =
+    layout === "tall"
+      ? tallPad.top * u
+      : (layout === "square" ? SQUARE_VERTICAL_PADDING : 64) * u;
+  const bottomPad = layout === "tall" ? tallPad.bottom * u : topPad;
+  const verticalPad = topPad;
   const wide = layout === "wide";
-  const square = layout === "square";
+  // The tall formats stack and centre exactly as the square does, with more
+  // height to spend: they differ in padding and in the content's type sizes.
+  const square = layout === "square" || layout === "tall";
   const railWidth = RAIL_WIDTH * u;
 
   const lockup = (
@@ -250,7 +280,7 @@ export function CardShell({
   );
 
   const gdg = cobrand ? (
-    <GdgcCobrand height={(wide ? 62 : layout === "square" ? 54 : 44) * u} />
+    <GdgcCobrand height={(wide ? 62 : square ? 54 : 44) * u} />
   ) : null;
 
   const chip = eyebrow ? (
@@ -339,7 +369,7 @@ export function CardShell({
     // written as `left: 0, top: 0` lands at the top-left of the CONTENT and
     // paints a hard-edged rectangle across the image.
     backgroundImage: `radial-gradient(circle at ${wide ? "94%" : "88%"} 6%, ${rgba(accent, 0.18)}, ${rgba(accent, 0)} 45%)`,
-    padding: `${verticalPad}px ${horizontalPad}px`,
+    padding: `${topPad}px ${horizontalPad}px ${bottomPad}px`,
   } as const;
 
   if (wide) {
