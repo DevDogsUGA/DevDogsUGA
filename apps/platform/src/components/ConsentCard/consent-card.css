@@ -1,0 +1,105 @@
+@layer theme, base, cosmic, components, utilities;
+/* The OAuth consent card (E2): the sign-in card's frame with a Google-style
+   body. Every selector carries the .cc- prefix; the file sits in the cosmic
+   layer. */
+@layer cosmic {
+  .cc-card {
+    width: 100%;
+    max-width: 440px;
+    padding: clamp(20px, 6vw, 32px);
+  }
+  .cc-head {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .cc-logo {
+    width: 56px;
+    height: 56px;
+    flex: none;
+    object-fit: cover;
+    border-radius: 12px;
+    background: var(--surface-2);
+  }
+  .cc-head h1 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .cc-by {
+    margin: 4px 0 0;
+    color: var(--text-2);
+    font-size: 14px;
+  }
+  .cc-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+    font-size: 14px;
+  }
+  .cc-who {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  .cc-who b {
+    display: block;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  .cc-who span {
+    display: block;
+    color: var(--text-2);
+    overflow-wrap: anywhere;
+  }
+  .cc-who form {
+    margin: 0;
+    flex: none;
+  }
+  .cc-lead {
+    margin: 0 0 8px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .cc-fields {
+    margin: 0 0 16px;
+    padding: 0 0 0 20px;
+    list-style: disc;
+    color: var(--text-2);
+    line-height: 1.6;
+  }
+  .cc-return {
+    margin: 0 0 24px;
+    color: var(--text-2);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .cc-return b {
+    color: var(--text);
+  }
+  .cc-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .cc-actions > * {
+    width: 100%;
+  }
+  .cc-note {
+    margin: 16px 0 0;
+  }
+  .cc-pick-list {
+    padding: 0;
+  }
+}

@@ -1,15 +1,30 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import * as z from "zod";
 import type { TestAccount } from "~/server/actions/testAccounts";
 import { expectSession, expectUserWith } from "~/server/auth";
+import ConsentActions from "~/components/ConsentCard/ConsentActions";
+import ConsentCard, { ConsentRefusedCard } from "~/components/ConsentCard";
 import ConsentForm from "~/components/ConsentForm";
+import { env } from "~/env";
 import { testAccountName } from "~/lib/testAccountName";
+import { approveAs } from "~/server/oauth/asAccount";
 import { approveAuthorization } from "~/server/oauth/approveAuthorization";
 import {
+  loadConsentRequest,
+  resolveConsentAccount,
+} from "~/server/oauth/consentRequest";
+import {
+  logoUrl,
+  returnHost,
+  sharedFields,
+} from "~/server/oauth/consentScreen";
+import {
   findConsentTarget,
-  isTestIdentity,
+  findDisplayName,
+  hasActiveConsent,
 } from "~/server/oauth/consentTarget";
-import { decideConsent } from "~/server/oauth/status";
 import { createSupabaseServerClient } from "~/supabase/server";
 
 /**
@@ -25,22 +40,49 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  searchParams: Promise<Record<string, string>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+/**
+ * Whether the browser is only prefetching this URL (a `<Link>` in view, a
+ * speculation rule). Covers the browser's own `Sec-Purpose`/`Purpose` headers
+ * and the router's prefetch headers where the runtime passes them through to
+ * `headers()`; vinext reads `Next-Router-Prefetch` itself and may not, so
+ * this is best effort. Nothing links to this route, and the real protection is
+ * that every approval needs a POST (a Server Action) except the remembered
+ * case. A prefetch must never start or finish a flow: approving
+ * on a GET the member did not make would hand a code to the app unseen.
+ */
+async function isPrefetch(): Promise<boolean> {
+  const h = await headers();
+  return (
+    h.get("next-router-prefetch") !== null ||
+    h.get("next-router-segment-prefetch") !== null ||
+    h.get("x-middleware-prefetch") !== null ||
+    /prefetch/i.test(h.get("purpose") ?? "") ||
+    /prefetch/i.test(h.get("sec-purpose") ?? "")
+  );
+}
+
+function single(value: string | string[] | undefined): string | null {
+  return typeof value === "string" && value ? value : null;
 }
 
 export default async function ConsentPage({ searchParams }: Props) {
-  const authorizationId = (await searchParams).authorization_id;
+  const params = await searchParams;
+  const authorizationId = single(params.authorization_id);
 
   if (!authorizationId) {
     notFound();
   }
 
-  // The client's registration decides everything, and it is read before the
-  // visitor is asked to sign in: a client nobody registered, or an
-  // authorization that has gone, is a 404 for everyone.
-  const target = await findConsentTarget(authorizationId);
+  if (await isPrefetch()) {
+    return null;
+  }
 
-  if (!target) {
+  // An unknown id, a stale id and an unregistered client are a 404 before
+  // anyone is asked to sign in, so they look the same from outside.
+  if (!(await findConsentTarget(authorizationId))) {
     notFound();
   }
 
@@ -49,30 +91,18 @@ export default async function ConsentPage({ searchParams }: Props) {
     redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
   });
 
-  // Decided on the server before anything renders. A DevDogs app that skips
-  // consent is approved here for whoever signed in (a test account excepted);
-  // a Testing app shows its owner the account picker; an app that asks shows
-  // the consent screen, which E2 builds; everything else is the same 404 as a
-  // stale id. The access token hook downgrades every token this authorization
-  // produces to `oauth_identity`, because GoTrue's own consent endpoint does
-  // not go through this page.
-  const decision = decideConsent({
-    status: target.status,
-    asksForConsent: target.asksForConsent,
-    redirectUri: target.redirectUri,
-    ownerUserId: target.ownerUserId,
-    userId,
-    isTestIdentity: await isTestIdentity(userId),
-  });
-
-  if (decision === "not-found") {
+  // The client's registration decides everything: an unregistered client or a
+  // gone authorization is a 404 for everyone. The access token hook downgrades
+  // every token this authorization produces to `oauth_identity`, because
+  // GoTrue's own consent endpoint does not go through this page.
+  const request = await loadConsentRequest(authorizationId, userId);
+  if (!request || request.decision === "not-found") {
     notFound();
   }
+  const { target, decision } = request;
 
-  // TODO(E2): the consent screen for an app that asks. Until it lands this is
-  // a 404, which is what every In production member app got before.
-  if (decision === "consent") {
-    notFound();
+  if (decision === "test-identity") {
+    return <ConsentRefusedCard authorizationId={authorizationId} />;
   }
 
   if (decision === "auto-approve") {
@@ -89,6 +119,73 @@ export default async function ConsentPage({ searchParams }: Props) {
     redirect(destination);
   }
 
+  // `consent` (In production) is always the member themselves. `pick-account`
+  // (Testing, the owner) is the account named in the address, re-checked here
+  // against the owner's own accounts; no valid pick shows the picker.
+  const picked = z.uuid().safeParse(single(params.accountId));
+  const account = await resolveConsentAccount(
+    request,
+    decision === "consent" ? null : picked.success ? picked.data : null,
+  );
+
+  if (!account) {
+    return pickerStep(authorizationId, request, userId);
+  }
+
+  // Approvals are Supabase Auth's. An account that already approved this app
+  // goes straight back; the card is for the first sign-in.
+  if (await hasActiveConsent(account.userId, target.clientId, target.scope)) {
+    let destination: string;
+    try {
+      destination = await approveAs(account.actor, authorizationId);
+    } catch {
+      notFound();
+    }
+    redirect(destination);
+  }
+
+  const host = returnHost(target.redirectUri);
+  if (!host) {
+    notFound();
+  }
+
+  const registrant = target.ownerUserId
+    ? ((await findDisplayName(target.ownerUserId)) ?? "a DevDogs member")
+    : null;
+
+  return (
+    <ConsentCard
+      app={{
+        label: target.label,
+        logoSrc: logoUrl(target.logoPath, {
+          baseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+          bucket: env.NEXT_PUBLIC_AVATARS_BUCKET,
+        }),
+        homepageUrl: target.homepageUrl,
+        privacyPolicyUrl: target.privacyPolicyUrl,
+        registrant,
+      }}
+      account={{ name: account.name, email: account.email }}
+      fields={sharedFields(target.scope)}
+      host={host}
+      authorizationId={authorizationId}
+      testing={decision === "pick-account"}
+    >
+      <ConsentActions
+        authorizationId={authorizationId}
+        accountId={decision === "pick-account" ? account.userId : undefined}
+      />
+    </ConsentCard>
+  );
+}
+
+/** Step one on a Testing app: the owner picks themselves or a test account. */
+async function pickerStep(
+  authorizationId: string,
+  request: NonNullable<Awaited<ReturnType<typeof loadConsentRequest>>>,
+  userId: string,
+) {
+  const self = await resolveConsentAccount(request, userId);
   const user = await expectUserWith({
     testAccounts: {
       columns: {
@@ -117,11 +214,14 @@ export default async function ConsentPage({ searchParams }: Props) {
   );
 
   // The centring and the full-viewport ground come from `(auth)/layout.tsx`.
-  // All that is left here is the card the decision sits on.
   return (
     <div className="card w-full max-w-md" style={{ padding: 32 }}>
       <ConsentForm
         authorizationId={authorizationId}
+        self={{
+          userId,
+          displayName: self?.name ?? user.email ?? "You",
+        }}
         testAccounts={testAccounts}
       />
     </div>

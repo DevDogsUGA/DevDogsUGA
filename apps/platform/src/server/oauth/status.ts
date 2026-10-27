@@ -45,8 +45,10 @@ export type ConsentDecision =
   | "not-found"
   /** Approve for the signed-in member and send them back (DevDogs apps only). */
   | "auto-approve"
-  /** Show the consent screen to the signed-in member (E2 renders it). */
+  /** Show the consent screen to the signed-in member. */
   | "consent"
+  /** In production: a test identity signed in, which Q164 refuses with a message. */
+  | "test-identity"
   /** Testing: the owner picks themselves or a test account first. */
   | "pick-account";
 
@@ -58,7 +60,8 @@ export type ConsentDecision =
  *   refuses, is a 404.
  * - Testing: only the owner sees the picker. A DevDogs app in Testing has no
  *   owner, so nobody does.
- * - In production: a test identity is refused (404). Everyone else signs in
+ * - In production: a test identity is refused with a message
+ *   (`test-identity`, Q164). Everyone else signs in
  *   as themselves; the app either asks (`consent`) or, if it may skip, is
  *   approved at once.
  */
@@ -85,7 +88,7 @@ export function decideConsent(input: {
       : "not-found";
   }
 
-  if (input.isTestIdentity) return "not-found";
+  if (input.isTestIdentity) return "test-identity";
   if (
     !input.asksForConsent &&
     maySkipConsent({ ownerUserId: input.ownerUserId, status: input.status })

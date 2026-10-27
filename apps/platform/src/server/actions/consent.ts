@@ -1,146 +1,67 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
 import { redirect, unstable_rethrow } from "next/navigation";
 import * as z from "zod";
 import { zfd } from "zod-form-data";
-import { env } from "~/env";
-import { authenticate, expectUserWith } from "~/server/auth";
-import { approveAuthorization } from "~/server/oauth/approveAuthorization";
-import { supabaseAdmin } from "~/supabase/admin";
-import { createSupabaseServerClient } from "~/supabase/server";
+import { expectSession } from "~/server/auth";
+import { approveAs, denyAs } from "~/server/oauth/asAccount";
+import {
+  loadConsentRequest,
+  resolveConsentAccount,
+} from "~/server/oauth/consentRequest";
 
-const approveAsTestAccountSchema = zfd.formData({
-  authorizationId: zfd.text(),
-  testUserId: zfd.text(z.uuid()),
+/**
+ * Allow and Cancel on the consent card. Both are Server Actions, so they carry
+ * the framework's same-origin check on the POST, which is the CSRF protection
+ * the old approve action had. Neither trusts the page: the registration, the
+ * decision and the account are all read again here, so a forged form cannot
+ * approve as an account the page would not have offered.
+ */
+
+const consentSchema = zfd.formData({
+  authorization_id: zfd.text(),
+  /** Testing apps only: the owner or one of their test accounts. */
+  accountId: zfd.text(z.uuid().optional()),
 });
 
-const denySchema = zfd.formData({
-  authorizationId: zfd.text(),
-});
+const GONE = "This request has expired. Start again from the app.";
 
-export async function approveTestAccountAuthorization(
-  _prevState: null | string,
+async function decide(
   formData: FormData,
-) {
+  act: typeof approveAs | typeof denyAs,
+): Promise<string | null> {
+  const parsed = consentSchema.safeParse(formData);
+  if (!parsed.success) return "Invalid form data";
+  const { authorization_id: authorizationId, accountId } = parsed.data;
+
   try {
-    const { authorizationId, testUserId } =
-      await approveAsTestAccountSchema.parseAsync(formData);
+    const userId = await expectSession().catch(() => null);
+    if (!userId) return "You are signed out. Sign in again and retry.";
 
-    // Verify the signed-in user owns the client this test account belongs to,
-    // and that it is a development client.
-    const user = await expectUserWith({
-      testAccounts: {
-        limit: 1,
-        where: { testUserId },
-        with: {
-          user: {
-            columns: {
-              email: true,
-            },
-          },
-        },
-      },
-      oauthRegistrations: {
-        where: {
-          authorizations: { authorizationId },
-        },
-      },
-    }).catch(() =>
-      authenticate(
-        "google",
-        `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`,
-      ),
-    );
+    const request = await loadConsentRequest(authorizationId, userId);
+    if (!request) return GONE;
 
-    const registration = user.oauthRegistrations[0];
-    if (!registration) {
-      return "You do not own this OAuth client.";
-    }
+    const account = await resolveConsentAccount(request, accountId ?? null);
+    if (!account) return "That account can't be used for this app.";
 
-    // Only a Testing app asks its owner to pick a test account. On an app
-    // that is In production everyone signs in as themselves (Q164), so none
-    // mints a session for a test account.
-    if (registration.status !== "testing") {
-      return "Only Testing apps approve as a test account.";
-    }
-
-    if (!user.testAccounts[0]?.user.email) {
-      return "User does not have an email.";
-    }
-
-    // Generate a magic link and exchange it for a session.
-    const { data: magicLink, error: magicLinkError } =
-      await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
-        email: user.testAccounts[0]?.user.email,
-      });
-
-    if (magicLinkError ?? !magicLink.properties.hashed_token) {
-      console.error({ magicLinkError });
-      throw new Error("Failed to generate magic link");
-    }
-
-    const testAccountClient = createClient(env.API_URL, env.PUBLISHABLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: true },
-    });
-
-    const { data: otp, error: otpError } =
-      await testAccountClient.auth.verifyOtp({
-        token_hash: magicLink.properties.hashed_token,
-        type: "magiclink",
-      });
-
-    if (otpError ?? !otp.session) {
-      console.error({ otpError });
-      throw new Error("Failed to exchange magic link for session");
-    }
-
-    // The magic-link session exists only to approve this one authorization.
-    // Revoke it as soon as that is done so a full session for the test
-    // account never outlives the request; the client's own token comes from
-    // the code exchange and is issued (and restricted) separately.
-    let redirectUrl: string;
-    try {
-      redirectUrl = await approveAuthorization(
-        testAccountClient,
-        authorizationId,
-      );
-    } finally {
-      await testAccountClient.auth.signOut({ scope: "local" });
-    }
-
-    redirect(redirectUrl);
+    redirect(await act(account.actor, authorizationId));
   } catch (err) {
     unstable_rethrow(err);
     console.error(err);
-    return err instanceof Error ? err.message : "Authorization failed";
+    return GONE;
   }
 }
 
-export async function denyOAuthAuthorization(
+export async function allowConsent(
   _prevState: string | null,
   formData: FormData,
 ): Promise<string | null> {
-  const parsed = denySchema.safeParse(formData);
-  if (!parsed.success)
-    return parsed.error.issues[0]?.message ?? "Invalid form data";
+  return decide(formData, approveAs);
+}
 
-  const { authorizationId: authorizationId } = parsed.data;
-
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.auth.oauth.denyAuthorization(
-      authorizationId,
-      {
-        skipBrowserRedirect: true,
-      },
-    );
-    if (error ?? !data.redirect_url)
-      throw new Error("Failed to deny authorization");
-    redirect(data.redirect_url);
-  } catch (err) {
-    unstable_rethrow(err);
-    return err instanceof Error ? err.message : "Failed to deny authorization";
-  }
+export async function cancelConsent(
+  _prevState: string | null,
+  formData: FormData,
+): Promise<string | null> {
+  return decide(formData, denyAs);
 }
