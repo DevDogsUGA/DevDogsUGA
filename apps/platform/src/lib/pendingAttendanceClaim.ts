@@ -117,3 +117,12 @@ export async function verifyPendingAttendanceClaim(
 
 export const PENDING_ATTENDANCE_COOKIE = "pending_attendance";
 export const PENDING_ATTENDANCE_MAX_AGE = CLAIM_MAX_AGE_SECONDS;
+
+/**
+ * The emailed officer-invite link (console meeting detail, Q51) parks its
+ * single-use token here while the visitor signs in with UGA SSO, the same way a
+ * scanned code parks its claim above. The token itself, not a signed claim:
+ * the database holds its hash and is the authority on whether it is spent.
+ */
+export const PENDING_INVITE_COOKIE = "pending_attendance_invite";
+export const PENDING_INVITE_MAX_AGE = CLAIM_MAX_AGE_SECONDS;

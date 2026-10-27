@@ -1,0 +1,134 @@
+@layer theme, base, cosmic, components, utilities;
+/* Console meeting detail (C1): the officer add form, the attendee table's
+   extras and the sync to-dos. Every selector carries the .md prefix. */
+@layer cosmic {
+  .md-grid {
+    display: grid;
+    gap: 24px;
+  }
+  .md-counts {
+    font: 700 18px/1.3 var(--font-display);
+    color: var(--text);
+    margin: 0;
+  }
+  .md-add-form {
+    display: grid;
+    gap: 8px;
+    max-width: 520px;
+  }
+  .md-add-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .md-myid {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+  .md-confirm {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    max-width: 520px;
+  }
+  .md-confirm p {
+    margin: 0;
+  }
+  .md-result {
+    margin-top: 16px;
+    max-width: 520px;
+  }
+  .md-add > .btn {
+    margin-top: 12px;
+  }
+  .md-inline-form {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .md-inline-err {
+    color: var(--bad);
+    font-size: 13px;
+  }
+  .md-inline-ok {
+    color: var(--text-2);
+    font-size: 13px;
+  }
+  .md-acts {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .md-remove > summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-flex;
+  }
+  .md-remove > summary::-webkit-details-marker {
+    display: none;
+  }
+  .md-remove-form {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+    min-width: 220px;
+    max-width: 320px;
+  }
+  .md-reason {
+    width: 100%;
+    font: inherit;
+    padding: 8px 10px;
+    border: 1px solid var(--bo, var(--line));
+    border-radius: 8px;
+    background: var(--surface, transparent);
+    color: var(--text);
+  }
+  .md-survey > summary {
+    cursor: pointer;
+  }
+  .md-answers {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .md-answers b {
+    display: block;
+    color: var(--text-2);
+    font-weight: 600;
+  }
+  .md-tally {
+    display: grid;
+    gap: 6px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .md-tally li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 420px;
+  }
+  .md-todos {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+  }
+  .md-slot {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 720px) {
+    .md-remove-form {
+      max-width: none;
+    }
+  }
+}

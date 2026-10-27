@@ -11,3 +11,17 @@ export function reflectionDeadline(
     activityEndsAt.getTime() + submissionWindowDays * 24 * 60 * 60 * 1000,
   );
 }
+
+/**
+ * When a reflection's window opens (Q52): the later of the meeting's end and
+ * the moment attendance was recorded, so an officer adding someone days after
+ * the meeting still gives them a full window.
+ */
+export function reflectionWindowStart(
+  meetingEndsAt: Date,
+  attendanceRecordedAt: Date,
+): Date {
+  return attendanceRecordedAt > meetingEndsAt
+    ? attendanceRecordedAt
+    : meetingEndsAt;
+}

@@ -13,6 +13,7 @@ import {
 } from "~/server/db/schema";
 import {
   reflectionDeadline,
+  reflectionWindowStart,
   reflectionWordCount,
 } from "~/server/reflections/policy";
 
@@ -78,7 +79,10 @@ async function writeReflection(
       throw new ReflectionError("You are not eligible for this reflection.");
     if (
       new Date() >
-      reflectionDeadline(eligibility.endsAt, policy.submissionWindowDays)
+      reflectionDeadline(
+        reflectionWindowStart(eligibility.endsAt, eligibility.recordedAt),
+        policy.submissionWindowDays,
+      )
     ) {
       throw new ReflectionError("The reflection window has closed.");
     }
@@ -184,12 +188,12 @@ async function eligibleActivity(
   tx: Tx,
   userId: string,
   input: z.infer<typeof inputSchema>,
-): Promise<{ endsAt: Date } | undefined> {
+): Promise<{ endsAt: Date; recordedAt: Date } | undefined> {
   // Raw SQL values do not inherit a column's Date decoder (see the same
   // note in reflections/load.ts), so `m."endsAt"` comes back as text and
   // has to be converted explicitly before it reaches `reflectionDeadline`.
-  const rows = await tx.execute<{ endsAt: string }>(sql`
-    select m."endsAt" from platform.attendance a
+  const rows = await tx.execute<{ endsAt: string; recordedAt: string }>(sql`
+    select m."endsAt", a."recordedAt" from platform.attendance a
     join platform.meetings m on m.id = a."meetingId"
     where a."userId" = ${userId}::uuid and m.id = ${input.activityId}::uuid
       and ${meetingHasWorkshop(sql`m.id`)}
@@ -197,5 +201,10 @@ async function eligibleActivity(
     for share of a, m
   `);
   const row = rows[0];
-  return row && { endsAt: new Date(row.endsAt) };
+  return (
+    row && {
+      endsAt: new Date(row.endsAt),
+      recordedAt: new Date(row.recordedAt),
+    }
+  );
 }

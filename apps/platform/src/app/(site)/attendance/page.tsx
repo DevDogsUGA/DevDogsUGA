@@ -64,6 +64,26 @@ const STATUS_COPY: Record<
     body: "Wait about a minute, then try the current code again.",
     tone: "warning",
   },
+  invite_invalid: {
+    title: "Invite link not valid",
+    body: "That link is not one we issued. Ask the officer to send a new one.",
+    tone: "critical",
+  },
+  invite_used: {
+    title: "Invite already used",
+    body: "That link has already been claimed. If that was you, your attendance is on file.",
+    tone: "warning",
+  },
+  invite_expired: {
+    title: "Invite expired",
+    body: "That link has expired. Ask an officer to resend it.",
+    tone: "critical",
+  },
+  invite_address_mismatch: {
+    title: "Wrong account for this invite",
+    body: "The invite is for a different UGA address than the one you signed in with. Sign out, open the link again, and choose the address the email was sent to. Nothing was recorded.",
+    tone: "critical",
+  },
   uga_required: {
     title: "Use your UGA Google account",
     body: "Attendance was not recorded. Sign in again with an @uga.edu account, then scan or enter the current code.",

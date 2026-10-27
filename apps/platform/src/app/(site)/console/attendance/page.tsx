@@ -14,8 +14,10 @@ import {
   timeRange,
 } from "~/components/EventsSection/meetingView";
 import { formatEventShortDate } from "~/lib/eventTime";
+import { formatAttendanceCount } from "~/lib/attendanceCount";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { canUserManageAttendance } from "~/server/actions/permissions";
+import { getAttendanceCounts } from "~/server/attendance/counts";
 import { getOfficerAttendanceMeetings } from "~/server/attendance/getOfficerMeeting";
 import { canUserUseGraphics } from "~/server/graphics/access";
 import { requirePermission } from "~/server/auth/require";
@@ -39,12 +41,17 @@ const PAST_PAGE_SIZE = 12;
 
 type Meeting = Awaited<ReturnType<typeof getOfficerAttendanceMeetings>>[number];
 
+type Counts = Awaited<ReturnType<typeof getAttendanceCounts>>;
+
 function Row({
   meeting,
+  counts,
   past,
   canManage,
 }: {
   meeting: Meeting;
+  /** Absent for a meeting that has not started, or for an officer without the attendance tools. */
+  counts?: Counts;
   past?: boolean;
   /** Attendance tools; an officer without them is sent to the graphics. */
   canManage: boolean;
@@ -68,7 +75,9 @@ function Row({
       meta={
         off
           ? "Canceled in the schedule · no check-in"
-          : timeRange(meeting.startsAt, meeting.endsAt)
+          : counts
+            ? `${timeRange(meeting.startsAt, meeting.endsAt)} · ${formatAttendanceCount(counts.get(meeting.id) ?? { total: 0, officers: 0 })}`
+            : timeRange(meeting.startsAt, meeting.endsAt)
       }
       end={
         <>
@@ -113,14 +122,15 @@ export default async function AttendanceDisplaysPage({
 }: {
   searchParams: Promise<{ page?: string | string[] }>;
 }) {
-  // Any officer may open the list for the graphics; the attendance tools on
-  // it still need `canManageAttendance`.
+  // Any officer may open the list for the graphics; the attendance tools and
+  // counts on it still need `canManageAttendance`.
   const userId = await requirePermission(canUserUseGraphics);
   const [meetings, params, canManage] = await Promise.all([
     getOfficerAttendanceMeetings(),
     searchParams,
     canUserManageAttendance(userId),
   ]);
+  const counts = canManage ? await getAttendanceCounts() : undefined;
   const now = new Date();
 
   const live = meetings.filter(
@@ -151,7 +161,7 @@ export default async function AttendanceDisplaysPage({
         title="Meetings"
         description={
           canManage
-            ? "Open a meeting's display to put the live QR and rotating code on the projector, or its graphics to download posters. Both stay available for past and future meetings."
+            ? "Open a meeting to see who attended, add or remove people, and put the live QR and rotating code on the projector, or its graphics to download posters."
             : "Open a meeting's graphics to download posters and social images. They stay available for past and future meetings."
         }
       />
@@ -178,6 +188,8 @@ export default async function AttendanceDisplaysPage({
               <h2 id={`live-${meeting.id}`}>{title}</h2>
               <div className="small muted" style={{ marginTop: 8 }}>
                 {timeRange(meeting.startsAt, meeting.endsAt)}
+                {counts &&
+                  ` · ${formatAttendanceCount(counts.get(meeting.id) ?? { total: 0, officers: 0 })}`}
               </div>
             </div>
             <div className="acts">
@@ -251,6 +263,7 @@ export default async function AttendanceDisplaysPage({
               <Row
                 key={meeting.id}
                 meeting={meeting}
+                counts={counts}
                 past
                 canManage={canManage}
               />

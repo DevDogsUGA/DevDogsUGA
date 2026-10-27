@@ -18,13 +18,11 @@ const DISPLAY_WINDOW_FEATURES = "popup,width=1280,height=800";
  * A plain `<a>` under the hood (not a button), so middle-click / "open in
  * new tab" / "copy link" still work exactly as they would for any other
  * link -- `onClick` only intercepts the ordinary left click, which is the
- * one case that would otherwise replace the console tab. `href` stays the
- * plain officer page (`/console/attendance/[meetingId]`), the one with site
- * chrome around it, for those cases and for "copy link". Only the
- * intercepted click's popup gets `/present` appended, since that's the one
- * case where the new window has no site chrome for the display to be a card
- * inside of and should just *be* the slide -- see the `(present)` route's
- * layout doc comment.
+ * one case that would otherwise replace the console tab. `href` is the
+ * meeting's console page (`/console/attendance/[meetingId]`); every path
+ * this link offers is its chrome-free `/present` display, since that page
+ * is now the meeting's detail page and no longer shows the QR -- see the
+ * `(present)` route's layout doc comment.
  */
 export default function OpenDisplayLink({
   href,
@@ -35,6 +33,7 @@ export default function OpenDisplayLink({
   href: string;
   children: ReactNode;
 } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">) {
+  const presentHref = `${href}/present`;
   function onClick(event: MouseEvent<HTMLAnchorElement>) {
     if (
       event.defaultPrevented ||
@@ -46,7 +45,6 @@ export default function OpenDisplayLink({
     )
       return;
     event.preventDefault();
-    const presentHref = `${href}/present`;
     window.open(
       presentHref,
       `devdogs-attendance-${href}`,
@@ -55,7 +53,7 @@ export default function OpenDisplayLink({
   }
 
   return (
-    <a href={href} onClick={onClick} className={className} {...rest}>
+    <a href={presentHref} onClick={onClick} className={className} {...rest}>
       {children}
     </a>
   );
