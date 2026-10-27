@@ -25,7 +25,7 @@ export default async function Terms() {
     <article className="content-legal">
       <h1 id="devdogs-terms-of-service">DevDogs Terms of Service</h1>
       <p>
-        <strong>Effective date:</strong> October 10, 2026
+        <strong>Effective date:</strong> October 27, 2026
       </p>
       <p>
         These terms apply when you use devdogsuga.org, the DevDogs apps DogDays
