@@ -1,11 +1,8 @@
 import {
-  APPS,
-  AppIcon,
-  Banner,
-  EmailSignature,
+  EVENT_FORMATS,
   EventCard,
   FORMATS,
-  PageCard,
+  staticBrandGraphics,
   type EventDetail,
   type Format,
 } from "@devdogsuga/sdk/brand";
@@ -45,78 +42,11 @@ export interface Graphic {
   render: (format: Format) => ReactElement;
 }
 
-/** The two renditions anything may need, because anything may reach the GDG platform. */
-const GDG = ["gdgc-wide", "gdgc-square"];
-const EVENT_FORMATS = ["og", ...GDG, "involvement-network"];
-const EMAIL = ["email-1x", "email-2x", "email-3x"];
-const ICON_SIZES = [16, 32, 48, 64, 96, 128, 180, 192, 256, 384, 512, 1024];
-
-/* ------------------------------------------------------------------- brand */
-
 /**
- * The club lockup, on each of the two grounds it is ever set on.
- *
- * One subject, two grounds, and the rendition decides which template draws it:
- * the email densities want the signature's tight horizontal strip, everything
- * else wants the banner. That is why "the email signature" is not a graphic of
- * its own: it is this lockup at `email-2x`, and its GDG export is the same
- * lockup at `gdgc-square` rather than a second drawing that has to be kept in
- * step with the first.
+ * What every meeting graphic (a night, or one workshop on it) is offered at:
+ * `EVENT_FORMATS` in the SDK, shared with the console's graphics page.
  */
-function brandGraphics(): Graphic[] {
-  return (["dark", "light"] as const).map((ground) => ({
-    name: ground === "dark" ? "brand/club" : "brand/club-light",
-    group: "brand",
-    stem: ground === "dark" ? "club" : "club-light",
-    formats: [
-      "og",
-      ...GDG,
-      ...(ground === "dark" ? ["savvycal"] : []),
-      ...EMAIL,
-    ],
-    why: `The DevDogs lockup with the GDG chapter cobrand, on a ${ground} ground.`,
-    render: (format) =>
-      format.family === "email"
-        ? EmailSignature({ width: format.width, ground })
-        : Banner({ width: format.width, height: format.height, ground }),
-  }));
-}
-
-/* --------------------------------------------------------------------- apps */
-
-function appGraphics(): Graphic[] {
-  return (Object.keys(APPS) as (keyof typeof APPS)[]).map((app) => {
-    const brand = APPS[app];
-
-    return {
-      name: `app/${app}`,
-      group: "app",
-      stem: app,
-      formats: [
-        ...ICON_SIZES.map((size) => `icon-${size}`),
-        // Next's file-convention icons, for an app that ships them.
-        "icon-favicon",
-        "icon-apple",
-        "og",
-        ...GDG,
-      ],
-      why: `${brand.name}: its mark as an icon, and its card as a link.`,
-      render: (format) =>
-        format.family === "icon"
-          ? AppIcon({ app, size: format.width })
-          : PageCard({
-              width: format.width,
-              height: format.height,
-              title: brand.name,
-              description: brand.blurb,
-              eyebrow: brand.tagline,
-              accent: brand.ground,
-              footer: brand.host,
-              cobrand: true,
-            }),
-    };
-  });
-}
+const EVENT_FORMAT_NAMES: string[] = [...EVENT_FORMATS];
 
 /* ------------------------------------------------------------------- events */
 
@@ -142,7 +72,7 @@ export function eventGraphics(events: EventGraphicSource[]): Graphic[] {
       name: `event/${event.slug}/meeting`,
       group: "event",
       stem: event.slug,
-      formats: EVENT_FORMATS,
+      formats: EVENT_FORMAT_NAMES,
       why: `The ${event.slug} meeting: ${event.hint}.`,
       render: (format) =>
         EventCard({
@@ -166,7 +96,7 @@ export function eventGraphics(events: EventGraphicSource[]): Graphic[] {
         group: "event",
         // Output is flat, so the stem still carries the meeting.
         stem: `${event.slug}-${path}`,
-        formats: EVENT_FORMATS,
+        formats: EVENT_FORMAT_NAMES,
         why: `${item.detail.badge?.label ?? "Agenda item"}: ${item.detail.title} (${event.hint}).`,
         render: (format) =>
           EventCard({
@@ -186,7 +116,7 @@ export function eventGraphics(events: EventGraphicSource[]): Graphic[] {
 
 /** Everything that does not depend on the schedule. */
 export function staticGraphics(): Graphic[] {
-  return [...brandGraphics(), ...appGraphics()];
+  return staticBrandGraphics();
 }
 
 /**

@@ -2,6 +2,7 @@ import {
   EVENT_SEGMENT_VISUALS,
   meetingCardDetail,
   meetingLocation,
+  workshopCardDetail,
 } from "@devdogsuga/sdk/brand/event";
 import { getClubConfig, type Workshop } from "@devdogsuga/events";
 import type { EventGraphicSource } from "./registry.js";
@@ -76,18 +77,10 @@ export function configEvents(): EventReader {
           slug: row.slug,
           hint: describeMeeting(meeting),
           detail,
-          items: items.map((item) => {
-            const visual = EVENT_SEGMENT_VISUALS[item.segment];
-            return {
-              stem: slugPart(item.label),
-              detail: {
-                ...detail,
-                title: item.label,
-                agenda: undefined,
-                badge: { label: visual.label, accent: visual.accent },
-              },
-            };
-          }),
+          items: items.map((item) => ({
+            stem: slugPart(item.label),
+            detail: workshopCardDetail(detail, item.label),
+          })),
         };
       });
     },

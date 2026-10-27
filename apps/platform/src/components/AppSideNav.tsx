@@ -2,6 +2,7 @@ import {
   BookOpenIcon,
   CalendarCheckIcon,
   FlagIcon,
+  ImageIcon,
   KeyIcon,
   LinkSimpleIcon,
   ListMagnifyingGlassIcon,
@@ -12,6 +13,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 import type { ReactNode } from "react";
 import { getNavUser } from "~/components/TopNav/data";
+import { mayUseGraphics } from "~/lib/graphicsAccess";
 import { Avatar, AvatarFallback } from "~/ui/avatar";
 import { SideWho } from "~/ui/app-shell";
 import { SideNav, SideNavGroup, SideNavLink } from "~/ui/side-nav";
@@ -50,8 +52,8 @@ function initials(name: string) {
  * The app shell's side nav, shared by Settings and the Console (kit-spec
  * section 10). Server-rendered: it shows Account and Developer to every member,
  * and the Console group only to viewers whose permissions (already resolved by
- * `getNavUser`) reach a console page. Event graphics, Imports and Exports are
- * not built (D5) and are not listed.
+ * `getNavUser`) reach a console page. Imports and Exports are not built (D5) and are
+ * not listed.
  *
  * `current` is the pathname being read; the matching link is marked current.
  * A link is current for its own path and anything beneath it.
@@ -60,11 +62,22 @@ export default async function AppSideNav({ current }: { current?: string }) {
   const user = await getNavUser();
   const p = user?.permissions;
 
+  // Any officer, so graphics do not need attendance powers (Q67).
+  const graphics = mayUseGraphics({
+    isLeader: user?.isLeader ?? false,
+    canManageAttendance: p?.canManageAttendance ?? false,
+  });
+
   const console: (Entry | false | undefined)[] = [
-    p?.canManageAttendance && {
+    graphics && {
       label: "Meetings",
       href: "/console/attendance",
       icon: <CalendarCheckIcon />,
+    },
+    graphics && {
+      label: "Graphics",
+      href: "/console/graphics",
+      icon: <ImageIcon />,
     },
     p?.canManageAttendance && {
       label: "QR codes",

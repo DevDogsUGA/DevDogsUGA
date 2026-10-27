@@ -14,6 +14,7 @@ export {
   HandshakeIcon,
   HashIcon,
   HouseIcon,
+  ImageIcon,
   InstagramLogoIcon,
   KeyIcon,
   LinkedinLogoIcon,
