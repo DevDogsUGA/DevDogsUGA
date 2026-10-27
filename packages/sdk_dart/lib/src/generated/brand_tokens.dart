@@ -27,6 +27,38 @@ abstract final class BrandPalette {
   static const Color emerald400 = Color(0xFF00d492);
   static const Color white = Color(0xFFffffff);
   static const Color ink = Color(0xFF000000);
+  static const Color kindBuild3 = Color(0xFF38bdf8);
+  static const Color kindBuild6 = Color(0xFF0084d1);
+  static const Color kindBuild7 = Color(0xFF0369a1);
+  static const Color kindWorkshop3 = Color(0xFF34d399);
+  static const Color kindWorkshop6 = Color(0xFF009966);
+  static const Color kindWorkshop7 = Color(0xFF047857);
+  static const Color kindSocial3 = Color(0xFFf9a8d4);
+  static const Color kindSocial6 = Color(0xFFdb2777);
+  static const Color kindSocial7 = Color(0xFFbe185d);
+  static const Color kindInfo3 = Color(0xFFfcd34d);
+  static const Color kindInfo6 = Color(0xFFd97706);
+  static const Color kindInfo7 = Color(0xFFb45309);
+  static const Color kindStudy3 = Color(0xFFcbd5e1);
+  static const Color kindStudy6 = Color(0xFF475569);
+  static const Color kindStudy7 = Color(0xFF475569);
+  static const Color kindMilestone3 = Color(0xFFa5b4fc);
+  static const Color kindMilestone6 = Color(0xFF4f39f6);
+  static const Color kindMilestone7 = Color(0xFF4f39f6);
+  static const Color devdogs3 = Color(0xFFffa1ad);
+  static const Color devdogs6 = Color(0xFFec003f);
+  static const Color devdogs7 = Color(0xFFc70036);
+  static const Color cosmicBg = Color(0xFF0a0718);
+  static const Color cosmicSurface = Color(0xFF0f0b1e);
+  static const Color cosmicSurface2 = Color(0xFF171230);
+  static const Color cosmicRaised = Color(0xFF1d1738);
+  static const Color cosmicLine = Color(0xFF2a2433);
+  static const Color cosmicLineStrong = Color(0xFF4a4258);
+  static const Color cosmicInkLine = Color(0xFF04020a);
+  static const Color cosmicText = Color(0xFFffffff);
+  static const Color cosmicText2 = Color(0xFFd7d0d7);
+  static const Color cosmicText3 = Color(0xFFa89ea9);
+  static const Color cosmicOnAccent = Color(0xFF0a0718);
 }
 
 /// The roles the palette plays in the dark theme the club's images use.
