@@ -316,7 +316,7 @@ describe("publicProfiles: hidden fields come back null", () => {
       "involvementLastName",
       "email",
       "pronouns",
-      "graduationYear",
+      "graduationSemester",
       "quarantinedBy",
       "identitySourcedAt",
     ]) {

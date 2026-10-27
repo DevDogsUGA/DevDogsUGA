@@ -39,7 +39,20 @@ CREATE VIEW "platform"."publicProfiles" AS  SELECT p."userId",
     p."showLinks",
     p."showCompetitions",
     p."showContributions",
-    p."showStars"
+    p."showStars",
+    p."graduationYear",
+    ARRAY( SELECT m.name
+           FROM ( SELECT ap.name,
+                    min(pap."sortOrder") AS ord
+                   FROM (platform."profileAcademicPrograms" pap
+                     JOIN platform."academicPrograms" ap ON ((ap.id = pap."programId")))
+                  WHERE ((pap."userId" = p."userId") AND (ap.category = ANY (ARRAY['undergraduate_major'::platform."academicProgramCategory", 'graduate_major'::platform."academicProgramCategory"])))
+                  GROUP BY ap.name) m
+          ORDER BY m.ord) AS majors,
+    (EXISTS ( SELECT 1
+           FROM (platform."userRoles" ur
+             JOIN platform.roles r ON ((r.id = ur."roleId")))
+          WHERE ((ur."userId" = p."userId") AND r."isLeadership"))) AS "isLeadership"
    FROM (platform.profile p
      JOIN platform."profileWithVerification" v ON ((v."userId" = p."userId")))
   WHERE (v.verified AND p."publicProfile" AND (p.handle IS NOT NULL) AND (p."quarantinedBy" IS NULL) AND (NOT platform.is_suspended(p."userId")) AND (NOT (EXISTS ( SELECT 1
@@ -50,4 +63,4 @@ REVOKE ALL ON TABLE "platform"."publicProfiles" FROM "anon", "authenticated";
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE "platform"."publicProfiles" TO "postgres", "service_role";
 
-COMMENT ON VIEW "platform"."publicProfiles" IS 'The one definition of a public member profile. Server-only (no anon/authenticated grant). Hidden fields are NULL. Never add legal/involvement names, emails or attendance.';
+COMMENT ON VIEW "platform"."publicProfiles" IS 'The one definition of a public member profile. Server-only (no anon/authenticated grant). Hidden fields are NULL. Never add legal/involvement names, emails or attendance. graduationYear and majors (major categories only, never minors or certificates) are public whenever the profile is (Q103).';

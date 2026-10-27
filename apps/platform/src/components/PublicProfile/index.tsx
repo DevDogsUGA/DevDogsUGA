@@ -6,6 +6,7 @@ import { Breadcrumbs } from "~/ui/breadcrumbs";
 import { Card } from "~/ui/card";
 import ContributionList from "~/components/Contributions";
 import { StarTotalsRow } from "~/components/participation/StarBadges";
+import { academicsLine } from "~/lib/directoryQuery";
 import type {
   PublicProfile as Profile,
   PublicProfileActivity,
@@ -25,6 +26,7 @@ export default function PublicProfile({
   activity: PublicProfileActivity;
 }) {
   const heading = headingFor(profile);
+  const academics = academicsLine(profile);
   const links = linkItemsFor(profile, activity.links);
   const { stars, contributions } = activity;
 
@@ -53,6 +55,7 @@ export default function PublicProfile({
                 {profile.displayName && (
                   <p className="cm-handle mono">@{profile.handle}</p>
                 )}
+                {academics && <p className="cm-academics">{academics}</p>}
                 {profile.roleDescription && (
                   <p className="cm-role">{profile.roleDescription}</p>
                 )}

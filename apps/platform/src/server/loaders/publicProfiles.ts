@@ -1,4 +1,5 @@
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { cacheLife } from "next/cache";
 import { cache } from "react";
 import { env } from "~/env";
 import { db } from "~/server/db";
@@ -7,6 +8,12 @@ import {
   getContributionsForUser,
   type ContributionItem,
 } from "./contributions";
+import {
+  DIRECTORY_PAGE_SIZE,
+  escapeLike,
+  pageBounds,
+  type DirectoryQuery,
+} from "~/lib/directoryQuery";
 import { getStarsForUser, totalStars, type StarTotals } from "./stars";
 
 /**
@@ -64,6 +71,10 @@ export interface PublicProfile {
   githubHandle: string | null;
   discordHandle: string | null;
   linkedinName: string | null;
+  /** Expected graduation year. Public whenever the profile is (Q103). */
+  graduationYear: number | null;
+  /** Major names (not minors or certificates), in the member's own order. */
+  majors: string[];
   visibility: PublicProfileVisibility;
 }
 
@@ -73,6 +84,8 @@ export interface PublicProfileSummary {
   displayName: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  graduationYear: number | null;
+  majors: string[];
 }
 
 type ViewRow = typeof publicProfiles.$inferSelect;
@@ -87,6 +100,8 @@ function toProfile(row: ViewRow): PublicProfile {
     githubHandle: row.githubHandle,
     discordHandle: row.discordHandle,
     linkedinName: row.linkedinName,
+    graduationYear: row.graduationYear,
+    majors: row.majors ?? [],
     visibility: {
       name: row.showName!,
       avatar: row.showAvatar!,
@@ -116,36 +131,134 @@ export const getPublicProfileByHandle = cache(
   },
 );
 
+export interface DirectoryPage {
+  members: PublicProfileSummary[];
+  /** Matches across all pages. */
+  total: number;
+  /** The page actually served, clamped into range. */
+  page: number;
+  totalPages: number;
+}
+
+/** Search, filter and one page of the directory. */
+export interface DirectorySearch extends DirectoryQuery {
+  /**
+   * Drop members who hold a leadership role. The unfiltered directory lists
+   * them in its own Leadership section instead of twice.
+   */
+  excludeLeadership?: boolean;
+}
+
 /**
- * Every public profile, for the directory, alphabetical by what is shown
- * (display name, falling back to handle). Unpaginated: the club has a few
- * hundred verified members, and the page needs the whole list to filter
- * client-side. Paginate here before that stops being true.
+ * One page of public profiles, alphabetical by what is shown (display name,
+ * falling back to handle). The search matches the shown name and the handle,
+ * case-insensitively, as a literal fragment (`%`, `_` and `\` are escaped). A
+ * name the member hides is NULL in the view, so it can never be searched.
  */
-export const listPublicProfiles = cache(
-  async (): Promise<PublicProfileSummary[]> => {
-    const rows = await db
-      .select({
-        userId: publicProfiles.userId,
-        handle: publicProfiles.handle,
-        displayName: publicProfiles.displayName,
-        hasAvatar: publicProfiles.hasAvatar,
-        bio: publicProfiles.bio,
-      })
-      .from(publicProfiles)
-      .orderBy(
-        asc(
-          sql`lower(coalesce(${publicProfiles.displayName}, ${publicProfiles.handle}))`,
-        ),
-      );
-    return rows.map((row) => ({
+export async function searchPublicProfiles(
+  search: DirectorySearch,
+  pageSize = DIRECTORY_PAGE_SIZE,
+): Promise<DirectoryPage> {
+  const conditions: SQL[] = [];
+  if (search.q) {
+    const pattern = `%${escapeLike(search.q)}%`;
+    conditions.push(
+      sql`(${publicProfiles.displayName} ilike ${pattern} escape '\\' or ${publicProfiles.handle} ilike ${pattern} escape '\\')`,
+    );
+  }
+  if (search.leadership) conditions.push(eq(publicProfiles.isLeadership, true));
+  else if (search.excludeLeadership)
+    conditions.push(eq(publicProfiles.isLeadership, false));
+  if (search.major)
+    conditions.push(sql`${search.major} = any(${publicProfiles.majors})`);
+  if (search.year !== null)
+    conditions.push(eq(publicProfiles.graduationYear, search.year));
+  const where = conditions.length ? and(...conditions) : undefined;
+
+  const [counted] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(publicProfiles)
+    .where(where);
+  const total = counted?.total ?? 0;
+  const { page, totalPages, offset } = pageBounds(search.page, total, pageSize);
+
+  const rows = await db
+    .select({
+      userId: publicProfiles.userId,
+      handle: publicProfiles.handle,
+      displayName: publicProfiles.displayName,
+      hasAvatar: publicProfiles.hasAvatar,
+      bio: publicProfiles.bio,
+      graduationYear: publicProfiles.graduationYear,
+      majors: publicProfiles.majors,
+    })
+    .from(publicProfiles)
+    .where(where)
+    .orderBy(
+      asc(
+        sql`lower(coalesce(${publicProfiles.displayName}, ${publicProfiles.handle}))`,
+      ),
+      asc(publicProfiles.handle),
+    )
+    .limit(pageSize)
+    .offset(offset);
+
+  return {
+    members: rows.map((row) => ({
       handle: row.handle!,
       displayName: row.displayName,
       avatarUrl: row.hasAvatar ? avatarUrlFor(row.userId!) : null,
       bio: row.bio,
-    }));
-  },
-);
+      graduationYear: row.graduationYear,
+      majors: row.majors ?? [],
+    })),
+    total,
+    page,
+    totalPages,
+  };
+}
+
+/**
+ * Every public profile, unpaginated and alphabetical. Not used by the
+ * directory (which pages through `searchPublicProfiles`); kept for the db tests
+ * that assert who is visible at all.
+ */
+export async function listPublicProfiles(): Promise<PublicProfileSummary[]> {
+  const { members } = await searchPublicProfiles(
+    { q: "", leadership: false, major: null, year: null, page: 1 },
+    1_000_000,
+  );
+  return members;
+}
+
+export interface DirectoryFacets {
+  majors: string[];
+  years: number[];
+}
+
+/**
+ * The values the filter menus offer: only majors and years that at least one
+ * public profile has, so no option leads to an empty list. Cached for an hour;
+ * a new major appearing late costs one stale menu, nothing more.
+ */
+export async function getDirectoryFacets(): Promise<DirectoryFacets> {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 3600, expire: 86_400 });
+
+  const [majors, years] = await Promise.all([
+    db.execute<{ major: string }>(
+      sql`select distinct m as major from platform."publicProfiles", unnest(majors) as m order by m`,
+    ),
+    db
+      .selectDistinct({ year: publicProfiles.graduationYear })
+      .from(publicProfiles)
+      .orderBy(asc(publicProfiles.graduationYear)),
+  ]);
+  return {
+    majors: Array.from(majors, (row) => row.major),
+    years: years.flatMap((row) => (row.year === null ? [] : [row.year])),
+  };
+}
 
 /**
  * The public handle of each given account that has a public profile, keyed by
