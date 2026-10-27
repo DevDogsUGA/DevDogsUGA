@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { parseRoster, RosterFormatError } from "./csv.js";
+import { guessHeaderRow } from "./csv.js";
+import { MissingColumnsError } from "./errors.js";
+import { parseRoster, RosterFormatError } from "./roster.js";
 
 /** The real export's shape: a preamble, CRLF, `(Hidden)` columns, one row per position. */
 const EXPORT = [
@@ -56,5 +58,41 @@ describe("parseRoster", () => {
     expect(() => parseRoster("Organization Roster\r\n\r\nfoo,bar\r\n")).toThrow(
       RosterFormatError,
     );
+  });
+
+  it("is a MissingColumnsError, so a caller can offer a column picker", () => {
+    expect(() => parseRoster("foo,bar\n1,2\n")).toThrow(MissingColumnsError);
+  });
+
+  it("reads the columns it is told to, and names the header it used", () => {
+    const text = "Given,Family,Mail\nAda,Lovelace,a@uga.edu\n";
+    const roster = parseRoster(text, {
+      columns: { firstName: "given", lastName: "FAMILY", email: "Mail" },
+    });
+    expect(roster.members.map((m) => m.email)).toEqual(["a@uga.edu"]);
+    expect(roster.columns).toEqual({
+      firstName: "Given",
+      lastName: "Family",
+      email: "Mail",
+    });
+    expect(roster.headers).toEqual(["Given", "Family", "Mail"]);
+    expect(() => parseRoster(text, { columns: { email: "Nope" } })).toThrow(
+      RosterFormatError,
+    );
+  });
+
+  it("with ugaOnly, moves other domains to notUga with their lines", () => {
+    const roster = parseRoster(
+      "First Name,Last Name,Email\nAda,Lovelace,a@uga.edu\nAlan,Turing,at@example.com\n",
+      { ugaOnly: true },
+    );
+    expect(roster.members.map((m) => m.email)).toEqual(["a@uga.edu"]);
+    expect(roster.notUga).toEqual([{ email: "at@example.com", line: 3 }]);
+  });
+});
+
+describe("guessHeaderRow", () => {
+  it("picks the widest of the first rows", () => {
+    expect(guessHeaderRow("Title\n\nA,B,C\n1,2,3\n")).toEqual(["A", "B", "C"]);
   });
 });

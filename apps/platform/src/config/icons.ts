@@ -37,6 +37,7 @@ export {
   TerminalWindowIcon,
   ToolboxIcon,
   TrophyIcon,
+  UploadSimpleIcon,
   UserIcon,
   UsersIcon,
   WrenchIcon,

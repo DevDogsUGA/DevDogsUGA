@@ -129,6 +129,17 @@ export const TERMINAL_PATHS = [
     page: "(site)/console/attendance/[meetingId]/graphics/page.tsx",
   },
 
+  {
+    pattern: "/console/data",
+    regex: /^\/console\/data\/?$/,
+    page: "(site)/console/data/page.tsx",
+  },
+  {
+    pattern: "/console/data/imports",
+    regex: /^\/console\/data\/imports\/?$/,
+    page: "(site)/console/data/imports/page.tsx",
+  },
+
   { pattern: "/help", regex: /^\/help\/?$/, page: null },
   {
     pattern: "/help/:threadId",

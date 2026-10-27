@@ -71,6 +71,8 @@ describe("matchTerminalPath", () => {
       "/console/attendance/6f0c1b0e-0000-4000-8000-000000000001",
       "/console/attendance/:meetingId",
     ],
+    ["/console/data", "/console/data"],
+    ["/console/data/imports/", "/console/data/imports"],
     ["/console/graphics", "/console/graphics"],
     [
       "/console/attendance/abc/graphics",
@@ -90,6 +92,7 @@ describe("matchTerminalPath", () => {
     "/robots.txt",
     "/changlelog",
     "/console/attendance/abc/present",
+    "/console/data/imports/preview",
     "/tools/oauth/device",
     "/teams",
   ])("passes %s through", (path) => {

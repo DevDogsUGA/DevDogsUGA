@@ -19,6 +19,11 @@
       "types": "./dist/index.d.ts",
       "devdogs-source": "./src/index.ts",
       "default": "./dist/index.js"
+    },
+    "./imports": {
+      "types": "./dist/imports/index.d.ts",
+      "devdogs-source": "./src/imports/index.ts",
+      "default": "./dist/imports/index.js"
     }
   },
   "files": [

@@ -54,7 +54,7 @@ import {
   planAttendance,
   type AttendancePlan,
   type ExistingCheckIn,
-} from "./plan.js";
+} from "@devdogsuga/events/imports";
 import { parseSheet, type ParsedSheet } from "./sheet.js";
 import {
   applyAttendanceFor,
