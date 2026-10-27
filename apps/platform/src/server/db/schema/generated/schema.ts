@@ -1069,6 +1069,89 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("workshops_definitionId_format", sql`(("definitionId" IS NULL) OR ("definitionId" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))`),check("workshops_description_length", sql`((description IS NULL) OR (char_length(description) <= 280))`),check("workshops_elHours_range", sql`(("elHours" > (0)::numeric) AND ("elHours" <= (8)::numeric))`),check("workshops_title_length", sql`((title IS NULL) OR (char_length(title) <= 80))`),]);
+export const projectsInPlatform = platform.table.withRLS("projects", {
+	id: uuid().defaultRandom().primaryKey(),
+	name: text().notNull(),
+	description: text(),
+	repos: text().array().default([]).notNull(),
+	status: text().default('proposed').notNull(),
+	advisorId: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	proposedBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	approvedBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	decidedAt: timestamp({ withTimezone: true }),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("projects_advisorId_idx").using("btree", table.advisorId.asc().nullsLast()).where(sql`("advisorId" IS NOT NULL)`),
+	uniqueIndex("projects_name_key").using("btree", sql`lower(btrim(name))`),
+	index("projects_status_idx").using("btree", table.status.asc().nullsLast()),
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+check("projects_description_length", sql`((description IS NULL) OR (char_length(description) <= 1000))`),check("projects_name_length", sql`(char_length(btrim(name)) BETWEEN 2 AND 80)`),check("projects_repos_count", sql`(cardinality(repos) <= 10)`),check("projects_status_choices", sql`(status = ANY (ARRAY['proposed'::text, 'active'::text, 'declined'::text, 'archived'::text]))`),]);
+
+export const projectMembersInPlatform = platform.table.withRLS("projectMembers", {
+	projectId: uuid().notNull().references(() => projectsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	addedBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	addedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("projectMembers_userId_idx").using("btree", table.userId.asc().nullsLast()),
+	primaryKey({ columns: [table.projectId, table.userId], name: "projectMembers_pkey" }),
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const projectReportsInPlatform = platform.table.withRLS("projectReports", {
+	id: uuid().defaultRandom().primaryKey(),
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	projectId: uuid().notNull().references(() => projectsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	startDate: date({ mode: "string" }).notNull(),
+	endDate: date({ mode: "string" }).notNull(),
+	hours: numeric({ precision: 5, scale: 2 }).notNull(),
+	content: text().notNull(),
+	status: text().default('submitted').notNull(),
+	approvedHours: numeric({ precision: 5, scale: 2 }),
+	reviewedBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	reviewedAt: timestamp({ withTimezone: true }),
+	reviewNote: text(),
+	submittedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("projectReports_projectId_status_idx").using("btree", table.projectId.asc().nullsLast(), table.status.asc().nullsLast()),
+	index("projectReports_userId_idx").using("btree", table.userId.asc().nullsLast(), table.submittedAt.desc().nullsFirst()),
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+check("projectReports_approved_shape", sql`(((status = 'approved') = ("approvedHours" IS NOT NULL)) AND ((status = 'submitted') = ("reviewedAt" IS NULL)))`),check("projectReports_approvedHours_range", sql`(("approvedHours" IS NULL) OR (("approvedHours" > (0)::numeric) AND ("approvedHours" <= (200)::numeric)))`),check("projectReports_content_words", sql`(platform.word_count(content) >= 100)`),check("projectReports_dates_order", sql`("endDate" >= "startDate")`),check("projectReports_hours_range", sql`(("hours" > (0)::numeric) AND ("hours" <= (200)::numeric))`),check("projectReports_returned_note", sql`((status <> 'returned') OR (char_length(btrim(COALESCE("reviewNote", ''::text))) > 0))`),check("projectReports_status_choices", sql`(status = ANY (ARRAY['submitted'::text, 'approved'::text, 'returned'::text]))`),]);
+
+export const projectReportContributionsInPlatform = platform.table.withRLS("projectReportContributions", {
+	reportId: uuid().notNull().references(() => projectReportsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	contributionId: uuid().notNull().references(() => contributionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+}, (table) => [
+	primaryKey({ columns: [table.reportId, table.contributionId], name: "projectReportContributions_pkey" }),
+	unique("projectReportContributions_contributionId_key").on(table.contributionId),
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+]);
 export const memberStarsInPlatform = platform.view("memberStars", {	userId: uuid(),
 	activityType: text(),
 	activityId: uuid(),
@@ -1161,6 +1244,10 @@ export { oauthTestAccountsInPlatform as oauthTestAccounts };
 export { oauthStatusInPlatform as oauthStatus };
 export { oauthTierInPlatform as oauthTier };
 export { officerDiscordIdsInPlatform as officerDiscordIds };
+export { projectMembersInPlatform as projectMembers };
+export { projectReportContributionsInPlatform as projectReportContributions };
+export { projectReportsInPlatform as projectReports };
+export { projectsInPlatform as projects };
 export { pointsInPlatform as points };
 export { profileInPlatform as profile };
 export { profileAcademicProgramsInPlatform as profileAcademicPrograms };

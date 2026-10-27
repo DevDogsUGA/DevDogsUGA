@@ -87,11 +87,11 @@ export show a member answer as it stood at a past meeting.
 
 ## Exports
 
-Officers download a CSV snapshot of stars, attendance, or reflections with the
+Officers download a CSV snapshot of EL evidence, attendance, or reflections with the
 officer CLI, not from the platform:
 
 ```sh
-backstage export stars --from 2026-08-17 --to 2026-12-12
+backstage export evidence --from 2026-08-17 --to 2026-12-12
 backstage export attendance --meeting 2026-09-09
 backstage export reflections --from 2026-08-17
 ```

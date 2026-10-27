@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
 import {
+  effectiveMinimumWords,
   reflectionDeadline,
   reflectionWindowStart,
   reflectionWordCount,
@@ -115,7 +116,7 @@ export async function getReflectionActivities(
   }
 
   return {
-    minimumWordCount: policy.minimumWordCount,
+    minimumWordCount: effectiveMinimumWords(policy.minimumWordCount),
     activities: rows.map((row) => {
       const endsAt = new Date(row.endsAt);
       const deadline = reflectionDeadline(

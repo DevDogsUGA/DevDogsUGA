@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  effectiveMinimumWords,
   reflectionDeadline,
   reflectionWindowStart,
   reflectionWordCount,
@@ -18,6 +19,14 @@ describe("reflection policy", () => {
     );
   });
 
+  it("never shortens the window below a week", () => {
+    const end = new Date("2026-09-08T23:30:00.000Z");
+    expect(reflectionDeadline(end, 1).toISOString()).toBe(
+      "2026-09-15T23:30:00.000Z",
+    );
+    expect(reflectionWordCount("a\u00a0b\u3000c")).toBe(3);
+  });
+
   it("opens the window at the later of the meeting's end and the attendance record", () => {
     const end = new Date("2026-09-08T23:30:00.000Z");
     const early = new Date("2026-09-08T20:00:00.000Z");
@@ -28,5 +37,11 @@ describe("reflection policy", () => {
     expect(
       reflectionDeadline(reflectionWindowStart(end, late), 7).toISOString(),
     ).toBe("2026-09-19T10:00:00.000Z");
+  });
+
+  it("never lets the settings row lower the 100-word minimum", () => {
+    expect(effectiveMinimumWords(5)).toBe(100);
+    expect(effectiveMinimumWords(100)).toBe(100);
+    expect(effectiveMinimumWords(150)).toBe(150);
   });
 });

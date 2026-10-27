@@ -314,7 +314,7 @@ describe("backstage contract tests", () => {
       "planner create",
       "import involvement",
       "import attendance",
-      "export stars",
+      "export evidence",
       "export attendance",
       "export reflections",
       "export responses",

@@ -38,7 +38,7 @@ describe("the tree", () => {
       "import involvement",
       "import attendance",
       "import contributions",
-      "export stars",
+      "export evidence",
       "export attendance",
       "export reflections",
       "export responses",
@@ -91,7 +91,7 @@ describe("the tree", () => {
       "contributions",
     ]);
     expect(subcommandNames(["export"])).toEqual([
-      "stars",
+      "evidence",
       "attendance",
       "reflections",
       "responses",

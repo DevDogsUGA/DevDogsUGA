@@ -64,7 +64,7 @@ describe("formats", () => {
     expect(() => parseFormats(["bevy"], "responses")).toThrow(
       "Try platform, wide",
     );
-    expect(() => parseFormats(["wide"], "stars")).toThrow("has one format");
+    expect(() => parseFormats(["wide"], "evidence")).toThrow("has one format");
   });
 
   it("fills the Bevy survey columns from a meeting's responses", () => {

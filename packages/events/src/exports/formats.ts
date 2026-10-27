@@ -31,7 +31,7 @@ export type FormatName = (typeof FORMAT_NAMES)[number];
 
 /** What each export can be written as; the first is its default. */
 export const FORMATS_BY_KIND: Record<ExportKind, readonly FormatName[]> = {
-  stars: ["platform"],
+  evidence: ["platform"],
   attendance: ["platform", "bevy", "involvement"],
   reflections: ["platform"],
   responses: ["platform", "wide"],
