@@ -12,6 +12,8 @@ import {
   type Workshop,
 } from "./schema.js";
 import type { SeriesConfig } from "./series.js";
+import type { VenuesConfig } from "./venues.js";
+import type { WorkshopsConfig } from "./workshops.js";
 import type { QuestionsConfig } from "./questions.js";
 
 /**
@@ -48,7 +50,14 @@ export type ValidationIssueCode =
   | "missing_title"
   | "missing_category"
   | "missing_summary"
-  | "missing_location"
+  | "missing_venue"
+  | "unknown_venue"
+  | "unknown_workshop"
+  | "duplicate_workshop_id"
+  | "duplicate_workshop_in_meeting"
+  | "duplicate_venue_id"
+  | "venue_needs_address"
+  | "venue_building_not_campus"
   | "duplicate_workshop_title"
   | "duplicate_slug"
   | "meeting_slug_date"
@@ -103,8 +112,12 @@ export function validateClubConfig(
 export function validateAuthored(
   config: AuthoredClubConfig,
   seriesConfig: SeriesConfig,
+  workshopsConfig: WorkshopsConfig = { workshops: [] },
+  venuesConfig: VenuesConfig = { venues: [] },
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
+  const workshopIds = new Set(workshopsConfig.workshops.map((w) => w.id));
+  const venueIds = new Set(venuesConfig.venues.map((v) => v.id));
   const byId = new Map<string, SeriesConfig["series"][number]>();
   for (const series of seriesConfig.series) {
     if (byId.has(series.id)) {
@@ -115,6 +128,13 @@ export function validateAuthored(
       });
     }
     byId.set(series.id, series);
+    if (series.venue !== undefined && !venueIds.has(series.venue)) {
+      issues.push({
+        id: series.id,
+        code: "unknown_venue",
+        message: `Series "${series.id}" names venue "${series.venue}", which is not in venues.json.`,
+      });
+    }
   }
 
   for (const meeting of config.meetings) {
@@ -131,7 +151,7 @@ export function validateAuthored(
     const needs: [string, ValidationIssueCode, unknown, unknown][] = [
       ["category", "missing_category", meeting.category, series?.category],
       ["summary", "missing_summary", meeting.summary, series?.summary],
-      ["location", "missing_location", meeting.location, series?.location],
+      ["venue", "missing_venue", meeting.venue, series?.venue],
     ];
     if (series === undefined && meeting.title === undefined) {
       issues.push({
@@ -139,6 +159,32 @@ export function validateAuthored(
         code: "missing_title",
         message: `Meeting "${meeting.slug}" has no series and no title. A one-off sets its own title.`,
       });
+    }
+    if (meeting.venue !== undefined && !venueIds.has(meeting.venue)) {
+      issues.push({
+        id: meeting.slug,
+        code: "unknown_venue",
+        message: `Meeting "${meeting.slug}" names venue "${meeting.venue}", which is not in venues.json. A venue is never guessed.`,
+      });
+    }
+    const seen = new Set<string>();
+    for (const entry of meeting.agenda) {
+      const id = typeof entry === "string" ? entry : entry.workshop;
+      if (!workshopIds.has(id)) {
+        issues.push({
+          id: meeting.slug,
+          code: "unknown_workshop",
+          message: `Meeting "${meeting.slug}" runs workshop "${id}", which is not in workshops.json.`,
+        });
+      }
+      if (seen.has(id)) {
+        issues.push({
+          id: meeting.slug,
+          code: "duplicate_workshop_in_meeting",
+          message: `Workshop "${id}" is on ${meeting.slug}'s agenda more than once.`,
+        });
+      }
+      seen.add(id);
     }
     for (const [field, code, own, inherited] of needs) {
       if (own === undefined && inherited === undefined) {
@@ -152,6 +198,57 @@ export function validateAuthored(
               : ". A one-off sets its own."),
         });
       }
+    }
+  }
+  return issues;
+}
+
+// ── Catalogs ─────────────────────────────────────────────────────────────────
+
+/**
+ * `workshops.json` and `venues.json` on their own: ids are unique (meetings
+ * and the platform's rows point at them), an off-campus venue has an address
+ * to navigate to, and only campus venues name a campus-map building.
+ */
+export function validateCatalog(
+  workshopsConfig: WorkshopsConfig,
+  venuesConfig: VenuesConfig,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const workshopIds = new Set<string>();
+  for (const workshop of workshopsConfig.workshops) {
+    if (workshopIds.has(workshop.id)) {
+      issues.push({
+        id: workshop.id,
+        code: "duplicate_workshop_id",
+        message: `"${workshop.id}" names more than one workshop; agendas reference a workshop by id.`,
+      });
+    }
+    workshopIds.add(workshop.id);
+  }
+  const venueIds = new Set<string>();
+  for (const venue of venuesConfig.venues) {
+    if (venueIds.has(venue.id)) {
+      issues.push({
+        id: venue.id,
+        code: "duplicate_venue_id",
+        message: `"${venue.id}" names more than one venue; meetings reference a venue by id.`,
+      });
+    }
+    venueIds.add(venue.id);
+    if (venue.kind === "offCampus" && venue.address === undefined) {
+      issues.push({
+        id: venue.id,
+        code: "venue_needs_address",
+        message: `Venue "${venue.id}" is off campus and needs an address to navigate to.`,
+      });
+    }
+    if (venue.building !== undefined && venue.kind !== "campus") {
+      issues.push({
+        id: venue.id,
+        code: "venue_building_not_campus",
+        message: `Venue "${venue.id}" names a campus-map building but is ${venue.kind}; only campus venues do.`,
+      });
     }
   }
   return issues;

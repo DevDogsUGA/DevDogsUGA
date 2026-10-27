@@ -1,15 +1,20 @@
 import meetings from "./data/meetings.json" with { type: "json" };
 import questions from "./data/questions.json" with { type: "json" };
 import series from "./data/series.json" with { type: "json" };
+import venues from "./data/venues.json" with { type: "json" };
+import workshops from "./data/workshops.json" with { type: "json" };
 import { questionsConfigSchema, type QuestionsConfig } from "./questions.js";
 import { resolveMeetings } from "./resolve.js";
 import { clubConfigSchema, type ClubConfig } from "./schema.js";
 import { seriesConfigSchema, type SeriesConfig } from "./series.js";
 import {
   validateAuthored,
+  validateCatalog,
   validateClubConfig,
   type ValidationIssue,
 } from "./validator.js";
+import { venuesConfigSchema, type VenuesConfig } from "./venues.js";
+import { workshopsConfigSchema, type WorkshopsConfig } from "./workshops.js";
 
 export * from "./answers.js";
 export * from "./questions.js";
@@ -17,6 +22,8 @@ export * from "./resolve.js";
 export * from "./schema.js";
 export * from "./series.js";
 export * from "./validator.js";
+export * from "./venues.js";
+export * from "./workshops.js";
 
 export class ClubConfigError extends Error {
   constructor(public readonly issues: ValidationIssue[]) {
@@ -54,16 +61,28 @@ export function getSeries(): SeriesConfig {
   return getConfigFiles().series;
 }
 
+/** The reusable workshops meeting agendas reference, from `workshops.json`. */
+export function getWorkshops(): WorkshopsConfig {
+  return getConfigFiles().workshops;
+}
+
+/** The venue catalog meetings and series reference, from `venues.json`. */
+export function getVenues(): VenuesConfig {
+  return getConfigFiles().venues;
+}
+
 function getConfigFiles(): {
   meetings: ClubConfig;
   questions: QuestionsConfig;
   series: SeriesConfig;
+  workshops: WorkshopsConfig;
+  venues: VenuesConfig;
 } {
   // A static import, never a read from disk: a bundler inlines it, and the
   // platform calls this from a Cloudflare Worker, which has no filesystem to
   // read `dist/` from. The data file sits under `src/` so `tsc` copies it into
   // `dist/` beside the module that imports it.
-  return parseConfigFiles(meetings, questions, series);
+  return parseConfigFiles(meetings, questions, series, workshops, venues);
 }
 
 /** The same validation `getClubConfig` runs, over an in-memory value rather
@@ -73,8 +92,16 @@ function getConfigFiles(): {
 export function parseClubConfig(
   raw: unknown,
   rawSeries: unknown = { series: [] },
+  rawWorkshops: unknown = { workshops: [] },
+  rawVenues: unknown = { venues: [] },
 ): ClubConfig {
-  return parseConfigFiles(raw, { questions: [] }, rawSeries).meetings;
+  return parseConfigFiles(
+    raw,
+    { questions: [] },
+    rawSeries,
+    rawWorkshops,
+    rawVenues,
+  ).meetings;
 }
 
 /** The files, each parsed, the series applied, then validated together. */
@@ -82,18 +109,41 @@ export function parseConfigFiles(
   rawMeetings: unknown,
   rawQuestions: unknown,
   rawSeries: unknown = { series: [] },
-): { meetings: ClubConfig; questions: QuestionsConfig; series: SeriesConfig } {
+  rawWorkshops: unknown = { workshops: [] },
+  rawVenues: unknown = { venues: [] },
+): {
+  meetings: ClubConfig;
+  questions: QuestionsConfig;
+  series: SeriesConfig;
+  workshops: WorkshopsConfig;
+  venues: VenuesConfig;
+} {
   const parsedAuthored = clubConfigSchema.parse(rawMeetings);
   const parsedQuestions = questionsConfigSchema.parse(rawQuestions);
   const parsedSeries = seriesConfigSchema.parse(rawSeries);
-  const authoredIssues = validateAuthored(parsedAuthored, parsedSeries);
+  const parsedWorkshops = workshopsConfigSchema.parse(rawWorkshops);
+  const parsedVenues = venuesConfigSchema.parse(rawVenues);
+  const authoredIssues = [
+    ...validateCatalog(parsedWorkshops, parsedVenues),
+    ...validateAuthored(
+      parsedAuthored,
+      parsedSeries,
+      parsedWorkshops,
+      parsedVenues,
+    ),
+  ];
   if (authoredIssues.length > 0) throw new ClubConfigError(authoredIssues);
-  const parsedMeetings = resolveMeetings(parsedAuthored, parsedSeries.series);
+  const parsedMeetings = resolveMeetings(parsedAuthored, parsedSeries.series, {
+    workshops: parsedWorkshops.workshops,
+    venues: parsedVenues.venues,
+  });
   const issues = validateClubConfig(parsedMeetings, parsedQuestions);
   if (issues.length > 0) throw new ClubConfigError(issues);
   return {
     meetings: parsedMeetings,
     questions: parsedQuestions,
     series: parsedSeries,
+    workshops: parsedWorkshops,
+    venues: parsedVenues,
   };
 }

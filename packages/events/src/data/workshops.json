@@ -1,0 +1,69 @@
+{
+  "$schema": "./workshops.schema.json",
+  "workshops": [
+    {
+      "id": "collaborative-coding",
+      "title": "Collaborative Coding",
+      "description": "Get set up with the DevDogs Monorepo, understand best practices on how to contribute to a large codebase, and learn the basics of working with Git and GitHub.",
+      "project": "DogDays & DogPack",
+      "elHours": 1,
+      "topics": ["git"]
+    },
+    {
+      "id": "nextjs",
+      "title": "Next.js",
+      "description": null,
+      "project": "DogDays",
+      "elHours": 1,
+      "topics": ["web"]
+    },
+    {
+      "id": "flutter",
+      "title": "Flutter",
+      "description": null,
+      "project": "DogPack",
+      "elHours": 1,
+      "topics": ["mobile"]
+    },
+    {
+      "id": "supabase",
+      "title": "Supabase",
+      "description": null,
+      "project": "DogDays & DogPack",
+      "elHours": 1,
+      "topics": ["databases"]
+    },
+    {
+      "id": "career-fair-prep",
+      "title": "Career Fair Prep",
+      "description": null,
+      "project": null,
+      "elHours": 1,
+      "topics": ["careers"]
+    },
+    {
+      "id": "nextjs-ii",
+      "title": "Next.js II: Components, State, and Styling",
+      "description": null,
+      "project": "DogDays",
+      "elHours": 1,
+      "topics": ["web"]
+    },
+    {
+      "id": "flutter-ii",
+      "title": "Flutter II: Screens, Forms & Navigation",
+      "description": null,
+      "project": "DogPack",
+      "elHours": 1,
+      "topics": ["mobile"]
+    },
+    {
+      "id": "supabase-ii",
+      "title": "Supabase II: Editing Our App Schemas",
+      "description": null,
+      "project": "DogDays & DogPack",
+      "elHours": 1,
+      "topics": ["databases"]
+    }
+  ]
+}

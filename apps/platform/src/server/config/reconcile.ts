@@ -19,10 +19,12 @@ import { postAlert } from "../alerts";
  * The reconcile-from-config: `@devdogsuga/events` in, `meetings` and
  * `workshops` up to date out.
  *
- *   * **A meeting is its `slug`; a workshop is its title within its
- *     meeting.** Both are authored in config, so re-titling a meeting
+ *   * **A meeting is its `slug`; a workshop row is its definition within
+ *     its meeting.** Both are authored in config, so re-titling a meeting
  *     updates its row instead of orphaning the attendance recorded against
- *     it. Changing a slug is a different meeting: the old row is archived,
+ *     it. The same workshop run on two nights is two rows sharing one
+ *     `definitionId`; a row written before definitions existed is adopted
+ *     by title the first time it is seen. Changing a slug is a different meeting: the old row is archived,
  *     attendance and all, and the new one starts empty.
  *
  *   * **Every meeting is the config's.** Nothing else creates meetings or
@@ -244,6 +246,10 @@ export async function reconcileFromConfig(
           series: meeting.series,
           category: meeting.category,
           summary: meeting.summary,
+          // The venue is the source; building and location are still derived
+          // from it for the readers that have not moved to venue and room.
+          venue: meeting.venue.id,
+          room: meeting.venue.room,
           building: meeting.building,
           location: meeting.location,
           startsAt: new Date(meeting.startsAt),
@@ -299,30 +305,41 @@ export async function reconcileFromConfig(
       ).length;
 
       // ── Workshops ──────────────────────────────────────────────────────────
-      // Matched on (meeting, title), case-insensitively, as the validator
-      // keeps titles unique within a meeting. A live row is preferred over an
-      // archived one with the same title, so a re-added workshop revives the
-      // row it had rather than a stale duplicate.
+      // Matched on (meeting, definition id). A row from before definitions
+      // existed has none; it is adopted by (meeting, title), case-insensitively,
+      // so its id (and anything pointing at it) survives. A live row is
+      // preferred over an archived one with the same key, so a re-added
+      // workshop revives the row it had rather than a stale duplicate.
       const existingWorkshops = await tx
         .select({
           id: workshops.id,
           meetingId: workshops.meetingId,
           title: workshops.title,
+          definitionId: workshops.definitionId,
           deletedAt: workshops.deletedAt,
         })
         .from(workshops)
         .where(inArray(workshops.meetingId, [...meetingIdBySlug.values()]));
-      const workshopKey = (meetingId: string, title: string | null) =>
-        `${meetingId}\u0000${(title ?? "").toLowerCase()}`;
+      const keyOf = (
+        meetingId: string,
+        kind: "definition" | "title",
+        value: string | null,
+      ) => `${meetingId}\u0000${kind}\u0000${(value ?? "").toLowerCase()}`;
       const workshopByKey = new Map<
         string,
         (typeof existingWorkshops)[number]
       >();
-      for (const row of existingWorkshops) {
-        const key = workshopKey(row.meetingId, row.title);
+      const hold = (key: string, row: (typeof existingWorkshops)[number]) => {
         const held = workshopByKey.get(key);
         if (!held || (held.deletedAt !== null && row.deletedAt === null)) {
           workshopByKey.set(key, row);
+        }
+      };
+      for (const row of existingWorkshops) {
+        if (row.definitionId !== null) {
+          hold(keyOf(row.meetingId, "definition", row.definitionId), row);
+        } else {
+          hold(keyOf(row.meetingId, "title", row.title), row);
         }
       }
 
@@ -334,15 +351,18 @@ export async function reconcileFromConfig(
         for (const item of meeting.agenda) {
           const values = {
             meetingId,
+            definitionId: item.id,
             title: item.title,
             description: item.description,
             project: item.project,
+            elHours: String(item.elHours),
+            topics: item.topics,
             deletedAt: null,
           };
 
-          const existing = workshopByKey.get(
-            workshopKey(meetingId, item.title),
-          );
+          const existing =
+            workshopByKey.get(keyOf(meetingId, "definition", item.id)) ??
+            workshopByKey.get(keyOf(meetingId, "title", item.title));
           if (existing) {
             await tx
               .update(workshops)

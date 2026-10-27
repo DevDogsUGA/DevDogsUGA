@@ -18,6 +18,8 @@ CREATE TABLE "platform"."meetings" (
   "surveyQuestionIds"  text[]                   NOT NULL DEFAULT '{}'::text[],
   "series"             text,
   "category"           text,
+  "venue"              text,
+  "room"               text,
   CONSTRAINT "meetings_building_choices"
     CHECK
     (((building IS NULL) OR (building = ANY (ARRAY['DLW'::text, 'Driftmier'::text, 'Plant Sciences'::text, 'Boyd'::text, 'MLC'::text, 'Science Learning Center'::text,
@@ -35,6 +37,7 @@ CREATE TABLE "platform"."meetings" (
   CONSTRAINT "meetings_series_format" CHECK (((series IS NULL) OR (series ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))),
   CONSTRAINT "meetings_slug_key" UNIQUE (slug),
   CONSTRAINT "meetings_summary_length" CHECK (((summary IS NULL) OR (char_length(summary) <= 240))),
+  CONSTRAINT "meetings_venue_format" CHECK (((venue IS NULL) OR (venue ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))),
   CONSTRAINT "meetings_seasonId_fkey" FOREIGN KEY ("seasonId") REFERENCES platform.seasons(id) ON UPDATE CASCADE ON DELETE SET NULL
 );
 
@@ -91,3 +94,7 @@ COMMENT ON COLUMN "platform"."meetings"."rsvpUrl" IS 'HTTPS RSVP event page (Bev
 COMMENT ON COLUMN "platform"."meetings"."summary" IS 'One or two sentences about this meeting, authored in config. Null means none was written, and the events page shows a derived agenda instead. Capped at 240 characters; longer text fails the config validator rather than being truncated.';
 
 COMMENT ON COLUMN "platform"."meetings"."surveyUrl" IS 'Where to send a member after a successful check-in at this meeting. Null is the ordinary case -- most nights have nothing to redirect to.';
+
+COMMENT ON COLUMN "platform"."meetings"."venue" IS 'The id of the venue (venues.json in @devdogsuga/events) this meeting is held at: a campus building, off-campus place, "virtual" or "tba". Resolved in config from the meeting or its series and written by reconcile. "building" and "location" are still written from it for the readers that have not moved yet. Null only on a row reconcile has not yet rewritten.';
+
+COMMENT ON COLUMN "platform"."meetings"."room" IS 'The room or space inside "venue", or null when the venue is the whole place. Written by reconcile.';

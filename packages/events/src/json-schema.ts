@@ -2,6 +2,8 @@ import { z } from "zod";
 import { questionsConfigSchema } from "./questions.js";
 import { clubConfigSchema } from "./schema.js";
 import { seriesConfigSchema } from "./series.js";
+import { venuesConfigSchema } from "./venues.js";
+import { workshopsConfigSchema } from "./workshops.js";
 
 /**
  * JSON Schemas for the data files, generated from the zod schemas that
@@ -29,6 +31,16 @@ export function jsonSchemas(): Record<string, unknown> {
       seriesConfigSchema,
       "DevDogs meeting series",
       "The recurring kinds of night meetings reference by id (Backstage packages/events).",
+    ),
+    "workshops.schema.json": generate(
+      workshopsConfigSchema,
+      "DevDogs workshops",
+      "The reusable workshop definitions meeting agendas reference by id (Backstage packages/events).",
+    ),
+    "venues.schema.json": generate(
+      venuesConfigSchema,
+      "DevDogs venues",
+      "The venue catalog meetings and series reference by id (Backstage packages/events).",
     ),
     "questions.schema.json": generate(
       questionsConfigSchema,

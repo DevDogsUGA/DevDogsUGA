@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { ClubConfig, Meeting, Workshop } from "./schema";
+import type { ClubConfig, Meeting } from "./schema";
+import type { ResolvedWorkshop } from "./workshops";
 import { validateClubConfig } from "./validator";
 
-function workshop(overrides: Partial<Workshop> = {}): Workshop {
+function workshop(overrides: Partial<ResolvedWorkshop> = {}): ResolvedWorkshop {
   return {
+    id: "supabase",
+    elHours: 1,
+    topics: [],
     title: "Supabase",
     description: null,
     project: null,
@@ -20,6 +24,13 @@ function meeting(overrides: Partial<Meeting> = {}): Meeting {
     kicker: null,
     category: "milestone",
     brand: "devdogs",
+    venue: {
+      id: "dlw",
+      kind: "campus",
+      name: "Dining, Learning, and Well-Being Center",
+      building: "DLW",
+      room: "124",
+    },
     building: "DLW",
     location: "124",
     startsAt: "2026-09-14T22:00:00.000Z",

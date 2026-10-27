@@ -36,8 +36,8 @@ a duplicate slug or one whose date isn't the meeting's own.
 The slug is also the meeting's identity: the platform matches its rows on it.
 Changing one makes a new meeting, and the old one is archived along with the
 attendance recorded against it, so set it once. A workshop's identity is its
-title within its meeting, so two workshops in one meeting can't share a
-title.
+`id` in `workshops.json`, so two workshops in one meeting can't share a title
+or an id.
 
 `questions.json` holds every survey question (`src/questions.ts`). A
 `member` question is one answer per person, asked until answered and then
@@ -87,10 +87,18 @@ does not depend on it.
 
 ## Series
 
-`src/data/series.json` holds the recurring kinds of night (Merge Monday, Build Session, Touch Grass). A meeting names one with `series` and inherits its category, brand, summary, location and building; anything the meeting writes itself wins, and a one-off (no series) sets its own `title` and `category`. `getClubConfig()` returns meetings with the series applied, and `resolveMeetings` is the only place a title is decided:
+`src/data/series.json` holds the recurring kinds of night (Merge Monday, Build Session, Touch Grass). A meeting names one with `series` and inherits its category, brand, summary, venue and room; anything the meeting writes itself wins, and a one-off (no series) sets its own `title` and `category`. `getClubConfig()` returns meetings with the series applied, and `resolveMeetings` is the only place a title is decided:
 
 - headline `series`: the series name, plus ` #n` if the series is `numbered` (counted per term, skipping cancelled nights), plus `: <workshops>` when the night has workshops;
 - headline `topic`: the workshop topic, with the series name as the meeting's `kicker`;
 - an authored `title` always wins.
 
 Categories are `build`, `workshop`, `social`, `info` (Info Session), `study` and `milestone` (Kickoff, Cold Start, Demo Day).
+
+## Workshops and venues
+
+`src/data/workshops.json` holds each reusable workshop once: a stable kebab `id`, `title`, `description`, `project`, `elHours` (the EL allowance attending earns, independent of the meeting's times; one hour by default) and optional `topics`. A meeting's `agenda` lists the ids running that night, or `{ "workshop": id, "description": "…" }` to override the description for one night. Workshops in parallel share a meeting; sequential ones are separate meetings. A repeated session of one workshop reuses its id.
+
+`src/data/venues.json` is the venue catalog: `kind` is `campus`, `offCampus` (needs an `address`), `virtual` or `tba`; a campus venue may carry a campus-map `building` code (the ten buildings the map draws). `verified` (`entrance`, `accessibleRoute`, `floorPlan`, `verifiedOn`, `notes`) is optional and stays empty until an officer has walked the route. A meeting names a `venue` and a `room`, else it takes its series' (a meeting that names its own venue does not inherit the series' room). An unknown venue fails `check:events`; nothing falls back to the DLW.
+
+`getClubConfig()` returns each meeting's `agenda` as resolved workshops and its `venue` (the catalog entry plus `room`). `building` and `location` are still resolved, derived from the venue, for readers that have not moved to `venue` yet.

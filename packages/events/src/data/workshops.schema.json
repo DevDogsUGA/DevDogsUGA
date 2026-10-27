@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "workshops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "The workshop's identity; meeting agendas reference it. Changing it makes a new workshop."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "One schedule row's worth. Also what a night's title is derived from."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 280
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Shown in the meeting's detail dialog."
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The work it recommends, in words (\"DogDays & DogPack\")."
+          },
+          "elHours": {
+            "default": 1,
+            "description": "EL hours attending earns, independent of the meeting's start and end. Defaults to one hour.",
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 8,
+            "multipleOf": 0.25
+          },
+          "topics": {
+            "description": "Optional topic tags (\"web\", \"mobile\", \"databases\").",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        },
+        "required": ["id", "title", "description", "project"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["workshops"],
+  "additionalProperties": false,
+  "title": "DevDogs workshops",
+  "description": "The reusable workshop definitions meeting agendas reference by id (Backstage packages/events)."
+}

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "venues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "The venue's identity; meetings and series reference it. Changing it detaches everything that names it."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["campus", "offCampus", "virtual", "tba"],
+            "description": "campus (on the UGA campus), offCampus (needs an address), virtual (online), or tba (not decided yet)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "How the place is named in full (\"Dawson Hall\")."
+          },
+          "shortName": {
+            "description": "What prints before a room number (\"Dawson\" in \"Dawson 110\"). Defaults to the name.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "building": {
+            "description": "The campus map building this venue is, for the ten the map draws. Campus venues only.",
+            "type": "string",
+            "enum": [
+              "DLW",
+              "Driftmier",
+              "Plant Sciences",
+              "Boyd",
+              "MLC",
+              "Science Learning Center",
+              "Science Library",
+              "Poultry Science",
+              "Main Library",
+              "Tate"
+            ]
+          },
+          "address": {
+            "description": "A street address a maps app understands. Required off campus.",
+            "type": "string",
+            "minLength": 1
+          },
+          "locality": {
+            "description": "The town, printed after an off-campus name (\"Atlanta\").",
+            "type": "string",
+            "minLength": 1
+          },
+          "verified": {
+            "type": "object",
+            "properties": {
+              "verifiedOn": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "The day the walkthrough happened."
+              },
+              "entrance": {
+                "description": "Which door to use, in a sentence.",
+                "type": "string",
+                "minLength": 1
+              },
+              "accessibleRoute": {
+                "description": "The step-free route from the entrance to the room.",
+                "type": "string",
+                "minLength": 1
+              },
+              "floorPlan": {
+                "description": "A floor plan image path or URL.",
+                "type": "string",
+                "minLength": 1
+              },
+              "notes": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["verifiedOn"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "kind", "name"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["venues"],
+  "additionalProperties": false,
+  "title": "DevDogs venues",
+  "description": "The venue catalog meetings and series reference by id (Backstage packages/events)."
+}

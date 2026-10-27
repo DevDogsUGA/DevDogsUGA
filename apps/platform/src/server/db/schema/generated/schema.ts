@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, integer, boolean, text, pgEnum, varchar, timestamp, smallint, date, jsonb, doublePrecision, customType, bytea, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, integer, boolean, text, pgEnum, varchar, timestamp, numeric, smallint, date, jsonb, doublePrecision, customType, bytea, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by types:drizzle after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -321,6 +321,8 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	surveyQuestionIds: text().array().default([]).notNull(),
 	series: text(),
 	category: text(),
+	venue: text(),
+	room: text(),
 }, (table) => [
 	index("meetings_live_idx").using("btree", table.startsAt.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	unique("meetings_slug_key").on(table.slug),
@@ -331,7 +333,7 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("meetings_building_choices", sql`((building IS NULL) OR (building = ANY (ARRAY['DLW'::text, 'Driftmier'::text, 'Plant Sciences'::text, 'Boyd'::text, 'MLC'::text, 'Science Learning Center'::text, 'Science Library'::text, 'Poultry Science'::text, 'Main Library'::text, 'Tate'::text, 'Other'::text])))`),check("meetings_cancellationReason_length", sql`(("cancellationReason" IS NULL) OR (char_length("cancellationReason") <= 160))`),check("meetings_cancellationReason_needs_cancellation", sql`(("cancellationReason" IS NULL) OR ("cancelledAt" IS NOT NULL))`),check("meetings_category_choices", sql`((category IS NULL) OR (category = ANY (ARRAY['build'::text, 'workshop'::text, 'social'::text, 'info'::text, 'study'::text, 'milestone'::text])))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),check("meetings_kind_choices", sql`((kind IS NULL) OR (kind = ANY (ARRAY['Build Session'::text, 'Study Session'::text, 'Interest Meeting'::text, 'Social'::text, 'Demo Night'::text])))`),check("meetings_nameOverride_length", sql`(("nameOverride" IS NULL) OR (char_length("nameOverride") <= 80))`),check("meetings_rsvpUrl_host", sql`(("rsvpUrl" IS NULL) OR ("rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'::text))`),check("meetings_series_format", sql`((series IS NULL) OR (series ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))`),check("meetings_summary_length", sql`((summary IS NULL) OR (char_length(summary) <= 240))`),]);
+check("meetings_building_choices", sql`((building IS NULL) OR (building = ANY (ARRAY['DLW'::text, 'Driftmier'::text, 'Plant Sciences'::text, 'Boyd'::text, 'MLC'::text, 'Science Learning Center'::text, 'Science Library'::text, 'Poultry Science'::text, 'Main Library'::text, 'Tate'::text, 'Other'::text])))`),check("meetings_cancellationReason_length", sql`(("cancellationReason" IS NULL) OR (char_length("cancellationReason") <= 160))`),check("meetings_cancellationReason_needs_cancellation", sql`(("cancellationReason" IS NULL) OR ("cancelledAt" IS NOT NULL))`),check("meetings_category_choices", sql`((category IS NULL) OR (category = ANY (ARRAY['build'::text, 'workshop'::text, 'social'::text, 'info'::text, 'study'::text, 'milestone'::text])))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),check("meetings_kind_choices", sql`((kind IS NULL) OR (kind = ANY (ARRAY['Build Session'::text, 'Study Session'::text, 'Interest Meeting'::text, 'Social'::text, 'Demo Night'::text])))`),check("meetings_nameOverride_length", sql`(("nameOverride" IS NULL) OR (char_length("nameOverride") <= 80))`),check("meetings_rsvpUrl_host", sql`(("rsvpUrl" IS NULL) OR ("rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'::text))`),check("meetings_series_format", sql`((series IS NULL) OR (series ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))`),check("meetings_summary_length", sql`((summary IS NULL) OR (char_length(summary) <= 240))`),check("meetings_venue_format", sql`((venue IS NULL) OR (venue ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))`),]);
 
 export const moderationClientsInPlatform = platform.table.withRLS("moderationClients", {
 	clientId: uuid().primaryKey().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -968,8 +970,12 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	deletedAt: timestamp({ withTimezone: true }),
 	title: text(),
 	description: text(),
+	definitionId: text(),
+	elHours: numeric({ precision: 4, scale: 2 }).default('1').notNull(),
+	topics: text().array().default([]).notNull(),
 }, (table) => [
 	index("workshops_live_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
+	uniqueIndex("workshops_meeting_definition_live_key").using("btree", table.meetingId.asc().nullsLast(), table.definitionId.asc().nullsLast()).where(sql`(("deletedAt" IS NULL) AND ("definitionId" IS NOT NULL))`),
 	unique("workshops_id_meetingId_key").on(table.id, table.meetingId),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
@@ -978,7 +984,7 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("workshops_description_length", sql`((description IS NULL) OR (char_length(description) <= 280))`),check("workshops_title_length", sql`((title IS NULL) OR (char_length(title) <= 80))`),]);
+check("workshops_definitionId_format", sql`(("definitionId" IS NULL) OR ("definitionId" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))`),check("workshops_description_length", sql`((description IS NULL) OR (char_length(description) <= 280))`),check("workshops_elHours_range", sql`(("elHours" > (0)::numeric) AND ("elHours" <= (8)::numeric))`),check("workshops_title_length", sql`((title IS NULL) OR (char_length(title) <= 80))`),]);
 export const memberStarsInPlatform = platform.view("memberStars", {	userId: uuid(),
 	activityType: text(),
 	activityId: uuid(),
