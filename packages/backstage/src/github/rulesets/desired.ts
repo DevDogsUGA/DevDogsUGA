@@ -84,6 +84,11 @@ export const LEGACY_NAME_ALIASES: Readonly<Record<string, readonly string[]>> =
 export const DELETE_RULESET_NAMES: readonly string[] = [
   "comp-branches",
   "production",
+  // An update restriction on `main` refused the merge queue's own push (the
+  // queue is not an actor a ruleset can name as a bypass), so the queue never
+  // merged anything: every merge needed an admin bypass. `main-reviews` and
+  // `main-merge-queue` already stop direct pushes, so it went (10-27).
+  "main-updates",
   // The Teams feature is gone (lane 3e), and `~ALL` covers `team/*` again.
   // The plan applies updates before deletes, so `~ALL` widens first and no
   // branch is ever unprotected between the two writes.
@@ -106,7 +111,7 @@ const always = (actor_id: number) => ({
  * Fixed DevDogsUGA rulesets.
  *
  * The main policy is deliberately split. A bypass actor bypasses every rule
- * in one ruleset, so combining immutable history, PR reviews, updates and CI
+ * in one ruleset, so combining immutable history, PR reviews and CI
  * would make a direct-push exception an accidental force-push exception too.
  */
 export function buildDesiredRulesets(
@@ -294,31 +299,6 @@ function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
       rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
     },
     {
-      name: "main-updates",
-      target: "branch",
-      enforcement: "active",
-      conditions: main,
-      bypass_actors: [
-        {
-          actor_id: actors.focusLeadsTeamId,
-          actor_type: "Team",
-          bypass_mode: "pull_request",
-        },
-        {
-          actor_id: actors.devopsTeamId,
-          actor_type: "Team",
-          bypass_mode: "pull_request",
-        },
-        always(actors.adminsTeamId),
-      ],
-      rules: [
-        {
-          type: "update",
-          parameters: { update_allows_fetch_and_merge: false },
-        },
-      ],
-    },
-    {
       name: "main-reviews",
       target: "branch",
       enforcement: "active",
@@ -452,31 +432,6 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
         { type: "deletion" },
         { type: "non_fast_forward" },
         { type: "required_signatures" },
-      ],
-    },
-    {
-      name: "main-updates",
-      target: "branch",
-      enforcement: "active",
-      conditions: main,
-      bypass_actors: [
-        {
-          actor_id: actors.focusLeadsTeamId,
-          actor_type: "Team",
-          bypass_mode: "pull_request",
-        },
-        {
-          actor_id: actors.devopsTeamId,
-          actor_type: "Team",
-          bypass_mode: "pull_request",
-        },
-        always(actors.adminsTeamId),
-      ],
-      rules: [
-        {
-          type: "update",
-          parameters: { update_allows_fetch_and_merge: false },
-        },
       ],
     },
     {

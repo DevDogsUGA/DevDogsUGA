@@ -23,6 +23,8 @@ The output is a diff: `+ create`, `~ update` with the rules and checks added (`+
 
 The merge queue ruleset is withheld until the repository's `ci.yaml` has a `merge_group` trigger. Without it a queued pull request waits forever for a check that never starts.
 
+There is deliberately no update restriction on `main`. The merge queue pushes the merged commit as itself, and no ruleset can name the queue as a bypass actor, so a "restrict updates" rule refuses every queued merge ("Cannot update this protected ref"). DevDogsUGA had one, `main-updates`, until 10-27; nothing ever merged through its queue. The pull request and merge queue rules already stop direct pushes for everyone but admins.
+
 **Order matters.** `main-ci` requires the checks `destructive-sql` and `destructive-gate`, which are reported by `database-pr.yaml` and `destructive-gate.yaml`. Apply the ruleset only **after** those workflows are on `main`: a required check that no workflow reports blocks every pull request. The same goes for a product repository: its CI must report the job names in `PRODUCT_REQUIRED_CHECKS` (`packages/backstage/src/github/rulesets/desired.ts`) before its `main-ci` is applied. The destructive gate reports there as `destructive-gate / destructive-sql` and `destructive-gate / destructive-gate`, because a called workflow's jobs carry the caller job's name: see [Product repository CI](./product-ci.md).
 
 ## What each ruleset does

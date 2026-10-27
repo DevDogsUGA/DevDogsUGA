@@ -22,7 +22,6 @@ describe("buildDesiredRulesets", () => {
   it("splits main rules so direct-push bypass never bypasses integrity", () => {
     expect(desired.map((rule) => rule.name)).toEqual([
       "main-integrity",
-      "main-updates",
       "main-reviews",
       "main-ci",
       "main-merge-queue",
@@ -60,13 +59,11 @@ describe("buildDesiredRulesets", () => {
     ).toBe(false);
   });
 
-  it("lets reviewers merge PRs while only admins direct-push", () => {
-    const updates = desired.find((rule) => rule.name === "main-updates")!;
-    expect(updates.bypass_actors).toEqual([
-      { actor_id: 9004, actor_type: "Team", bypass_mode: "pull_request" },
-      { actor_id: 9002, actor_type: "Team", bypass_mode: "pull_request" },
-      { actor_id: 9001, actor_type: "Team", bypass_mode: "always" },
-    ]);
+  it("has no update restriction on main, which would refuse the merge queue's push", () => {
+    expect(desired.map((rule) => rule.name)).not.toContain("main-updates");
+    for (const r of desired.filter((rule) => rule.name.startsWith("main-"))) {
+      expect(r.rules.map((rule) => rule.type)).not.toContain("update");
+    }
   });
 
   it("requires one code-owner approval from someone other than the last pusher", () => {
@@ -213,7 +210,6 @@ describe("buildDesiredRulesets for Backstage", () => {
   it("has no team/** rulesets, platform App or Renovate bypass", () => {
     expect(without.map((r) => r.name)).toEqual([
       "main-integrity",
-      "main-updates",
       "main-reviews",
       "main-ci",
       "main-merge-queue",
@@ -305,11 +301,8 @@ describe("buildDesiredRulesets for Backstage", () => {
     ).toEqual([{ actor_id: 9001, actor_type: "Team", bypass_mode: "always" }]);
   });
 
-  it("matches DevDogsUGA's main-integrity, main-updates and main-reviews", () => {
+  it("matches DevDogsUGA's main-integrity and main-reviews", () => {
     const dd = buildDesiredRulesets(actors);
-    expect(without.find((r) => r.name === "main-updates")).toEqual(
-      dd.find((r) => r.name === "main-updates"),
-    );
     // Backstage is archived by the fold-back, so it never gained signed
     // commits: the one difference from DevDogsUGA's `main-integrity`.
     const integrity = (rules: typeof dd) =>
