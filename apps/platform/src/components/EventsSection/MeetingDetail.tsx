@@ -19,7 +19,9 @@ import {
   timeRange,
 } from "./meetingView";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
-import { isMappedBuilding, locationLine, mapUrls } from "./FindUs/buildings";
+import { locationLine } from "./FindUs/buildings";
+import { describePlace, hasDirections } from "./FindUs/place";
+import { placeOfMeeting } from "./FindUs/placeLookup";
 import FindUs from "./FindUs";
 import AddToCalendar from "./AddToCalendar";
 import { calendarLinks } from "~/lib/calendarEvent";
@@ -104,6 +106,10 @@ export default function MeetingDetail({
   const cancelled = meeting.cancelledAt !== null;
   const notice = cancellationNotice(meeting);
   const where = locationLine(meeting.building, meeting.location);
+  const place = placeOfMeeting(meeting);
+  const placeView = describePlace(place);
+  const primaryLink = placeView.links[0];
+  const online = place.state === "known" && place.venue.kind === "virtual";
   const baseUrl = env.BASE_URL.replace(/\/$/, "");
   const eventUrl = `${baseUrl}/events/${encodeURIComponent(slug)}`;
   const addToCalendar = calendarLinks({
@@ -300,22 +306,29 @@ export default function MeetingDetail({
               </div>
               <DefinitionList className="ev-kv">
                 <DefinitionPair
-                  term="Room"
-                  detail={where ?? "Room to be announced"}
+                  term="Where"
+                  detail={
+                    place.state === "known"
+                      ? placeView.title
+                      : (where ?? "Room to be announced")
+                  }
                 />
               </DefinitionList>
-              {isMappedBuilding(meeting.building) && (
+              {hasDirections(place) && (
                 <div className="ev-loc-actions">
-                  <FindUs building={meeting.building} room={meeting.location} />
-                  <TextLink asChild className="small">
-                    <a
-                      href={mapUrls(meeting.building).google}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open in maps <ArrowUpRightIcon weight="bold" />
-                    </a>
-                  </TextLink>
+                  <FindUs place={place} />
+                  {primaryLink !== undefined && (
+                    <TextLink asChild className="small">
+                      <a
+                        href={primaryLink.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {online ? primaryLink.label : "Open in maps"}{" "}
+                        <ArrowUpRightIcon weight="bold" />
+                      </a>
+                    </TextLink>
+                  )}
                 </div>
               )}
             </Card>

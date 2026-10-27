@@ -56,6 +56,7 @@ function meeting(name: string, overrides: Partial<Meeting> = {}): Meeting {
     startsAt: "2027-01-01T18:00:00.000Z",
     endsAt: "2027-01-01T20:00:00.000Z",
     rsvpUrl: null,
+    joinUrl: null,
     cancelledAt: null,
     cancellationReason: null,
     countsForCredit: true,
@@ -198,6 +199,7 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
           startsAt: new Date(row.startsAt).toISOString(),
           endsAt: new Date(row.endsAt).toISOString(),
           rsvpUrl: row.rsvpUrl,
+          joinUrl: null,
           cancelledAt: row.cancelledAt
             ? new Date(row.cancelledAt).toISOString()
             : null,

@@ -100,6 +100,7 @@ const catalog: ResolveCatalog = {
       shortName: "Dawson",
     },
     { id: "tba", kind: "tba", name: "TBA" },
+    { id: "virtual", kind: "virtual", name: "Virtual" },
   ],
 };
 
@@ -457,5 +458,41 @@ describe("the committed files", () => {
         { venues: catalog.venues },
       ),
     ).toThrow(/dlw-124/);
+  });
+});
+
+describe("joinUrl", () => {
+  const resolve = (overrides: Partial<AuthoredMeeting>) =>
+    resolveMeetings(
+      clubConfigSchema.parse({
+        meetings: [
+          meeting({
+            title: "Online",
+            summary: "Join us.",
+            category: "info",
+            venue: "virtual",
+            ...overrides,
+          }),
+        ],
+      }),
+      [],
+      catalog,
+    ).meetings[0]!;
+
+  it("carries an authored https join link through", () => {
+    expect(resolve({ joinUrl: "https://meet.example.org/abc" }).joinUrl).toBe(
+      "https://meet.example.org/abc",
+    );
+  });
+
+  it("is null when the night has none", () => {
+    expect(resolve({}).joinUrl).toBeNull();
+  });
+
+  it("refuses anything but https", () => {
+    const parsed = clubConfigSchema.safeParse({
+      meetings: [meeting({ joinUrl: "http://meet.example.org/abc" })],
+    });
+    expect(parsed.success).toBe(false);
   });
 });

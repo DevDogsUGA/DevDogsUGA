@@ -1,15 +1,17 @@
 import { SITE } from "@devdogsuga/newsletter";
 import { KIND } from "@devdogsuga/sdk/brand";
 import { EVENT_SEGMENT_VISUALS } from "@devdogsuga/sdk/brand/event";
+import { locationLine } from "~/components/EventsSection/FindUs/buildings";
 import {
-  BUILDING_ADDRESS,
-  BUILDING_FULL_NAME,
+  describePlace,
+  hasDirections,
+  placeBlurb,
+} from "~/components/EventsSection/FindUs/place";
+import {
+  directionsQuery,
   directionsTarget,
-  isMappedBuilding,
-  locationLine,
-  mapUrls,
-} from "~/components/EventsSection/FindUs/buildings";
-import { findUsBlurb } from "~/components/EventsSection/FindUs/copy";
+  placeOfMeeting,
+} from "~/components/EventsSection/FindUs/placeLookup";
 import { cancellationNotice } from "~/components/EventsSection/meetingView";
 import { categoryOf } from "~/lib/eventKind";
 import { formatEventDate, formatRelative } from "~/lib/eventTime";
@@ -22,7 +24,7 @@ import {
   getPastMeetings,
   resolveMeetingSegments,
 } from "~/server/loaders/meetings";
-import type { Block, Card, Field } from "../blocks";
+import type { Block, Card } from "../blocks";
 import { seriesKicker } from "~/server/config/seriesKicker";
 import { NOT_FOUND, page, PUBLIC, terminal } from "../define";
 import { meetingItem, ROOM_TBA, timeSpan } from "../meetings";
@@ -177,27 +179,24 @@ export const eventDetail = terminal(PUBLIC, async ({ params }) => {
     );
   }
 
-  if (isMappedBuilding(meeting.building)) {
-    const query = new URLSearchParams({ b: meeting.building });
-    if (meeting.location) query.set("r", meeting.location);
+  const place = placeOfMeeting(meeting);
+  if (hasDirections(place)) {
+    const view = describePlace(place);
     body.push(
       { type: "heading", text: "where" },
       {
         type: "fields",
-        rows: [
-          { label: "building", value: BUILDING_FULL_NAME[meeting.building] },
-          ...(meeting.location
-            ? [{ label: "room", value: meeting.location }]
-            : []),
-          { label: "address", value: BUILDING_ADDRESS[meeting.building] },
-        ],
+        rows:
+          view.rows.length > 0
+            ? view.rows
+            : [{ label: "where", value: view.title }],
       },
       {
         type: "commands",
         items: [
           {
-            path: `/events/directions?${query.toString()}`,
-            description: "Map links for getting there.",
+            path: `/events/directions?${directionsQuery(place)}`,
+            description: "Text directions and map links for getting there.",
           },
         ],
       },
@@ -231,29 +230,68 @@ export const eventDetail = terminal(PUBLIC, async ({ params }) => {
 });
 
 export const directions = terminal(PUBLIC, ({ search }) => {
-  const { building, room } = directionsTarget(search.get("b"), search.get("r"));
-  const maps = mapUrls(building);
-  const rows: Field[] = [
-    { label: "building", value: BUILDING_FULL_NAME[building] },
-    ...(room ? [{ label: "room", value: room }] : []),
-    { label: "address", value: BUILDING_ADDRESS[building] },
+  const place = directionsTarget(
+    search.get("v"),
+    search.get("b"),
+    search.get("r"),
+  );
+  const view = describePlace(place);
+  const body: Block[] = [
+    { type: "text", text: placeBlurb(place) },
+    ...view.paragraphs.map((text): Block => ({ type: "text", text })),
   ];
+  if (view.rows.length > 0) body.push({ type: "fields", rows: view.rows });
+  const { verified } = view;
+  if (verified !== null) {
+    body.push(
+      { type: "heading", text: "getting in" },
+      {
+        type: "fields",
+        rows: [
+          { label: "verified", value: verified.verifiedOn },
+          ...(verified.entrance
+            ? [{ label: "entrance", value: verified.entrance }]
+            : []),
+          ...(verified.accessibleRoute
+            ? [{ label: "step-free route", value: verified.accessibleRoute }]
+            : []),
+          ...(verified.notes
+            ? [{ label: "notes", value: verified.notes }]
+            : []),
+        ],
+      },
+    );
+  }
+  if (view.unverifiedNote !== null) {
+    body.push({
+      type: "notice",
+      notice: {
+        tone: "warn",
+        title: "Not verified yet",
+        text: view.unverifiedNote,
+      },
+    });
+  }
+  if (view.links.length > 0) {
+    body.push(
+      {
+        type: "heading",
+        text:
+          place.state === "known" && place.venue.kind === "virtual"
+            ? "join"
+            : "maps",
+      },
+      {
+        type: "links",
+        items: view.links.map((link) => ({ label: link.label, url: link.url })),
+      },
+    );
+  }
   return page({
     banner: "DIRECTIONS",
     accent: "violet",
-    aside: [locationLine(building, room) ?? BUILDING_FULL_NAME[building]],
-    command: `directions --to "${building}"`,
-    body: [
-      { type: "text", text: findUsBlurb(building, room) },
-      { type: "fields", rows },
-      { type: "heading", text: "maps" },
-      {
-        type: "links",
-        items: [
-          { label: "Google Maps", url: maps.google },
-          { label: "Apple Maps", url: maps.apple },
-        ],
-      },
-    ],
+    aside: [view.title],
+    command: `directions --to "${place.state === "known" ? place.venue.id : "unknown"}"`,
+    body,
   });
 });
