@@ -74,8 +74,10 @@ describe("resolving Renovate", () => {
         desired: { name: string; bypass_actors: { actor_id: number }[] };
       }[];
     };
-    const allBranches = printed.creates.find((c) => c.desired.name === "~ALL")!;
-    expect(allBranches.desired.bypass_actors.map((a) => a.actor_id)).toContain(
+    const reviews = printed.creates.find(
+      (c) => c.desired.name === "main-reviews",
+    )!;
+    expect(reviews.desired.bypass_actors.map((a) => a.actor_id)).toContain(
       7001,
     );
     restore();
@@ -99,9 +101,11 @@ describe("resolving Renovate", () => {
         };
       }[];
     };
-    const allBranches = printed.creates.find((c) => c.desired.name === "~ALL")!;
+    const reviews = printed.creates.find(
+      (c) => c.desired.name === "main-reviews",
+    )!;
     expect(
-      allBranches.desired.bypass_actors.every(
+      reviews.desired.bypass_actors.every(
         (a) => a.actor_type !== "Integration",
       ),
     ).toBe(true);

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { applyGates, hasMergeGroupTrigger } from "./gates.js";
-import type { LiveRuleset } from "./types.js";
 import { planRulesets } from "./diff.js";
 import {
   BACKSTAGE_MERGE_QUEUE,
@@ -25,7 +24,6 @@ describe("buildDesiredRulesets", () => {
       "main-reviews",
       "main-ci",
       "main-merge-queue",
-      "~ALL",
       "tag-protection",
       "release-tags",
     ]);
@@ -59,11 +57,34 @@ describe("buildDesiredRulesets", () => {
     ).toBe(false);
   });
 
-  it("leaves the merge queue's own branches out of ~ALL", () => {
-    const all = desired.find((rule) => rule.name === "~ALL")!;
-    expect(all.conditions.ref_name.exclude).toContain(
-      "refs/heads/gh-readonly-queue/**",
-    );
+  it("restricts no branch but main, so the merge queue can create its own", () => {
+    expect(desired.map((rule) => rule.name)).not.toContain("~ALL");
+    for (const r of desired.filter((rule) => rule.target === "branch")) {
+      expect(r.conditions.ref_name.include).toEqual(["refs/heads/main"]);
+    }
+  });
+
+  it("shares main-integrity, main-reviews and main-merge-queue with the products, and main-ci's shape", () => {
+    const shared = ["main-integrity", "main-reviews", "main-merge-queue"];
+    for (const repo of ["DogDays", "DogPack"] as const) {
+      const product = buildDesiredRulesets(actors, repo);
+      expect(product.map((r) => r.name)).toEqual([
+        "main-integrity",
+        "main-reviews",
+        "main-ci",
+        "main-merge-queue",
+      ]);
+      for (const name of shared) {
+        expect(product.find((r) => r.name === name)).toEqual(
+          desired.find((r) => r.name === name),
+        );
+      }
+      const ci = (rules: typeof desired) => {
+        const r = rules.find((x) => x.name === "main-ci")!;
+        return { ...r, rules: r.rules.map((rule) => rule.type) };
+      };
+      expect(ci(product)).toEqual(ci(desired));
+    }
   });
 
   it("has no update restriction on main, which would refuse the merge queue's push", () => {
@@ -110,24 +131,6 @@ describe("buildDesiredRulesets", () => {
     });
   });
 
-  it("excludes only main and the merge queue's branches from the broad backstop, so team/* branches are locked down", () => {
-    const all = desired.find((rule) => rule.name === "~ALL")!;
-    expect(all.conditions.ref_name).toEqual({
-      include: ["~ALL"],
-      exclude: ["refs/heads/main", "refs/heads/gh-readonly-queue/**"],
-    });
-    expect(all.bypass_actors).toContainEqual({
-      actor_id: 9004,
-      actor_type: "Team",
-      bypass_mode: "always",
-    });
-    expect(all.bypass_actors).toContainEqual({
-      actor_id: 9002,
-      actor_type: "Team",
-      bypass_mode: "always",
-    });
-  });
-
   it("declares no team/** ruleset and no platform App bypass anywhere", () => {
     expect(desired.map((rule) => rule.name)).not.toContain("team/**");
     const withRenovate = buildDesiredRulesets({
@@ -165,32 +168,20 @@ describe("migration names", () => {
     expect(DELETE_RULESET_NAMES).toContain("production");
   });
 
-  it("deletes the retired team/** ruleset, and plans ~ALL's widening before that delete", () => {
-    expect(DELETE_RULESET_NAMES).toContain("team/**");
-    const all = buildDesiredRulesets(actors).find((r) => r.name === "~ALL")!;
-    const liveAll: LiveRuleset = {
-      id: 1,
-      ...all,
-      conditions: {
-        ref_name: {
-          include: ["~ALL"],
-          exclude: ["refs/heads/main", "refs/heads/team/**"],
-        },
-      },
-    };
+  it("deletes the retired team/**, ~ALL and Main Protection rulesets", () => {
+    for (const name of ["team/**", "~ALL", "Main Protection"]) {
+      expect(DELETE_RULESET_NAMES).toContain(name);
+    }
     const plan = planRulesets(
       [
         { id: 1, name: "~ALL", target: "branch" },
         { id: 2, name: "team/**", target: "branch" },
       ],
-      new Map([[1, liveAll]]),
+      new Map(),
       actors,
-      [all],
+      buildDesiredRulesets(actors),
     );
-    expect(plan.updates).toEqual([expect.objectContaining({ id: 1 })]);
-    expect(plan.deletes).toEqual([
-      expect.objectContaining({ id: 2, name: "team/**" }),
-    ]);
+    expect(plan.deletes.map((d) => d.name).sort()).toEqual(["team/**", "~ALL"]);
   });
 });
 

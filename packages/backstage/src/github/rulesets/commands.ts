@@ -2,7 +2,7 @@
  * `backstage github rulesets` — TASK-322.
  *
  * Prints the diff between the fixed rulesets `desired.ts` declares (the
- * `main-*` set, `~ALL` and the tag ruleset) and what `gh api .../rulesets`
+ * `main-*` set and the tag rulesets) and what `gh api .../rulesets`
  * actually reports.
  * Defaults to a dry-run plan; `--apply` writes it, gated behind a
  * confirmation unless `--yes`.
@@ -345,14 +345,14 @@ export async function runGithubRulesets(
     // Renovate (TASK-299) is resolved SEPARATELY and is allowed to fail: Sloan
     // may not have installed it yet, and that must not block reconciling
     // everything else. A failure here prints a warning and the plan simply
-    // omits it from `~ALL`'s bypass list — re-running after the App is
+    // omits it from `main-reviews`' bypass list — re-running after the App is
     // installed picks it up with no further action.
     try {
       renovateAppId = await resolveAppId(opts.org, DEFAULT_RENOVATE_SLUG);
     } catch (err) {
       process.stderr.write(
         `backstage github rulesets: warning: could not resolve the Renovate App ` +
-          `("${DEFAULT_RENOVATE_SLUG}") — ~ALL's plan omits it as a bypass actor ` +
+          `("${DEFAULT_RENOVATE_SLUG}") — main-reviews' plan omits it as a bypass actor ` +
           `until it is installed (TASK-299). ${err instanceof Error ? err.message : String(err)}\n`,
       );
     }

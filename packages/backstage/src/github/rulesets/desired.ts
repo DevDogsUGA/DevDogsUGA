@@ -74,6 +74,20 @@ export const PRODUCT_REQUIRED_CHECKS: Readonly<
   ],
 };
 
+/**
+ * DevDogsUGA's required checks. `format` is a step of `validate`, not a job of
+ * its own; the catalog/patch drift check is the `toolchain` job; `dart-sdk`
+ * (the Dart SDK's analysis, tests and publish dry run) runs on every pull
+ * request and queue entry, only the schedule skips it.
+ */
+export const DEVDOGSUGA_REQUIRED_CHECKS: readonly string[] = [
+  "validate",
+  "database",
+  "toolchain",
+  "dart-sdk",
+  ...DESTRUCTIVE_GATE_CHECKS,
+];
+
 /** Earlier live names which occupy the same managed slot. */
 export const LEGACY_NAME_ALIASES: Readonly<Record<string, readonly string[]>> =
   {
@@ -89,9 +103,14 @@ export const DELETE_RULESET_NAMES: readonly string[] = [
   // merged anything: every merge needed an admin bypass. `main-reviews` and
   // `main-merge-queue` already stop direct pushes, so it went (10-27).
   "main-updates",
-  // The Teams feature is gone (lane 3e), and `~ALL` covers `team/*` again.
-  // The plan applies updates before deletes, so `~ALL` widens first and no
-  // branch is ever unprotected between the two writes.
+  // `~ALL` locked every branch but `main` to the bypass teams. Its creation
+  // rule refused the merge queue's own test branch (fixed by an exclusion),
+  // and the products never had it, so DevDogsUGA dropped it to match (10-27).
+  // Archived Backstage still defines it, and a desired name is never deleted.
+  "~ALL",
+  // DogDays' hand-made ruleset from before the managed ones; disabled.
+  "Main Protection",
+  // The Teams feature is gone (lane 3e).
   "team/**",
 ];
 
@@ -125,24 +144,26 @@ export function buildDesiredRulesets(
 }
 
 /**
- * The product repositories' rulesets (Q11, Q40, TASK-334, TASK-342): signed
- * commits, a merge queue, squash only, and the destructive gate. Smaller than
- * DevDogsUGA's on purpose.
+ * The four rulesets on `main` that every managed repository shares (Q11, Q40,
+ * TASK-334, TASK-342); only the required checks differ.
  *
  * - `main-integrity` has no bypass actor, so nobody can delete `main`,
  *   force-push it, or push an unsigned commit to it. An owner who pushes
- *   directly needs a signing key (the runbook says how).
+ *   directly needs a signing key (the runbook says how). The merge queue's
+ *   squash commits are signed by GitHub.
  * - `main-reviews`: pull requests only, one approving review from a code
  *   owner, squash merges only. Renovate may open its own pull requests past
- *   the review count (never push), admins always bypass.
- * - `main-ci`: the checks in PRODUCT_REQUIRED_CHECKS.
+ *   the review count (`pull_request`, never a push); admins always bypass.
+ * - `main-ci`: `requiredChecks`, all reported by GitHub Actions.
  * - `main-merge-queue`: queue-only, so admins can still push directly past it.
- * - No tag rulesets: the publish workflows tag releases with `GITHUB_TOKEN`,
- *   which GitHub refuses as a bypass actor.
+ *
+ * Nothing restricts creating or updating other branches (`~ALL` went 10-27),
+ * and nothing restricts updating `main` itself: either kind of rule refuses
+ * the merge queue, which no ruleset can name as a bypass actor.
  */
-function buildProductRulesets(
+function mainRulesets(
   actors: RulesetActors,
-  repo: ProductRepo,
+  requiredChecks: readonly string[],
 ): DesiredRuleset[] {
   return [
     {
@@ -200,15 +221,28 @@ function buildProductRulesets(
           parameters: {
             do_not_enforce_on_create: false,
             strict_required_status_checks_policy: false,
-            required_status_checks: PRODUCT_REQUIRED_CHECKS[repo].map(
-              (context) => ({ context, integration_id: ACTIONS_APP }),
-            ),
+            required_status_checks: requiredChecks.map((context) => ({
+              context,
+              integration_id: ACTIONS_APP,
+            })),
           },
         },
       ],
     },
     mainMergeQueueRuleset(actors),
   ];
+}
+
+/**
+ * The product repositories' rulesets: the shared four with
+ * PRODUCT_REQUIRED_CHECKS. No tag rulesets: the publish workflows tag releases
+ * with `GITHUB_TOKEN`, which GitHub refuses as a bypass actor.
+ */
+function buildProductRulesets(
+  actors: RulesetActors,
+  repo: ProductRepo,
+): DesiredRuleset[] {
+  return mainRulesets(actors, PRODUCT_REQUIRED_CHECKS[repo]);
 }
 
 /**
@@ -428,118 +462,7 @@ function mainMergeQueueRuleset(actors: RulesetActors): DesiredRuleset {
 
 function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
   return [
-    {
-      name: "main-integrity",
-      target: "branch",
-      enforcement: "active",
-      conditions: main,
-      bypass_actors: [],
-      // Signed commits (Q40): no bypass, so an owner who pushes directly needs
-      // a signing key. The merge queue's squash commits are signed by GitHub.
-      rules: [
-        { type: "deletion" },
-        { type: "non_fast_forward" },
-        { type: "required_signatures" },
-      ],
-    },
-    {
-      name: "main-reviews",
-      target: "branch",
-      enforcement: "active",
-      conditions: main,
-      // Renovate (App) may bypass the review requirement only by opening a
-      // pull request (`pull_request`), never by pushing; admins bypass always.
-      bypass_actors: [
-        ...(actors.renovateAppId === undefined
-          ? []
-          : [
-              {
-                actor_id: actors.renovateAppId,
-                actor_type: "Integration" as const,
-                bypass_mode: "pull_request" as const,
-              },
-            ]),
-        always(actors.adminsTeamId),
-      ],
-      rules: [
-        {
-          type: "pull_request",
-          parameters: {
-            allowed_merge_methods: ["squash"],
-            dismiss_stale_reviews_on_push: false,
-            require_code_owner_review: true,
-            require_last_push_approval: true,
-            required_approving_review_count: 1,
-            required_review_thread_resolution: true,
-          },
-        },
-      ],
-    },
-    {
-      name: "main-ci",
-      target: "branch",
-      enforcement: "active",
-      conditions: main,
-      bypass_actors: [always(actors.adminsTeamId)],
-      rules: [
-        {
-          type: "required_status_checks",
-          parameters: {
-            do_not_enforce_on_create: false,
-            strict_required_status_checks_policy: false,
-            required_status_checks: [
-              { context: "validate", integration_id: 15368 },
-              { context: "database", integration_id: 15368 },
-              // `format` is a step of `validate`, not a job of its own; the
-              // catalog/patch drift check (`toolchain`) is a job.
-              { context: "toolchain", integration_id: 15368 },
-              // The Dart SDK's analysis, tests and publish dry run. It runs on
-              // every pull request and queue entry (only the schedule skips it).
-              { context: "dart-sdk", integration_id: 15368 },
-              ...DESTRUCTIVE_GATE_CHECKS.map((context) => ({
-                context,
-                integration_id: ACTIONS_APP,
-              })),
-            ],
-          },
-        },
-      ],
-    },
-    mainMergeQueueRuleset(actors),
-    {
-      name: "~ALL",
-      target: "branch",
-      enforcement: "active",
-      conditions: {
-        ref_name: {
-          include: ["~ALL"],
-          exclude: ["refs/heads/main", MERGE_QUEUE_BRANCHES],
-        },
-      },
-      bypass_actors: [
-        always(actors.focusLeadsTeamId),
-        always(actors.devopsTeamId),
-        always(actors.adminsTeamId),
-        ...(actors.renovateAppId === undefined
-          ? []
-          : [
-              {
-                actor_id: actors.renovateAppId,
-                actor_type: "Integration" as const,
-                bypass_mode: "always" as const,
-              },
-            ]),
-      ],
-      rules: [
-        {
-          type: "update",
-          parameters: { update_allows_fetch_and_merge: false },
-        },
-        { type: "creation" },
-        { type: "deletion" },
-        { type: "non_fast_forward" },
-      ],
-    },
+    ...mainRulesets(actors, DEVDOGSUGA_REQUIRED_CHECKS),
     {
       name: "tag-protection",
       target: "tag",
