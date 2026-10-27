@@ -1,28 +1,23 @@
-import { notFound, redirect } from "next/navigation";
+import { forbidden, notFound } from "next/navigation";
 import { expectSession } from "~/server/auth";
 
 /**
- * Gate helpers, so that every gated page denies access the same way.
- *
- * Before these there were four conventions in the tree: console loaders threw
- * the caller to `/` on a failed permission check, `verification` used
- * `notFound()`, `moderation` returned a `canModerate` flag and let the page
- * decide, and the participation pages checked only for a session, inline.
- * Which one a page used was an accident of when it was written.
+ * Gate helpers, so that every gated console page denies access the same way.
  *
  * The split below is the only distinction that matters to the person hitting
  * the route:
  *
- *   * **Not signed in.** A fixable state, so send them to sign in.
- *   * **Signed in, not allowed.** Not fixable by them, so the route simply
- *     does not exist for this caller. `notFound()` renders the app's own
- *     not-found page; a redirect to `/` drops an officer on the homepage with
- *     no account of why the link they followed evaporated.
+ *   * **Not signed in.** The console does not exist for them: the site 404,
+ *     with no redirect into OAuth. Nothing confirms the route is real.
+ *   * **Signed in, not allowed.** `forbidden()` renders the access-denied card
+ *     (`(site)/forbidden.tsx`), which names the section for an officer and
+ *     explains how to reach leadership for a member with no console role.
+ *     Only real routes get here; an unknown path is still the 404.
  */
 
-/** The caller's id, or a bounce to sign-in. */
+/** The caller's id, or the 404 for a signed-out visitor. */
 export async function requireSession(): Promise<string> {
-  return await expectSession().catch(() => redirect("/auth"));
+  return await expectSession().catch(() => notFound());
 }
 
 /**
@@ -35,6 +30,6 @@ export async function requirePermission(
   check: (userId: string) => Promise<boolean>,
 ): Promise<string> {
   const userId = await requireSession();
-  if (!(await check(userId))) notFound();
+  if (!(await check(userId))) forbidden();
   return userId;
 }

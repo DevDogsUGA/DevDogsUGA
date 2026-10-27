@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { authenticate } from "~/server/auth";
-import { callbackPathSchema } from "~/server/utils";
+import { safeReturnPath } from "./returnPath";
 
 /**
  * The GET handler behind `/auth`. `/join` shared it until that route became a
@@ -25,10 +25,9 @@ export async function startOAuthFromLink(
     return new Response(null, { status: 204 });
   }
 
-  const raw = request.nextUrl.searchParams.get("callbackPath");
-  const callbackPath = raw
-    ? await callbackPathSchema.parseAsync(raw).catch(() => "/")
-    : "/";
+  const callbackPath = safeReturnPath(
+    request.nextUrl.searchParams.get("callbackPath"),
+  );
 
   return await authenticate("google", callbackPath);
 }

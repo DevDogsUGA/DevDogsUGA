@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { cache } from "react";
-import { notFound } from "next/navigation";
+import { forbidden } from "next/navigation";
 import type { APIRole } from "discord-api-types/v10";
 import { requireSession } from "~/server/auth/require";
 import { db } from "~/server/db";
@@ -53,7 +53,7 @@ export const getPermissionsPageData = cache(
     // same roles twice. The denial is the shared one either way.
     const userId = await requireSession();
     const ctx = await getCallerContext(userId);
-    if (!ctx.resolvedPermissions.canManageRoles) notFound();
+    if (!ctx.resolvedPermissions.canManageRoles) forbidden();
 
     const discordSyncErrors: string[] = [];
 

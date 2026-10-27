@@ -338,6 +338,9 @@ export const SWITCHER_LINKS: SwitcherEntry[] = [
   },
 ];
 
+/** The address for reaching DevDogs leadership; the footer's Email link and the access-denied cards use it. */
+export const CONTACT_EMAIL = "devdogs@uga.edu";
+
 /**
  * Social channels, shown in the app switcher, mobile sheet, and footer: each
  * through its short redirect (see `~/config/socials`), then email.
@@ -351,7 +354,7 @@ export const SOCIAL_LINKS: SwitcherEntry[] = [
   })),
   {
     label: "Email",
-    href: "mailto:devdogs@uga.edu",
+    href: `mailto:${CONTACT_EMAIL}`,
     icon: "EnvelopeSimpleIcon",
     external: true,
   },

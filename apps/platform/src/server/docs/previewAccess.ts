@@ -5,11 +5,10 @@ import { expectSession } from "~/server/auth";
 /**
  * The one gate on `/preview/docs`.
  *
- * Everyone without `canPreviewDocs` gets a 404, signed in or not. That is not
- * the convention for the console (`requireSession` sends a signed-out visitor
- * to sign-in): a redirect would confirm the route exists and that a login opens
- * it, and this route exists precisely so that scheduled pages are invisible
- * until they are live. The public docs cannot check who is asking, because the
+ * Everyone without `canPreviewDocs` gets a 404, signed in or not. Unlike the
+ * console (where a member without access sees a denied card), a card here
+ * would confirm the route exists, and this route exists precisely so that
+ * scheduled pages are invisible until they are live. The public docs cannot check who is asking, because the
  * platform's cache does not know, so the early-access copy is a separate route
  * that can.
  */
