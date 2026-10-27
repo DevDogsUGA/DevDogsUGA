@@ -8,7 +8,7 @@ CREATE VIEW "platform"."memberStars" WITH (security_invoker=on) AS  SELECT a."us
     false AS won
    FROM (platform.attendance a
      JOIN platform.meetings m ON ((m.id = a."meetingId")))
-  WHERE (m."countsForCredit" AND (m."cancelledAt" IS NULL) AND (m."deletedAt" IS NULL))
+  WHERE (platform.meeting_has_workshop(m.id) AND (m."cancelledAt" IS NULL) AND (m."deletedAt" IS NULL))
 UNION ALL
  SELECT tm."userId",
     'competition'::text AS "activityType",

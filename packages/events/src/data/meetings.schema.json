@@ -107,10 +107,6 @@
             ],
             "description": "Shown beside the struck-through row. Needs cancelledAt."
           },
-          "countsForCredit": {
-            "type": "boolean",
-            "description": "Whether checking in earns a star and counts toward EL credit."
-          },
           "surveyUrl": {
             "anyOf": [
               {
@@ -168,7 +164,6 @@
           "rsvpUrl",
           "cancelledAt",
           "cancellationReason",
-          "countsForCredit",
           "surveyUrl",
           "agenda"
         ],

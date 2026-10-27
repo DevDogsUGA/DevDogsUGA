@@ -10,7 +10,7 @@ function meeting(slug: string, title = "Build Session"): Meeting {
     startsAt: new Date("2026-10-05T22:00:00Z"),
     endsAt: new Date("2026-10-06T00:00:00Z"),
     cancelledAt: null,
-    countsForCredit: true,
+    hasWorkshop: true,
   };
 }
 

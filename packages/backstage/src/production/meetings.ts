@@ -16,7 +16,7 @@ export interface Meeting {
   startsAt: Date;
   endsAt: Date;
   cancelledAt: Date | null;
-  countsForCredit: boolean;
+  hasWorkshop: boolean;
 }
 
 /** Live meetings an argument could mean: by id or slug, or on that Eastern day. */
@@ -28,7 +28,7 @@ select
   m."startsAt",
   m."endsAt",
   m."cancelledAt",
-  m."countsForCredit"
+  "platform".meeting_has_workshop(m."id") as "hasWorkshop"
 from "platform"."meetings" m
 where m."deletedAt" is null
   and (
@@ -50,7 +50,7 @@ export function findMeetingsWith(sql: Sql): FindMeetings {
       startsAt: r.startsAt as Date,
       endsAt: r.endsAt as Date,
       cancelledAt: (r.cancelledAt as Date | null) ?? null,
-      countsForCredit: r.countsForCredit === true,
+      hasWorkshop: r.hasWorkshop === true,
     }));
   };
 }

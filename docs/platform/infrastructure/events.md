@@ -26,7 +26,7 @@ as `2026-10-05-judging` when the date is shared), a title, a summary, `kind`
 and
 `building` from the same closed lists the database checks, a location,
 start/end times, an RSVP link, a cancellation reason paired with a
-cancellation date, a single `countsForCredit` flag, an optional `surveyUrl`,
+cancellation date, an optional `surveyUrl`,
 and an `agenda` of workshops. A workshop is a title (unique within its
 meeting, and its identity), a description, and a **free-text** `project` recommendation — no foreign key,
 no `projects` table. That table is gone; a workshop that used to link to

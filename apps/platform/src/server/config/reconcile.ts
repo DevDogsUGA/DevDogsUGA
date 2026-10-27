@@ -258,7 +258,6 @@ export async function reconcileFromConfig(
           cancelledAt:
             meeting.cancelledAt === null ? null : new Date(meeting.cancelledAt),
           cancellationReason: meeting.cancellationReason,
-          countsForCredit: meeting.countsForCredit,
           surveyUrl: meeting.surveyUrl,
           surveyQuestionIds: meeting.questions ?? [],
           // Un-archives unconditionally. The archive pass below sets this the

@@ -13,9 +13,9 @@ visible on the next read without a backfill.
 
 ## Stars
 
-- One star is earned for each meeting whose `countsForCredit` flag is
-  enabled and that the member attended — the same flag EL reflection
-  eligibility reads; see
+- One star is earned for each meeting that links at least one reusable
+  workshop and that the member attended — the same rule EL reflection
+  eligibility reads (`platform.meeting_has_workshop`); see
   [Attendance](./attendance.md).
 
 Competitions used to add a second kind of star (and a win decorated it). They

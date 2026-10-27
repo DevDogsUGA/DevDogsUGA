@@ -96,8 +96,8 @@ export default async function AttendancePage({
   // Every meeting records a check-in; one that doesn't count for credit
   // says so rather than promising progress it won't show.
   const receiptBody =
-    receipt?.good && checkedInMeeting && !checkedInMeeting.countsForCredit
-      ? "You’re checked in. This meeting doesn’t count toward stars, streaks or EL credit."
+    receipt?.good && checkedInMeeting && !checkedInMeeting.hasWorkshop
+      ? "You’re checked in. Only workshop nights count toward stars, streaks or EL credit."
       : receipt?.body;
   const surveyUrl =
     receipt?.good && checkedInMeeting ? checkedInMeeting.surveyUrl : null;
@@ -205,7 +205,7 @@ export default async function AttendancePage({
           <section className="att-sect" aria-labelledby="passport-h">
             <h2 id="passport-h">Your participation passport</h2>
             <p className="muted small">
-              One star for each eligible meeting you attend.
+              One star for each workshop night you attend.
             </p>
             <PassportSummary totals={totalStars(stars)} streak={streak} />
             <StarGrid cells={stars} />

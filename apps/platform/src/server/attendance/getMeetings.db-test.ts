@@ -31,19 +31,23 @@ beforeAll(async () => {
   await cleanup();
   await db.execute(sql`
     insert into platform.meetings
-      (id, slug, "startsAt", "endsAt", "countsForCredit") values
+      (id, slug, "startsAt", "endsAt") values
       (${IDS.endsFirst}::uuid, 'attendance-order-ends-first',
-       '2026-09-11T18:00:00Z', '2026-09-11T21:00:00Z', true),
+       '2026-09-11T18:00:00Z', '2026-09-11T21:00:00Z'),
       (${IDS.startsFirst}::uuid, 'attendance-order-starts-first',
-       '2026-09-11T18:00:00Z', '2026-09-11T22:00:00Z', true),
+       '2026-09-11T18:00:00Z', '2026-09-11T22:00:00Z'),
       (${IDS.startsLater}::uuid, 'attendance-order-starts-later',
-       '2026-09-11T19:00:00Z', '2026-09-11T21:30:00Z', true),
+       '2026-09-11T19:00:00Z', '2026-09-11T21:30:00Z'),
       (${IDS.past}::uuid, 'attendance-order-past',
-       '2026-09-10T18:00:00Z', '2026-09-10T20:00:00Z', true),
+       '2026-09-10T18:00:00Z', '2026-09-10T20:00:00Z'),
       (${IDS.future}::uuid, 'attendance-order-future',
-       '2026-09-12T18:00:00Z', '2026-09-12T20:00:00Z', true),
+       '2026-09-12T18:00:00Z', '2026-09-12T20:00:00Z'),
       (${IDS.nonCounting}::uuid, 'attendance-order-noncounting',
-       '2026-09-11T18:00:00Z', '2026-09-11T21:00:00Z', false)
+       '2026-09-11T18:00:00Z', '2026-09-11T21:00:00Z')
+  `);
+  await db.execute(sql`
+    insert into platform.workshops ("meetingId", "definitionId")
+    values (${IDS.endsFirst}::uuid, 'attendance-order-workshop')
   `);
 });
 
@@ -69,15 +73,18 @@ describe("attendance meeting selection", () => {
     expect(fixtures.some((meeting) => meeting.id === IDS.future)).toBe(false);
   });
 
-  it("offers a meeting that doesn't count for credit, saying so", async () => {
+  it("offers a meeting with no workshop, saying so", async () => {
     // A build session: checked in like any other (the survey follows it),
-    // just without stars, streaks or EL credit.
+    // just without stars, streaks or EL credit (it links no workshop).
     const meetings = await getAttendanceMeetings(
       new Date("2026-09-11T20:00:00Z"),
     );
     expect(meetings.find((m) => m.id === IDS.nonCounting)).toMatchObject({
       ongoing: true,
-      countsForCredit: false,
+      hasWorkshop: false,
+    });
+    expect(meetings.find((m) => m.id === IDS.endsFirst)).toMatchObject({
+      hasWorkshop: true,
     });
   });
 });

@@ -59,8 +59,8 @@ function meeting(name: string, overrides: Partial<Meeting> = {}): Meeting {
     joinUrl: null,
     cancelledAt: null,
     cancellationReason: null,
-    countsForCredit: true,
     surveyUrl: null,
+    hasWorkshop: false,
     agenda: [],
     ...overrides,
   };
@@ -158,13 +158,12 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
     rsvpUrl: string | null;
     cancelledAt: string | null;
     cancellationReason: string | null;
-    countsForCredit: boolean;
     surveyUrl: string | null;
     surveyQuestionIds: string[];
   }>(sql`
     select id, slug, "nameOverride", summary, series, category, venue, room, building, location,
       "startsAt", "endsAt", "rsvpUrl", "cancelledAt", "cancellationReason",
-      "countsForCredit", "surveyUrl", "surveyQuestionIds"
+      "surveyUrl", "surveyQuestionIds"
     from platform.meetings
     where "deletedAt" is null and slug not like ${`${PREFIX}%`}
   `);
@@ -204,8 +203,8 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
             ? new Date(row.cancelledAt).toISOString()
             : null,
           cancellationReason: row.cancellationReason,
-          countsForCredit: row.countsForCredit,
           surveyUrl: row.surveyUrl,
+          hasWorkshop: otherWorkshops.some((w) => w.meetingId === row.id),
           ...(row.surveyQuestionIds.length > 0
             ? { questions: row.surveyQuestionIds }
             : {}),
@@ -311,7 +310,6 @@ describe("reconcileFromConfig", () => {
             rsvpUrl: null,
             cancelledAt: null,
             cancellationReason: null,
-            countsForCredit: false,
             surveyUrl: null,
             agenda: [],
           },
@@ -326,7 +324,6 @@ describe("reconcileFromConfig", () => {
             rsvpUrl: null,
             cancelledAt: null,
             cancellationReason: null,
-            countsForCredit: false,
             surveyUrl: null,
             agenda: [],
           },

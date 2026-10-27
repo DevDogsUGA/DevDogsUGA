@@ -39,7 +39,6 @@ function meeting(overrides: Partial<Meeting> = {}): Meeting {
     joinUrl: null,
     cancelledAt: null,
     cancellationReason: null,
-    countsForCredit: true,
     surveyUrl: null,
     agenda: [],
     ...overrides,
