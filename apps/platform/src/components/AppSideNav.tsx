@@ -3,6 +3,7 @@ import {
   BookOpenIcon,
   CalendarCheckIcon,
   FlagIcon,
+  FolderSimpleIcon,
   ImageIcon,
   KeyIcon,
   LinkSimpleIcon,
@@ -34,6 +35,7 @@ const ACCOUNT: Entry[] = [
     href: "/settings/accounts",
     icon: <LinkSimpleIcon />,
   },
+  { label: "Projects", href: "/projects", icon: <FolderSimpleIcon /> },
 ];
 
 const DEVELOPER: Entry[] = [
@@ -101,6 +103,11 @@ export default async function AppSideNav({ current }: { current?: string }) {
       label: "Badges",
       href: "/console/badges",
       icon: <SealCheckIcon />,
+    },
+    user?.isLeader && {
+      label: "Projects",
+      href: "/console/projects",
+      icon: <FolderSimpleIcon />,
     },
     p?.canManageRoles && {
       label: "Permissions",

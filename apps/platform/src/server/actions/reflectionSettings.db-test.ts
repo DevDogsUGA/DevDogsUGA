@@ -95,7 +95,7 @@ describe("updateReflectionSettings", () => {
 
     const result = await updateReflectionSettings(
       { ok: false, message: "" },
-      formData({ minimumWordCount: "150", submissionWindowDays: "5" }),
+      formData({ minimumWordCount: "150", submissionWindowDays: "10" }),
     );
 
     expect(result).toEqual({
@@ -110,7 +110,7 @@ describe("updateReflectionSettings", () => {
 
     const result = await updateReflectionSettings(
       { ok: false, message: "" },
-      formData({ minimumWordCount: "0", submissionWindowDays: "5" }),
+      formData({ minimumWordCount: "0", submissionWindowDays: "10" }),
     );
 
     expect(result.ok).toBe(false);
@@ -129,7 +129,7 @@ describe("updateReflectionSettings", () => {
 
     const result = await updateReflectionSettings(
       { ok: false, message: "" },
-      formData({ minimumWordCount: "150", submissionWindowDays: "5" }),
+      formData({ minimumWordCount: "150", submissionWindowDays: "10" }),
     );
 
     expect(result).toEqual({
@@ -144,7 +144,7 @@ describe("updateReflectionSettings", () => {
       })
       .from(reflectionSettings)
       .limit(1);
-    expect(row).toEqual({ minimumWordCount: 150, submissionWindowDays: 5 });
+    expect(row).toEqual({ minimumWordCount: 150, submissionWindowDays: 10 });
 
     const [event] = await db
       .select({ action: auditEvents.action, metadata: auditEvents.metadata })
@@ -154,7 +154,7 @@ describe("updateReflectionSettings", () => {
     expect(event?.action).toBe("reflectionSettings.updated");
     expect(event?.metadata).toMatchObject({
       before: original,
-      after: { minimumWordCount: 150, submissionWindowDays: 5 },
+      after: { minimumWordCount: 150, submissionWindowDays: 10 },
     });
   });
 });

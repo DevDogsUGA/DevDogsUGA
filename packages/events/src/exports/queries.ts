@@ -1,8 +1,8 @@
 /**
- * The exports. The first three moved from the platform's `server/export/`
- * with their columns unchanged: anything downstream that read
- * `/export/stars` reads `backstage export stars` the same way. `responses`
- * (the check-in survey's answers) was born here.
+ * The exports. `attendance` and `reflections` moved from the platform's
+ * `server/export/` with their columns unchanged. `responses` (the check-in
+ * survey's answers) was born here, and `evidence` (the EL evidence, D5)
+ * replaced the stars export when stars retired.
  *
  * Each query selects its columns, aliased to the header names, in header
  * order; attendance also selects the names and UGA address the Bevy and
@@ -14,7 +14,7 @@ import { describeAnswer, type Answer } from "../answers.js";
 import type { Question } from "../questions.js";
 
 export const EXPORT_KINDS = [
-  "stars",
+  "evidence",
   "attendance",
   "reflections",
   "responses",
@@ -145,38 +145,47 @@ order by pa."userId", q.scope, q.id, m."startsAt" nulls first`,
 
 export const EXPORTS: Record<ExportKind, ExportSpec> = {
   /**
-   * One row per earned star: a credit-eligible meeting attended. A star is a
-   * meeting fact and is not attributed to a workshop. (Competition stars are
-   * retired along with competitions.)
+   * The EL evidence the club can vouch for, one row per item, for the
+   * officers to hand to UGAHacks: a workshop with a qualifying reflection, or
+   * an approved project report. Read through `platform."memberElEvidence"`,
+   * the same view /attendance totals from, so "verified" has one definition.
+   * `--from`/`--to` filter on the Eastern day of the activity (a workshop's
+   * night, a report's last day); each member's total covers the rows shown.
    */
-  stars: {
-    summary: "One row per earned meeting star.",
+  evidence: {
+    summary:
+      "One row per verified EL item: a workshop reflection or an approved project report.",
     columns: [
       ...MEMBER_COLUMNS,
-      "activity_type",
-      "activity_id",
-      "activity_starts_at",
-      "earned_at",
-      "meeting_id",
+      "evidence_type",
+      "evidence_id",
+      "title",
+      "activity_on",
+      "hours",
+      "words",
+      "member_total_hours",
     ],
     sql: `
-select ${MEMBER('ms."userId"')},
-  ms."activityType" as "activity_type",
-  ms."activityId" as "activity_id",
-  ms."startsAt" as "activity_starts_at",
-  ms."earnedAt" as "earned_at",
-  ms."meetingId" as "meeting_id"
-from "platform"."memberStars" ms
-${MEMBER_JOINS('ms."userId"')}
-where ms."activityType" = 'meeting'
-  and ($1::timestamptz is null or ms."startsAt" >= $1::timestamptz)
-  and ($2::timestamptz is null or ms."startsAt" < $2::timestamptz)
+select ${MEMBER('e."userId"')},
+  e."evidenceType" as "evidence_type",
+  e."evidenceId" as "evidence_id",
+  e."title" as "title",
+  to_char(e."activityOn", 'YYYY-MM-DD') as "activity_on",
+  trim_scale(e."hours")::text as "hours",
+  e."words" as "words",
+  trim_scale(sum(e."hours") over (partition by e."userId"))::text as "member_total_hours"
+from "platform"."memberElEvidence" e
+${MEMBER_JOINS('e."userId"')}
+where ($1::timestamptz is null
+    or e."activityOn" >= ($1::timestamptz at time zone 'America/New_York')::date)
+  and ($2::timestamptz is null
+    or e."activityOn" < ($2::timestamptz at time zone 'America/New_York')::date)
   and $3::uuid is null
-order by ms."startsAt", ms."userId", ms."activityType", ms."activityId"`,
+order by p."preferredName" nulls last, e."userId", e."activityOn", e."evidenceType", e."evidenceId"`,
   },
 
   /**
-   * One row per check-in, the raw ledger under the stars: an officer
+   * One row per check-in, the raw ledger: an officer
    * reconciling a night sees every scan (and every imported row, method
    * `import`) rather than a derived boolean.
    */

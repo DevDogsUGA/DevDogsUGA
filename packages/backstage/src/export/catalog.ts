@@ -52,10 +52,10 @@ const MEETING: CommandOption = {
 export const exportCommand: CommandNode = {
   name: "export",
   summary:
-    "Member data as CSV: stars, attendance, reflections, survey responses. Audited.",
+    "Member data as CSV: EL evidence, attendance, reflections, survey responses. Audited.",
   hint: "production database; your gh login is recorded",
   subcommands: [
-    exportOf("stars"),
+    exportOf("evidence"),
     exportOf("attendance", [
       MEETING,
       {

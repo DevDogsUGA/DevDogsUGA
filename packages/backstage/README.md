@@ -38,7 +38,7 @@ pnpm backstage creds renew                       # extend every Send 30 days
 pnpm backstage import involvement --file OrganizationRoster.csv  # verify members; previews, then asks
 pnpm backstage import attendance --meeting 2026-09-09 --file sign-in.csv
 pnpm backstage import contributions --dry-run     # merged PRs the webhook missed; previews, then asks
-pnpm backstage export stars --from 2026-08-17   # audited under your gh login
+pnpm backstage export evidence --from 2026-08-17   # audited under your gh login
 pnpm backstage export attendance --meeting 2026-09-09 --format bevy,involvement
 ```
 
@@ -62,27 +62,27 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 
 ## Commands
 
-| Command                                            | What it does                                                                           |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `deploy <app> --tier <t>`                          | Checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file, deploys, removes it.  |
-| `deploy write-env`                                 | Composes `.env.<DEPLOY_ENV>` from the GitHub environment.                              |
-| `deploy preflight`                                 | Classifies the project: paused (skip) or broken (fail).                                |
-| `deploy plan`, `deploy migrate [--include-seed]`   | Dry-run the migrations (and new seed files) into the job summary; apply them.          |
-| `deploy avatars`                                   | Uploads seeded headshots the bucket lacks; never replaces one (`SECRET_KEY`).          |
-| `deploy smoke --tier <t> [--app]`                  | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
-| `deploy reconcile --tier <t>`                      | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
-| `deploy prune-monitors --tier <t> [--app]`         | Deletes the app's Sentry Crons monitors it no longer declares (production only).       |
-| `env pull\|push\|audit --target <t>`               | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
-| `planner status\|create\|reset-password\|drop`     | The `migration_planner` role the preflight tier holds.                                 |
-| `graphics [graphic…]`                              | Club images from `@devdogsuga/sdk/brand`: `brand/*`, `app/*`, `event/*`.               |
-| `qr <text>`                                        | QR codes with every option of `/console/qr`.                                           |
-| `github rulesets\|settings`                        | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
-| `newsletter render\|draft\|send <series> <issue…>` | Changelog or GDGC issues as files, mailbox drafts, or a send.                          |
-| `creds send\|add\|renew\|list\|report`             | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
-| `import involvement --file <csv>`                  | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
-| `import attendance --meeting <day> --file <csv>`   | Records a meeting's attendance from a sign-in sheet (method `import`).                 |
-| `import contributions [--repo] [--since]`          | Backfills merged pull requests from the organization's repositories (GitHub App).      |
-| `export stars\|attendance\|reflections\|responses` | Member data as CSV, each export audited under the officer's gh login.                  |
+| Command                                               | What it does                                                                           |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `deploy <app> --tier <t>`                             | Checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file, deploys, removes it.  |
+| `deploy write-env`                                    | Composes `.env.<DEPLOY_ENV>` from the GitHub environment.                              |
+| `deploy preflight`                                    | Classifies the project: paused (skip) or broken (fail).                                |
+| `deploy plan`, `deploy migrate [--include-seed]`      | Dry-run the migrations (and new seed files) into the job summary; apply them.          |
+| `deploy avatars`                                      | Uploads seeded headshots the bucket lacks; never replaces one (`SECRET_KEY`).          |
+| `deploy smoke --tier <t> [--app]`                     | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
+| `deploy reconcile --tier <t>`                         | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
+| `deploy prune-monitors --tier <t> [--app]`            | Deletes the app's Sentry Crons monitors it no longer declares (production only).       |
+| `env pull\|push\|audit --target <t>`                  | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
+| `planner status\|create\|reset-password\|drop`        | The `migration_planner` role the preflight tier holds.                                 |
+| `graphics [graphic…]`                                 | Club images from `@devdogsuga/sdk/brand`: `brand/*`, `app/*`, `event/*`.               |
+| `qr <text>`                                           | QR codes with every option of `/console/qr`.                                           |
+| `github rulesets\|settings`                           | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
+| `newsletter render\|draft\|send <series> <issue…>`    | Changelog or GDGC issues as files, mailbox drafts, or a send.                          |
+| `creds send\|add\|renew\|list\|report`                | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
+| `import involvement --file <csv>`                     | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
+| `import attendance --meeting <day> --file <csv>`      | Records a meeting's attendance from a sign-in sheet (method `import`).                 |
+| `import contributions [--repo] [--since]`             | Backfills merged pull requests from the organization's repositories (GitHub App).      |
+| `export evidence\|attendance\|reflections\|responses` | Member data as CSV, each export audited under the officer's gh login.                  |
 
 `smoke` and `reconcile` replace DevDogsUGA's `packages/deploy-checks`. The
 per-app data (hosts, public paths, the protected path and its redirect) stays in
@@ -243,10 +243,12 @@ account, and how many wait for their author to link GitHub; then it asks
 (`--dry-run`, `--yes`). Authors are matched by GitHub user id, never by login,
 and rerunning records nothing twice.
 
-### `export stars|attendance|reflections|responses`
+### `export evidence|attendance|reflections|responses`
 
-The platform's three CSVs, columns unchanged: `stars` (one row per earned
-star), `attendance` (one row per check-in; `--meeting` for one night) and
+The platform's CSVs: `evidence` (the EL evidence, one row per verified item:
+a workshop with a qualifying reflection, 100 words or more inside the
+window, or an approved project report, each with its hours and the member's
+total; this replaced the stars export), `attendance` (one row per check-in; `--meeting` for one night) and
 `reflections` (each member's current text). `responses` is the check-in
 survey: one row per answer, worded with each question's current labels
 beside the stored value. With `--meeting` it is that meeting's answers plus
