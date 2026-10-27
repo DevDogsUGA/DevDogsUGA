@@ -4,6 +4,7 @@ import { accountDeletion, consoleApps } from "./routes/account";
 import {
   brandGraphics,
   consoleData,
+  consoleExports,
   consoleImports,
   consoleMeeting,
   meetingGraphics,
@@ -39,10 +40,11 @@ export const TERMINAL_ROUTES = {
   "/account/deletion": accountDeletion,
   "/console/attendance/:meetingId": consoleMeeting,
   "/console/data": consoleData,
+  "/console/data/exports": consoleExports,
   "/console/data/imports": consoleImports,
+  "/help": help,
+  "/help/:threadId": helpThread,
   "/console/apps": consoleApps,
   "/console/graphics": brandGraphics,
   "/console/attendance/:meetingId/graphics": meetingGraphics,
-  "/help": help,
-  "/help/:threadId": helpThread,
 } as const satisfies Record<TerminalPattern, TerminalRoute>;

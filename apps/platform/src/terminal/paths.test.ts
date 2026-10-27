@@ -73,6 +73,7 @@ describe("matchTerminalPath", () => {
     ],
     ["/console/data", "/console/data"],
     ["/console/data/imports/", "/console/data/imports"],
+    ["/console/data/exports", "/console/data/exports"],
     ["/console/graphics", "/console/graphics"],
     [
       "/console/attendance/abc/graphics",
@@ -93,6 +94,7 @@ describe("matchTerminalPath", () => {
     "/changlelog",
     "/console/attendance/abc/present",
     "/console/data/imports/preview",
+    "/console/data/exports/prepare",
     "/tools/oauth/device",
     "/teams",
   ])("passes %s through", (path) => {
