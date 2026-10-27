@@ -38,6 +38,7 @@ pnpm backstage creds renew                       # extend every Send 30 days
 pnpm backstage import involvement --file OrganizationRoster.csv  # verify members; previews, then asks
 pnpm backstage import attendance --meeting 2026-09-09 --file sign-in.csv
 pnpm backstage import contributions --dry-run     # merged PRs the webhook missed; previews, then asks
+pnpm backstage import badges --dry-run            # badges for old evidence; previews, then asks
 pnpm backstage export evidence --from 2026-08-17   # audited under your gh login
 pnpm backstage export attendance --meeting 2026-09-09 --format bevy,involvement
 ```
@@ -82,6 +83,7 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 | `import involvement --file <csv>`                     | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
 | `import attendance --meeting <day> --file <csv>`      | Records a meeting's attendance from a sign-in sheet (method `import`).                 |
 | `import contributions [--repo] [--since]`             | Backfills merged pull requests from the organization's repositories (GitHub App).      |
+| `import badges`                                       | Awards Workshop completed and First Merge for evidence that predates the triggers.     |
 | `export evidence\|attendance\|reflections\|responses` | Member data as CSV, each export audited under the officer's gh login.                  |
 
 `smoke` and `reconcile` replace DevDogsUGA's `packages/deploy-checks`. The
@@ -242,6 +244,19 @@ already recorded, how many are new and match a member by linked GitHub
 account, and how many wait for their author to link GitHub; then it asks
 (`--dry-run`, `--yes`). Authors are matched by GitHub user id, never by login,
 and rerunning records nothing twice.
+
+### `import badges`
+
+Awards Workshop completed and First Merge for evidence that existed before the
+badge triggers, by calling the triggers' own SQL (`platform.sync_workshop_badge`,
+`platform.award_first_merge`). A submitted reflection earns Workshop completed
+with attendance and a workshop the meeting ran; one with no workshop chosen
+counts only when the meeting ran exactly one (the reflection form's default),
+and is otherwise skipped and counted. First Merge goes to a member with a
+matched contribution (run `import contributions` first). Officer awards and
+withdrawals are never touched, nothing becomes EL hours, and a rerun changes
+nothing. `--dry-run` prints what would be awarded and skipped per badge; a real
+run asks (`--yes`) and writes one `badge.backfill` audit event.
 
 ### `export evidence|attendance|reflections|responses`
 

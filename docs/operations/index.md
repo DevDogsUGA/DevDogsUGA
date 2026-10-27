@@ -49,3 +49,4 @@ Everyone else works from a fork. Nobody but the people above, and the `team-*` t
 
 - [npm and pub.dev releases](./releases/publishing.md)
 - [Catalog term rollover](./releases/catalog-term-rollover.md)
+- [Backfilling badges](./releases/badge-backfill.md): `import badges` for evidence that predates the triggers.
