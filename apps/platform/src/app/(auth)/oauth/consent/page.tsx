@@ -5,8 +5,11 @@ import { expectSession, expectUserWith } from "~/server/auth";
 import ConsentForm from "~/components/ConsentForm";
 import { testAccountName } from "~/lib/testAccountName";
 import { approveAuthorization } from "~/server/oauth/approveAuthorization";
-import { findConsentTarget } from "~/server/oauth/consentTarget";
-import { decideConsent } from "~/server/oauth/tier";
+import {
+  findConsentTarget,
+  isTestIdentity,
+} from "~/server/oauth/consentTarget";
+import { decideConsent } from "~/server/oauth/status";
 import { createSupabaseServerClient } from "~/supabase/server";
 
 /**
@@ -46,21 +49,29 @@ export default async function ConsentPage({ searchParams }: Props) {
     redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
   });
 
-  // Decided on the server before anything renders. A production client is
-  // approved here, for whoever signed in, when it returns to a Supabase
-  // callback; a development client shows its owner the test-account form;
-  // everything else is the same 404 as a stale id. The access token hook
-  // (migration 57) downgrades every token this authorization produces to
-  // `oauth_identity`, because GoTrue's own consent endpoint does not go
-  // through this page.
+  // Decided on the server before anything renders. A DevDogs app that skips
+  // consent is approved here for whoever signed in (a test account excepted);
+  // a Testing app shows its owner the account picker; an app that asks shows
+  // the consent screen, which E2 builds; everything else is the same 404 as a
+  // stale id. The access token hook downgrades every token this authorization
+  // produces to `oauth_identity`, because GoTrue's own consent endpoint does
+  // not go through this page.
   const decision = decideConsent({
-    tier: target.tier,
+    status: target.status,
+    asksForConsent: target.asksForConsent,
     redirectUri: target.redirectUri,
     ownerUserId: target.ownerUserId,
     userId,
+    isTestIdentity: await isTestIdentity(userId),
   });
 
   if (decision === "not-found") {
+    notFound();
+  }
+
+  // TODO(E2): the consent screen for an app that asks. Until it lands this is
+  // a 404, which is what every In production member app got before.
+  if (decision === "consent") {
     notFound();
   }
 

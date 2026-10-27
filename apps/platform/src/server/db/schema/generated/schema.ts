@@ -20,6 +20,7 @@ export const quarantineEffectInPlatform = platform.enum("quarantineEffect", ["hi
 export const oauthDeviceCodeStatusInPlatform = platform.enum("oauthDeviceCodeStatus", ["pending", "approved", "denied"])
 export const appKindInPlatform = platform.enum("appKind", ["internal", "external"])
 export const deliveryStatusInPlatform = platform.enum("deliveryStatus", ["pending", "delivered", "failed"])
+export const oauthStatusInPlatform = platform.enum("oauthStatus", ["testing", "in_production"])
 export const oauthTierInPlatform = platform.enum("oauthTier", ["development", "production"])
 
 
@@ -419,6 +420,11 @@ export const oauthRegistrationsInPlatform = platform.table.withRLS("oauthRegistr
 	type: oauthRegistrationTypeInPlatform().default("development").notNull(),
 	label: text().default("Default Client").notNull(),
 	tier: oauthTierInPlatform().default("development").notNull(),
+	status: oauthStatusInPlatform().default("testing").notNull(),
+	asksForConsent: boolean().default(true).notNull(),
+	logoPath: text(),
+	homepageUrl: text(),
+	privacyPolicyUrl: text(),
 }, (table) => [
 
 	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
@@ -428,7 +434,7 @@ export const oauthRegistrationsInPlatform = platform.table.withRLS("oauthRegistr
 	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
 
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
-]);
+check("oauthRegistrations_consent_skip_check", sql`("asksForConsent" OR (("userId" IS NULL) AND (status = 'in_production'::platform."oauthStatus")))`),check("oauthRegistrations_homepageUrl_https", sql`(("homepageUrl" IS NULL) OR (("homepageUrl" ~ '^https://[^/?#@[:space:]]+([/?#][^[:space:]]*)?$'::text) AND (char_length("homepageUrl") <= 2048)))`),check("oauthRegistrations_logoPath_length", sql`(("logoPath" IS NULL) OR (char_length("logoPath") <= 512))`),check("oauthRegistrations_privacyPolicyUrl_https", sql`(("privacyPolicyUrl" IS NULL) OR (("privacyPolicyUrl" ~ '^https://[^/?#@[:space:]]+([/?#][^[:space:]]*)?$'::text) AND (char_length("privacyPolicyUrl") <= 2048)))`),]);
 
 export const oauthTestAccountsInPlatform = platform.table.withRLS("oauthTestAccounts", {
 	testUserId: uuid().primaryKey().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -1067,6 +1073,7 @@ export { oauthDeviceCodesInPlatform as oauthDeviceCodes };
 export { oauthRegistrationTypeInPlatform as oauthRegistrationType };
 export { oauthRegistrationsInPlatform as oauthRegistrations };
 export { oauthTestAccountsInPlatform as oauthTestAccounts };
+export { oauthStatusInPlatform as oauthStatus };
 export { oauthTierInPlatform as oauthTier };
 export { officerDiscordIdsInPlatform as officerDiscordIds };
 export { pointsInPlatform as points };

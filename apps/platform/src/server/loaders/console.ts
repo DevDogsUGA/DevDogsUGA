@@ -128,11 +128,11 @@ export const getOAuthPageData = cache(async () => {
   } = await expectUserWith({
     profile: {
       with: {
-        // Development clients only: a production client is listed below, for
-        // whoever holds `canManageOAuthApps`, whoever registered it.
+        // Testing apps only: an app that is In production is listed below,
+        // for whoever holds `canManageOAuthApps`, whoever registered it.
         oauthRegistrations: {
           columns: { clientId: true, label: true },
-          where: { tier: "development" },
+          where: { status: "testing" },
         },
       },
     },
@@ -177,7 +177,9 @@ export const getOAuthPageData = cache(async () => {
   const productionRegistrations = canManageOAuthApps
     ? await db.query.oauthRegistrations.findMany({
         columns: { clientId: true, label: true },
-        where: { tier: "production" },
+        where: {
+          OR: [{ status: "in_production" }, { userId: { isNull: true } }],
+        },
         with: { profile: { columns: { preferredName: true } } },
         orderBy: { label: "asc" },
       })

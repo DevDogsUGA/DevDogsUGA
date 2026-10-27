@@ -203,7 +203,7 @@ describe("deleting a user", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("allows an ownerless (DevDogs) registration, with no tier check tying it to production", async () => {
+  it("allows an ownerless (DevDogs) registration, a Testing DevDogs app included", async () => {
     await db.execute(sql`
       insert into platform."oauthRegistrations" ("clientId", "userId")
       values (${IDS.client}::uuid, null)

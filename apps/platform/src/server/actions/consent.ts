@@ -58,11 +58,11 @@ export async function approveTestAccountAuthorization(
       return "You do not own this OAuth client.";
     }
 
-    // Only a development client asks its owner to pick a test account. A
-    // production client is approved automatically by `/oauth/consent` and has
-    // no business minting a session for a test account.
-    if (registration.tier !== "development") {
-      return "Only development clients approve as a test account.";
+    // Only a Testing app asks its owner to pick a test account. On an app
+    // that is In production everyone signs in as themselves (Q164), so none
+    // mints a session for a test account.
+    if (registration.status !== "testing") {
+      return "Only Testing apps approve as a test account.";
     }
 
     if (!user.testAccounts[0]?.user.email) {

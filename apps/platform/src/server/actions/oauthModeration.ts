@@ -53,19 +53,19 @@ const field = (formData: FormData, name: string): string => {
 /**
  * The registration of a client `userId` may manage, or null.
  *
- * Same rule as the OAuth credentials above it: a development client belongs to
- * whoever registered it; a production client is managed by everyone who holds
- * `canManageOAuthApps`, whoever registered it. Anyone else gets the "not
+ * A Testing app belongs to whoever registered it; an app that is In production
+ * (or a DevDogs app) is managed by everyone who holds `canManageOAuthApps`,
+ * whoever registered it. Anyone else gets the "not
  * found" they would get for an id that does not exist.
  */
 async function managedClient(clientId: string, userId: string) {
   const registration = await db.query.oauthRegistrations.findFirst({
-    columns: { clientId: true, userId: true, tier: true, label: true },
+    columns: { clientId: true, userId: true, status: true, label: true },
     where: { clientId },
   });
   if (!registration) return null;
   const allowed =
-    registration.tier === "production"
+    registration.status === "in_production" || registration.userId === null
       ? await canUserManageOAuthApps(userId)
       : registration.userId === userId;
   return allowed ? registration : null;
@@ -92,7 +92,7 @@ export default async function oauthModerationAction(
 
   const registration = await managedClient(clientId, userId);
   if (!registration) return fail("OAuth client not found");
-  const production = registration.tier === "production";
+  const production = registration.status === "in_production";
   if (!env.MODERATION_SIGNING_KEY) {
     return fail("Moderation is not configured on this deployment yet");
   }

@@ -64,4 +64,27 @@ describe("parseRegistrationParams", () => {
     );
     expect(result.ok).toBe(false);
   });
+
+  it("rejects http for a host that is not local, and a custom scheme", () => {
+    for (const callbackUri of [
+      "http://example.com/cb",
+      "http://192.168.1.5:3000/cb",
+      "myapp://callback",
+    ]) {
+      expect(parseRegistrationParams(validParams({ callbackUri })).ok).toBe(
+        false,
+      );
+    }
+  });
+
+  it("accepts http for localhost and [::1]", () => {
+    for (const callbackUri of [
+      "http://localhost:3000/auth",
+      "http://[::1]:3000/auth",
+    ]) {
+      expect(parseRegistrationParams(validParams({ callbackUri })).ok).toBe(
+        true,
+      );
+    }
+  });
 });

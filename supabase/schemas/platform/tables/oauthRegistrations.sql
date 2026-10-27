@@ -16,11 +16,46 @@ ALTER TABLE "platform"."oauthRegistrations"
 ALTER TABLE "platform"."oauthRegistrations"
   ADD COLUMN "tier" platform."oauthTier" NOT NULL DEFAULT 'development'::platform."oauthTier";
 
-CREATE TRIGGER "oauthRegistrations_tier_immutable"
-  BEFORE UPDATE OF tier ON platform."oauthRegistrations"
+-- The publishing status (oauth-consent Q154a). "tier" above is retired: nothing
+-- reads it any more and the immutability trigger is gone. The column and the
+-- "oauthTier" type are dropped in a later, destructive change, one deploy after
+-- the last reader (see the notes in migration 57).
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD COLUMN "status" platform."oauthStatus" NOT NULL DEFAULT 'testing'::platform."oauthStatus";
+
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD COLUMN "asksForConsent" boolean NOT NULL DEFAULT true;
+
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD COLUMN "logoPath" text;
+
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD COLUMN "homepageUrl" text;
+
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD COLUMN "privacyPolicyUrl" text;
+
+-- Only a DevDogs app (no owner) that is In production may skip the consent
+-- screen (Q162). Anything else always asks.
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD CONSTRAINT "oauthRegistrations_consent_skip_check" CHECK (("asksForConsent" OR (("userId" IS NULL) AND (status = 'in_production'::platform."oauthStatus"))));
+
+-- https only, no credentials in the address (Q159). The app's own pages, so a
+-- plain string compare is enough; the form checks again when it saves.
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD CONSTRAINT "oauthRegistrations_homepageUrl_https" CHECK ((("homepageUrl" IS NULL) OR (("homepageUrl" ~ '^https://[^/?#@[:space:]]+([/?#][^[:space:]]*)?$'::text) AND (char_length("homepageUrl") <= 2048))));
+
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD CONSTRAINT "oauthRegistrations_privacyPolicyUrl_https" CHECK ((("privacyPolicyUrl" IS NULL) OR (("privacyPolicyUrl" ~ '^https://[^/?#@[:space:]]+([/?#][^[:space:]]*)?$'::text) AND (char_length("privacyPolicyUrl") <= 2048))));
+
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD CONSTRAINT "oauthRegistrations_logoPath_length" CHECK ((("logoPath" IS NULL) OR (char_length("logoPath") <= 512)));
+
+-- A member owns at most three OAuth apps (Q163), Testing or In production.
+CREATE TRIGGER "oauthRegistrations_app_cap"
+  BEFORE INSERT OR UPDATE OF "userId" ON platform."oauthRegistrations"
   FOR EACH ROW
-  WHEN ((old.tier IS DISTINCT FROM new.tier))
-  EXECUTE FUNCTION platform.reject_oauth_tier_change();
+  EXECUTE FUNCTION platform.enforce_oauth_app_cap();
 
 CREATE POLICY "crud_public_policy_delete" ON "platform"."oauthRegistrations"
   AS RESTRICTIVE

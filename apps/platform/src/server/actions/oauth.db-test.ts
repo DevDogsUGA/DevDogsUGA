@@ -10,15 +10,14 @@ import {
   vi,
 } from "vitest";
 import { db } from "~/server/db";
-import { findClient } from "~/server/moderation/store";
 import { createOauthClientAndRegister } from "~/server/oauth/registerClient";
 import { supabaseAdmin } from "~/supabase/admin";
 
 /**
  * `/tools/oauth`'s action and `createOauthClientAndRegister` against a real
- * database and a real local GoTrue: tiers, the permission check, the audit
- * entries a production client writes, replacement-before-delete, and the
- * orphan-client fix. Only the session is faked (the actions read it from
+ * database and a real local GoTrue: ownership, the three-app cap, the redirect
+ * rule, the audit entries an In production or DevDogs app writes, deletion,
+ * and the orphan-client fix. Only the session is faked (the actions read it from
  * cookies); everything else, including the permission lookup through the
  * `resolvedUserPermissions` materialized view, is the real thing.
  */
@@ -48,8 +47,6 @@ const USERS = [
 ] as const;
 
 const PREFIX = "oauth-action-db-test";
-const DOGDAYS = "https://dogdays.supabase.co/auth/v1/callback";
-const DOGPACK = "https://dogpack.supabase.co/auth/v1/callback";
 const EMPTY = { clientId: null, clientSecret: null };
 
 function form(fields: Record<string, string>): FormData {
@@ -69,10 +66,11 @@ function signInAs(id: string, github = true) {
 async function registration(clientId: string) {
   const rows = await db.execute<{
     userId: string | null;
-    tier: string;
+    status: string;
+    asksForConsent: boolean;
     label: string;
   }>(
-    sql`select "userId", tier::text as tier, label
+    sql`select "userId", status::text as status, "asksForConsent", label
         from platform."oauthRegistrations" where "clientId" = ${clientId}::uuid`,
   );
   return rows[0] ?? null;
@@ -99,7 +97,35 @@ async function liveClientCount(name: string): Promise<number> {
   return rows[0]!.n;
 }
 
+/** Puts an app into the state the holder-only actions would leave it in. */
+async function setState(
+  clientId: string,
+  state: { status: string; owner?: string | null; asksForConsent?: boolean },
+) {
+  await db.execute(sql`
+    update platform."oauthRegistrations"
+       set status = ${state.status}::platform."oauthStatus",
+           "userId" = ${state.owner === undefined ? sql`"userId"` : state.owner}::uuid,
+           "asksForConsent" = ${state.asksForConsent ?? true}
+     where "clientId" = ${clientId}::uuid
+  `);
+}
+
+/** Forgets the apps a user owns, so a test starts under the three-app cap. */
+async function clearOwned(...userIds: string[]) {
+  for (const id of userIds) {
+    await db.execute(
+      sql`delete from platform."oauthRegistrations" where "userId" = ${id}::uuid`,
+    );
+  }
+}
+
 async function cleanup() {
+  await db.execute(
+    sql`delete from platform."oauthRegistrations"
+        where "clientId" in (select id from auth.oauth_clients
+                             where client_name like ${`${PREFIX}%`})`,
+  );
   await db.execute(
     sql`delete from auth.oauth_clients where client_name like ${`${PREFIX}%`}`,
   );
@@ -143,7 +169,7 @@ beforeEach(() => {
 });
 
 describe("creating a client", () => {
-  it("creates a development client for a member with GitHub, with no audit entry", async () => {
+  it("creates a Testing app that asks for consent, owned by the member, with no audit entry", async () => {
     signInAs(IDS.member);
     const result = await act({
       intent: "create-client",
@@ -154,13 +180,14 @@ describe("creating a client", () => {
     expect(result.clientSecret).toBeTruthy();
     expect(await registration(result.clientId!)).toEqual({
       userId: IDS.member,
-      tier: "development",
+      status: "testing",
+      asksForConsent: true,
       label: `${PREFIX}-dev`,
     });
     expect(await auditRows(result.clientId!)).toHaveLength(0);
   });
 
-  it("needs a linked GitHub account for a development client", async () => {
+  it("needs a linked GitHub account", async () => {
     signInAs(IDS.member, false);
     await expect(
       act({ intent: "create-client", label: `${PREFIX}-nogithub` }),
@@ -168,160 +195,205 @@ describe("creating a client", () => {
     expect(await liveClientCount(`${PREFIX}-nogithub`)).toBe(0);
   });
 
-  it("refuses a production client to a member without canManageOAuthApps, and makes nothing", async () => {
-    signInAs(IDS.member);
-    await expect(
-      act({
-        intent: "create-client",
-        tier: "production",
-        label: `${PREFIX}-prod-denied`,
-        callbackUri: DOGDAYS,
-      }),
-    ).rejects.toThrow(/canManageOAuthApps/);
-    expect(await liveClientCount(`${PREFIX}-prod-denied`)).toBe(0);
+  it("ignores a requested tier: a holder's app starts as a Testing app too", async () => {
+    signInAs(IDS.officer);
+    const result = await act({
+      intent: "create-client",
+      tier: "production",
+      label: `${PREFIX}-officer-tier`,
+    });
+    expect((await registration(result.clientId!))?.status).toBe("testing");
   });
 
-  it("refuses a production client whose return address is not a Supabase callback", async () => {
-    signInAs(IDS.officer);
+  it("refuses a return address the redirect rule refuses, and makes nothing", async () => {
+    signInAs(IDS.member);
     for (const callbackUri of [
-      "http://localhost:3000/auth",
-      "https://example.com/auth/v1/callback",
-      "http://dogdays.supabase.co/auth/v1/callback",
-      "",
+      "http://example.com/auth",
+      "myapp://callback",
+      "https://user:pw@example.com/cb",
     ]) {
       await expect(
         act({
           intent: "create-client",
-          tier: "production",
-          label: `${PREFIX}-prod-badcb`,
+          label: `${PREFIX}-badcb`,
           callbackUri,
         }),
-      ).rejects.toThrow(/supabase\.co\/auth\/v1\/callback/);
+      ).rejects.toThrow(/Redirect URIs must be/);
     }
-    expect(await liveClientCount(`${PREFIX}-prod-badcb`)).toBe(0);
+    expect(await liveClientCount(`${PREFIX}-badcb`)).toBe(0);
   });
 
-  it("creates a production client for a holder, and audits it without the secret", async () => {
-    signInAs(IDS.officer, false); // no GitHub needed for production
-    const result = await act({
-      intent: "create-client",
-      tier: "production",
-      label: `${PREFIX}-dogdays`,
-      callbackUri: DOGDAYS,
-    });
-
-    expect(await registration(result.clientId!)).toEqual({
-      userId: IDS.officer,
-      tier: "production",
-      label: `${PREFIX}-dogdays`,
-    });
-    const audit = await auditRows(result.clientId!);
-    expect(audit).toHaveLength(1);
-    expect(audit[0]).toMatchObject({
-      action: "oauth_client.created",
-      actor: IDS.officer,
-      metadata: {
-        tier: "production",
-        label: `${PREFIX}-dogdays`,
-        redirectUris: DOGDAYS,
-      },
-    });
-    expect(JSON.stringify(audit)).not.toContain(result.clientSecret!);
-  });
-
-  it("treats an unknown tier as development", async () => {
+  it("accepts any https address and a local http one", async () => {
     signInAs(IDS.officer);
-    const result = await act({
+    const created = await act({
       intent: "create-client",
-      tier: "root",
-      label: `${PREFIX}-unknown-tier`,
+      label: `${PREFIX}-custom-host`,
+      callbackUri: "https://api.example.com/auth/v1/callback",
     });
-    expect((await registration(result.clientId!))?.tier).toBe("development");
+    expect(created.clientId).toBeTruthy();
+  });
+});
+
+describe("the three-app cap", () => {
+  const CAPPED = "f7000000-0000-4000-a000-000000000003";
+
+  beforeAll(async () => {
+    await db.execute(sql`
+      insert into auth.users (id, instance_id, aud, role, email)
+      values (${CAPPED}::uuid, '00000000-0000-0000-0000-000000000000',
+              'authenticated', 'authenticated', 'oauth-action-capped@uga.edu')
+      on conflict do nothing
+    `);
+  });
+
+  afterAll(async () => {
+    await db.execute(
+      sql`delete from platform."oauthRegistrations" where "userId" = ${CAPPED}::uuid`,
+    );
+    await db.execute(sql`delete from auth.users where id = ${CAPPED}::uuid`);
+  });
+
+  it("refuses a fourth app, whatever the status of the first three, and creates no client", async () => {
+    signInAs(CAPPED);
+    const ids: string[] = [];
+    for (const n of [1, 2, 3]) {
+      const created = await act({
+        intent: "create-client",
+        label: `${PREFIX}-cap-${n}`,
+      });
+      ids.push(created.clientId!);
+    }
+    // One of them In production still counts.
+    await setState(ids[0]!, { status: "in_production" });
+
+    await expect(
+      act({ intent: "create-client", label: `${PREFIX}-cap-4` }),
+    ).rejects.toThrow(/at most 3/);
+    expect(await liveClientCount(`${PREFIX}-cap-4`)).toBe(0);
+  });
+
+  it("frees a slot when an app is transferred to DevDogs", async () => {
+    signInAs(CAPPED);
+    const [first] = await db.execute<{ clientId: string }>(
+      sql`select "clientId" from platform."oauthRegistrations"
+          where "userId" = ${CAPPED}::uuid order by label limit 1`,
+    );
+    await setState(first!.clientId, {
+      status: "in_production",
+      owner: null,
+      asksForConsent: false,
+    });
+    const created = await act({
+      intent: "create-client",
+      label: `${PREFIX}-cap-4`,
+    });
+    expect(created.clientId).toBeTruthy();
   });
 });
 
 describe("managing a client", () => {
-  let production: string;
-  let development: string;
+  let owned: string;
+  let published: string;
+  let devdogs: string;
 
   beforeAll(async () => {
-    signInAs(IDS.officer);
-    production = (
-      await act({
-        intent: "create-client",
-        tier: "production",
-        label: `${PREFIX}-manage-prod`,
-        callbackUri: DOGPACK,
-      })
-    ).clientId!;
+    await clearOwned(IDS.member, IDS.officer);
     signInAs(IDS.member);
-    development = (
+    owned = (
       await act({ intent: "create-client", label: `${PREFIX}-manage-dev` })
     ).clientId!;
+    published = (
+      await act({ intent: "create-client", label: `${PREFIX}-manage-pub` })
+    ).clientId!;
+    await setState(published, { status: "in_production" });
+
+    signInAs(IDS.officer);
+    devdogs = (
+      await act({ intent: "create-client", label: `${PREFIX}-manage-dd` })
+    ).clientId!;
+    await setState(devdogs, {
+      status: "in_production",
+      owner: null,
+      asksForConsent: false,
+    });
   });
 
-  it("hides a production client from a member without the permission", async () => {
-    signInAs(IDS.member);
-    for (const intent of ["reset-secret", "revoke-client"]) {
-      await expect(act({ intent, clientId: production })).rejects.toThrow(
+  it("hides an app from anyone but its owner, holders included", async () => {
+    signInAs(IDS.officer);
+    for (const clientId of [owned, published]) {
+      await expect(act({ intent: "reset-secret", clientId })).rejects.toThrow(
         /not found/,
       );
     }
-    await expect(
-      act({ intent: "add-uri", clientId: production, uri: DOGDAYS }),
-    ).rejects.toThrow(/not found/);
   });
 
-  it("hides a development client from anyone but its owner, officers included", async () => {
-    signInAs(IDS.officer);
-    await expect(
-      act({ intent: "reset-secret", clientId: development }),
-    ).rejects.toThrow(/not found/);
+  it("hides a DevDogs app from a member without the permission", async () => {
+    signInAs(IDS.member);
+    for (const intent of ["reset-secret", "revoke-client"]) {
+      await expect(act({ intent, clientId: devdogs })).rejects.toThrow(
+        /not found/,
+      );
+    }
   });
 
-  it("lets a holder who did not create a production client roll its secret, with an audit entry", async () => {
-    // Created by the officer above; a second holder would behave the same, so
-    // sign in as the officer and check the entry names them as the actor.
+  it("lets every holder roll a DevDogs app's secret, with an audit entry", async () => {
     signInAs(IDS.officer);
-    const result = await act({ intent: "reset-secret", clientId: production });
-    expect(result.clientId).toBe(production);
+    const result = await act({ intent: "reset-secret", clientId: devdogs });
     expect(result.clientSecret).toBeTruthy();
-
-    const rotated = (await auditRows(production)).filter(
+    const rotated = (await auditRows(devdogs)).filter(
       (row) => row.action === "oauth_client.secret_rotated",
     );
     expect(rotated).toHaveLength(1);
     expect(JSON.stringify(rotated)).not.toContain(result.clientSecret!);
   });
 
-  it("rolls a development client's secret for its owner without an audit entry", async () => {
+  it("lets the owner of a published app keep its secret, audited", async () => {
     signInAs(IDS.member);
-    const result = await act({ intent: "reset-secret", clientId: development });
-    expect(result.clientSecret).toBeTruthy();
-    expect(await auditRows(development)).toHaveLength(0);
+    await act({ intent: "reset-secret", clientId: published });
+    expect((await auditRows(published)).map((row) => row.action)).toContain(
+      "oauth_client.secret_rotated",
+    );
   });
 
-  it("accepts only a Supabase callback as a production redirect URI, and audits changes", async () => {
-    signInAs(IDS.officer);
-    await expect(
-      act({
-        intent: "add-uri",
-        clientId: production,
-        uri: "http://localhost:3000/auth",
-      }),
-    ).rejects.toThrow(/supabase\.co\/auth\/v1\/callback/);
+  it("rolls a Testing app's secret for its owner without an audit entry", async () => {
+    signInAs(IDS.member);
+    const result = await act({ intent: "reset-secret", clientId: owned });
+    expect(result.clientSecret).toBeTruthy();
+    expect(await auditRows(owned)).toHaveLength(0);
+  });
 
-    await act({ intent: "add-uri", clientId: production, uri: DOGDAYS });
-    await act({ intent: "remove-uri", clientId: production, uri: DOGDAYS });
+  it("applies one redirect rule to every app, and audits an audited app's changes", async () => {
+    signInAs(IDS.member);
+    for (const uri of ["http://example.com/cb", "myapp://cb"]) {
+      await expect(
+        act({ intent: "add-uri", clientId: owned, uri }),
+      ).rejects.toThrow(/Redirect URIs must be/);
+    }
+    await act({
+      intent: "add-uri",
+      clientId: owned,
+      uri: "http://localhost:4000/cb",
+    });
+    expect(await auditRows(owned)).toHaveLength(0);
 
-    const actions = (await auditRows(production)).map((row) => row.action);
+    await act({
+      intent: "add-uri",
+      clientId: published,
+      uri: "https://app.example.com/cb",
+    });
+    await act({
+      intent: "remove-uri",
+      clientId: published,
+      uri: "https://app.example.com/cb",
+    });
+    const actions = (await auditRows(published)).map((row) => row.action);
     expect(actions).toContain("oauth_client.redirect_uri_added");
     expect(actions).toContain("oauth_client.redirect_uri_removed");
   });
 
-  it("records nothing, and says so, when GoTrue refuses a production change", async () => {
+  it("records nothing, and says so, when GoTrue refuses an audited change", async () => {
     signInAs(IDS.officer);
-    const before = (await auditRows(production)).length;
+    const before = (await auditRows(devdogs)).length;
     const failure = { data: null, error: { message: "boom", status: 500 } };
     const oauth = supabaseAdmin.auth.admin.oauth;
     const update = vi
@@ -332,235 +404,74 @@ describe("managing a client", () => {
       .mockResolvedValue(failure as never);
     try {
       await expect(
-        act({ intent: "add-uri", clientId: production, uri: DOGDAYS }),
+        act({
+          intent: "add-uri",
+          clientId: devdogs,
+          uri: "https://x.example.com/cb",
+        }),
       ).rejects.toThrow(/boom/);
       await expect(
-        act({
-          intent: "remove-uri",
-          clientId: production,
-          uri: DOGPACK,
-        }),
-      ).rejects.toThrow(/(boom|at least one)/);
-      await expect(
-        act({ intent: "reset-secret", clientId: production }),
+        act({ intent: "reset-secret", clientId: devdogs }),
       ).rejects.toThrow(/boom/);
     } finally {
       update.mockRestore();
       rotate.mockRestore();
     }
-    expect(await auditRows(production)).toHaveLength(before);
-  });
-
-  it("keeps at least one redirect URI on a production client", async () => {
-    signInAs(IDS.officer);
-    await expect(
-      act({ intent: "remove-uri", clientId: production, uri: DOGPACK }),
-    ).rejects.toThrow(/at least one redirect URI/);
-  });
-
-  it("allows a development client any http(s) URI, as before", async () => {
-    signInAs(IDS.member);
-    await act({
-      intent: "add-uri",
-      clientId: development,
-      uri: "http://localhost:4000/cb",
-    });
-    expect(await auditRows(development)).toHaveLength(0);
+    expect(await auditRows(devdogs)).toHaveLength(before);
   });
 });
 
-describe("deleting a production client", () => {
-  let first: string;
-  let second: string;
-  let development: string;
+describe("deleting an app", () => {
+  beforeAll(() => clearOwned(IDS.member, IDS.officer));
 
-  beforeAll(async () => {
-    signInAs(IDS.officer);
-    first = (
-      await act({
-        intent: "create-client",
-        tier: "production",
-        label: `${PREFIX}-del-first`,
-        callbackUri: DOGDAYS,
-      })
-    ).clientId!;
-    second = (
-      await act({
-        intent: "create-client",
-        tier: "production",
-        label: `${PREFIX}-del-second`,
-        callbackUri: DOGPACK,
-      })
-    ).clientId!;
+  it("deletes any app for its owner with no replacement, audits an In production one", async () => {
     signInAs(IDS.member);
-    development = (
-      await act({ intent: "create-client", label: `${PREFIX}-del-dev` })
+    const testing = (
+      await act({ intent: "create-client", label: `${PREFIX}-del-testing` })
     ).clientId!;
-  });
+    const published = (
+      await act({ intent: "create-client", label: `${PREFIX}-del-pub` })
+    ).clientId!;
+    await setState(published, { status: "in_production" });
 
-  it("refuses without a replacement, with itself, with a development client, or with an unknown id", async () => {
-    signInAs(IDS.officer);
-    const attempts: Record<string, string>[] = [
-      {},
-      { replacementClientId: first },
-      { replacementClientId: development },
-      { replacementClientId: "f7000000-0000-4000-b000-0000000000ff" },
-    ];
-    for (const extra of attempts) {
-      await expect(
-        act({ intent: "revoke-client", clientId: first, ...extra }),
-      ).rejects.toThrow(/replac/i);
+    await act({ intent: "revoke-client", clientId: testing });
+    await act({ intent: "revoke-client", clientId: published });
+
+    for (const [id, label] of [
+      [testing, `${PREFIX}-del-testing`],
+      [published, `${PREFIX}-del-pub`],
+    ] as const) {
+      expect(await registration(id)).toBeNull();
+      expect(await liveClientCount(label)).toBe(0);
     }
-    expect(await registration(first)).not.toBeNull();
-    expect(await liveClientCount(`${PREFIX}-del-first`)).toBe(1);
-  });
-
-  it("deletes once another live production client takes over, and records which", async () => {
-    signInAs(IDS.officer);
-    await act({
-      intent: "revoke-client",
-      clientId: first,
-      replacementClientId: second,
-    });
-
-    expect(await registration(first)).toBeNull();
-    expect(await liveClientCount(`${PREFIX}-del-first`)).toBe(0);
-
-    const deleted = (await auditRows(first)).filter(
+    expect(await auditRows(testing)).toHaveLength(0);
+    const entry = (await auditRows(published)).find(
       (row) => row.action === "oauth_client.deleted",
     );
-    expect(deleted).toHaveLength(1);
-    expect(deleted[0]).toMatchObject({
-      actor: IDS.officer,
+    expect(entry).toMatchObject({
+      actor: IDS.member,
       metadata: {
-        tier: "production",
-        label: `${PREFIX}-del-first`,
-        replacementClientId: second,
-        replacementLabel: `${PREFIX}-del-second`,
+        label: `${PREFIX}-del-pub`,
+        consents: 0,
+        sessions: 0,
+        authorizations: 0,
       },
     });
   });
 
-  it("will not let the last production client go to a deleted one", async () => {
+  it("lets a holder delete a DevDogs app, the last one included", async () => {
     signInAs(IDS.officer);
-    // `first` is gone, so it cannot be the replacement for `second`.
-    await expect(
-      act({
-        intent: "revoke-client",
-        clientId: second,
-        replacementClientId: first,
-      }),
-    ).rejects.toThrow(/live production client/);
-    expect(await registration(second)).not.toBeNull();
-  });
-
-  it("deletes a development client without a replacement or an audit entry", async () => {
-    signInAs(IDS.member);
-    await act({ intent: "revoke-client", clientId: development });
-    expect(await registration(development)).toBeNull();
-    expect(await liveClientCount(`${PREFIX}-del-dev`)).toBe(0);
-    expect(await auditRows(development)).toHaveLength(0);
-  });
-});
-
-describe("deleting a production client that is a registered moderation app", () => {
-  const ENDPOINT = "https://receiver.example.com/moderation";
-
-  async function production(label: string, callbackUri: string) {
-    signInAs(IDS.officer);
-    return (
-      await act({
-        intent: "create-client",
-        tier: "production",
-        label: `${PREFIX}-${label}`,
-        callbackUri,
-      })
+    const id = (
+      await act({ intent: "create-client", label: `${PREFIX}-del-dd` })
     ).clientId!;
-  }
-
-  async function register(slug: string, clientId: string) {
-    await db.execute(sql`
-      select platform.register_external_app(
-        ${`${PREFIX}-${slug}`}, ${`Moderation ${slug}`}, ${clientId}::uuid,
-        ${ENDPOINT},
-        ${JSON.stringify([{ contentType: "session", label: "Session" }])}::jsonb)
-    `);
-  }
-
-  async function moderationRow(clientId: string) {
-    const rows = await db.execute<{ slug: string | null; endpoint: string }>(
-      sql`select a.slug, m."endpointUrl" as endpoint
-          from platform."moderationClients" m
-          left join platform.apps a on a.id = m."appId"
-          where m."clientId" = ${clientId}::uuid`,
-    );
-    return rows[0] ?? null;
-  }
-
-  it("hands the registration to the replacement, and the deleted client is unknown", async () => {
-    const deleted = await production("mod-a", DOGDAYS);
-    const replacement = await production("mod-b", DOGPACK);
-    await register("app-a", deleted);
-    expect(await findClient(deleted)).not.toBeNull();
-    expect(await findClient(replacement)).toBeNull();
-
-    signInAs(IDS.officer);
-    await act({
-      intent: "revoke-client",
-      clientId: deleted,
-      replacementClientId: replacement,
+    await setState(id, {
+      status: "in_production",
+      owner: null,
+      asksForConsent: false,
     });
-
-    expect(await moderationRow(deleted)).toBeNull();
-    expect(await moderationRow(replacement)).toEqual({
-      slug: `${PREFIX}-app-a`,
-      endpoint: ENDPOINT,
-    });
-    expect(await findClient(deleted)).toBeNull();
-    expect(await findClient(replacement)).toMatchObject({
-      clientId: replacement,
-    });
-    const entry = (await auditRows(deleted)).find(
-      (row) => row.action === "oauth_client.deleted",
-    );
-    expect(entry?.metadata).toMatchObject({ moderation: "transferred" });
-  });
-
-  it("keeps a replacement's own registration and drops the deleted client's", async () => {
-    const deleted = await production("mod-c", DOGDAYS);
-    const replacement = await production("mod-d", DOGPACK);
-    await register("app-c", deleted);
-    await register("app-d", replacement);
-
-    signInAs(IDS.officer);
-    await act({
-      intent: "revoke-client",
-      clientId: deleted,
-      replacementClientId: replacement,
-    });
-
-    expect(await moderationRow(deleted)).toBeNull();
-    expect(await moderationRow(replacement)).toMatchObject({
-      slug: `${PREFIX}-app-d`,
-    });
-    const entry = (await auditRows(deleted)).find(
-      (row) => row.action === "oauth_client.deleted",
-    );
-    expect(entry?.metadata).toMatchObject({ moderation: "dropped" });
-  });
-
-  it("drops the registration of any soft-deleted client, whoever deleted it", async () => {
-    const client = await production("mod-e", DOGDAYS);
-    await register("app-e", client);
-    expect(await moderationRow(client)).not.toBeNull();
-
-    // What GoTrue's delete does: it sets deleted_at and removes nothing.
-    await db.execute(
-      sql`update auth.oauth_clients set deleted_at = now() where id = ${client}::uuid`,
-    );
-
-    expect(await moderationRow(client)).toBeNull();
-    expect(await findClient(client)).toBeNull();
+    await act({ intent: "revoke-client", clientId: id });
+    expect(await registration(id)).toBeNull();
+    expect(await liveClientCount(`${PREFIX}-del-dd`)).toBe(0);
   });
 });
 
@@ -580,31 +491,14 @@ describe("a registration that fails leaves no orphan client", () => {
     expect(await liveClientCount(label)).toBe(0);
   });
 
-  it("deletes the Supabase client when a production client's audit entry fails", async () => {
-    const label = `${PREFIX}-orphan-prod`;
-    await expect(
-      createOauthClientAndRegister({
-        label,
-        redirectUris: [DOGDAYS],
-        userId: "f7000000-0000-4000-a000-0000000000fe",
-        tier: "production",
-      }),
-    ).rejects.toThrow();
-
-    expect(await liveClientCount(label)).toBe(0);
-  });
-
-  it("does not even create a production client for a bad return address", async () => {
-    const before = await supabaseAdmin.auth.admin.oauth.listClients();
+  it("does not even create a client for a bad return address", async () => {
     await expect(
       createOauthClientAndRegister({
         label: `${PREFIX}-never`,
-        redirectUris: ["http://localhost:3000/auth"],
+        redirectUris: ["http://example.com/auth"],
         userId: IDS.officer,
-        tier: "production",
       }),
-    ).rejects.toThrow(/supabase\.co/);
+    ).rejects.toThrow(/Redirect URIs must be/);
     expect(await liveClientCount(`${PREFIX}-never`)).toBe(0);
-    expect(before.error).toBeNull();
   });
 });
