@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { oauthRegistrations, oauthTestAccounts } from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";
+import { revokeAppAccess } from "./appStatus";
 
 /**
  * The pieces of removing OAuth clients that the settings action
@@ -59,7 +60,8 @@ export async function cleanUpTestAccountsIfNoClientsRemain(
 /**
  * Removes the OAuth apps a member owns because their account is being
  * deleted (account-deletion Q11, oauth-consent Q160): all of them, published
- * or not. Each has its Supabase client deleted first, then its registration,
+ * or not. Each first has its signed-in members signed out (the kill switch),
+ * then its Supabase client deleted, then its registration,
  * then the test accounts that only existed to sign into them.
  *
  * Apps with no owner (the DevDogs apps) are never selected. A production app
@@ -76,7 +78,11 @@ export async function removeMemberOAuthApps(
     .where(eq(oauthRegistrations.userId, userId));
 
   for (const client of owned) {
-    // Supabase first: the registration's foreign key does not cascade, since
+    // Everyone signed in with the app is signed out first (Q160): deleting a
+    // GoTrue client soft-deletes it, which does not end its sessions or
+    // approvals. Safe to repeat.
+    await revokeAppAccess(db, client.clientId, "everyone_but_owner");
+    // Supabase next: the registration's foreign key does not cascade, since
     // GoTrue only soft-deletes. A failure here leaves the registration, so the
     // next run finds the client again.
     await deleteSupabaseClient(client.clientId);

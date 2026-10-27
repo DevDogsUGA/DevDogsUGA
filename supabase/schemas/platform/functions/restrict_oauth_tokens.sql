@@ -10,6 +10,7 @@ CREATE OR REPLACE FUNCTION platform.restrict_oauth_tokens (
 declare
   claims jsonb := event -> 'claims';
   client_id uuid;
+  user_id uuid := nullif(event ->> 'user_id', '')::uuid;
 begin
   -- GoTrue puts `client_id` on tokens it issues to OAuth clients. The session
   -- row records the same client, so check it too: either one marks the token
@@ -25,6 +26,18 @@ begin
 
   if client_id is null then
     return jsonb_build_object('claims', claims);
+  end if;
+
+  -- A published app never signs in a test account (oauth-consent Q164). The
+  -- consent page refuses them first; this is the backstop for GoTrue's own
+  -- consent endpoint, which accepts any signed-in user's session.
+  if user_id is not null and "platform".oauth_refuses_user(client_id, user_id) then
+    return jsonb_build_object(
+      'error', jsonb_build_object(
+        'http_code', 403,
+        'message', 'Test accounts cannot sign in to a published app'
+      )
+    );
   end if;
 
   -- Whoever the client is, and whoever signed in, the token is an identity and

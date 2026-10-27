@@ -175,9 +175,12 @@ async function makeClient(
     .from("oauthRegistrations")
     .insert({
       clientId: created.data.client_id,
-      userId: owner.id,
+      // "production" is a DevDogs app that skips consent; "development" is
+      // a member's Testing app (the tier column is retired).
+      userId: tier === "production" ? null : owner.id,
       label: `verify-oauth-tiers-${RUN}-${tier}`,
-      tier,
+      status: tier === "production" ? "in_production" : "testing",
+      asksForConsent: tier !== "production",
     });
   if (registered.error) {
     throw new Error(`register ${tier}: ${registered.error.message}`);

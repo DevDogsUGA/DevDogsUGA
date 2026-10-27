@@ -1,13 +1,16 @@
 import type { auditEvents } from "~/server/db/schema";
 
 /**
- * Audit entries for production OAuth clients (`/console/audit-log`).
+ * Audit entries for OAuth apps (`/console/audit-log`).
  *
- * A production client is the credential a DevDogs app signs its members in
- * with, so creating one, deleting one, rolling its secret and changing where
- * it may send people are all recorded: who, which client, and in what state.
- * Development clients are a member's own test tool and are not audited (a
- * workshop mints dozens in an hour).
+ * An app that is In production (or a DevDogs app) is a credential real members
+ * sign in with, so rolling its secret, changing where it may send people and
+ * deleting it are recorded: who, which client, and in what state. Every status
+ * change is recorded whatever the app's state (oauth-consent Q155): publishing,
+ * returning to Testing, the consent switch, transferring to DevDogs, and
+ * forgetting an approval, each with the kill switch's counts where it ran one.
+ * Apps in Testing are a member's own test tool and their ordinary edits are not
+ * audited (a workshop mints dozens in an hour).
  *
  * The rows are plain `platform."auditEvents"` inserts, append-only like every
  * other entry; `targetType` is `oauth_client` and `targetId` is the client id.
@@ -27,6 +30,13 @@ export const OAUTH_AUDIT_ACTIONS = [
   "oauth_client.moderation_registered",
   "oauth_client.moderation_secret_rotated",
   "oauth_client.moderation_endpoint_changed",
+  // Status and consent changes (holder-only, Q155 / Q161 / Q162), and the
+  // kill switch run for one member (Q158).
+  "oauth_app.published",
+  "oauth_app.returned_to_testing",
+  "oauth_app.consent_changed",
+  "oauth_app.transferred_to_devdogs",
+  "oauth_app.approval_forgotten",
 ] as const;
 
 export type OAuthAuditAction = (typeof OAUTH_AUDIT_ACTIONS)[number];
@@ -46,6 +56,6 @@ export function oauthAuditEvent(input: {
     action: input.action,
     targetType: OAUTH_AUDIT_TARGET_TYPE,
     targetId: input.clientId,
-    metadata: { tier: "production", ...input.metadata },
+    metadata: input.metadata,
   };
 }

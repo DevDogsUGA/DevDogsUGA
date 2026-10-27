@@ -59,8 +59,8 @@ async function cleanup() {
 }
 
 async function registrations() {
-  return db.execute<{ label: string; tier: string }>(
-    sql`select label, tier::text as tier from platform."oauthRegistrations"
+  return db.execute<{ label: string; status: string }>(
+    sql`select label, status::text as status from platform."oauthRegistrations"
         where "userId" = ${OFFICER}::uuid order by label`,
   );
 }
@@ -107,23 +107,25 @@ describe("unlinking GitHub", () => {
       redirectUris: ["http://localhost:3000/auth"],
       userId: OFFICER,
     });
-    await createOauthClientAndRegister({
+    const prod = await createOauthClientAndRegister({
       label: `${PREFIX}-prod`,
       redirectUris: [DOGDAYS],
       userId: OFFICER,
-      tier: "production",
     });
+    await db.execute(sql`
+      update platform."oauthRegistrations" set status = 'in_production'
+      where "clientId" = ${prod.clientId}::uuid`);
     expect(await registrations()).toEqual([
-      { label: `${PREFIX}-dev`, tier: "development" },
-      { label: `${PREFIX}-prod`, tier: "production" },
+      { label: `${PREFIX}-dev`, status: "testing" },
+      { label: `${PREFIX}-prod`, status: "in_production" },
     ]);
     const auditBefore = await auditCount();
-    expect(auditBefore).toBe(auditStart + 1); // the production client's creation
+    expect(auditBefore).toBe(auditStart); // creating an app is not audited
 
     await unlinkGithubProfile();
 
     expect(await registrations()).toEqual([
-      { label: `${PREFIX}-prod`, tier: "production" },
+      { label: `${PREFIX}-prod`, status: "in_production" },
     ]);
     // The development client is gone from GoTrue too; the production one is live.
     expect(await liveClients()).toBe(1);
@@ -134,7 +136,7 @@ describe("unlinking GitHub", () => {
   it("does nothing to production clients when the member has no development client", async () => {
     await unlinkGithubProfile();
     expect(await registrations()).toEqual([
-      { label: `${PREFIX}-prod`, tier: "production" },
+      { label: `${PREFIX}-prod`, status: "in_production" },
     ]);
     expect(await liveClients()).toBe(1);
   });

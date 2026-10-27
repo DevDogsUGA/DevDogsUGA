@@ -1,3 +1,5 @@
+import { isValidRedirectUri } from "./redirectRule";
+
 const MAX_LABEL_LENGTH = 100;
 
 export interface RegistrationParams {
@@ -13,18 +15,9 @@ export type RegistrationParamsResult =
  * handoffs: the loopback connect flow's `~/server/oauth/connectParams` and
  * the device-code flow's `POST /tools/oauth/device/code`. Split out so
  * "what a valid label or callback URI looks like" is defined once instead
- * of copied between the two.
+ * of copied between the two. The address rule is the one every client
+ * shares (`./redirectRule`).
  */
-export function isAbsoluteHttpUrl(value: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    return false;
-  }
-  return url.protocol === "http:" || url.protocol === "https:";
-}
-
 export function parseRegistrationParams(raw: {
   label: string;
   callbackUri: string;
@@ -39,10 +32,11 @@ export function parseRegistrationParams(raw: {
     };
   }
 
-  if (!isAbsoluteHttpUrl(callbackUri)) {
+  if (!isValidRedirectUri(callbackUri)) {
     return {
       ok: false,
-      error: "callback_uri must be an absolute http:// or https:// URL.",
+      error:
+        "callback_uri must be an https:// URL, or an http:// one only for localhost, 127.0.0.1 or [::1].",
     };
   }
 

@@ -137,8 +137,8 @@ async function registerApp(
   // writes); a test that wants another tier has already made its own.
   if (registration) {
     await db.execute(sql`
-      insert into platform."oauthRegistrations" ("clientId", "userId", label, tier)
-      values (${client}::uuid, ${OWNER}::uuid, 'production', 'production')
+      insert into platform."oauthRegistrations" ("clientId", "userId", label, status)
+      values (${client}::uuid, ${OWNER}::uuid, 'production', 'in_production')
       on conflict ("clientId") do nothing
     `);
   }
@@ -821,11 +821,12 @@ describe("a development client's failing endpoint", () => {
 });
 
 /**
- * `oauthRegistrations.tier` (lane 3c): a development client cannot be
- * registered as a production moderation app, and a production client nobody
- * registered is refused instead of sandboxed.
+ * `oauthRegistrations.status`: a Testing app cannot be registered as a
+ * production moderation app, and an In production client nobody registered is
+ * refused instead of sandboxed. The moderation API still speaks in
+ * "development" / "production" tiers, derived from the status.
  */
-describe("OAuth tiers", () => {
+describe("OAuth status", () => {
   const registration = async (
     client: string,
     tier: "development" | "production",
@@ -834,7 +835,7 @@ describe("OAuth tiers", () => {
       sql`delete from platform."oauthRegistrations" where "clientId" = ${client}::uuid`,
     );
     await db.execute(
-      sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, tier) values (${client}::uuid, ${OWNER}::uuid, 'x', ${tier}::platform."oauthTier")`,
+      sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, status) values (${client}::uuid, ${OWNER}::uuid, 'x', ${tier === "production" ? "in_production" : "testing"}::platform."oauthStatus")`,
     );
   };
 
@@ -964,7 +965,7 @@ describe("moderation controls on /tools/oauth", () => {
       sql`delete from platform."oauthRegistrations" where "clientId" = ${client}::uuid`,
     );
     await db.execute(
-      sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, tier) values (${client}::uuid, ${OWNER}::uuid, 'x', ${tier}::platform."oauthTier")`,
+      sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, status) values (${client}::uuid, ${OWNER}::uuid, 'x', ${tier === "production" ? "in_production" : "testing"}::platform."oauthStatus")`,
     );
   };
 

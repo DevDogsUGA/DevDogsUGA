@@ -530,17 +530,19 @@ describe("runDueDeletions", () => {
       label: `${PREFIX}-published`,
       redirectUris: [DOGDAYS],
       userId: MEMBER,
-      tier: "production",
     });
+    await db.execute(sql`
+      update platform."oauthRegistrations" set status = 'in_production'
+      where "clientId" = ${published.clientId}::uuid`);
     const devdogs = await createOauthClientAndRegister({
       label: `${PREFIX}-devdogs`,
       redirectUris: [DOGDAYS],
       userId: OFFICER,
-      tier: "production",
     });
     await db.execute(sql`
-      update platform."oauthRegistrations" set "userId" = null
-      where "clientId" = ${devdogs.clientId}::uuid`);
+      update platform."oauthRegistrations"
+         set "userId" = null, status = 'in_production', "asksForConsent" = false
+       where "clientId" = ${devdogs.clientId}::uuid`);
     await db.execute(sql`
       insert into "schedule_builder"."userPreferences" ("userId", "currentAcademicPeriod")
       values (${MEMBER}::uuid, 202608)`);
@@ -563,11 +565,31 @@ describe("runDueDeletions", () => {
       values (${APP_SLUG}, 'Deletion job test app', 'external')
       returning id`);
 
+    // Another member signed in with the published app (Q160): their session
+    // and approval must be ended by the job, because GoTrue's delete only
+    // soft-deletes the client.
+    await db.execute(sql`
+      insert into auth.sessions (id, user_id, created_at, updated_at, oauth_client_id)
+      values (gen_random_uuid(), ${OTHER}::uuid, now(), now(), ${published.clientId}::uuid)`);
+    await db.execute(sql`
+      insert into auth.oauth_consents (id, user_id, client_id, scopes)
+      values (gen_random_uuid(), ${OTHER}::uuid, ${published.clientId}::uuid, 'openid email')`);
+
     await scheduleAccountDeletion(MEMBER, MEMBER, { now: LONG_AGO });
     const run = await runDueDeletions(NOW);
 
     expect(run.failed).toEqual([]);
     expect(run.completed).toEqual([MEMBER]);
+
+    expect(
+      await count(sql`select count(*)::int as n from auth.sessions
+                      where oauth_client_id = ${published.clientId}::uuid`),
+    ).toBe(0);
+    expect(
+      await count(sql`select count(*)::int as n from auth.oauth_consents
+                      where client_id = ${published.clientId}::uuid
+                        and revoked_at is null`),
+    ).toBe(0);
 
     // The auth user, the pending row and the profile are gone.
     for (const query of [

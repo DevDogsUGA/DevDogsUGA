@@ -11,9 +11,10 @@ import { db } from "~/server/db";
  * event shape GoTrue sends (`user_id` plus the draft `claims`). A token for an
  * OAuth client is recognised by its `client_id` claim or, failing that, by the
  * `oauth_client_id` on its session row, and is re-roled to `oauth_identity`
- * whatever the client's tier and whoever signed in. Who may sign in to which
- * client is the consent page's decision (`decideConsent`), not the hook's; the
- * hook is the downgrade and nothing else. The last case proves the role it
+ * whatever the client's status and whoever signed in, except that a test
+ * account is refused on an app that is In production. Who may sign in to which
+ * client is the consent page's decision (`decideConsent`); the hook is the
+ * downgrade, plus the Q164 backstop. The last case proves the role it
  * hands out really cannot read data.
  */
 
@@ -89,9 +90,9 @@ beforeAll(async () => {
   }
 
   await db.execute(sql`
-    insert into platform."oauthRegistrations" ("clientId", "userId", "tier")
-    values (${IDS.devClient}::uuid, ${IDS.owner}::uuid, 'development'),
-           (${IDS.productionClient}::uuid, ${IDS.owner}::uuid, 'production')
+    insert into platform."oauthRegistrations" ("clientId", "userId", "status")
+    values (${IDS.devClient}::uuid, ${IDS.owner}::uuid, 'testing'),
+           (${IDS.productionClient}::uuid, ${IDS.owner}::uuid, 'in_production')
   `);
   await db.execute(sql`
     insert into platform."oauthTestAccounts" ("testUserId", "ownerUserId")
@@ -134,7 +135,7 @@ describe("platform.restrict_oauth_tokens", () => {
     });
   });
 
-  describe("a development client's token", () => {
+  describe("a Testing client's token", () => {
     it("is downgraded for the owner", async () => {
       const result = await hook(IDS.owner, { client_id: IDS.devClient });
       expect(result.error).toBeUndefined();
@@ -159,7 +160,7 @@ describe("platform.restrict_oauth_tokens", () => {
     });
   });
 
-  describe("a production client's token", () => {
+  describe("an In production client's token", () => {
     it("is downgraded for the owner", async () => {
       const result = await hook(IDS.owner, { client_id: IDS.productionClient });
       expect(result.error).toBeUndefined();
@@ -167,13 +168,26 @@ describe("platform.restrict_oauth_tokens", () => {
       expect(result.claims?.client_id).toBe(IDS.productionClient);
     });
 
-    it("is downgraded for a member and a test account the owner does not own", async () => {
-      for (const user of [IDS.other, IDS.otherTestAccount]) {
-        const result = await hook(user, { client_id: IDS.productionClient });
-        expect(result.error).toBeUndefined();
-        expect(result.claims?.role).toBe("oauth_identity");
-        expect(result.claims?.client_id).toBe(IDS.productionClient);
+    it("is downgraded for any member signing in as themselves", async () => {
+      const result = await hook(IDS.other, { client_id: IDS.productionClient });
+      expect(result.error).toBeUndefined();
+      expect(result.claims?.role).toBe("oauth_identity");
+      expect(result.claims?.client_id).toBe(IDS.productionClient);
+    });
+
+    it("is refused for every test account, the owner's included (Q164)", async () => {
+      for (const user of [IDS.testAccount, IDS.otherTestAccount]) {
+        const byClaim = await hook(user, { client_id: IDS.productionClient });
+        expect(byClaim.claims).toBeUndefined();
+        expect(byClaim.error?.http_code).toBe(403);
       }
+    });
+
+    it("is refused for a test account found only by its session row", async () => {
+      const result = await hook(IDS.testAccount, {
+        session_id: IDS.productionSession,
+      });
+      expect(result.error?.http_code).toBe(403);
     });
   });
 

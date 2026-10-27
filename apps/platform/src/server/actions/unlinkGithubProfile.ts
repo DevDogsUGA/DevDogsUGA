@@ -11,14 +11,12 @@ export default async function unlinkGithubProfile() {
   const user = await expectUserWith({
     profile: {
       with: {
-        // Development clients only: production clients are DevDogs apps'
-        // sign-in credentials, owned by whichever officer created them and
-        // not gated on GitHub. They are deleted through the audited,
-        // replacement-checked path in oauth.ts, never as a side effect of
-        // unlinking an account.
+        // Testing apps only: an app that is In production is a credential
+        // real members sign in with. It is deleted through the audited path
+        // in oauth.ts, never as a side effect of unlinking an account.
         oauthRegistrations: {
           columns: { clientId: true },
-          where: { tier: "development" },
+          where: { status: "testing" },
         },
       },
     },
@@ -37,7 +35,7 @@ export default async function unlinkGithubProfile() {
           .where(
             and(
               eq(oauthRegistrations.userId, user.id),
-              eq(oauthRegistrations.tier, "development"),
+              eq(oauthRegistrations.status, "testing"),
             ),
           );
         await Promise.all(
