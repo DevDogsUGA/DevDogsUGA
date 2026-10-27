@@ -74,6 +74,10 @@ jobs:
           RENOVATE_PLATFORM: github
           RENOVATE_REPOSITORIES: '["DevDogsUGA/DevDogsUGA", "DevDogsUGA/DogDays", "DevDogsUGA/DogPack"]'
           RENOVATE_GIT_AUTHOR: ${{ steps.author.outputs.git-author }}
+          # The pull requests Mend's hosted app opened are still ours to
+          # rebase and update. Without this, Renovate reads their commits as
+          # someone else's edits and leaves the branches alone.
+          RENOVATE_GIT_IGNORED_AUTHORS: '["29139614+renovate[bot]@users.noreply.github.com"]'
           # Every repository already has a renovate.json5; never open an
           # onboarding pull request, and skip a repository that loses its file.
           RENOVATE_ONBOARDING: "false"
