@@ -20,15 +20,21 @@ export async function middleware(request: NextRequest) {
   // and `forwardRequest` makes `updateSession` pass it on as the middleware
   // request-header override vinext decodes server-side to rebuild the
   // `headers()` context.
-  const isTools = /^\/tools(\/|$)/.test(request.nextUrl.pathname);
-  if (isTools) {
+  // `/console` gets it too: the access-denied card (`forbidden.tsx`) takes no
+  // props, so it reads this to say which section was refused.
+  const wantsRequestPath = /^\/(tools|console)(\/|$)/.test(
+    request.nextUrl.pathname,
+  );
+  if (wantsRequestPath) {
     request.headers.set(
       "x-request-path",
       request.nextUrl.pathname + request.nextUrl.search,
     );
   }
 
-  const response = await updateSession(request, { forwardRequest: isTools });
+  const response = await updateSession(request, {
+    forwardRequest: wantsRequestPath,
+  });
   // Authoritative header application -- see @devdogsuga/sdk/headers'
   // `applySecurityHeaders` doc comment for why this, not just next.config.ts's
   // `headers()`: that mechanism drops these headers on `/` specifically

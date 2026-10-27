@@ -35,6 +35,12 @@ export const TERMINAL_PATHS = [
   { pattern: "/", regex: /^\/$/, page: "(site)/page.tsx" },
 
   {
+    pattern: "/auth/failed",
+    regex: /^\/auth\/failed\/?$/,
+    page: "(auth)/auth/failed/page.tsx",
+  },
+
+  {
     pattern: "/changelog",
     regex: /^\/changelog\/?$/,
     page: "(site)/changelog/page.tsx",

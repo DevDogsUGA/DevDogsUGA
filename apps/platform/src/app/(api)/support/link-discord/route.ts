@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 import { authenticate, expectSession } from "~/server/auth";
+import { safeReturnPath } from "~/server/auth/returnPath";
 import { requestAuthorization } from "~/server/auth/providers/google";
 
 /**
@@ -15,7 +16,7 @@ import { requestAuthorization } from "~/server/auth/providers/google";
 export async function GET(request: NextRequest) {
   const raw = request.nextUrl.searchParams.get("next") ?? "/docs";
   // Same-origin paths only; never an open redirect.
-  const next = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/docs";
+  const next = safeReturnPath(raw, "/docs");
 
   const userId = await expectSession().catch(() => null);
   if (!userId) {

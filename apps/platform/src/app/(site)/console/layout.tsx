@@ -22,14 +22,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * Wraps every `/console` page and holds their one shared gate, a session check.
+ * Wraps every `/console` page and holds their one shared gate: a session. A
+ * signed-out visitor gets the 404, checked once here so a page added under this
+ * route later cannot forget it.
  *
- * Being signed in is the only thing every page under `/console` needs, so it is
- * checked once here rather than at the top of each of them: a page added under
- * this route later cannot forget it. What each page needs *beyond* a session
- * differs (moderation, audit-log and permissions want three different flags),
- * so the specific check stays with the page that knows which one it is. See
- * `~/server/auth/require`.
+ * Who may use a page is the page's own check, which renders the access-denied
+ * card (see `~/server/auth/require`). It is not a console permission flag for
+ * every page: some admit a leadership role or a project's advisors with no flag
+ * at all, so a shared "has some console permission" check here would turn them
+ * away before their page could decide.
  */
 export default async function ConsoleLayout({
   children,

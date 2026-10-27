@@ -8,8 +8,9 @@ import "./content.css";
  * The site-wide 404 (`404.html`): the mascot peeking out, a headline, two ways
  * back. Rendered by `app/not-found.tsx` for an unmatched URL and by
  * `(site)/not-found.tsx` for `notFound()` thrown inside a page, so the chrome
- * is the same either way. Console denial for a signed-in non-officer is this
- * page too (it must not confirm the console exists).
+ * is the same either way. A signed-out visitor to
+ * the console gets this page too; a signed-in member without access gets the
+ * denied card instead.
  */
 export default function NotFoundPage() {
   return (
