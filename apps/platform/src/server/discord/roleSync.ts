@@ -152,6 +152,7 @@ export async function importRoleFromDiscord(
       canManageAttendance: fields.canManageAttendance ?? null,
       canPreviewDocs: fields.canPreviewDocs ?? null,
       canManageOAuthApps: fields.canManageOAuthApps ?? null,
+      canDeleteAccounts: fields.canDeleteAccounts ?? null,
     })
     .returning({ id: roles.id });
 

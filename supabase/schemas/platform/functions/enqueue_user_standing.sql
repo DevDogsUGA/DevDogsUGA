@@ -14,7 +14,7 @@ declare
   ids uuid[] := '{}';
   app record;
 begin
-  if p_action not in ('suspend', 'ban', 'restore') then
+  if p_action not in ('suspend', 'ban', 'restore', 'delete') then
     raise exception 'Unknown user standing action "%"', p_action;
   end if;
 

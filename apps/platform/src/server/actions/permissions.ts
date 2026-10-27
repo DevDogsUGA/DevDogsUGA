@@ -50,6 +50,7 @@ const PERMISSION_KEYS = [
   "canManageAttendance",
   "canPreviewDocs",
   "canManageOAuthApps",
+  "canDeleteAccounts",
 ] as const satisfies readonly PermissionKey[];
 
 // Two-way exhaustiveness check: fails to compile if a nullable-boolean
@@ -97,6 +98,7 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canManageAttendance: false,
   canPreviewDocs: false,
   canManageOAuthApps: false,
+  canDeleteAccounts: false,
 };
 
 /**
@@ -117,6 +119,7 @@ export async function resolveUserPermissions(
       canManageAttendance: resolvedUserPermissions.canManageAttendance,
       canPreviewDocs: resolvedUserPermissions.canPreviewDocs,
       canManageOAuthApps: resolvedUserPermissions.canManageOAuthApps,
+      canDeleteAccounts: resolvedUserPermissions.canDeleteAccounts,
     })
     .from(resolvedUserPermissions)
     .where(eq(resolvedUserPermissions.userId, userId))
@@ -158,6 +161,7 @@ export async function getCallerContext(userId: string): Promise<{
       canManageAttendance: row.canManageAttendance,
       canPreviewDocs: row.canPreviewDocs,
       canManageOAuthApps: row.canManageOAuthApps,
+      canDeleteAccounts: row.canDeleteAccounts,
     },
     minRank: row.minRank,
     isLeader: row.isLeader,
@@ -190,6 +194,9 @@ export async function canUserPreviewDocs(userId: string): Promise<boolean> {
 }
 export async function canUserManageOAuthApps(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canManageOAuthApps);
+}
+export async function canUserDeleteAccounts(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canDeleteAccounts);
 }
 
 // ── Shared guards ─────────────────────────────────────────────────────────────
@@ -242,6 +249,7 @@ export type CreateRoleInput = {
   canManageAttendance?: boolean | null;
   canPreviewDocs?: boolean | null;
   canManageOAuthApps?: boolean | null;
+  canDeleteAccounts?: boolean | null;
 };
 
 export async function createRole(
@@ -271,6 +279,7 @@ export async function createRole(
       canManageAttendance: data.canManageAttendance ?? null,
       canPreviewDocs: data.canPreviewDocs ?? null,
       canManageOAuthApps: data.canManageOAuthApps ?? null,
+      canDeleteAccounts: data.canDeleteAccounts ?? null,
     })
     .returning({ id: roles.id });
 
@@ -334,6 +343,9 @@ export async function updateRole(
       }),
       ...(data.canManageOAuthApps !== undefined && {
         canManageOAuthApps: data.canManageOAuthApps,
+      }),
+      ...(data.canDeleteAccounts !== undefined && {
+        canDeleteAccounts: data.canDeleteAccounts,
       }),
     })
     .where(eq(roles.id, roleId));

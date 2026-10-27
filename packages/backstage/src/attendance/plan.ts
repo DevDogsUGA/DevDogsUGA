@@ -12,7 +12,8 @@ import type { Attendee } from "./sheet.js";
 
 /** A check-in already on the meeting. */
 export interface ExistingCheckIn {
-  userId: string;
+  /** Null for a deleted member's row (account deletion nulls the person). */
+  userId: string | null;
   method: string;
 }
 
@@ -45,7 +46,12 @@ export function planAttendance(
   replace: boolean,
 ): AttendancePlan {
   const find = accountFinder(accounts);
-  const methodOf = new Map(existing.map((e) => [e.userId, e.method]));
+  // A row with no member (the account was deleted) cannot be matched by email
+  // and is not removable by one either, so it takes no part in the plan.
+  const present = existing.filter(
+    (e): e is { userId: string; method: string } => e.userId !== null,
+  );
+  const methodOf = new Map(present.map((e) => [e.userId, e.method]));
   const plan: AttendancePlan = {
     record: [],
     create: [],
@@ -73,7 +79,7 @@ export function planAttendance(
 
   if (replace) {
     const byId = new Map(accounts.map((a) => [a.userId, a]));
-    for (const e of existing) {
+    for (const e of present) {
       if (e.method !== IMPORT_METHOD || onSheet.has(e.userId)) continue;
       const account = byId.get(e.userId);
       plan.remove.push({

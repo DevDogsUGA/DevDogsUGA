@@ -91,6 +91,7 @@ export function useRoles(
             canManageAttendance: data.canManageAttendance ?? null,
             canPreviewDocs: data.canPreviewDocs ?? null,
             canManageOAuthApps: data.canManageOAuthApps ?? null,
+            canDeleteAccounts: data.canDeleteAccounts ?? null,
             discordRoleId: null,
             discordSyncedName: null,
             discordRolePosition: null,
@@ -150,6 +151,9 @@ export function useRoles(
                 }),
                 ...(data.canManageOAuthApps !== undefined && {
                   canManageOAuthApps: data.canManageOAuthApps ?? null,
+                }),
+                ...(data.canDeleteAccounts !== undefined && {
+                  canDeleteAccounts: data.canDeleteAccounts ?? null,
                 }),
               }
             : r,

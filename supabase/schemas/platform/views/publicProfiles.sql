@@ -42,7 +42,9 @@ CREATE VIEW "platform"."publicProfiles" AS  SELECT p."userId",
     p."showStars"
    FROM (platform.profile p
      JOIN platform."profileWithVerification" v ON ((v."userId" = p."userId")))
-  WHERE (v.verified AND p."publicProfile" AND (p.handle IS NOT NULL) AND (p."quarantinedBy" IS NULL) AND (NOT platform.is_suspended(p."userId")));
+  WHERE (v.verified AND p."publicProfile" AND (p.handle IS NOT NULL) AND (p."quarantinedBy" IS NULL) AND (NOT platform.is_suspended(p."userId")) AND (NOT (EXISTS ( SELECT 1
+           FROM platform."accountDeletions" d
+          WHERE (d."userId" = p."userId")))));
 
 REVOKE ALL ON TABLE "platform"."publicProfiles" FROM "anon", "authenticated";
 

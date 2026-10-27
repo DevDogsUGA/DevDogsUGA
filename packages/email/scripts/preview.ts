@@ -15,6 +15,15 @@ import { render, type Templates } from "../src/runtime/index.js";
  * new template or prop cannot ship without deciding what its preview says.
  */
 const FIXTURES = {
+  AccountDeletionComplete: {
+    name: "Avery",
+  },
+  AccountDeletionScheduled: {
+    name: "Avery",
+    requestedLine: "You asked to delete your account.",
+    scheduledDate: "Saturday, November 7",
+    keepUrl: "https://devdogsuga.org/account/deletion",
+  },
   JoinRequest: {
     leadName: "Jordan",
     applicantName: "Avery",

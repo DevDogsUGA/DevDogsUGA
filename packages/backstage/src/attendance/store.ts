@@ -19,7 +19,12 @@ export async function readCheckIns(
 ): Promise<ExistingCheckIn[]> {
   const rows = await sql.unsafe(
     `select "userId"::text as "userId", "method"::text as "method"
-     from "platform"."attendance" where "meetingId" = $1::uuid`,
+     from "platform"."attendance"
+     where "meetingId" = $1::uuid
+       -- A deleted member's row keeps the credit with the person nulled
+       -- (account deletion). It matches no account, so it is neither a
+       -- check-in to skip nor an import to remove.
+       and "userId" is not null`,
     [meetingId],
   );
   return rows.map((r) => ({

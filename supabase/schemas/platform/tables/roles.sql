@@ -17,6 +17,7 @@ CREATE TABLE "platform"."roles" (
   "canManageAttendance"  boolean,
   "canPreviewDocs"       boolean,
   "canManageOAuthApps"   boolean,
+  "canDeleteAccounts"    boolean,
   CONSTRAINT "roles_discordRoleId_key" UNIQUE ("discordRoleId"),
   CONSTRAINT "roles_pkey" PRIMARY KEY (id),
   CONSTRAINT "roles_rank_key" UNIQUE (rank),
@@ -38,7 +39,7 @@ CREATE INDEX "roles_isLeadership_rank_idx" ON platform.roles USING btree (rank)
 CREATE TRIGGER roles_refresh_resolved_permissions
   AFTER INSERT OR DELETE OR UPDATE OF id,
     rank,
-    "isLeadership", "roleType", "canModerate", "canManageRoles", "canManageSuspensions", "canViewAuditLog", "canManageAttendance", "canPreviewDocs", "canManageOAuthApps" OR TRUNCATE ON platform.roles
+    "isLeadership", "roleType", "canModerate", "canManageRoles", "canManageSuspensions", "canViewAuditLog", "canManageAttendance", "canPreviewDocs", "canManageOAuthApps", "canDeleteAccounts" OR TRUNCATE ON platform.roles
   FOR EACH STATEMENT
   EXECUTE FUNCTION platform.refresh_resolved_user_permissions();
 
