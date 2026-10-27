@@ -71,7 +71,6 @@ export async function getPublicProfileSettings(): Promise<PublicProfileSettings 
         showAvatar: profiles.showAvatar,
         showBio: profiles.showBio,
         showLinks: profiles.showLinks,
-        showStars: profiles.showStars,
         showContributions: profiles.showContributions,
       })
       .from(profiles)
@@ -86,7 +85,6 @@ export async function getPublicProfileSettings(): Promise<PublicProfileSettings 
       showAvatar: true,
       showBio: true,
       showLinks: true,
-      showStars: true,
       showContributions: true,
     },
   };

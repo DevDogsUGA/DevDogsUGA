@@ -168,7 +168,6 @@ async function ProfileContent() {
                   showAvatar: data.profile.showAvatar,
                   showBio: data.profile.showBio,
                   showLinks: data.profile.showLinks,
-                  showStars: data.profile.showStars,
                   showContributions: data.profile.showContributions,
                 },
               }}

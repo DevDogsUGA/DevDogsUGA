@@ -17,7 +17,7 @@ const profile: Profile = {
   linkedinName: null,
   graduationYear: null,
   majors: [],
-  visibility: { name: true, avatar: true, bio: true, links: true, stars: true },
+  visibility: { name: true, avatar: true, bio: true, links: true },
 };
 
 const render = (activity: Partial<PublicProfileActivity>) =>
@@ -26,11 +26,12 @@ const render = (activity: Partial<PublicProfileActivity>) =>
       profile={profile}
       activity={{
         links: null,
-        stars: null,
+        weekly: { current: 0, longest: 0, semesters: [] },
         contributions: null,
         badges: [],
         ...activity,
       }}
+      treatment="frost"
     />,
   );
 

@@ -1,0 +1,116 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
+/* The weekly art on /attendance and public profiles. Every selector hangs off a `wa-` class. */
+@layer cosmic {
+  .cosmic .wa-streak {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    margin: 0 0 var(--space-4);
+  }
+  .cosmic .wa-streak dt {
+    font: 700 11.5px/1.2 var(--font-ui);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .cosmic .wa-streak dd {
+    margin: 6px 0 0;
+    font: 800 26px/1 var(--font-display);
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .cosmic .wa-streak dd small {
+    font: 500 14px var(--font-ui);
+    color: var(--text-3);
+  }
+  .cosmic .wa-note {
+    margin: 0 0 var(--space-4);
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  .cosmic .wa-sems {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+  .cosmic .wa-sem {
+    margin: 0;
+    min-width: 0;
+  }
+  .cosmic .wa-text {
+    margin: 0 0 var(--space-3);
+    font: 700 16px/1.3 var(--font-ui);
+    color: var(--text);
+  }
+  .cosmic .wa-art {
+    container-type: inline-size;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: var(--space-3);
+  }
+  .cosmic .wa-pre {
+    margin: 0;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    /* A monospace cell is about 0.62em wide: shrink the type until the whole
+       picture fits its card instead of scrolling a phone sideways. */
+    font-size: min(13px, calc(100cqw / (var(--wa-cols) * 0.62)));
+    line-height: 1.15;
+    white-space: pre;
+    overflow: hidden;
+  }
+  .cosmic .wa-pre i {
+    font-style: normal;
+  }
+  .cosmic .wa-scenery {
+    color: color-mix(in srgb, var(--text-3) 50%, transparent);
+  }
+  .cosmic .wa-dark {
+    color: color-mix(in srgb, var(--text-3) 38%, transparent);
+  }
+  .cosmic .wa-open {
+    color: color-mix(in srgb, var(--text-3) 55%, transparent);
+  }
+  .cosmic .wa-lit {
+    color: var(--warn);
+    text-shadow: 0 0 6px color-mix(in srgb, var(--warn) 55%, transparent);
+  }
+  .cosmic .wa-frost {
+    color: color-mix(in srgb, var(--note) 55%, transparent);
+  }
+
+  /* The plain row of week cells a semester without art falls back to. */
+  .cosmic .wa-cells {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .cosmic .wa-cell {
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+  }
+  .cosmic .wa-cell.wa-lit {
+    background: var(--warn);
+    border-color: var(--warn);
+    text-shadow: none;
+  }
+  .cosmic .wa-cell.wa-dark {
+    background: color-mix(in srgb, var(--text-3) 22%, transparent);
+  }
+  .cosmic .wa-cell.wa-frost {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--note) 55%, transparent);
+    background: transparent;
+  }
+  .cosmic .wa-earlier > summary {
+    cursor: pointer;
+    font: 700 14px var(--font-ui);
+    color: var(--k3);
+    padding: 4px 0;
+  }
+}

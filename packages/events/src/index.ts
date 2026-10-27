@@ -1,6 +1,7 @@
 import badges from "./data/badges.json" with { type: "json" };
 import meetings from "./data/meetings.json" with { type: "json" };
 import questions from "./data/questions.json" with { type: "json" };
+import semesters from "./data/semesters.json" with { type: "json" };
 import series from "./data/series.json" with { type: "json" };
 import venues from "./data/venues.json" with { type: "json" };
 import workshops from "./data/workshops.json" with { type: "json" };
@@ -12,6 +13,7 @@ import {
 import { questionsConfigSchema, type QuestionsConfig } from "./questions.js";
 import { resolveMeetings } from "./resolve.js";
 import { clubConfigSchema, type ClubConfig } from "./schema.js";
+import { parseSemesters, type SemestersConfig } from "./semesters.js";
 import { seriesConfigSchema, type SeriesConfig } from "./series.js";
 import {
   validateAuthored,
@@ -27,9 +29,11 @@ export * from "./badges.js";
 export * from "./questions.js";
 export * from "./resolve.js";
 export * from "./schema.js";
+export * from "./semesters.js";
 export * from "./series.js";
 export * from "./validator.js";
 export * from "./venues.js";
+export * from "./weeks.js";
 export * from "./workshops.js";
 
 export class ClubConfigError extends Error {
@@ -76,6 +80,15 @@ export function getWorkshops(): WorkshopsConfig {
 /** The badge definitions, from `badges.json`. */
 export function getBadges(): BadgesConfig {
   return parseBadges(badges);
+}
+
+/**
+ * The semesters and their weekly art, from `semesters.json`, validated against
+ * the committed meetings (an art map must cover exactly the weeks the
+ * semester's live meetings span).
+ */
+export function getSemesters(): SemestersConfig {
+  return parseSemesters(semesters, getClubConfig().meetings);
 }
 
 /** Parses and validates a badges file, throwing a readable error. */

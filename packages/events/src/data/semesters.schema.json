@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "emptyWeeks": {
+      "type": "string",
+      "enum": ["frost", "omit"],
+      "description": "The one switch for weeks with no meetings: frost (neither lit nor dark) or omit (left out of the picture)."
+    },
+    "semesters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "The semester's identity, for example \"fall-2026\"."
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "description": "What the heading and the text equivalent say (\"Fall 2026\")."
+          },
+          "from": {
+            "type": "string",
+            "description": "First day of the window meetings are assigned to this semester by."
+          },
+          "to": {
+            "type": "string",
+            "description": "Last day of that window."
+          },
+          "art": {
+            "description": "The weekly picture. Leave it out and the semester shows a plain row of week cells.",
+            "type": "object",
+            "properties": {
+              "lines": {
+                "minItems": 1,
+                "maxItems": 40,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                "description": "The picture, one string per line. Characters outside every region are scenery and never change."
+              },
+              "regions": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      }
+                    ]
+                  }
+                },
+                "description": "Week (its Monday) to the runs of characters that week lights, as [line, column, length]."
+              }
+            },
+            "required": ["lines", "regions"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "label", "from", "to"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["emptyWeeks", "semesters"],
+  "additionalProperties": false,
+  "title": "DevDogs semesters",
+  "description": "The semesters and the weekly art each draws (Backstage packages/events)."
+}

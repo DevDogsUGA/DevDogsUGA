@@ -7,9 +7,11 @@ import {
 } from "~/lib/directoryQuery";
 import { formatEventDate } from "~/lib/eventTime";
 import { handleFromSegment, profilePath } from "~/lib/profilePath";
+import { artPlainText, weeksLabel } from "~/lib/weeklyArt";
 import { multiplierLabel } from "~/server/badges/display";
 import { publicProfilesEnabled } from "~/server/features";
 import { getCurrentOfficers } from "~/server/loaders/officers";
+import { emptyWeekTreatment } from "~/server/loaders/weeklyParticipation";
 import {
   getDirectoryFacets,
   getPublicHandlesByUserId,
@@ -158,16 +160,26 @@ export const communityProfile = terminal(
       accounts.push({ label: "linkedin", value: profile.linkedinName });
     if (accounts.length) body.push({ type: "fields", rows: accounts });
 
-    if (activity.stars) {
-      body.push(
-        { type: "heading", text: "stars" },
-        {
-          type: "fields",
-          rows: [
-            { label: "meetings", value: String(activity.stars.meetingStars) },
-          ],
-        },
-      );
+    const { weekly } = activity;
+    body.push(
+      { type: "heading", text: "weekly streak" },
+      {
+        type: "fields",
+        rows: [
+          { label: "current", value: weeksLabel(weekly.current) },
+          { label: "longest", value: weeksLabel(weekly.longest) },
+        ],
+      },
+    );
+    const treatment = emptyWeekTreatment();
+    for (const semester of weekly.semesters) {
+      body.push({ type: "text", text: semester.text });
+      if (semester.art) {
+        body.push({
+          type: "markdown",
+          source: `\`\`\`\n${artPlainText(semester.art, semester.weeks, treatment)}\n\`\`\``,
+        });
+      }
     }
     if (activity.badges.length > 0) {
       body.push(

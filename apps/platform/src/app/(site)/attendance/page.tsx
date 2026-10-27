@@ -6,9 +6,8 @@ import CheckInForm, {
   MeetingLine,
   type CheckInMeeting,
 } from "~/components/participation/CheckInForm";
-import StarGrid from "~/components/participation/StarGrid";
-import { PassportSummary } from "~/components/participation/StarBadges";
 import EmptyState from "~/components/participation/EmptyState";
+import WeeklyArt from "~/components/WeeklyArt";
 import {
   CATEGORY_LABEL,
   meetingCategory,
@@ -20,10 +19,12 @@ import { formatMeetingWhen } from "~/components/participation/when";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { getAttendanceMeetings } from "~/server/attendance/getMeetings";
 import { expectSession } from "~/server/auth";
-import { getStarsForUser, totalStars } from "~/server/loaders/stars";
 import ContributionList from "~/components/Contributions";
 import { getContributionsForUser } from "~/server/loaders/contributions";
-import { getStreakForUser } from "~/server/loaders/streak";
+import {
+  emptyWeekTreatment,
+  getWeeklyParticipation,
+} from "~/server/loaders/weeklyParticipation";
 import { getReflectionActivities } from "~/server/reflections/load";
 import { getSurvey } from "~/server/survey/load";
 import Callout, { type CalloutTone } from "~/ui/callout";
@@ -119,7 +120,7 @@ export default async function AttendancePage({
   // says so rather than promising progress it won't show.
   const receiptBody =
     receipt?.good && checkedInMeeting && !checkedInMeeting.hasWorkshop
-      ? "You’re checked in. Only workshop nights count toward stars, streaks or EL credit."
+      ? "You’re checked in. Only workshop nights count toward your streak or EL credit."
       : receipt?.body;
   const surveyUrl =
     receipt?.good && checkedInMeeting ? checkedInMeeting.surveyUrl : null;
@@ -128,17 +129,16 @@ export default async function AttendancePage({
   // attendance row itself, so a hand-edited URL shows nothing.
   const surveyMeetingId =
     receipt?.good && requestedMeeting ? requestedMeeting : null;
-  const [stars, reflectionData, streak, survey, contributions] = userId
+  const [weekly, reflectionData, survey, contributions] = userId
     ? await Promise.all([
-        getStarsForUser(userId),
+        getWeeklyParticipation(userId),
         getReflectionActivities(userId),
-        getStreakForUser(userId),
         surveyMeetingId && isUuid(surveyMeetingId)
           ? getSurvey(userId, surveyMeetingId)
           : null,
         getContributionsForUser(userId, { publicOnly: false }),
       ])
-    : [null, null, null, null, null];
+    : [null, null, null, null];
   const selected = meetings.some((meeting) => meeting.id === requestedMeeting)
     ? requestedMeeting
     : meetings[0]?.id;
@@ -224,15 +224,18 @@ export default async function AttendancePage({
             </Card>
           ))}
 
-        {stars && (
-          <section className="att-sect" aria-labelledby="passport-h">
-            <h2 id="passport-h">Your participation passport</h2>
-            <p className="muted small">
-              One star for each workshop night you attend.
-            </p>
-            <PassportSummary totals={totalStars(stars)} streak={streak} />
-            <StarGrid cells={stars} />
-          </section>
+        {weekly && (
+          <div className="att-sect">
+            <WeeklyArt
+              heading="Your weekly streak"
+              headingId="streak-h"
+              current={weekly.current}
+              longest={weekly.longest}
+              semesters={weekly.semesters}
+              treatment={emptyWeekTreatment()}
+              note="A week lights when you attend a workshop night or have a pull request merged. Monday counts for the week before. A week with no meetings is a Streak Freeze: it never breaks a streak."
+            />
+          </div>
         )}
 
         {contributions && (
