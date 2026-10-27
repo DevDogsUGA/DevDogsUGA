@@ -10,6 +10,7 @@ import {
   NotePencilIcon,
   QrCodeIcon,
   ShieldCheckIcon,
+  UploadSimpleIcon,
   UserIcon,
 } from "@phosphor-icons/react/ssr";
 import type { ReactNode } from "react";
@@ -53,8 +54,8 @@ function initials(name: string) {
  * The app shell's side nav, shared by Settings and the Console (kit-spec
  * section 10). Server-rendered: it shows Account and Developer to every member,
  * and the Console group only to viewers whose permissions (already resolved by
- * `getNavUser`) reach a console page. Imports and Exports are not built (D5) and are
- * not listed.
+ * `getNavUser`) reach a console page. Exports are not built yet and are not
+ * listed.
  *
  * `current` is the pathname being read; the matching link is marked current.
  * A link is current for its own path and anything beneath it.
@@ -79,6 +80,11 @@ export default async function AppSideNav({ current }: { current?: string }) {
       label: "Graphics",
       href: "/console/graphics",
       icon: <ImageIcon />,
+    },
+    p?.canManageAttendance && {
+      label: "Data tools",
+      href: "/console/data",
+      icon: <UploadSimpleIcon />,
     },
     p?.canManageAttendance && {
       label: "QR codes",

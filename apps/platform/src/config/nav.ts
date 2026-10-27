@@ -154,6 +154,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
     description: "Set the word minimum and submission window for reflections.",
   },
   {
+    label: "Data tools",
+    href: "/console/data",
+    icon: "UploadSimpleIcon",
+    permission: "canManageAttendance",
+    description:
+      "Import attendance sheets and the Involvement roster from CSV, with a preview before anything changes.",
+  },
+  {
     label: "QR Codes",
     href: "/console/qr",
     icon: "QrCodeIcon",

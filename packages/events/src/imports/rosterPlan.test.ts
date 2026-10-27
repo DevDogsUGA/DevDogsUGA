@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { InvolvementMember } from "./csv.js";
-import { planImport, type AccountRow } from "./plan.js";
+import type { InvolvementMember } from "./roster.js";
+import type { AccountRow } from "./accounts.js";
+import { planImport } from "./rosterPlan.js";
 
 function member(email: string, name = "Ada Lovelace"): InvolvementMember {
   const [firstName, lastName] = name.split(" ") as [string, string];

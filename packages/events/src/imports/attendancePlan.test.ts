@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AccountRow } from "../production/accounts.js";
-import { planAttendance } from "./plan.js";
+import type { AccountRow } from "./accounts.js";
+import { planAttendance } from "./attendancePlan.js";
 import type { Attendee } from "./sheet.js";
 
 function attendee(email: string, name: string | null = "Someone"): Attendee {

@@ -1,12 +1,14 @@
 import type { TerminalRoute } from "./define";
 import type { TerminalPattern } from "./paths";
 import { accountDeletion, consoleApps } from "./routes/account";
-import { changelogArchive, changelogIssue } from "./routes/changelog";
 import {
   brandGraphics,
+  consoleData,
+  consoleImports,
   consoleMeeting,
   meetingGraphics,
 } from "./routes/console";
+import { changelogArchive, changelogIssue } from "./routes/changelog";
 import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
 import { communityDirectory, communityProfile } from "./routes/community";
 import { directions, eventDetail, eventsSchedule } from "./routes/events";
@@ -36,6 +38,8 @@ export const TERMINAL_ROUTES = {
   "/preview/kit": kitGallery,
   "/account/deletion": accountDeletion,
   "/console/attendance/:meetingId": consoleMeeting,
+  "/console/data": consoleData,
+  "/console/data/imports": consoleImports,
   "/console/apps": consoleApps,
   "/console/graphics": brandGraphics,
   "/console/attendance/:meetingId/graphics": meetingGraphics,

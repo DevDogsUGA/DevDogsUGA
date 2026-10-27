@@ -5,7 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runInvolvement, type InvolvementDeps } from "./commands.js";
-import type { AccountRow } from "./plan.js";
+import type { AccountRow } from "@devdogsuga/events/imports";
 import type { ProfileWrite } from "./store.js";
 
 const ROSTER = [
