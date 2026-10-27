@@ -59,6 +59,13 @@ describe("buildDesiredRulesets", () => {
     ).toBe(false);
   });
 
+  it("leaves the merge queue's own branches out of ~ALL", () => {
+    const all = desired.find((rule) => rule.name === "~ALL")!;
+    expect(all.conditions.ref_name.exclude).toContain(
+      "refs/heads/gh-readonly-queue/**",
+    );
+  });
+
   it("has no update restriction on main, which would refuse the merge queue's push", () => {
     expect(desired.map((rule) => rule.name)).not.toContain("main-updates");
     for (const r of desired.filter((rule) => rule.name.startsWith("main-"))) {
@@ -103,11 +110,11 @@ describe("buildDesiredRulesets", () => {
     });
   });
 
-  it("excludes only main from the broad backstop, so team/* branches are locked down", () => {
+  it("excludes only main and the merge queue's branches from the broad backstop, so team/* branches are locked down", () => {
     const all = desired.find((rule) => rule.name === "~ALL")!;
     expect(all.conditions.ref_name).toEqual({
       include: ["~ALL"],
-      exclude: ["refs/heads/main"],
+      exclude: ["refs/heads/main", "refs/heads/gh-readonly-queue/**"],
     });
     expect(all.bypass_actors).toContainEqual({
       actor_id: 9004,
@@ -263,7 +270,7 @@ describe("buildDesiredRulesets for Backstage", () => {
     expect(without.find((r) => r.name === "deploy/devdogsuga")).toBeUndefined();
     expect(
       without.find((r) => r.name === "~ALL")!.conditions.ref_name.exclude,
-    ).toEqual(["refs/heads/main"]);
+    ).toEqual(["refs/heads/main", "refs/heads/gh-readonly-queue/**"]);
   });
 
   it("lets only admins and the deploy-PR App bypass deploy/devdogsuga, which ~ALL then excludes", () => {
@@ -284,6 +291,7 @@ describe("buildDesiredRulesets for Backstage", () => {
     const all = withApp.find((r) => r.name === "~ALL")!;
     expect(all.conditions.ref_name.exclude).toEqual([
       "refs/heads/main",
+      "refs/heads/gh-readonly-queue/**",
       "refs/heads/deploy/devdogsuga",
     ]);
     expect(all.bypass_actors.map((a) => a.actor_id).sort()).toEqual([

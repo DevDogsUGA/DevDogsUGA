@@ -249,6 +249,13 @@ export function hasMergeQueueRule(ruleset: DesiredRuleset): boolean {
  * - no Renovate bypass: its install on Backstage is not readable from here.
  * - no `team/**` rulesets (a DevDogsUGA concern).
  */
+// The merge queue tests each entry on a branch it creates itself,
+// `gh-readonly-queue/main/pr-<n>-<sha>`, as `github-merge-queue[bot]`, which
+// no ruleset can name as a bypass. `~ALL`'s creation rule refused that branch,
+// so every queued pull request was dropped with `branch_protection_failure`
+// before a check started (10-27). Only GitHub writes these branches.
+const MERGE_QUEUE_BRANCHES = "refs/heads/gh-readonly-queue/**";
+
 // npm releases (`@devdogsuga/<pkg>@x.y.z`) and the extension's
 // (`workshops-vscode@x.y.z`, scripts/publish-workshops-vscode.mjs): both are
 // pushed by the publish job with GITHUB_TOKEN.
@@ -356,6 +363,7 @@ function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
           // admins, devops and focus-leads bypass teams.
           exclude: [
             "refs/heads/main",
+            MERGE_QUEUE_BRANCHES,
             ...(deployRuleset.length > 0 ? [deployBranch] : []),
           ],
         },
@@ -505,7 +513,7 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
       conditions: {
         ref_name: {
           include: ["~ALL"],
-          exclude: ["refs/heads/main"],
+          exclude: ["refs/heads/main", MERGE_QUEUE_BRANCHES],
         },
       },
       bypass_actors: [
