@@ -33,6 +33,17 @@
     cursor: grab;
     touch-action: none;
   }
+  /* Fingers need 44px; the box stays 28x36 so the look is the kit's. */
+  @media (pointer: coarse) {
+    .grip {
+      position: relative;
+    }
+    .grip::before {
+      content: "";
+      position: absolute;
+      inset: -4px -8px;
+    }
+  }
   .grip:hover {
     color: var(--text);
   }

@@ -3382,6 +3382,18 @@
     background: var(--bg);
     box-shadow: inset 1px 0 0 var(--line);
   }
+  /* The pinned cells keep their row rule: the shadow above would replace the
+     header's 2px and the body's 1px bottom lines (cosmic tables). */
+  .cosmic .table th.menu-cell {
+    box-shadow:
+      inset 1px 0 0 var(--line),
+      inset 0 -2px 0 var(--line-strong);
+  }
+  .cosmic .table td.menu-cell {
+    box-shadow:
+      inset 1px 0 0 var(--line),
+      inset 0 -1px 0 var(--line);
+  }
 
   /* ── overlays: Radix rows and parts (promoted from ui/overlays.css) ───────── */
   .cosmic .menu {

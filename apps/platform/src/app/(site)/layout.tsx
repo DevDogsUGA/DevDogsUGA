@@ -7,6 +7,7 @@ import { AppSwitcherProvider } from "~/components/AppSwitcher/provider";
 import Footer from "~/components/Footer";
 import TopNav from "~/components/TopNav";
 import NavUserProvider from "~/components/TopNav/NavUserProvider";
+import NavigationProgress from "~/ui/navigation-progress";
 import SupportWidget from "~/components/SupportWidget";
 
 export default function SiteLayout({ children }: LayoutProps<"/">) {
@@ -15,6 +16,14 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
       <AppSwitcherProvider>
         <div className="flex min-h-screen flex-col">
           <TopNav />
+          {/* Here rather than in the root layout: the bar sits under the nav
+              (fixed at the nav's height), so layouts without TopNav (auth,
+              present) would show it floating mid-page. It reads
+              usePathname(), which is dynamic under Cache Components, so it
+              needs its own <Suspense>. */}
+          <Suspense>
+            <NavigationProgress />
+          </Suspense>
           {/* In flow, directly under the nav, so it takes its own row rather
               than floating over content or fighting AnnouncementBanner and the
               app switcher for the viewport's corners. A client component: it

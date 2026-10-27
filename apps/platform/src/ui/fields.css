@@ -22,10 +22,13 @@
     inset: 0 auto auto 0;
     cursor: inherit;
   }
-  .cosmic .check:not(:has(> input:checked)) i svg {
+  .cosmic
+    .check:not(:has(> input:is(:checked, [type="checkbox"]:indeterminate)))
+    i
+    svg {
     visibility: hidden;
   }
-  .cosmic .check:has(> input:checked) i {
+  .cosmic .check:has(> input:is(:checked, [type="checkbox"]:indeterminate)) i {
     background:
       linear-gradient(var(--k3), var(--k3)) 0 2px / 100% calc(100% - 4px)
         no-repeat,
@@ -47,7 +50,11 @@
     outline: 2px dashed var(--brand3);
     outline-offset: 3px;
   }
-  .cosmic .check[data-invalid]:not(:has(> input:checked)) i {
+  .cosmic
+    .check[data-invalid]:not(
+      :has(> input:is(:checked, [type="checkbox"]:indeterminate))
+    )
+    i {
     background:
       linear-gradient(var(--bg), var(--bg)) 2px 4px / calc(100% - 4px)
         calc(100% - 8px) no-repeat,

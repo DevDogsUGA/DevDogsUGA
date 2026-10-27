@@ -32,11 +32,4 @@
   .table th.num > :is(button, a) {
     flex-direction: row-reverse;
   }
-  .table caption {
-    caption-side: top;
-    text-align: left;
-    padding: 0 14px 10px;
-    font-size: 13.5px;
-    color: var(--text-3);
-  }
 }

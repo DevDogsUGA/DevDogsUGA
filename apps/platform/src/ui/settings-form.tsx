@@ -97,8 +97,9 @@ export interface SettingsFormContextValue {
   blockedAt: number;
 }
 
-export const SettingsFormContext =
-  createContext<SettingsFormContextValue | null>(null);
+const SettingsFormContext = createContext<SettingsFormContextValue | null>(
+  null,
+);
 
 const listFormatter = new Intl.ListFormat("en", {
   style: "long",

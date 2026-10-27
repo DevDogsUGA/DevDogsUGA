@@ -7,7 +7,8 @@ import { wasNavigationBlocked } from "~/lib/navigationGuard";
 
 type Phase = "idle" | "loading" | "done";
 
-/** The kit's 4px stepped bar (`--step1` corners) in the brand red. */
+/** The kit's 4px stepped bar (`--step1` corners) in the brand red. It sits
+ * under the 68px top nav (kit-spec.md section 7), not over it. */
 const BAR_CLASS = "h-1 [clip-path:var(--step1)]";
 const FILL_CLASS = "h-full bg-[var(--brand6)]";
 
@@ -95,7 +96,7 @@ export default function NavigationProgress() {
     <div
       data-slot="navigation-progress"
       data-phase={phase}
-      className={`pointer-events-none fixed top-0 right-0 left-0 z-[9999] ${BAR_CLASS}`}
+      className={`pointer-events-none fixed top-[68px] right-0 left-0 z-[9999] ${BAR_CLASS}`}
       aria-hidden="true"
     >
       <motion.div

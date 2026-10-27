@@ -5,6 +5,7 @@ import { Select as SelectPrimitive } from "radix-ui";
 
 import { cn } from "~/lib/cn";
 import { LB_FRAME, LB_ITEM } from "~/ui/combobox";
+import { useFieldControlProps } from "~/ui/field";
 import {
   CaretDownIcon,
   CaretUpDownIcon,
@@ -41,10 +42,11 @@ function SelectTrigger({
   className,
   size = "default",
   children,
-  ...props
+  ...rest
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default";
 }) {
+  const props = { ...rest, ...useFieldControlProps(rest) };
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"

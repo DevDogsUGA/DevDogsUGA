@@ -399,7 +399,7 @@ function PinnedDialog() {
               <Button variant="ghost" size="sm">
                 Cancel
               </Button>
-              <Button variant="danger-solid" size="sm">
+              <Button variant="destructive" size="sm">
                 Leave team
               </Button>
             </DialogFooter>
