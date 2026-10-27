@@ -140,7 +140,45 @@ test("a rejection or another environment's approval is not an approval", async (
     }),
   );
   assert.equal(result.pass, false);
-  assert.match(result.failures[0], /No approval of the production environment/);
+  assert.match(
+    result.failures[0],
+    /No approval or admin bypass of the production environment/,
+  );
+});
+
+test("an admin bypass passes with a warning, even by the author and enqueuer", async () => {
+  const result = await gate(
+    routes({
+      approvals: [approval("dev", "production", "skipped")],
+      author: "dev",
+      enqueuer: "dev",
+    }),
+  );
+  assert.equal(result.pass, true);
+  assert.deepEqual(result.failures, []);
+  assert.match(result.warnings[0], /dev bypassed it as an admin/);
+});
+
+test("a bypass of another environment is not a bypass of this one", async () => {
+  const result = await gate(
+    routes({
+      approvals: [approval("dev", "publishing", "skipped")],
+      enqueuer: "ann",
+    }),
+  );
+  assert.equal(result.pass, false);
+});
+
+test("an approval beside a bypass is still checked against the author", async () => {
+  const result = await gate(
+    routes({
+      approvals: [approval("dev"), approval("sam", "production", "skipped")],
+      author: "dev",
+      enqueuer: "ann",
+    }),
+  );
+  assert.equal(result.pass, false);
+  assert.match(result.failures[0], /dev approved production but authored #7/);
 });
 
 test("a direct push has no PR, and the native review rule is the gate", async () => {

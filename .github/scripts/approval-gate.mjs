@@ -13,8 +13,15 @@
  * enqueuer to compare against; there the native prevent-self-review is the
  * whole gate, and this says so and passes.
  *
- * Fails closed when a pull request exists but no approval of the environment
- * is on record: it could not tell who approved, and that is not a pass.
+ * An admin's bypass of the environment ("bypass protection rules", recorded
+ * with state `skipped`) passes, with a warning naming who bypassed. A bypass
+ * is an admin deliberately overriding the review, author or not; refusing it
+ * here would leave admins no way to ship a change nobody else can approve.
+ * GitHub offers the bypass to repository admins only.
+ *
+ * Fails closed when a pull request exists but neither an approval nor a bypass
+ * of the environment is on record: it could not tell who let the deploy
+ * through, and that is not a pass.
  *
  * Usage (in the `production` job, first):
  *   GH_TOKEN=... node .github/scripts/approval-gate.mjs \
@@ -29,16 +36,17 @@ const norm = (login) => login.toLowerCase();
 /**
  * Logins that approved `environment`, from `GET .../runs/{id}/approvals`.
  * Rejections and approvals of other environments (a run can carry several
- * gates) do not count.
+ * gates) do not count. `state` "skipped" lists the admins who bypassed it.
  *
  * @param {Array<{ state?: string, user?: { login?: string } | null, environments?: Array<{ name?: string }> }>} approvals
  * @param {string} environment
+ * @param {"approved" | "skipped"} [state]
  * @returns {string[]}
  */
-export function approversOf(approvals, environment) {
+export function approversOf(approvals, environment, state = "approved") {
   const logins = new Set();
   for (const approval of approvals) {
-    if (approval.state !== "approved") continue;
+    if (approval.state !== state) continue;
     if (!(approval.environments ?? []).some((e) => e.name === environment)) {
       continue;
     }
@@ -76,7 +84,7 @@ export function enqueuerOf(timeline) {
 }
 
 /**
- * @typedef {{ pass: boolean, notes: string[], failures: string[] }} GateResult
+ * @typedef {{ pass: boolean, notes: string[], failures: string[], warnings: string[] }} GateResult
  */
 
 /**
@@ -100,6 +108,8 @@ export async function evaluateGate({
   const notes = [];
   /** @type {string[]} */
   const failures = [];
+  /** @type {string[]} */
+  const warnings = [];
 
   const pulls = producingPulls(
     await apiAll(api, `/repos/${repo}/commits/${sha}/pulls`),
@@ -110,7 +120,7 @@ export async function evaluateGate({
       `No merged pull request produced ${sha}: a direct push. The ` +
         `environment's own prevent-self-review is the gate.`,
     );
-    return { pass: true, notes, failures };
+    return { pass: true, notes, failures, warnings };
   }
 
   /** @type {Map<string, string[]>} login (lowercase) -> why it may not approve */
@@ -139,13 +149,21 @@ export async function evaluateGate({
     `/repos/${repo}/actions/runs/${runId}/approvals`,
   );
   const approvers = approversOf(approvals, environment);
+  const bypassers = approversOf(approvals, environment, "skipped");
+  if (approvers.length === 0 && bypassers.length > 0) {
+    warnings.push(
+      `${environment} was not approved: ${bypassers.join(", ")} bypassed it ` +
+        `as an admin. The author and enqueuer check does not apply to a bypass.`,
+    );
+    return { pass: true, notes, failures, warnings };
+  }
   if (approvers.length === 0) {
     failures.push(
-      `No approval of the ${environment} environment is on record for run ` +
+      `No approval or admin bypass of the ${environment} environment is on record for run ` +
         `${runId}, so the approver cannot be checked against the PR author ` +
         `and enqueuer. Refusing.`,
     );
-    return { pass: false, notes, failures };
+    return { pass: false, notes, failures, warnings };
   }
 
   notes.push(`${environment} approved by: ${approvers.join(", ")}.`);
@@ -158,7 +176,7 @@ export async function evaluateGate({
       );
     }
   }
-  return { pass: failures.length === 0, notes, failures };
+  return { pass: failures.length === 0, notes, failures, warnings };
 }
 
 /** @param {string[]} argv @param {string} name */
@@ -188,6 +206,7 @@ async function main() {
     environment,
   });
   for (const note of result.notes) console.log(note);
+  for (const warning of result.warnings) console.log(`::warning::${warning}`);
   for (const failure of result.failures) console.error(`::error::${failure}`);
   if (!result.pass) process.exit(1);
 }
