@@ -162,11 +162,26 @@ function productSecrets(
   product: Product,
 ): Map<string, BwsSecret> {
   const prefix = `${product}/`;
-  return new Map(
-    secrets
-      .filter((secret) => secret.key.startsWith(prefix))
-      .map((secret) => [secret.key.slice(prefix.length), secret]),
-  );
+  const selected = new Map<string, BwsSecret>();
+  for (const secret of secrets) {
+    if (!secret.key.startsWith(prefix)) continue;
+    const key = secret.key.slice(prefix.length);
+    // Match EnvDocument's identifier grammar exactly. Never normalize a name:
+    // doing so could turn a private credential into a public variable.
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+      throw new Error(
+        `Invalid product env key ${JSON.stringify(secret.key)} (record ${secret.id}). Expected ${prefix}<KEY> with KEY matching [A-Za-z_][A-Za-z0-9_]*. No values were written.`,
+      );
+    }
+    const previous = selected.get(key);
+    if (previous) {
+      throw new Error(
+        `Duplicate product env key ${JSON.stringify(secret.key)} (records ${previous.id}, ${secret.id}). Resolve the ambiguity in Secrets Manager; no values were written.`,
+      );
+    }
+    selected.set(key, secret);
+  }
+  return selected;
 }
 
 // ── where the checkout is ────────────────────────────────────────────────────

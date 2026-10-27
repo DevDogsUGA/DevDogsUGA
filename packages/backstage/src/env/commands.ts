@@ -1076,7 +1076,7 @@ async function runProductEnvCommand(
       "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
       "then your Bitwarden vault, and finally by asking.",
       "`gh auth status` shows whether the GitHub CLI is signed in.",
-      `A missing project is created by hand in Secrets Manager: ${product}-<target>.`,
+      `Check that your machine account can access the existing Secrets Manager project "${target}"; product keys use "${product}/<KEY>".`,
     ]);
     process.exitCode = 1;
   }
