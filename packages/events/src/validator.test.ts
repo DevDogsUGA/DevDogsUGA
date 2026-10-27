@@ -36,6 +36,7 @@ function meeting(overrides: Partial<Meeting> = {}): Meeting {
     startsAt: "2026-09-14T22:00:00.000Z",
     endsAt: "2026-09-14T23:30:00.000Z",
     rsvpUrl: null,
+    joinUrl: null,
     cancelledAt: null,
     cancellationReason: null,
     countsForCredit: true,
@@ -173,6 +174,32 @@ describe("RSVP HTTPS URL guards", () => {
   it("allows a meeting with no RSVP link", () => {
     const result = validateClubConfig(config([meeting({ rsvpUrl: null })]));
     expect(result).toEqual([]);
+  });
+});
+
+describe("join links", () => {
+  it("allows one on a virtual night", () => {
+    const result = validateClubConfig(
+      config([
+        meeting({
+          venue: {
+            id: "virtual",
+            kind: "virtual",
+            name: "Virtual",
+            room: null,
+          },
+          joinUrl: "https://meet.example.org/abc",
+        }),
+      ]),
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("refuses one on an in-person night", () => {
+    const result = validateClubConfig(
+      config([meeting({ joinUrl: "https://meet.example.org/abc" })]),
+    );
+    expect(result.map((i) => i.code)).toEqual(["meeting_join_url_not_virtual"]);
   });
 });
 

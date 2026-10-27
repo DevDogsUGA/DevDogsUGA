@@ -66,6 +66,7 @@ export type ValidationIssueCode =
   | "meeting_cancellation_reason_too_long"
   | "meeting_cancellation_reason_without_date"
   | "meeting_rsvp_host"
+  | "meeting_join_url_not_virtual"
   | "workshop_title_too_long"
   | "workshop_description_too_long"
   | "duplicate_question_id"
@@ -397,6 +398,13 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
       id: meeting.slug,
       code: "meeting_rsvp_host",
       message: `rsvpUrl "${meeting.rsvpUrl}" must be an HTTPS address without userinfo or unsupported URL characters.`,
+    });
+  }
+  if (meeting.joinUrl !== null && meeting.venue.kind !== "virtual") {
+    issues.push({
+      id: meeting.slug,
+      code: "meeting_join_url_not_virtual",
+      message: `Meeting "${meeting.slug}" has a joinUrl but its venue "${meeting.venue.id}" is not virtual; a join link belongs to an online night.`,
     });
   }
 }

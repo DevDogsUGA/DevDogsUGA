@@ -73,6 +73,10 @@ export interface MeetingSummary {
   building: string | null;
   /** The room or space inside {@link building}. Free text; never parsed. */
   location: string | null;
+  /** The venue's id in `venues.json`; null only on a row reconcile has not rewritten. */
+  venue: string | null;
+  /** The room or space inside the venue; null when the venue is the whole place. */
+  room: string | null;
   startsAt: Date;
   endsAt: Date;
   /**
@@ -113,6 +117,8 @@ const summaryColumns = {
   cancellationReason: meetings.cancellationReason,
   building: meetings.building,
   location: meetings.location,
+  venue: meetings.venue,
+  room: meetings.room,
   startsAt: meetings.startsAt,
   endsAt: meetings.endsAt,
   category: meetings.category,
