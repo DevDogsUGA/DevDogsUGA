@@ -40,6 +40,25 @@ const TEST_ACCOUNTS = [
   { userId: "t2", displayName: "Tom", createdAt: "2026-10-02" },
 ];
 
+function renderPublished(devDogsApp = false) {
+  return render(
+    <OAuthClientSheet
+      client={{
+        ...CLIENT,
+        status: "in_production",
+        homepageUrl: "https://lab.example",
+        privacyPolicyUrl: "https://lab.example/p",
+      }}
+      testAccounts={[]}
+      dispatch={vi.fn()}
+      isPending={false}
+      secret={null}
+      onClose={vi.fn()}
+      devDogsApp={devDogsApp}
+    />,
+  );
+}
+
 function renderSheet() {
   return render(
     <OAuthClientSheet
@@ -111,5 +130,35 @@ describe("OAuthClientSheet", () => {
         privacyPolicyUrl: "",
       }),
     );
+  });
+});
+
+describe("branding lock", () => {
+  it("shows a published member app's logo, homepage and privacy policy read-only", () => {
+    renderPublished();
+    expect(
+      screen.getByText(/Ask an officer to return it to Testing/),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Homepage")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("Privacy policy")).toHaveValue(
+      "https://lab.example/p",
+    );
+    expect(screen.queryByText("logo field")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Save details" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the edit controls in Testing and for an officer's DevDogs app", () => {
+    const { unmount } = renderSheet();
+    expect(screen.getByText("logo field")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save details" }),
+    ).toBeInTheDocument();
+    unmount();
+    renderPublished(true);
+    expect(
+      screen.getByRole("button", { name: "Save details" }),
+    ).toBeInTheDocument();
   });
 });

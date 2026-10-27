@@ -70,11 +70,10 @@ export default function AppLogoField({
       const { error } = await createClient()
         .storage.from(env.NEXT_PUBLIC_AVATARS_BUCKET)
         .uploadToSignedUrl(path, token, file, {
-          upsert: true,
           cacheControl: "0, no-cache",
         });
       if (error) throw error;
-      const saved = await saveAppLogo(clientId);
+      const saved = await saveAppLogo(clientId, path);
       if (!saved.ok) {
         toast.error(saved.error);
         return;
