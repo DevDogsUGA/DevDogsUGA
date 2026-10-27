@@ -20,7 +20,7 @@ export const CHECK_IN_ADDRESS = "devdogsuga.org/attendance";
  */
 export interface TitleCardMeeting {
   title: string;
-  kind: string | null;
+  category: string | null;
   building: string | null;
   location: string | null;
   startsAt: Date;
@@ -35,7 +35,7 @@ export interface TitleCardMeeting {
  */
 export function toTitleCardMeeting(
   meeting: {
-    kind: string | null;
+    category: string | null;
     building: string | null;
     location: string | null;
     startsAt: Date;
@@ -45,7 +45,7 @@ export function toTitleCardMeeting(
 ): TitleCardMeeting {
   return {
     title,
-    kind: meeting.kind,
+    category: meeting.category,
     building: meeting.building,
     location: meeting.location,
     startsAt: meeting.startsAt,
@@ -78,7 +78,7 @@ export default function TitleCard({
   /** The checked-in count, top right. */
   count: ReactNode;
 }) {
-  const category = meetingCategory({ kind: meeting.kind });
+  const category = meetingCategory({ category: meeting.category });
   const where = locationLine(meeting.building, meeting.location);
   const when = [formatMeetingWhen(meeting.startsAt, meeting.endsAt), where]
     .filter(Boolean)

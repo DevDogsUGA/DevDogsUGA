@@ -14,43 +14,36 @@ export const EVENT_CATEGORIES = [
 
 export type EventCategory = (typeof EVENT_CATEGORIES)[number];
 
-/**
- * What `categoryOf` reads from a meeting. Structural, so a loader row, a
- * calendar entry or a bare literal all fit, and `segments` (from
- * `resolveMeetingSegments`) and `workshops` are both accepted since callers
- * hold one or the other.
- */
-export interface CategorisableMeeting {
-  kind: string | null;
-  segments?: readonly string[];
-  workshops?: readonly unknown[];
-}
-
-const BY_KIND: Readonly<Record<string, EventCategory>> = {
-  "Build Session": "build",
-  "Study Session": "study",
-  "Interest Meeting": "info",
-  Social: "social",
-  "Demo Night": "milestone",
+/** The chip text for each category. */
+export const CATEGORY_LABEL: Record<EventCategory, string> = {
+  build: "Build",
+  workshop: "Workshop",
+  social: "Social",
+  info: "Info Session",
+  study: "Study",
+  milestone: "Milestone",
 };
 
 /**
- * D12: maps a meeting to its category. Any night with a workshop wins, then the
- * authored `kind`, and everything else (a one-off with no kind and no
- * workshop) is a build night.
+ * What `categoryOf` reads from a meeting. Structural, so a loader row, a
+ * calendar entry or a bare literal all fit.
+ */
+export interface CategorisableMeeting {
+  category: string | null;
+}
+
+/**
+ * D12: the one mapping from a meeting to its category.
  *
- * Replace the body with the config's `category` field when the meeting-series
- * redesign lands; callers do not change.
+ * The category is resolved in config (the meeting's own, else its series')
+ * and written by reconcile, so this only reads it. A row reconcile has not
+ * yet rewritten (null) or an unknown value is a build night, the same
+ * fallback the old kind table used.
  */
 export function categoryOf(meeting: CategorisableMeeting): EventCategory {
-  if (
-    meeting.segments?.includes("workshop") ||
-    (meeting.workshops?.length ?? 0) > 0
-  ) {
-    return "workshop";
-  }
-  const kind = meeting.kind;
-  return kind !== null && Object.hasOwn(BY_KIND, kind)
-    ? BY_KIND[kind]!
+  const category = meeting.category;
+  return category !== null &&
+    (EVENT_CATEGORIES as readonly string[]).includes(category)
+    ? (category as EventCategory)
     : "build";
 }

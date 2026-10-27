@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "series": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "The series' identity; meetings reference it. Changing it detaches every meeting that names it."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48,
+            "description": "What the series is called (\"Merge Monday\")."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "build",
+              "workshop",
+              "social",
+              "info",
+              "study",
+              "milestone"
+            ],
+            "description": "The category every night of the series takes by default."
+          },
+          "brand": {
+            "type": "string",
+            "enum": ["devdogs", "gdgc"],
+            "description": "devdogs (Cosmic) or gdgc (Paper)."
+          },
+          "headline": {
+            "type": "string",
+            "enum": ["series", "topic"],
+            "description": "\"series\" leads with the series name (plus #n and the night's workshops). \"topic\" leads with the workshop topic and shows the series name as a small kicker."
+          },
+          "numbered": {
+            "description": "Append #n to the title, counted per term in date order, skipping cancelled nights.",
+            "type": "boolean"
+          },
+          "slot": {
+            "description": "The usual time, Eastern. Documents when the series meets; each meeting still authors its own startsAt and endsAt.",
+            "type": "object",
+            "properties": {
+              "weekday": {
+                "type": "string",
+                "enum": [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                  "saturday",
+                  "sunday"
+                ]
+              },
+              "start": {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+              },
+              "end": {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+              }
+            },
+            "required": ["weekday", "start", "end"],
+            "additionalProperties": false
+          },
+          "summary": {
+            "description": "The summary a night uses when it does not write its own.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "building": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DLW",
+                  "Driftmier",
+                  "Plant Sciences",
+                  "Boyd",
+                  "MLC",
+                  "Science Learning Center",
+                  "Science Library",
+                  "Poultry Science",
+                  "Main Library",
+                  "Tate",
+                  "Other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "description": "The room a night uses when it does not name one.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["id", "name", "category", "brand", "headline"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["series"],
+  "additionalProperties": false,
+  "title": "DevDogs meeting series",
+  "description": "The recurring kinds of night meetings reference by id (Backstage packages/events)."
+}

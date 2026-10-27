@@ -5,7 +5,7 @@ import { meetings } from "~/server/db/schema";
 export type AttendanceMeeting = {
   id: string;
   nameOverride: string | null;
-  kind: string | null;
+  category: string | null;
   startsAt: Date;
   endsAt: Date;
   ongoing: boolean;
@@ -28,7 +28,7 @@ export async function getAttendanceMeetings(
     .select({
       id: meetings.id,
       nameOverride: meetings.nameOverride,
-      kind: meetings.kind,
+      category: meetings.category,
       startsAt: meetings.startsAt,
       endsAt: meetings.endsAt,
       ongoing,

@@ -23,6 +23,7 @@ import {
   resolveMeetingSegments,
 } from "~/server/loaders/meetings";
 import type { Block, Card, Field } from "../blocks";
+import { seriesKicker } from "~/server/config/seriesKicker";
 import { NOT_FOUND, page, PUBLIC, terminal } from "../define";
 import { meetingItem, ROOM_TBA, timeSpan } from "../meetings";
 import { meetingChip, type Chip } from "../theme";
@@ -99,17 +100,18 @@ export const eventsSchedule = terminal(PUBLIC, async () => {
   });
 });
 
-/** The dialog's chips: derived segments first, then the authored kind. */
+/** The dialog's chips: the night's category, then "Workshop" when it has workshops (unless that is the category). */
 function segmentChips(
-  kind: string | null,
+  category: string | null,
   workshops: readonly unknown[],
 ): Chip[] {
-  const { segments } = resolveMeetingSegments({ kind, workshops });
-  const chips: Chip[] = segments.map((segment) => ({
-    label: EVENT_SEGMENT_VISUALS[segment].label,
-    color: KIND[categoryOf({ kind: null, segments: [segment] })][3],
-  }));
-  if (kind !== null) chips.push(meetingChip(kind, false));
+  const chips: Chip[] = [meetingChip(category)];
+  const { segments } = resolveMeetingSegments({ workshops });
+  for (const segment of segments) {
+    const label = EVENT_SEGMENT_VISUALS[segment].label;
+    if (chips.some((chip) => chip.label === label)) continue;
+    chips.push({ label, color: KIND[categoryOf({ category: segment })][3] });
+  }
   return chips;
 }
 
@@ -124,14 +126,16 @@ export const eventDetail = terminal(PUBLIC, async ({ params }) => {
   const ended = now >= meeting.endsAt;
   const happeningNow = now >= meeting.startsAt && !ended;
   const where = locationLine(meeting.building, meeting.location);
-  const chips = segmentChips(meeting.kind, workshops);
+  const chips = segmentChips(meeting.category, workshops);
   const title = meetingTitle(meeting, workshops);
+  const kicker = seriesKicker(meeting.series, title);
 
   const card: Card = {
-    color:
-      chips[0]?.color ?? meetingChip(meeting.kind, workshops.length > 0).color,
+    color: chips[0]!.color,
     chips,
-    meta: formatEventDate(meeting.startsAt),
+    meta: [kicker, formatEventDate(meeting.startsAt)]
+      .filter(Boolean)
+      .join(" · "),
     title,
     facts: [timeSpan(meeting.startsAt, meeting.endsAt), where ?? ROOM_TBA],
     body: meeting.summary ?? undefined,

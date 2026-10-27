@@ -13,7 +13,7 @@ const MEETING_ID = "aaaaaaaa-0000-4000-a000-000000000001";
 
 const MEETING: TitleCardMeeting = {
   title: "Supabase",
-  kind: "Build Session",
+  category: "build",
   building: "DLW",
   location: "124",
   startsAt: new Date("2026-09-28T22:00:00.000Z"),

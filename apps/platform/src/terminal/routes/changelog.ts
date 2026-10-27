@@ -28,7 +28,10 @@ export interface IssueMeeting {
   slug?: string;
   title: string;
   summary: string | null;
-  kind: string | null;
+  /** Releases from the series redesign on. */
+  category?: string | null;
+  /** Older releases: the authored kind, none for a workshop night. */
+  kind?: string | null;
   building: string | null;
   location: string | null;
   startsAt: string;
@@ -70,14 +73,31 @@ function eventPath(meeting: IssueMeeting): string | undefined {
     : undefined;
 }
 
+/**
+ * An issue meeting's category. Older newsletter releases carry the authored
+ * `kind` instead (none meaning a workshop night, the email's reading).
+ */
+const LEGACY_KIND_CATEGORY: Readonly<Record<string, string>> = {
+  "Build Session": "build",
+  "Study Session": "study",
+  "Interest Meeting": "info",
+  Social: "social",
+  "Demo Night": "milestone",
+};
+
+function issueCategory(meeting: IssueMeeting): string {
+  if (meeting.category) return meeting.category;
+  const legacy = meeting.kind ? LEGACY_KIND_CATEGORY[meeting.kind] : undefined;
+  return legacy ?? "workshop";
+}
+
 export function issueEventItem(meeting: IssueMeeting): EventItem {
   const startsAt = new Date(meeting.startsAt);
   const cancelled = meeting.cancelledAt !== null;
   return {
     date: dayLabel(startsAt),
     title: meeting.title,
-    // A night with no kind is a workshop night, the email's reading.
-    chip: meetingChip(meeting.kind, true),
+    chip: meetingChip(issueCategory(meeting)),
     facts: [
       timeSpan(startsAt, new Date(meeting.endsAt)),
       locationLine(meeting.building, meeting.location) ?? ROOM_TBA,

@@ -1,6 +1,5 @@
-import { EVENT_SEGMENT_VISUALS } from "@devdogsuga/sdk/brand/event";
 import { COSMIC, DEVDOGS, KIND } from "@devdogsuga/sdk/brand";
-import { categoryOf } from "../lib/eventKind";
+import { CATEGORY_LABEL, categoryOf } from "../lib/eventKind";
 
 /**
  * The terminal's colours, every one borrowed rather than chosen.
@@ -43,25 +42,16 @@ export const ACCENT = {
 
 export type Accent = keyof typeof ACCENT;
 
-/** A chip's label and colour, for an event kind or segment. */
+/** A chip's label and colour, for an event category or segment. */
 export interface Chip {
   label: string;
   color: string;
 }
 
-/**
- * The chip for a meeting: its authored kind when it has one, else what its
- * structure says (a workshop night, or an unscheduled one). The same
- * precedence `primaryBadge` applies on the site.
- */
-export function meetingChip(kind: string | null, hasWorkshops: boolean): Chip {
-  const color =
-    KIND[categoryOf({ kind, segments: hasWorkshops ? ["workshop"] : [] })][3];
-  if (kind !== null) return { label: kind, color };
-  const segment = hasWorkshops
-    ? EVENT_SEGMENT_VISUALS.workshop
-    : EVENT_SEGMENT_VISUALS.open;
-  return { label: segment.label, color };
+/** The chip for a meeting: its resolved category's label and colour. */
+export function meetingChip(category: string | null): Chip {
+  const resolved = categoryOf({ category });
+  return { label: CATEGORY_LABEL[resolved], color: KIND[resolved][3] };
 }
 
 /** The struck-through state a cancelled night wears everywhere. */

@@ -38,7 +38,6 @@ import { EVENT_TZ } from "./eventTime";
 /** The fields any caller can supply, all of them nullable or plain data. */
 export interface TitleableMeeting {
   nameOverride: string | null;
-  kind: string | null;
   startsAt: Date;
 }
 
@@ -105,15 +104,18 @@ export const WORKSHOP_FALLBACK_LABEL = "Workshop";
 /**
  * The meeting's name, in descending order of how much somebody meant it.
  *
- * 1. `nameOverride`: an officer wrote this night a name, so use it.
- * 2. `kind`: "Build Session", "Study Session". Authored, just not bespoke.
- * 3. the workshops it teaches: "Workshop: Next.js & Flutter".
- * 4. the date, always available, since `startsAt` is `not null`.
+ * 1. `nameOverride`: the title the config resolved for this night (authored,
+ *    else derived from its series: "Build Session #3"). Reconcile writes one
+ *    for every meeting, so this is the answer for every live row.
+ * 2. the workshops it teaches: "Workshop: Next.js & Flutter".
+ * 3. the date, always available, since `startsAt` is `not null`.
+ *
+ * Steps 2 and 3 only serve a row reconcile has not yet written.
  *
  * `workshops` is optional because two callers genuinely do not have it: the
  * stars grid and the CSV export select a meeting row without its agenda, and
  * widening their queries to build a string would be a join per row for a label.
- * Those fall through to a kind or a date, which is the right answer for a
+ * Those fall through to a date, which is the right answer for a
  * table that already shows the date in the next column.
  */
 export function meetingTitle(
@@ -121,7 +123,6 @@ export function meetingTitle(
   workshops: readonly TitleableWorkshop[] = [],
 ): string {
   if (meeting.nameOverride !== null) return meeting.nameOverride;
-  if (meeting.kind !== null) return meeting.kind;
 
   // `workshopName`, not `workshopLabel`: the label is total now, so mapping
   // it here would turn an unnamed workshop into the heading "Workshop:

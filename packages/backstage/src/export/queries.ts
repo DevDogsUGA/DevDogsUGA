@@ -120,7 +120,7 @@ with ${PICKED_ANSWERS}
 select ${MEMBER('pa."userId"')},
   m."slug" as "meeting_slug",
   case when m.id is not null
-    then coalesce(m."nameOverride", m."kind", 'Meeting') end as "meeting_title",
+    then coalesce(m."nameOverride", 'Meeting') end as "meeting_title",
   q.id as "question_id",
   q.scope as "question_scope",
   q.definition ->> 'prompt' as "question_prompt",
@@ -193,7 +193,7 @@ order by ms."startsAt", ms."userId", ms."activityType", ms."activityId"`,
     sql: `
 select ${MEMBER('a."userId"')},
   m."slug" as "meeting_slug",
-  coalesce(m."nameOverride", m."kind", 'Meeting') as "meeting_title",
+  coalesce(m."nameOverride", 'Meeting') as "meeting_title",
   m."startsAt" as "meeting_starts_at",
   a."recordedAt" as "checked_in_at",
   a."method"::text as "check_in_method",
@@ -233,7 +233,7 @@ select ${MEMBER('r."userId"')},
   'meeting' as "activity_type",
   r."meetingId" as "activity_id",
   (
-    select coalesce(m."nameOverride", m."kind", 'Meeting')
+    select coalesce(m."nameOverride", 'Meeting')
     from "platform"."meetings" m where m."id" = r."meetingId"
   ) as "activity_title",
   r."content" as "content",

@@ -8,27 +8,25 @@
  * `mix()` instead of asking a mail client to composite them.
  */
 import type { CSSProperties } from "react";
-import {
-  EVENT_KIND_VISUALS,
-  EVENT_SEGMENT_VISUALS,
-} from "@devdogsuga/sdk/brand/event";
+import { EVENT_CATEGORY_VISUALS } from "@devdogsuga/sdk/brand/event";
 
 /** The club accent — UGA arch black on red. */
 export const UGA = "#ba0c2f";
 
 /**
- * Event-type colors, taken from the calendar's own vocabulary in
+ * Event-category colors (the theme keeps its older `interest` and `demo` names for
+ * `info` and `milestone`, which the hosted glow images are filed under), taken from the calendar's own vocabulary in
  * `@devdogsuga/sdk/brand/event` rather than restated: the chips here and the
  * chips on the site's schedule are the same promise about the same event
  * types.
  */
 export const KIND = {
-  interest: EVENT_KIND_VISUALS["Interest Meeting"].accent,
-  build: EVENT_KIND_VISUALS["Build Session"].accent,
-  study: EVENT_KIND_VISUALS["Study Session"].accent,
-  social: EVENT_KIND_VISUALS.Social.accent,
-  demo: EVENT_KIND_VISUALS["Demo Night"].accent,
-  workshop: EVENT_SEGMENT_VISUALS.workshop.accent,
+  interest: EVENT_CATEGORY_VISUALS.info.accent,
+  build: EVENT_CATEGORY_VISUALS.build.accent,
+  study: EVENT_CATEGORY_VISUALS.study.accent,
+  social: EVENT_CATEGORY_VISUALS.social.accent,
+  demo: EVENT_CATEGORY_VISUALS.milestone.accent,
+  workshop: EVENT_CATEGORY_VISUALS.workshop.accent,
 } as const;
 
 /** The mauve surfaces, matching the platform (mauve-950 canvas → -300 text). */

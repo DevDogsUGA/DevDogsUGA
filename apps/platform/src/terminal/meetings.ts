@@ -54,7 +54,7 @@ export function meetingItem(
   return {
     date: dayLabel(meeting.startsAt),
     title: meetingTitle(meeting, workshops),
-    chip: meetingChip(meeting.kind, meeting.workshopCount > 0),
+    chip: meetingChip(meeting.category),
     facts: [
       timeSpan(meeting.startsAt, meeting.endsAt),
       locationLine(meeting.building, meeting.location) ?? ROOM_TBA,
@@ -72,8 +72,7 @@ export function configMeetingItem(meeting: Meeting): EventItem {
   return {
     date: dayLabel(startsAt),
     title: meeting.title,
-    // A config night with no kind is a workshop night, the email's reading.
-    chip: meetingChip(meeting.kind, true),
+    chip: meetingChip(meeting.category),
     facts: [
       timeSpan(startsAt, new Date(meeting.endsAt)),
       locationLine(meeting.building, meeting.location) ?? ROOM_TBA,

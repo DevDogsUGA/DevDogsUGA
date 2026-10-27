@@ -48,14 +48,42 @@ export const WORKSHOP_DESCRIPTION_MAX_LENGTH = 280;
 export const RSVP_URL_PATTERN =
   /^https:\/\/[A-Za-z0-9][A-Za-z0-9.-]*(\/[A-Za-z0-9/_?=&.%#:~-]*)?$/;
 
-/** Mirrors `meetings_kind_choices`. */
-export const MEETING_KIND_CHOICES = [
-  "Build Session",
-  "Study Session",
-  "Interest Meeting",
-  "Social",
-  "Demo Night",
+/**
+ * What a night is, for colour and filtering. Mirrors `meetings_category_choices`
+ * and `EVENT_CATEGORIES` in the platform's `eventKind.ts`. `info` is the Info
+ * Session (what was the "Interest Meeting" kind); `milestone` covers Kickoff,
+ * Cold Start and Demo Day.
+ */
+export const MEETING_CATEGORIES = [
+  "build",
+  "workshop",
+  "social",
+  "info",
+  "study",
+  "milestone",
 ] as const;
+
+export type MeetingCategory = (typeof MEETING_CATEGORIES)[number];
+
+/** Which visual identity a night wears: Cosmic (`devdogs`) or Paper (`gdgc`). */
+export const MEETING_BRANDS = ["devdogs", "gdgc"] as const;
+
+export type MeetingBrand = (typeof MEETING_BRANDS)[number];
+
+/** The label each category prints. */
+export const MEETING_CATEGORY_LABELS: Readonly<
+  Record<MeetingCategory, string>
+> = {
+  build: "Build",
+  workshop: "Workshop",
+  social: "Social",
+  info: "Info Session",
+  study: "Study",
+  milestone: "Milestone",
+};
+
+/** A series' or meeting's stable id: lowercase words joined by hyphens. */
+export const SERIES_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** Mirrors `meetings_building_choices`. */
 export const MEETING_BUILDING_CHOICES = [
@@ -125,10 +153,14 @@ export const workshopSchema = z.strictObject({
 export type Workshop = z.infer<typeof workshopSchema>;
 
 /**
- * A meeting: the in-person moment. Its agenda is the workshops running that
- * night, authored inline rather than cross-referenced, because a workshop
- * belongs to exactly one meeting and nothing else in the config ever needs
- * to point at one independently.
+ * A meeting as AUTHORED in `meetings.json`: the in-person moment. Its agenda
+ * is the workshops running that night, written inline rather than
+ * cross-referenced, because a workshop belongs to exactly one meeting.
+ *
+ * A meeting may name a `series` (from `series.json`) and inherit its category,
+ * brand, summary, location and building. An authored value always wins, a
+ * one-off (no series) sets its own `title` and `category`, and `resolveMeetings`
+ * turns this shape into the {@link Meeting} everything downstream reads.
  */
 export const meetingSchema = z
   .strictObject({
@@ -142,27 +174,33 @@ export const meetingSchema = z
         description:
           "The meeting's identity and its URL on the platform and posters: its Eastern date (YYYY-MM-DD), plus a lowercase descriptor when another meeting shares the date. Unique across the file. Changing it makes a new meeting.",
       }),
-    // Title, summary and location are required even though their columns
-    // are nullable: every meeting is also a newsletter card, and a card needs
-    // a heading, copy and a place ("TBA" until there is one). Stricter than
-    // the database is allowed; looser is not.
-    title: z.string().min(1).max(MEETING_TITLE_MAX_LENGTH).meta({
-      description: "The heading on the events page and newsletter card.",
+    series: z.string().regex(SERIES_ID_PATTERN).optional().meta({
+      description:
+        "The id of a series in series.json. The meeting inherits the series' category, brand, summary, location and building, and its title is derived from the series unless one is authored.",
     }),
-    summary: z
-      .string()
-      .min(1)
-      .max(MEETING_SUMMARY_MAX_LENGTH)
-      .meta({ description: "About two sentences, for the events card." }),
-    kind: z
-      .enum(MEETING_KIND_CHOICES)
-      .nullable()
-      .meta({ description: "The kind of night, or null for a one-off." }),
-    building: z.enum(MEETING_BUILDING_CHOICES).nullable(),
-    location: z
-      .string()
-      .min(1)
-      .meta({ description: 'The room, or "TBA" until there is one.' }),
+    title: z.string().min(1).max(MEETING_TITLE_MAX_LENGTH).optional().meta({
+      description:
+        "The heading on the events page and newsletter card. Always wins over the series-derived title; required for a one-off (no series).",
+    }),
+    summary: z.string().min(1).max(MEETING_SUMMARY_MAX_LENGTH).optional().meta({
+      description:
+        "About two sentences, for the events card. Defaults to the series' summary.",
+    }),
+    category: z.enum(MEETING_CATEGORIES).optional().meta({
+      description:
+        "What the night is. Defaults to the series' category; required for a one-off.",
+    }),
+    brand: z.enum(MEETING_BRANDS).optional().meta({
+      description:
+        "devdogs (Cosmic) or gdgc (Paper). Defaults to the series' brand, then devdogs.",
+    }),
+    building: z.enum(MEETING_BUILDING_CHOICES).nullable().optional().meta({
+      description: "Defaults to the series' building, then null.",
+    }),
+    location: z.string().min(1).optional().meta({
+      description:
+        'The room, or "TBA" until there is one. Defaults to the series\' location.',
+    }),
     startsAt: isoInstant.meta({
       description:
         "ISO 8601 instant, e.g. 2026-09-14T22:00:00.000Z (6 PM Eastern).",
@@ -211,7 +249,40 @@ export const meetingSchema = z
     path: ["endsAt"],
   });
 
-export type Meeting = z.infer<typeof meetingSchema>;
+/** A meeting as written in `meetings.json`. */
+export type AuthoredMeeting = z.infer<typeof meetingSchema>;
+
+/**
+ * A meeting once its series is applied: every field a consumer reads is
+ * present. This is what `getClubConfig()` returns, and what the validator,
+ * the platform's reconcile, the newsletter and the graphics all take.
+ */
+export interface Meeting {
+  slug: string;
+  /** The series id, or null for a one-off. */
+  series: string | null;
+  /** The resolved display title: authored, else derived from the series. */
+  title: string;
+  /**
+   * The small line over a topic-headline night's title: the series name
+   * ("Workshop Wednesday" over the workshop's topic). Null otherwise.
+   */
+  kicker: string | null;
+  summary: string;
+  category: MeetingCategory;
+  brand: MeetingBrand;
+  building: (typeof MEETING_BUILDING_CHOICES)[number] | null;
+  location: string;
+  startsAt: string;
+  endsAt: string;
+  rsvpUrl: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+  countsForCredit: boolean;
+  surveyUrl: string | null;
+  questions?: string[] | undefined;
+  agenda: Workshop[];
+}
 
 export const clubConfigSchema = z.strictObject({
   /** The editor's pointer to `meetings.schema.json`; ignored otherwise. */
@@ -219,4 +290,10 @@ export const clubConfigSchema = z.strictObject({
   meetings: z.array(meetingSchema),
 });
 
-export type ClubConfig = z.infer<typeof clubConfigSchema>;
+/** `meetings.json` as authored. */
+export type AuthoredClubConfig = z.infer<typeof clubConfigSchema>;
+
+/** The meetings, series applied: what the rest of the system reads. */
+export interface ClubConfig {
+  meetings: Meeting[];
+}

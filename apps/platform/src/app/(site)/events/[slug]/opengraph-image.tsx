@@ -4,6 +4,7 @@ import {
   meetingLocation,
 } from "@devdogsuga/sdk/brand/event";
 import { categoryOf } from "~/lib/eventKind";
+import { seriesKicker } from "~/server/config/seriesKicker";
 import { isCancelled } from "~/components/EventsSection/meetingView";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import { contentType, ogResponse, size } from "@devdogsuga/sdk/brand/next";
@@ -66,12 +67,15 @@ export default async function Image({
   return ogResponse(
     EventCard({
       ...size,
-      category: categoryOf({
-        kind: meeting.kind,
-        workshops,
-      }),
       ...meetingCardDetail({
-        meeting,
+        meeting: {
+          ...meeting,
+          category: categoryOf(meeting),
+          kicker: seriesKicker(
+            meeting.series,
+            meetingTitle(meeting, workshops),
+          ),
+        },
         title: meetingTitle(meeting, workshops),
         agenda: workshops.map(workshopLabel),
         location: meetingLocation(meeting.building, meeting.location),

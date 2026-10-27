@@ -1,6 +1,6 @@
 import * as React from "react";
 import { COSMIC, DEVDOGS } from "../brand.js";
-import { type EventDetail } from "../event.js";
+import { eventCategoryVisual, type EventDetail } from "../event.js";
 import { Icon } from "../primitives.js";
 import {
   CardShell,
@@ -11,21 +11,6 @@ import {
   type CardContext,
   type CardHue,
 } from "./CardShell.js";
-
-/**
- * The category an authored kind falls in when the caller has not resolved one
- * (the CLI passes a bare `kind`). The platform's `categoryOf` is the source of
- * truth and passes `category`; this mirrors its kind table for callers that
- * cannot import the app. Keep it in step with lib/eventKind.ts BY_KIND in the
- * platform; the Backstage graphics registry should pass `category` itself.
- */
-const CATEGORY_OF_KIND: Readonly<Record<string, CardHue>> = {
-  "Build Session": "build",
-  "Study Session": "study",
-  "Interest Meeting": "info",
-  Social: "social",
-  "Demo Night": "milestone",
-};
 
 /**
  * One meeting, as everything a person needs to decide whether to come.
@@ -40,8 +25,6 @@ const CATEGORY_OF_KIND: Readonly<Record<string, CardHue>> = {
  * no date maths and holds no timezone.
  */
 export interface EventCardProps extends EventDetail {
-  /** The meeting's category (the platform's `categoryOf`); drives the hue. */
-  category?: CardHue;
   width: number;
   height: number;
   cobrand?: boolean;
@@ -76,7 +59,8 @@ export function EventCard({
   date,
   time,
   location,
-  kind,
+  kicker,
+  brand,
   badge,
   agenda,
   cancelled,
@@ -84,15 +68,13 @@ export function EventCard({
   category,
   cobrand,
 }: EventCardProps) {
-  // A workshop item's badge wins, then the resolved category, then the kind's
-  // own; a cancelled night is DevDogs red, the one colour that is not a hue.
+  // A workshop item's badge wins, then the resolved category; a cancelled
+  // night is DevDogs red, the one colour that is not a hue.
   const hue: CardHue = cancelled
     ? "devdogs"
     : badge?.label === "Workshop"
       ? "workshop"
-      : (category ??
-        (kind !== undefined ? CATEGORY_OF_KIND[kind] : undefined) ??
-        "build");
+      : (category ?? "build");
   const { light: accent, deep } = hueSteps(hue);
   const context = cardContext(width, height);
   const { u } = context;
@@ -114,10 +96,17 @@ export function EventCard({
     <CardShell
       width={width}
       height={height}
-      eyebrow={cancelled ? undefined : (badge?.label ?? kind ?? "Events")}
+      eyebrow={
+        cancelled
+          ? undefined
+          : (badge?.label ??
+            kicker ??
+            eventCategoryVisual(category)?.label ??
+            "Events")
+      }
       accent={accent}
       footer={`devdogsuga.org${path ?? "/events"}`}
-      cobrand={cobrand}
+      cobrand={cobrand ?? brand === "gdgc"}
     >
       <div
         style={{

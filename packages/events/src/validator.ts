@@ -6,10 +6,12 @@ import {
   RSVP_URL_PATTERN,
   WORKSHOP_DESCRIPTION_MAX_LENGTH,
   WORKSHOP_TITLE_MAX_LENGTH,
+  type AuthoredClubConfig,
   type ClubConfig,
   type Meeting,
   type Workshop,
 } from "./schema.js";
+import type { SeriesConfig } from "./series.js";
 import type { QuestionsConfig } from "./questions.js";
 
 /**
@@ -41,6 +43,12 @@ export interface ValidationIssue {
 }
 
 export type ValidationIssueCode =
+  | "duplicate_series_id"
+  | "unknown_series"
+  | "missing_title"
+  | "missing_category"
+  | "missing_summary"
+  | "missing_location"
   | "duplicate_workshop_title"
   | "duplicate_slug"
   | "meeting_slug_date"
@@ -81,6 +89,71 @@ export function validateClubConfig(
 
   if (questions) checkQuestions(questions, config.meetings, issues);
 
+  return issues;
+}
+
+// ── Series ───────────────────────────────────────────────────────────────────
+
+/**
+ * The checks that must pass before a series can be applied: series ids are
+ * unique, every named series exists, and every meeting ends up with a
+ * title, category, summary and location, from itself or its series. A
+ * one-off (no series) has only itself to take them from.
+ */
+export function validateAuthored(
+  config: AuthoredClubConfig,
+  seriesConfig: SeriesConfig,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const byId = new Map<string, SeriesConfig["series"][number]>();
+  for (const series of seriesConfig.series) {
+    if (byId.has(series.id)) {
+      issues.push({
+        id: series.id,
+        code: "duplicate_series_id",
+        message: `"${series.id}" names more than one series; meetings reference a series by id.`,
+      });
+    }
+    byId.set(series.id, series);
+  }
+
+  for (const meeting of config.meetings) {
+    const series =
+      meeting.series === undefined ? undefined : byId.get(meeting.series);
+    if (meeting.series !== undefined && series === undefined) {
+      issues.push({
+        id: meeting.slug,
+        code: "unknown_series",
+        message: `Meeting "${meeting.slug}" names series "${meeting.series}", which is not in series.json.`,
+      });
+      continue;
+    }
+    const needs: [string, ValidationIssueCode, unknown, unknown][] = [
+      ["category", "missing_category", meeting.category, series?.category],
+      ["summary", "missing_summary", meeting.summary, series?.summary],
+      ["location", "missing_location", meeting.location, series?.location],
+    ];
+    if (series === undefined && meeting.title === undefined) {
+      issues.push({
+        id: meeting.slug,
+        code: "missing_title",
+        message: `Meeting "${meeting.slug}" has no series and no title. A one-off sets its own title.`,
+      });
+    }
+    for (const [field, code, own, inherited] of needs) {
+      if (own === undefined && inherited === undefined) {
+        issues.push({
+          id: meeting.slug,
+          code,
+          message:
+            `Meeting "${meeting.slug}" has no ${field}` +
+            (series
+              ? ` and series "${series.id}" gives none.`
+              : ". A one-off sets its own."),
+        });
+      }
+    }
+  }
   return issues;
 }
 

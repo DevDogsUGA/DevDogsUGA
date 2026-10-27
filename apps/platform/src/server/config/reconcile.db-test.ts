@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { parseClubConfig } from "@devdogsuga/events";
 import type {
   ClubConfig,
   Meeting,
@@ -43,7 +44,10 @@ function meeting(name: string, overrides: Partial<Meeting> = {}): Meeting {
     slug: `${PREFIX}${name}`,
     title: "Reconcile Test",
     summary: "A reconcile test meeting.",
-    kind: null,
+    series: null,
+    kicker: null,
+    category: "build",
+    brand: "devdogs",
     building: "DLW",
     location: "124",
     startsAt: "2027-01-01T18:00:00.000Z",
@@ -107,7 +111,8 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
     // the config requires all three.
     nameOverride: string;
     summary: string;
-    kind: Meeting["kind"];
+    series: string | null;
+    category: Meeting["category"];
     building: Meeting["building"];
     location: string;
     // `postgres.js` hands timestamptz columns back as ISO strings, not `Date`
@@ -122,7 +127,7 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
     surveyUrl: string | null;
     surveyQuestionIds: string[];
   }>(sql`
-    select id, slug, "nameOverride", summary, kind, building, location,
+    select id, slug, "nameOverride", summary, series, category, building, location,
       "startsAt", "endsAt", "rsvpUrl", "cancelledAt", "cancellationReason",
       "countsForCredit", "surveyUrl", "surveyQuestionIds"
     from platform.meetings
@@ -137,7 +142,10 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
           slug: row.slug,
           title: row.nameOverride,
           summary: row.summary,
-          kind: row.kind,
+          series: row.series,
+          kicker: null,
+          category: row.category,
+          brand: "devdogs",
           building: row.building,
           location: row.location,
           // Postgres's own text format ("2026-09-14 22:00:00+00") rather
@@ -173,9 +181,11 @@ async function meetingRow(name: string) {
     id: string;
     deletedAt: Date | null;
     nameOverride: string | null;
+    series: string | null;
+    category: string | null;
     surveyQuestionIds: string[];
   }>(sql`
-    select id, "deletedAt", "nameOverride", "surveyQuestionIds"
+    select id, "deletedAt", "nameOverride", series, category, "surveyQuestionIds"
     from platform.meetings where slug = ${`${PREFIX}${name}`}
   `);
   return rows[0] ?? null;
@@ -227,6 +237,73 @@ describe("reconcileFromConfig", () => {
 
     const [workshopRow] = await workshopRows("insert");
     expect(workshopRow?.project).toBe("DogDays");
+  });
+
+  it("writes the series, the category and the title the series derived", async () => {
+    const resolved = parseClubConfig(
+      {
+        meetings: [
+          {
+            slug: `${PREFIX}series`,
+            series: "reconcile-test-series",
+            startsAt: "2027-01-01T18:00:00.000Z",
+            endsAt: "2027-01-01T20:00:00.000Z",
+            rsvpUrl: null,
+            cancelledAt: null,
+            cancellationReason: null,
+            countsForCredit: false,
+            surveyUrl: null,
+            agenda: [],
+          },
+          {
+            slug: `${PREFIX}oneoff`,
+            title: "A One-Off",
+            summary: "Stands alone.",
+            category: "milestone",
+            location: "TBA",
+            startsAt: "2027-01-01T21:00:00.000Z",
+            endsAt: "2027-01-01T22:00:00.000Z",
+            rsvpUrl: null,
+            cancelledAt: null,
+            cancellationReason: null,
+            countsForCredit: false,
+            surveyUrl: null,
+            agenda: [],
+          },
+        ],
+      },
+      {
+        series: [
+          {
+            id: "reconcile-test-series",
+            name: "Reconcile Series",
+            category: "study",
+            brand: "devdogs",
+            headline: "series",
+            numbered: true,
+            summary: "A series night.",
+            location: "124",
+          },
+        ],
+      },
+    );
+    const live = await liveConfig(resolved.meetings);
+
+    const result = await reconcileFromConfig(db, live.config);
+    expect(result.ok).toBe(true);
+
+    const night = await meetingRow("series");
+    expect(night).toMatchObject({
+      nameOverride: "Reconcile Series #1",
+      series: "reconcile-test-series",
+      category: "study",
+    });
+    const oneOff = await meetingRow("oneoff");
+    expect(oneOff).toMatchObject({
+      nameOverride: "A One-Off",
+      series: null,
+      category: "milestone",
+    });
   });
 
   it("updates an existing meeting by slug rather than inserting a duplicate", async () => {

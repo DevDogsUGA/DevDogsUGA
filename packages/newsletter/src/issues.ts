@@ -16,7 +16,7 @@ import type { PartnerName } from "./partners.js";
 export type FeaturedEvent = (
   { meeting: Meeting; cta: string } | { meeting: Meeting; partner: PartnerName }
 ) & {
-  /** The colours a kind-less one-off takes (it would otherwise read as a workshop). */
+  /** Colours that override the meeting's own category for this hero card. */
   kind?: KindKey;
 };
 
@@ -208,7 +208,6 @@ export const ISSUES: ChangelogIssue[] = [
       {
         meeting: EVENTS.g311kickoff,
         cta: "See the schedule",
-        kind: "study",
       },
     ],
     upcoming: [

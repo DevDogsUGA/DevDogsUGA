@@ -1,4 +1,8 @@
-import { categoryOf, type EventCategory } from "~/lib/eventKind";
+import {
+  categoryOf,
+  CATEGORY_LABEL,
+  type EventCategory,
+} from "~/lib/eventKind";
 import { EVENT_TZ } from "~/lib/eventTime";
 
 /**
@@ -14,32 +18,16 @@ import { EVENT_TZ } from "~/lib/eventTime";
  * import from a client component.
  */
 
-/** The chip text for each category. Milestone nights are Demo Days. */
-export const CATEGORY_LABEL: Record<EventCategory, string> = {
-  build: "Build",
-  workshop: "Workshop",
-  social: "Social",
-  info: "Info",
-  study: "Study",
-  milestone: "Demo Day",
-};
+export { CATEGORY_LABEL };
 
 /**
- * The category a meeting is drawn in. A night with workshops attached is a
- * workshop night; otherwise its authored kind decides (`categoryOf`).
- * `workshopCount` stands in for the list on rows that only carry the count.
+ * The category a meeting is drawn in: the resolved `category` the config
+ * authored for it (`categoryOf`).
  */
 export function meetingCategory(meeting: {
-  kind: string | null;
-  workshops?: readonly unknown[];
-  workshopCount?: number;
+  category: string | null;
 }): EventCategory {
-  return categoryOf({
-    kind: meeting.kind,
-    workshops:
-      meeting.workshops ??
-      (meeting.workshopCount ? new Array<unknown>(meeting.workshopCount) : []),
-  });
+  return categoryOf({ category: meeting.category });
 }
 
 // ── Cancellation ─────────────────────────────────────────────────────────────

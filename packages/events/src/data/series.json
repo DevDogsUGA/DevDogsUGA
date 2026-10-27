@@ -1,0 +1,87 @@
+{
+  "$schema": "./series.schema.json",
+  "series": [
+    {
+      "id": "build-session",
+      "name": "Build Session",
+      "category": "build",
+      "brand": "devdogs",
+      "headline": "series",
+      "numbered": true,
+      "slot": {
+        "weekday": "wednesday",
+        "start": "18:00",
+        "end": "19:00"
+      },
+      "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
+      "building": "DLW",
+      "location": "124"
+    },
+    {
+      "id": "merge-monday",
+      "name": "Merge Monday",
+      "category": "build",
+      "brand": "devdogs",
+      "headline": "series",
+      "slot": {
+        "weekday": "monday",
+        "start": "18:00",
+        "end": "20:00"
+      },
+      "summary": "Pick an issue in DogDays or DogPack and open a pull request before you leave. An unfinished PR counts. Focus leads are here to pair with you.",
+      "building": "DLW",
+      "location": "124"
+    },
+    {
+      "id": "touch-grass",
+      "name": "DevDogs Touch Grass",
+      "category": "social",
+      "brand": "devdogs",
+      "headline": "series",
+      "numbered": true,
+      "summary": "No laptops required! Destress from midterms and the chaos of the semester. Just come outside, get some air, and hang out with the club. We'll have snacks, card games, Minecraft, Jackbox, Mario Kart, Mario Party, and more!",
+      "building": "Other",
+      "location": "Myers Quad"
+    },
+    {
+      "id": "workshop-wednesday",
+      "name": "Workshop Wednesday",
+      "category": "workshop",
+      "brand": "devdogs",
+      "headline": "topic",
+      "slot": {
+        "weekday": "wednesday",
+        "start": "18:00",
+        "end": "19:00"
+      },
+      "summary": "A hands-on workshop. Bring a laptop.",
+      "building": "DLW",
+      "location": "124"
+    },
+    {
+      "id": "georgia-311-checkpoint",
+      "name": "Georgia 311 Checkpoint",
+      "category": "build",
+      "brand": "devdogs",
+      "headline": "series",
+      "slot": {
+        "weekday": "wednesday",
+        "start": "18:00",
+        "end": "19:00"
+      },
+      "summary": "Georgia 311 teams check in on their progress and get unblocked by officers. Everyone else is welcome to come work on DogDays or DogPack.",
+      "building": "DLW",
+      "location": "124"
+    },
+    {
+      "id": "georgia-311-interest",
+      "name": "Georgia 311 Challenge: Interest Meeting",
+      "category": "info",
+      "brand": "devdogs",
+      "headline": "series",
+      "summary": "All majors welcome. Bring a solution proposal or join as a builder or designer for Mableton. Learn about the three tracks, the Oct 16–30 sprint, and applying by Oct 15. Same overview at each 30-minute meeting.",
+      "building": "Other",
+      "location": "Dawson 110"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ function meeting(overrides: Record<string, unknown> = {}) {
     slug: "2026-09-14",
     title: "Cold Start",
     summary: "The first meeting of the year.",
-    kind: null,
+    category: "milestone",
     building: "DLW",
     location: "124",
     startsAt: "2026-09-14T22:00:00.000Z",
@@ -65,7 +65,7 @@ describe("meetingSchema", () => {
   });
 
   it.each(["title", "summary", "location"])(
-    "requires %s, which every newsletter card draws",
+    "refuses a null or empty %s, which every newsletter card draws",
     (field) => {
       expect(() => meetingSchema.parse(meeting({ [field]: null }))).toThrow();
       expect(() => meetingSchema.parse(meeting({ [field]: "" }))).toThrow();
@@ -98,10 +98,29 @@ describe("meetingSchema", () => {
     ).toThrow();
   });
 
-  it("rejects a kind outside the closed list", () => {
+  it("rejects a category outside the closed list", () => {
     expect(() =>
-      meetingSchema.parse(meeting({ kind: "Karaoke Night" })),
+      meetingSchema.parse(meeting({ category: "Karaoke Night" })),
     ).toThrow();
+    // `kind` is gone: it became `category`.
+    expect(() => meetingSchema.parse(meeting({ kind: "Social" }))).toThrow();
+  });
+
+  it("rejects a brand outside the closed list", () => {
+    expect(() => meetingSchema.parse(meeting({ brand: "acme" }))).toThrow();
+  });
+
+  it("lets a series supply the title, summary, category and place", () => {
+    const parsed = meetingSchema.parse({
+      ...meeting(),
+      series: "merge-monday",
+      title: undefined,
+      summary: undefined,
+      category: undefined,
+      location: undefined,
+      building: undefined,
+    });
+    expect(parsed.series).toBe("merge-monday");
   });
 
   it("rejects a building outside the closed list", () => {

@@ -3,7 +3,7 @@ import {
   meetingCardDetail,
   meetingLocation,
 } from "@devdogsuga/sdk/brand/event";
-import { getClubConfig, type Meeting, type Workshop } from "@devdogsuga/events";
+import { getClubConfig, type Workshop } from "@devdogsuga/events";
 import type { EventGraphicSource } from "./registry.js";
 
 /**
@@ -25,8 +25,9 @@ export interface EventReader {
 /**
  * Builds the reader from `@devdogsuga/events`'s committed data file.
  *
- * `Meeting.slug` is the card's `slug` (its platform URL) and `Meeting.title` is its authored name
- * (`nameOverride` on the platform's meetings table).
+ * `Meeting.slug` is the card's `slug` (its platform URL) and `Meeting.title` is
+ * its resolved title (series applied; `nameOverride` on the platform's meetings
+ * table), so a poster can never name a night differently from the site.
  */
 export function configEvents(): EventReader {
   return {
@@ -44,7 +45,9 @@ export function configEvents(): EventReader {
           endsAt: new Date(row.endsAt),
           building: row.building,
           location: row.location,
-          kind: row.kind,
+          category: row.category,
+          brand: row.brand,
+          kicker: row.kicker,
           cancelledAt: row.cancelledAt ? new Date(row.cancelledAt) : null,
           cancellationReason: row.cancellationReason,
         };
@@ -61,12 +64,7 @@ export function configEvents(): EventReader {
 
         const detail = meetingCardDetail({
           meeting,
-          title: meetingTitle(
-            row.title,
-            row.kind,
-            meeting.startsAt,
-            items.map((item) => item.label),
-          ),
+          title: row.title,
           agenda: items.map(
             (item) =>
               `${EVENT_SEGMENT_VISUALS[item.segment].label}: ${item.label}`,
@@ -110,35 +108,6 @@ function slugPart(label: string): string {
 /** `Workshop.title` is non-nullable in the config schema (`workshopSchema`). */
 function workshopLabel(row: Workshop): string {
   return row.title;
-}
-
-/**
- * The meeting's name, in descending order of how much somebody meant it.
- *
- * Mirrors `apps/platform/src/lib/meetingTitle.ts`: an authored name, then the
- * kind, then the workshops it teaches, then the date. Two named workshops read
- * as a heading; three do not, and the date carries it while the agenda below
- * shows the detail.
- *
- * Duplicated rather than imported because it lives in the Next app, which this
- * package cannot depend on. `graphics.test.ts` pins the chain so a change to one
- * shows up as a failure rather than as a differently-titled poster.
- */
-export function meetingTitle(
-  nameOverride: string | null,
-  kind: Meeting["kind"],
-  startsAt: Date,
-  agenda: readonly string[],
-): string {
-  if (nameOverride !== null) return nameOverride;
-  if (kind !== null) return kind;
-  if (agenda.length === 1) return `Workshop: ${agenda[0]}`;
-  if (agenda.length === 2) return `Workshop: ${agenda[0]} & ${agenda[1]}`;
-
-  return startsAt.toLocaleDateString("en-US", {
-    timeZone: "America/New_York",
-    dateStyle: "long",
-  });
 }
 
 /** One line for the picker: when it is, and whether it is still on. */

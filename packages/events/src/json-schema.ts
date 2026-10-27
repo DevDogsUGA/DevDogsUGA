@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { questionsConfigSchema } from "./questions.js";
 import { clubConfigSchema } from "./schema.js";
+import { seriesConfigSchema } from "./series.js";
 
 /**
- * JSON Schemas for the two data files, generated from the zod schemas that
+ * JSON Schemas for the data files, generated from the zod schemas that
  * validate them, so an officer's editor completes and checks `meetings.json`
  * and `questions.json` through each file's `$schema` key with the same rules
  * CI applies (lengths, choices, id patterns). What JSON Schema cannot say --
@@ -23,6 +24,11 @@ export function jsonSchemas(): Record<string, unknown> {
       clubConfigSchema,
       "DevDogs meetings",
       "The club's meetings and their workshops (Backstage packages/events).",
+    ),
+    "series.schema.json": generate(
+      seriesConfigSchema,
+      "DevDogs meeting series",
+      "The recurring kinds of night meetings reference by id (Backstage packages/events).",
     ),
     "questions.schema.json": generate(
       questionsConfigSchema,
