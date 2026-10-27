@@ -3,6 +3,10 @@ import { cache } from "react";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { profileLinks, publicProfiles } from "~/server/db/schema";
+import {
+  getContributionsForUser,
+  type ContributionItem,
+} from "./contributions";
 import { getStarsForUser, totalStars, type StarTotals } from "./stars";
 
 /**
@@ -176,10 +180,12 @@ export interface PublicProfileLink {
 export interface PublicProfileActivity {
   links: PublicProfileLink[] | null;
   stars: StarTotals | null;
+  /** Merged pull requests in public DevDogs repositories, newest first. */
+  contributions: ContributionItem[] | null;
 }
 
 /**
- * Links and star totals for a public profile, each gated on its own
+ * Links, star totals and merged pull requests for a public profile, each gated on its own
  * visibility flag. Null when the handle is not a public profile (resolved
  * through the view, so the visibility rule is not repeated).
  *
@@ -192,13 +198,14 @@ export const getPublicProfileActivity = cache(
         userId: publicProfiles.userId,
         showLinks: publicProfiles.showLinks,
         showStars: publicProfiles.showStars,
+        showContributions: publicProfiles.showContributions,
       })
       .from(publicProfiles)
       .where(eq(publicProfiles.handle, handle.trim().toLowerCase()));
     if (!member) return null;
     const userId = member.userId!;
 
-    const [links, stars] = await Promise.all([
+    const [links, stars, contributions] = await Promise.all([
       member.showLinks
         ? db
             .select({ title: profileLinks.title, url: profileLinks.url })
@@ -209,9 +216,12 @@ export const getPublicProfileActivity = cache(
       member.showStars
         ? getStarsForUser(userId).then((cells) => totalStars(cells))
         : null,
+      member.showContributions
+        ? getContributionsForUser(userId, { publicOnly: true })
+        : null,
     ]);
 
-    return { links, stars };
+    return { links, stars, contributions };
   },
 );
 

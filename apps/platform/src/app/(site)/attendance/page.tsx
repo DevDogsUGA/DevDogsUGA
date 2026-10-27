@@ -21,6 +21,8 @@ import { meetingTitle } from "~/lib/meetingTitle";
 import { getAttendanceMeetings } from "~/server/attendance/getMeetings";
 import { expectSession } from "~/server/auth";
 import { getStarsForUser, totalStars } from "~/server/loaders/stars";
+import ContributionList from "~/components/Contributions";
+import { getContributionsForUser } from "~/server/loaders/contributions";
 import { getStreakForUser } from "~/server/loaders/streak";
 import { getReflectionActivities } from "~/server/reflections/load";
 import { getSurvey } from "~/server/survey/load";
@@ -126,7 +128,7 @@ export default async function AttendancePage({
   // attendance row itself, so a hand-edited URL shows nothing.
   const surveyMeetingId =
     receipt?.good && requestedMeeting ? requestedMeeting : null;
-  const [stars, reflectionData, streak, survey] = userId
+  const [stars, reflectionData, streak, survey, contributions] = userId
     ? await Promise.all([
         getStarsForUser(userId),
         getReflectionActivities(userId),
@@ -134,8 +136,9 @@ export default async function AttendancePage({
         surveyMeetingId && isUuid(surveyMeetingId)
           ? getSurvey(userId, surveyMeetingId)
           : null,
+        getContributionsForUser(userId, { publicOnly: false }),
       ])
-    : [null, null, null, null];
+    : [null, null, null, null, null];
   const selected = meetings.some((meeting) => meeting.id === requestedMeeting)
     ? requestedMeeting
     : meetings[0]?.id;
@@ -229,6 +232,19 @@ export default async function AttendancePage({
             </p>
             <PassportSummary totals={totalStars(stars)} streak={streak} />
             <StarGrid cells={stars} />
+          </section>
+        )}
+
+        {contributions && (
+          <section className="att-sect" aria-labelledby="contributions-h">
+            <h2 id="contributions-h">Your merged pull requests</h2>
+            <p className="muted small">
+              Pull requests you authored that were merged into a DevDogs
+              repository. They are matched through the GitHub account linked
+              under Settings, Accounts. Private repositories are listed here but
+              never on your public profile.
+            </p>
+            <ContributionList items={contributions} />
           </section>
         )}
 

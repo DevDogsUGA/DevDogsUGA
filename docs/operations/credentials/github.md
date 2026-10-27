@@ -15,13 +15,14 @@ section: infrastructure
 
 ## What it issues
 
-| Credential                                                | Used for                                                                                | Lives in                        |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------- |
-| The GitHub OAuth app (`GH_CLIENT_ID`, `GH_CLIENT_SECRET`) | Members signing in with GitHub                                                          | Bitwarden, Supabase auth config |
-| `WORKSHOPS_READ_TOKEN`                                    | A fine-grained token that reads the private workshop repositories, for the slides build | A repository secret             |
-| Renovate                                                  | A GitHub App (Mend's), installed by an owner                                            | The App's own installation      |
+| Credential                                                                        | Used for                                                                                           | Lives in                        |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------- |
+| The GitHub OAuth app (`GH_CLIENT_ID`, `GH_CLIENT_SECRET`)                         | Members signing in with GitHub                                                                     | Bitwarden, Supabase auth config |
+| `WORKSHOPS_READ_TOKEN`                                                            | A fine-grained token that reads the private workshop repositories, for the slides build            | A repository secret             |
+| The read-only GitHub App (`GH_APP_ID`, `GH_APP_PRIVATE_KEY`, `GH_WEBHOOK_SECRET`) | Merged pull requests for member profiles ([Contributions](../../platform/guides/contributions.md)) | Bitwarden, the platform Worker  |
+| Renovate                                                                          | A GitHub App (Mend's), installed by an owner                                                       | The App's own installation      |
 
-The platform no longer holds a GitHub App: teams and competitions left the platform, and with them the organization administration it did through one. The OAuth app signs members in and nothing else.
+The platform holds no GitHub App that administers the organization: teams and competitions left the platform, and with them that administration. The OAuth app signs members in. The one App it uses is read-only (`devdogs-platform`, and a staging twin): it reports merged pull requests and nothing else.
 
 ## Rotating
 

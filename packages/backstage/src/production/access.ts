@@ -20,7 +20,8 @@ export class ProductionError extends Error {
   override name = "ProductionError";
 }
 
-export type ProductionKey = "DB_URL" | "API_URL" | "SECRET_KEY";
+export type ProductionKey =
+  "DB_URL" | "API_URL" | "SECRET_KEY" | "GH_APP_ID" | "GH_APP_PRIVATE_KEY";
 
 /** The production project in Secrets Manager (see `creds/roster.ts`). */
 const PRODUCTION_PROJECT = "production";

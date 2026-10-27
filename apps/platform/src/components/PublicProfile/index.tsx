@@ -4,6 +4,7 @@ import { ArrowSquareOutIcon, UserIcon } from "@phosphor-icons/react/ssr";
 import { Avatar, AvatarFallback, AvatarImage } from "~/ui/avatar";
 import { Breadcrumbs } from "~/ui/breadcrumbs";
 import { Card } from "~/ui/card";
+import ContributionList from "~/components/Contributions";
 import { StarTotalsRow } from "~/components/participation/StarBadges";
 import type {
   PublicProfile as Profile,
@@ -25,7 +26,7 @@ export default function PublicProfile({
 }) {
   const heading = headingFor(profile);
   const links = linkItemsFor(profile, activity.links);
-  const { stars } = activity;
+  const { stars, contributions } = activity;
 
   return (
     <div className="wrap cm-profile-wrap">
@@ -79,6 +80,20 @@ export default function PublicProfile({
                 )}
               </div>
             </div>
+            {contributions && (
+              <section
+                id="contributions"
+                className="cm-contributions"
+                aria-labelledby="h-contributions"
+              >
+                <Card>
+                  <h2 id="h-contributions" className="card-title">
+                    Contributions
+                  </h2>
+                  <ContributionList items={contributions} />
+                </Card>
+              </section>
+            )}
           </div>
           {stars && (
             <aside>

@@ -1,4 +1,5 @@
 import { INVOLVEMENT_NETWORK_ROSTER_URL } from "~/config/nav";
+import { formatEventDate } from "~/lib/eventTime";
 import { handleFromSegment, profilePath } from "~/lib/profilePath";
 import { publicProfilesEnabled } from "~/server/features";
 import { getCurrentOfficers } from "~/server/loaders/officers";
@@ -117,6 +118,27 @@ export const communityProfile = terminal(
           ],
         },
       );
+    }
+    if (activity.contributions) {
+      body.push({ type: "heading", text: "contributions" });
+      if (activity.contributions.length === 0) {
+        body.push({
+          type: "text",
+          text: "No merged pull requests yet.",
+          tone: "dim",
+        });
+      } else {
+        body.push({
+          type: "entries",
+          items: activity.contributions.map((pr) => ({
+            label: pr.title.trim() || `Pull request #${pr.number}`,
+            meta: `${pr.repo} #${pr.number}`,
+            headline: formatEventDate(pr.mergedAt),
+            text: pr.url,
+          })),
+          empty: "",
+        });
+      }
     }
     if (activity.links?.length) {
       body.push(
