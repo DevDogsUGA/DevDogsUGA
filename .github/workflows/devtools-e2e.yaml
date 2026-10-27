@@ -36,12 +36,9 @@ on:
       - packages/devtools/**
       - packages/cli-core/**
       - .github/workflows/devtools-e2e.yaml
-  push:
-    branches: [main]
-    paths:
-      - packages/devtools/**
-      - packages/cli-core/**
-      - .github/workflows/devtools-e2e.yaml
+  # A push to main runs this through ci.yaml (the `devtools-e2e` job), on the
+  # same paths as pull_request above, so `publish-next` can wait for it.
+  workflow_call:
   workflow_dispatch:
     inputs:
       sabotage:

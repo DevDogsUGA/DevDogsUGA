@@ -233,6 +233,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.changed.outputs.run }}
+      e2e: ${{ steps.e2e.outputs.run }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -249,6 +250,21 @@ jobs:
           elif git diff --quiet "$BASE_SHA...HEAD" -- $(node scripts/workspace-closure.mjs @devdogsuga/devtools @devdogsuga/cli-core) scripts/workspace-closure.mjs pnpm-lock.yaml pnpm-workspace.yaml .nvmrc .github/workflows/ci.yaml; then
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo 'Nothing devtools or cli-core depend on changed: skipping the Windows job.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Exactly the paths that run devtools-e2e.yaml on a pull request: the
+      # push gates `publish-next` on the e2e only when its pull request ran it.
+      - name: Did the pull request run devtools-e2e?
+        id: e2e
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE_SHA" ] || ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$BASE_SHA...HEAD" -- packages/devtools packages/cli-core .github/workflows/devtools-e2e.yaml; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
@@ -475,6 +491,21 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/patch-issues.ts patch-report.json
 
+  # devtools set up in a fresh DogDays and DogPack (devtools-e2e.yaml), on a
+  # push to main that touched devtools, cli-core or the e2e itself: the same
+  # paths that run it on a pull request. Gates `publish-next` only then
+  # (decided 2026-10-26): a prerelease whose setup is broken should not reach
+  # `next`, and a push that cannot have broken it does not wait for Docker.
+  devtools-e2e:
+    needs: windows-changes
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && needs.windows-changes.outputs.e2e == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/devtools-e2e.yaml
+    secrets: inherit
+
   # Stable npm publishing stays with Backstage's last commit until the Gate, so
   # a push here asks nobody to approve a `publishing` deployment yet: both
   # repositories publishing would race on the same npm packages, and this one
@@ -510,14 +541,16 @@ jobs:
   # npm prereleases ride the push to main (Q88); only the Dart SDK publishes by
   # tag push (publish-dart.yaml).
   publish-next:
-    needs: [validate, windows-changes, windows]
-    # `windows` is skipped when devtools did not change. A skipped need would
-    # skip this job too, so the status functions are explicit: it must
-    # succeed or be skipped, and a failed or cancelled run still blocks.
+    needs: [validate, windows-changes, windows, devtools-e2e]
+    # `windows` and `devtools-e2e` are skipped when devtools did not change. A
+    # skipped need would skip this job too, so the status functions are
+    # explicit: each must succeed or be skipped, and a failed or cancelled run
+    # still blocks.
     if: >-
       !cancelled() && needs.validate.result == 'success'
       && needs.windows-changes.result == 'success'
       && contains(fromJSON('["success","skipped"]'), needs.windows.result)
+      && contains(fromJSON('["success","skipped"]'), needs.devtools-e2e.result)
       && github.event_name == 'push' && github.ref == 'refs/heads/main'
       && vars.BACKSTAGE_PUBLISHES_NEXT != 'false'
     # The grant is a ceiling for every job in publish.yaml, including the
