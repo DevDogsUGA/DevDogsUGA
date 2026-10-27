@@ -1,4 +1,5 @@
 import { and, asc, desc, isNull, lte, sql } from "drizzle-orm";
+import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
 import { meetings } from "~/server/db/schema";
 
@@ -12,8 +13,8 @@ export type AttendanceMeeting = {
   /** Where to send a member after a successful check-in, or null when this
    *  meeting has nothing to redirect to. */
   surveyUrl: string | null;
-  /** Whether checking in earns a star, streak and EL credit. */
-  countsForCredit: boolean;
+  /** Whether it runs a workshop, so checking in earns streak and EL credit. */
+  hasWorkshop: boolean;
 };
 
 /** Past and currently running meetings, with the specified default first. */
@@ -33,7 +34,7 @@ export async function getAttendanceMeetings(
       endsAt: meetings.endsAt,
       ongoing,
       surveyUrl: meetings.surveyUrl,
-      countsForCredit: meetings.countsForCredit,
+      hasWorkshop: meetingHasWorkshop(meetings.id),
     })
     .from(meetings)
     .where(

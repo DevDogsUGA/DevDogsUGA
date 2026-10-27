@@ -209,7 +209,7 @@ export function resolveMeetings(
       joinUrl: meeting.joinUrl ?? null,
       cancelledAt: meeting.cancelledAt,
       cancellationReason: meeting.cancellationReason,
-      countsForCredit: meeting.countsForCredit,
+      hasWorkshop: agenda.length > 0,
       surveyUrl: meeting.surveyUrl,
       ...(meeting.questions === undefined
         ? {}

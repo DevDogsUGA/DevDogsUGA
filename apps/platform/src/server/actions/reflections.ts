@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { expectSession } from "~/server/auth";
+import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
 import {
   auditEvents,
@@ -191,7 +192,7 @@ async function eligibleActivity(
     select m."endsAt" from platform.attendance a
     join platform.meetings m on m.id = a."meetingId"
     where a."userId" = ${userId}::uuid and m.id = ${input.activityId}::uuid
-      and m."countsForCredit"
+      and ${meetingHasWorkshop(sql`m.id`)}
       and m."deletedAt" is null and m."cancelledAt" is null
     for share of a, m
   `);

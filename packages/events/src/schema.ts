@@ -249,12 +249,6 @@ export const meetingSchema = z
       .meta({
         description: "Shown beside the struck-through row. Needs cancelledAt.",
       }),
-    /** The one flag that governs both star credit and EL eligibility -- see
-     * the migration note on `meetings.countsForCredit`. */
-    countsForCredit: z.boolean().meta({
-      description:
-        "Whether checking in earns a star and counts toward EL credit.",
-    }),
     /** Where to send a member after a successful check-in. Null is the
      * ordinary case: most nights have nothing to redirect to. */
     surveyUrl: z.url().nullable().meta({
@@ -316,7 +310,9 @@ export interface Meeting {
   joinUrl: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
-  countsForCredit: boolean;
+  /** Whether it runs at least one reusable workshop: the one rule behind
+   *  stars, streaks, reflections and EL credit (derived, never authored). */
+  hasWorkshop: boolean;
   surveyUrl: string | null;
   questions?: string[] | undefined;
   /** The workshops running that night, definitions resolved. */

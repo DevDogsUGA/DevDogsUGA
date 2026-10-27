@@ -15,10 +15,10 @@ export type RecordAttendanceResult =
  * been validated, meeting time does not decide whether attendance counts.
  *
  * Every meeting records attendance, including ones that don't count for
- * credit (build sessions): `countsForCredit` decides stars, streaks and EL
- * eligibility, each of which filters on it where it reads attendance
- * (`memberStars`, the streak loader, reflections), not whether a member was
- * in the room -- and the check-in survey follows that record.
+ * credit (build sessions): a meeting having a workshop (`meeting_has_workshop`)
+ * decides stars, streaks, reflections and EL eligibility, each of which
+ * filters on it where it reads attendance (`memberStars`, the streak loader,
+ * reflections), not whether a member was in the room -- and the check-in survey follows that record.
  */
 export async function recordMemberAttendance(
   meetingId: string,

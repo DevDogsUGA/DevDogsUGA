@@ -106,9 +106,9 @@ beforeAll(async () => {
     `);
   }
   await db.execute(sql`
-    insert into platform.meetings (id, slug, "startsAt", "endsAt", "countsForCredit")
+    insert into platform.meetings (id, slug, "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'account-deletion-meeting',
-            now() - interval '1 day', now() - interval '1 day' + interval '2 hours', true)
+            now() - interval '1 day', now() - interval '1 day' + interval '2 hours')
   `);
   await db.execute(sql`
     insert into platform.attendance (id, "meetingId", "userId", method)

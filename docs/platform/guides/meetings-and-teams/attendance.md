@@ -21,8 +21,9 @@ whenever it is scanned or entered, including when an officer re-displays one
 for a member who checked in late. There is no other correction path — a late
 check-in is the rotating code shown again, not a request to an officer.
 
-Every meeting records check-ins, including ones whose `countsForCredit` is
-off, such as build sessions. That flag decides stars, streaks and EL
+Every meeting records check-ins, including ones that link no workshop, such as
+build sessions and socials. Whether a meeting links a workshop
+(`platform.meeting_has_workshop`) decides stars, streaks and EL
 eligibility, which each filter on it; it doesn't decide whether a member was
 in the room, so those meetings still get the receipt (saying they don't
 count) and the survey.
@@ -54,8 +55,8 @@ their own records and cannot write them.
 
 ## EL reflections
 
-Meeting reflections require active attendance and `countsForCredit` on the
-meeting — the single flag that governs both star credit and EL eligibility;
+Meeting reflections require active attendance at a meeting that links a workshop — the
+single rule that governs star credit, streaks and EL eligibility;
 see [Stars & streaks](./stars-and-awards.md).
 
 Members may save drafts below the word minimum. Submission requires the global

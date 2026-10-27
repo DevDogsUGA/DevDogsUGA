@@ -59,7 +59,6 @@ function meeting(overrides: Partial<AuthoredMeeting> = {}): AuthoredMeeting {
     rsvpUrl: null,
     cancelledAt: null,
     cancellationReason: null,
-    countsForCredit: false,
     surveyUrl: null,
     agenda: [],
     ...overrides,
@@ -281,6 +280,22 @@ describe("resolveMeetings", () => {
       ["flutter-ii", "Flutter II", "Tonight: forms.", 1],
     ]);
     expect(night!.title).toBe("Supabase II & Flutter II");
+    expect(night!.hasWorkshop).toBe(true);
+  });
+
+  it("counts a night for credit only when it runs a workshop", () => {
+    const cfg = clubConfigSchema.parse({
+      meetings: [
+        meeting({ series: "build-session" }),
+        meeting({
+          slug: "2026-09-23",
+          series: "workshop-wednesday",
+          agenda: ["supabase"],
+        }),
+      ],
+    });
+    const nights = resolveMeetings(cfg, [build, wednesday], catalog).meetings;
+    expect(nights.map((n) => n.hasWorkshop)).toEqual([false, true]);
   });
 
   it("refuses an unknown workshop rather than dropping it", () => {

@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
 import { calculateStreak, type StreakSummary } from "./streakPolicy";
 
@@ -11,7 +12,7 @@ export async function getStreakForUser(userId: string): Promise<StreakSummary> {
   const [opportunities, earned] = await Promise.all([
     db.execute<StartRow>(sql`
       select m."startsAt" from platform.meetings m
-      where m."countsForCredit" and m."cancelledAt" is null
+      where ${meetingHasWorkshop(sql`m.id`)} and m."cancelledAt" is null
         and m."deletedAt" is null
     `),
     db.execute<StartRow>(sql`

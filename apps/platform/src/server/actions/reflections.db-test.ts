@@ -31,6 +31,7 @@ const IDS = {
   member: "e4000000-0000-4000-a000-000000000001",
   meeting: "e4000000-0000-4000-a000-000000000006",
   unattendedMeeting: "e4000000-0000-4000-a000-000000000007",
+  noWorkshopMeeting: "e4000000-0000-4000-a000-000000000008",
 };
 
 async function cleanup() {
@@ -53,7 +54,7 @@ async function cleanup() {
     sql`delete from platform.attendance where "userId" = ${IDS.member}::uuid`,
   );
   await db.execute(
-    sql`delete from platform.meetings where id in (${IDS.meeting}::uuid, ${IDS.unattendedMeeting}::uuid)`,
+    sql`delete from platform.meetings where id in (${IDS.meeting}::uuid, ${IDS.unattendedMeeting}::uuid, ${IDS.noWorkshopMeeting}::uuid)`,
   );
   await db.execute(
     sql`delete from platform.profile where "userId" = ${IDS.member}::uuid`,
@@ -73,15 +74,22 @@ beforeAll(async () => {
     values (${IDS.member}::uuid, 'Reflections Action Member')
   `);
   await db.execute(sql`
-    insert into platform.meetings (id, slug, "startsAt", "endsAt", "countsForCredit")
+    insert into platform.meetings (id, slug, "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'reflections-action-meeting',
-       now() - interval '1 days', now() - interval '1 days' + interval '2 hours', true),
+       now() - interval '1 days', now() - interval '1 days' + interval '2 hours'),
       (${IDS.unattendedMeeting}::uuid, 'reflections-action-unattended',
-       now() - interval '1 days', now() - interval '1 days' + interval '2 hours', true)
+       now() - interval '1 days', now() - interval '1 days' + interval '2 hours'),
+      (${IDS.noWorkshopMeeting}::uuid, 'reflections-action-no-workshop',
+       now() - interval '1 days', now() - interval '1 days' + interval '2 hours')
+  `);
+  await db.execute(sql`
+    insert into platform.workshops ("meetingId", "definitionId")
+    values (${IDS.meeting}::uuid, 'reflections-action-workshop')
   `);
   await db.execute(sql`
     insert into platform.attendance (id, "userId", "meetingId", method, "recordedAt")
-    values (gen_random_uuid(), ${IDS.member}::uuid, ${IDS.meeting}::uuid, 'qr', now())
+    values (gen_random_uuid(), ${IDS.member}::uuid, ${IDS.meeting}::uuid, 'qr', now()),
+      (gen_random_uuid(), ${IDS.member}::uuid, ${IDS.noWorkshopMeeting}::uuid, 'qr', now())
   `);
 });
 
@@ -101,6 +109,23 @@ describe("saveReflection", () => {
       formData({
         activityType: "meeting",
         activityId: IDS.unattendedMeeting,
+        content: "My reflection",
+        intent: "save",
+      }),
+    );
+    expect(result).toEqual({
+      ok: false,
+      message: "You are not eligible for this reflection.",
+    });
+  });
+
+  it("refuses an attended meeting that links no workshop (Q165)", async () => {
+    session.userId = IDS.member;
+    const result = await saveReflection(
+      { ok: false, message: "" },
+      formData({
+        activityType: "meeting",
+        activityId: IDS.noWorkshopMeeting,
         content: "My reflection",
         intent: "save",
       }),

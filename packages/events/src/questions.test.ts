@@ -49,7 +49,6 @@ function meeting(questions?: string[]): Meeting {
     joinUrl: null,
     cancelledAt: null,
     cancellationReason: null,
-    countsForCredit: true,
     surveyUrl: null,
     ...(questions ? { questions } : {}),
     agenda: [],

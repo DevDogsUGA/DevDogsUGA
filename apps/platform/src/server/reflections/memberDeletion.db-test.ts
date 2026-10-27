@@ -48,9 +48,9 @@ beforeAll(async () => {
             'authenticated', 'authenticated', 'member-deletion-test@uga.edu')
   `);
   await db.execute(sql`
-    insert into platform.meetings (id, slug, "startsAt", "endsAt", "countsForCredit")
+    insert into platform.meetings (id, slug, "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'member-deletion-meeting',
-            now() - interval '1 day', now() - interval '1 day' + interval '2 hours', true)
+            now() - interval '1 day', now() - interval '1 day' + interval '2 hours')
   `);
   await db.execute(sql`
     insert into platform.reflections (id, "userId", "meetingId", content)

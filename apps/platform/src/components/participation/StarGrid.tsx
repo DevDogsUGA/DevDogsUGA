@@ -10,7 +10,7 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
     return (
       <EmptyState
         title="No participation recorded yet"
-        body="Stars appear here after an eligible meeting attendance is recorded."
+        body="Stars appear here after you attend a workshop night."
       />
     );
   }

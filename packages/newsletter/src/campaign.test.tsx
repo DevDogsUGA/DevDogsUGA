@@ -112,7 +112,7 @@ describe("Georgia 311 campaign", () => {
       expect(Date.parse(meeting.endsAt) - Date.parse(meeting.startsAt)).toBe(
         30 * 60_000,
       );
-      expect(meeting.countsForCredit).toBe(false);
+      expect(meeting.hasWorkshop).toBe(false);
     }
     const html = renderIssueDocument(issue, previewRenderContext());
     expect(html).toContain("Dawson 110");

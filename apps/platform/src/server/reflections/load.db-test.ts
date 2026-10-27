@@ -14,6 +14,7 @@ import { getReflectionActivities } from "./load";
 const IDS = {
   member: "e3000000-0000-4000-a000-000000000001",
   meeting: "e3000000-0000-4000-a000-000000000002",
+  plainMeeting: "e3000000-0000-4000-a000-000000000003",
 };
 
 async function cleanup() {
@@ -21,7 +22,7 @@ async function cleanup() {
     sql`delete from platform.attendance where "userId" = ${IDS.member}::uuid`,
   );
   await db.execute(
-    sql`delete from platform.meetings where id = ${IDS.meeting}::uuid`,
+    sql`delete from platform.meetings where id in (${IDS.meeting}::uuid, ${IDS.plainMeeting}::uuid)`,
   );
   await db.execute(
     sql`delete from platform.profile where "userId" = ${IDS.member}::uuid`,
@@ -41,13 +42,20 @@ beforeAll(async () => {
     values (${IDS.member}::uuid, 'Reflections Load Member')
   `);
   await db.execute(sql`
-    insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt", "countsForCredit")
+    insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'reflections-load-meeting', 'Reflections Load Meeting',
-            now() - interval '2 days', now() - interval '2 days' + interval '2 hours', true)
+            now() - interval '2 days', now() - interval '2 days' + interval '2 hours'),
+      (${IDS.plainMeeting}::uuid, 'reflections-load-plain', 'Reflections Load Plain',
+            now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
+  `);
+  await db.execute(sql`
+    insert into platform.workshops ("meetingId", "definitionId")
+    values (${IDS.meeting}::uuid, 'reflections-load-workshop')
   `);
   await db.execute(sql`
     insert into platform.attendance (id, "userId", "meetingId", method, "recordedAt")
-    values (gen_random_uuid(), ${IDS.member}::uuid, ${IDS.meeting}::uuid, 'qr', now())
+    values (gen_random_uuid(), ${IDS.member}::uuid, ${IDS.meeting}::uuid, 'qr', now()),
+      (gen_random_uuid(), ${IDS.member}::uuid, ${IDS.plainMeeting}::uuid, 'qr', now())
   `);
 });
 
@@ -62,5 +70,12 @@ describe("getReflectionActivities", () => {
       activityType: "meeting",
       label: "Reflections Load Meeting",
     });
+  });
+
+  it("leaves out an attended meeting that links no workshop (Q165)", async () => {
+    const { activities } = await getReflectionActivities(IDS.member);
+    expect(activities.some((a) => a.activityId === IDS.plainMeeting)).toBe(
+      false,
+    );
   });
 });

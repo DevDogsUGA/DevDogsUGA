@@ -45,15 +45,20 @@ beforeAll(async () => {
   `);
   await db.execute(sql`
     insert into platform.meetings
-      (id, slug, "nameOverride", "startsAt", "endsAt", "cancelledAt",
-       "countsForCredit")
+      (id, slug, "nameOverride", "startsAt", "endsAt", "cancelledAt")
     values
       (${IDS.meeting}::uuid, 'attendance-test', 'Attendance Test',
-       now() - interval '1 year', now() - interval '364 days', null, true),
+       now() - interval '1 year', now() - interval '364 days', null),
       (${IDS.cancelledMeeting}::uuid, 'attendance-cancelled', 'Cancelled',
-       now(), now() + interval '1 hour', now(), true),
+       now(), now() + interval '1 hour', now()),
       (${IDS.nonCountingMeeting}::uuid, 'attendance-noncounting', 'Not Counting',
-       now() - interval '1 year', now() - interval '364 days', null, false)
+       now() - interval '1 year', now() - interval '364 days', null)
+  `);
+  // Only a meeting that links a workshop earns stars (Q165).
+  await db.execute(sql`
+    insert into platform.workshops ("meetingId", "definitionId")
+    values (${IDS.meeting}::uuid, 'attendance-test-workshop'),
+      (${IDS.cancelledMeeting}::uuid, 'attendance-cancelled-workshop')
   `);
 });
 

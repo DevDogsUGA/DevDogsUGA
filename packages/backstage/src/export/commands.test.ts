@@ -39,7 +39,7 @@ const ROWS: Record<string, unknown>[] = [
     meeting_starts_at: new Date("2026-09-09T22:00:00Z"),
     checked_in_at: new Date("2026-09-09T22:05:00Z"),
     check_in_method: "import",
-    counts_for_credit: true,
+    has_workshop: true,
     uga_email: "ada@uga.edu",
     first_name: "Ada",
     last_name: "Lovelace",
@@ -84,7 +84,7 @@ function source(fail = false): ExportSource {
         startsAt: new Date("2026-09-09T22:00:00Z"),
         endsAt: new Date("2026-09-10T00:00:00Z"),
         cancelledAt: null,
-        countsForCredit: true,
+        hasWorkshop: true,
       },
     ],
     audit: async (userId, kind: ExportKind, filters) => {
@@ -177,7 +177,7 @@ describe("export", () => {
     ]);
     expect(lastFilters?.meetingId).toBe("m-1");
     expect(file?.text).toBe(
-      "user_id,preferred_name,email,github_login,meeting_slug,meeting_title,meeting_starts_at,checked_in_at,check_in_method,counts_for_credit\r\n" +
+      "user_id,preferred_name,email,github_login,meeting_slug,meeting_title,meeting_starts_at,checked_in_at,check_in_method,has_workshop\r\n" +
         'u-1,"\t=Ada, the first",ada@uga.edu,,2026-09-09,Build Session,2026-09-09T22:00:00.000Z,2026-09-09T22:05:00.000Z,import,true\r\n',
     );
   });

@@ -26,7 +26,6 @@ function meeting(overrides: Record<string, unknown> = {}) {
     rsvpUrl: null,
     cancelledAt: null,
     cancellationReason: null,
-    countsForCredit: true,
     surveyUrl: null,
     agenda: [],
     ...overrides,

@@ -136,7 +136,7 @@ export function describePlan(
   replace: boolean,
 ): string {
   const lines = [
-    `Meeting: ${describeMeeting(meeting)}${meeting.countsForCredit ? "" : " (does not count for credit)"}`,
+    `Meeting: ${describeMeeting(meeting)}${meeting.hasWorkshop ? "" : " (no workshop, so it does not count for credit)"}`,
     sheet.emailColumn
       ? `Sheet: ${plural(sheet.attendees.length, "UGA address", "UGA addresses")} from "${sheet.emailColumn}"` +
         (sheet.nameColumn

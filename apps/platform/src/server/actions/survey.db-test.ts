@@ -101,10 +101,10 @@ async function cleanup() {
 async function meeting(id: string, slug: string, endedDaysAgo: number) {
   await db.execute(sql`
     insert into platform.meetings
-      (id, slug, "startsAt", "endsAt", "countsForCredit", "surveyQuestionIds")
+      (id, slug, "startsAt", "endsAt", "surveyQuestionIds")
     values (${id}::uuid, ${slug},
       now() - make_interval(days => ${endedDaysAgo}) - interval '2 hours',
-      now() - make_interval(days => ${endedDaysAgo}), true,
+      now() - make_interval(days => ${endedDaysAgo}),
       array[${learn.id}, ${working.id}])
   `);
   await db.execute(sql`

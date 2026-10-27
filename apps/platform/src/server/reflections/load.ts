@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
 import { reflectionDeadline, reflectionWordCount } from "./policy";
 
@@ -55,7 +56,7 @@ export async function getReflectionActivities(
     left join platform.reflections r
       on r."userId" = a."userId" and r."meetingId" = m.id
     where a."userId" = ${userId}::uuid
-      and m."countsForCredit" and m."deletedAt" is null and m."cancelledAt" is null
+      and ${meetingHasWorkshop(sql`m.id`)} and m."deletedAt" is null and m."cancelledAt" is null
 
     order by "endsAt" desc, "activityId"
   `);
