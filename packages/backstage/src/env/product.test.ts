@@ -539,3 +539,68 @@ it("pushes confirmed production values to the shared project under the product p
     ["production", "API_URL", "DevDogsUGA/DogDays"],
   ]);
 });
+
+describe("product namespace validation before writes", () => {
+  const commands = [runProductPull, runProductPush, runProductAudit];
+  for (const run of commands) {
+    it.each([
+      "",
+      "nested/DB_URL",
+      "export API_URL",
+      " BWS_ACCESS_TOKEN",
+      "API_URL=OTHER",
+      "API_URL\nOTHER",
+      "KEY-WITH-DASH",
+    ])(
+      `${run.name} rejects malformed suffix %j without writes`,
+      async (suffix) => {
+        const path = join(dir, ".env.staging");
+        const original = "API_URL=https://public.example\nDB_URL=local\n";
+        writeFileSync(path, original);
+        const { deps, calls } = fakes({
+          bws: {
+            staging: {
+              "dogdays/API_URL": "https://public.example",
+              [`dogdays/${suffix}`]: "private-value-must-not-leak",
+            },
+          },
+        });
+        await expect(run(options(), deps)).rejects.toThrow(
+          "Invalid product env key",
+        );
+        expect(readFileSync(path, "utf8")).toBe(original);
+        expect(calls.created).toEqual([]);
+        expect(calls.updated).toEqual([]);
+        expect(calls.setSecret).toEqual([]);
+        expect(calls.setVariable).toEqual([]);
+      },
+    );
+    it.each([false, true])(
+      `${run.name} refuses duplicate IDs regardless of order (%s)`,
+      async (reverse) => {
+        const path = join(dir, ".env.staging");
+        const original = "DB_URL=current\n";
+        writeFileSync(path, original);
+        const { deps, calls } = fakes({ bws: { staging: {} } });
+        const records = ["first", "second"].map((id) => ({
+          id,
+          key: "dogdays/DB_URL",
+          value: id === "first" ? "older" : "current",
+          projectId: "staging",
+          note: "",
+          revisionDate: "2026-10-13T00:00:00Z",
+        }));
+        deps.bws.listSecrets = async () =>
+          reverse ? records.toReversed() : records;
+        await expect(run(options(), deps)).rejects.toThrow(
+          "Duplicate product env key",
+        );
+        expect(readFileSync(path, "utf8")).toBe(original);
+        expect(calls.created).toEqual([]);
+        expect(calls.updated).toEqual([]);
+        expect(calls.setSecret).toEqual([]);
+        expect(calls.setVariable).toEqual([]);
+      },
+    );
+  }
+});

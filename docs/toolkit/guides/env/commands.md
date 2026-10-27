@@ -67,6 +67,11 @@ The first time, put the values from the
 hand-made Bitwarden item into `.env.<target>` in the checkout, one `KEY=value`
 line each, and run `push`.
 
+Product key suffixes must match `[A-Za-z_][A-Za-z0-9_]*` exactly. Pull, push
+and audit fail before writing if selected keys are malformed or duplicated.
+Names are never trimmed or normalized; resolve the reported records in Secrets
+Manager without exposing their values.
+
 Products share the existing tier Secrets Manager projects. Product pull, push
 and audit select only their exact `<product>/` prefix and strip it for env files
 and GitHub. Platform pull, push and audit skip every Bitwarden key containing
