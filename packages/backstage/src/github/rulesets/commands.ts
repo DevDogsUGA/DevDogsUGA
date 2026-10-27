@@ -46,8 +46,11 @@ const DEFAULT_ORG = "DevDogsUGA";
 const DEFAULT_REPO = "DevDogsUGA";
 const DEFAULT_DEVOPS_SLUG = "devops";
 const DEFAULT_ADMINS_SLUG = "admins";
-/** TASK-299 — installed separately from the platform App; may not exist yet. */
-const DEFAULT_RENOVATE_SLUG = "renovate";
+/**
+ * The club's own Renovate App, which .github/workflows/renovate.yaml signs in
+ * as (TASK-299); it replaced Mend's hosted `renovate` App. May not exist yet.
+ */
+const DEFAULT_RENOVATE_SLUG = "devdogs-renovate";
 /** Backstage's deploy-PR App; the wizard creates it, so it may not exist yet. */
 const DEFAULT_DEPLOY_PR_SLUG = "devdogs-deploy-pr";
 const CI_WORKFLOW_PATH = ".github/workflows/ci.yaml";

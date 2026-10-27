@@ -26,7 +26,21 @@ The CLI version is pinned in three places that must agree: the pnpm catalog, the
 
 DevDogsUGA's `renovate.json5` ships with a rollout switch: the first package rule disables everything except our own packages, so merging the preset changes nothing until you are ready, with one exception: vulnerability alerts still open a security pull request for a vulnerable dependency (the first, for pnpm, opened minutes after the preset merged). Review and merge those like any other. To turn Renovate on for the repository, delete that rule (and its comment) in a pull request. For a product repository, extend the preset with no switch.
 
-Renovate itself is a GitHub App installed by an organization owner; an owner also chooses which repositories it can see ([Owner-only actions](./owner-actions.md)).
+## Where it runs
+
+Renovate runs on our own GitHub Actions runner, from `.github/workflows/renovate.yaml` in DevDogsUGA, every three hours and on demand (**Actions → Renovate → Run workflow**, with `debug` logging if you are chasing a problem). One run covers all three repositories, and its log is the place to look when the Dependency Dashboard stops updating.
+
+It used to be Mend's hosted Renovate app. Mend's runners have a fixed memory limit, and regenerating DevDogsUGA's lockfile for the weekend group ran out of it ("Kernel out of memory"), so every run from Oct 14 stopped partway. A public repository's runner has 16 GB.
+
+Renovate signs in as the `devdogs-renovate` GitHub App, owned by the organization. Using an App rather than the workflow's own token means:
+
+- its pull requests trigger CI (pull requests opened with the workflow token do not);
+- its commits are signed by GitHub, so they pass the signed-commits rule;
+- the rulesets can name it: `main-reviews` lets it open pull requests without a review, never push.
+
+The App needs these repository permissions: Administration (read), Checks, Commit statuses, Contents, Issues, Pull requests and Workflows (read and write), and Dependabot alerts (read); plus Members (read) for the organization. An organization owner installs it on DevDogsUGA, DogDays and DogPack ([Owner-only actions](./owner-actions.md)); a repository it cannot see is skipped, and `backstage github rulesets --apply` fails on it. The workflow reads the App's id from the `renovate` environment's `RENOVATE_APP_ID` variable and its private key from the `RENOVATE_APP_PRIVATE_KEY` secret. The environment has no reviewers, since a scheduled job cannot wait for one, and only `main` may use it.
+
+A ticked checkbox on a Dependency Dashboard takes effect at the next run. Run the workflow by hand to act on it sooner.
 
 ## Holding it back
 

@@ -1,0 +1,80 @@
+name: Renovate
+
+# Renovate for all three repositories (DevDogsUGA, DogDays, DogPack), run on
+# our own runner instead of Mend's hosted app. Mend's runners have a fixed
+# memory limit, and regenerating DevDogsUGA's lockfile for the weekend group
+# (about 50 packages across the merged workspace) ran out of it: every run from
+# Oct 14 was killed partway, before it could update the Dependency Dashboard.
+# A public repository's ubuntu-latest runner has 16 GB.
+#
+# What Renovate updates, and when, is the shared preset (renovate/default.json)
+# and each repository's renovate.json5; this file only says how often it runs.
+# The preset's schedules still apply: the grouped pull request waits for the
+# weekend however often this runs.
+#
+# Renovate signs in as the `devdogs-renovate` GitHub App, so its pull requests
+# trigger CI (a GITHUB_TOKEN pull request would not), its commits are signed
+# through GitHub's API (platformCommit), and the rulesets name it as the bypass
+# actor on `main-reviews`. The App must be installed on all three repositories.
+#
+# The `renovate` environment holds the App's id (variable RENOVATE_APP_ID) and
+# private key (secret RENOVATE_APP_PRIVATE_KEY). It has no reviewers, because a
+# scheduled job cannot wait for an approval, and only `main` may deploy to it.
+#
+# A ticked checkbox on a Dependency Dashboard takes effect at the next run, not
+# at once as it did with Mend. Run this workflow by hand to act on it sooner.
+on:
+  schedule:
+    - cron: "23 */3 * * *"
+  workflow_dispatch:
+    inputs:
+      log_level:
+        description: Renovate log level
+        type: choice
+        options: [info, debug]
+        default: info
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    environment: renovate
+    steps:
+      # The installation token lasts an hour, which is why the job stops at 55
+      # minutes. It covers exactly the three repositories Renovate manages.
+      - id: token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.RENOVATE_APP_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: DevDogsUGA,DogDays,DogPack
+      # Commits through the API are authored by the App already; gitAuthor
+      # covers anything Renovate commits with git itself.
+      - id: author
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          SLUG: ${{ steps.token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          id=$(gh api "users/${SLUG}%5Bbot%5D" --jq .id)
+          echo "git-author=${SLUG}[bot] <${id}+${SLUG}[bot]@users.noreply.github.com>" >> "$GITHUB_OUTPUT"
+      - uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
+        with:
+          token: ${{ steps.token.outputs.token }}
+        env:
+          LOG_LEVEL: ${{ inputs.log_level || 'info' }}
+          RENOVATE_PLATFORM: github
+          RENOVATE_REPOSITORIES: '["DevDogsUGA/DevDogsUGA", "DevDogsUGA/DogDays", "DevDogsUGA/DogPack"]'
+          RENOVATE_GIT_AUTHOR: ${{ steps.author.outputs.git-author }}
+          # Every repository already has a renovate.json5; never open an
+          # onboarding pull request, and skip a repository that loses its file.
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: required

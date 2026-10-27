@@ -60,7 +60,7 @@ function captureConsole() {
 describe("resolving Renovate", () => {
   it("includes Renovate in the plan when it resolves", async () => {
     mockResolveAppId.mockImplementation(async (_org, slug) => {
-      if (slug === "renovate") return 7001;
+      if (slug === "devdogs-renovate") return 7001;
       throw new Error(`unexpected app slug "${slug}"`);
     });
     const { log, err, restore } = captureConsole();
@@ -117,7 +117,9 @@ describe("resolving Renovate", () => {
     const code = await runGithubRulesets(["--json"]);
 
     expect(code).toBe(0);
-    expect(mockResolveAppId.mock.calls.map((c) => c[1])).toEqual(["renovate"]);
+    expect(mockResolveAppId.mock.calls.map((c) => c[1])).toEqual([
+      "devdogs-renovate",
+    ]);
     const printed = JSON.parse(log.mock.calls[0]![0] as string) as {
       creates: { desired: { name: string } }[];
     };
@@ -195,7 +197,7 @@ describe("--repo DogDays, DogPack and all", () => {
     vi.mocked(listRulesets).mockReset();
     vi.mocked(listRulesets).mockResolvedValue([]);
     mockResolveAppId.mockImplementation(async (_org, slug) => {
-      if (slug === "renovate") return 7001;
+      if (slug === "devdogs-renovate") return 7001;
       throw new Error(`no installation for "${slug}"`);
     });
   });
