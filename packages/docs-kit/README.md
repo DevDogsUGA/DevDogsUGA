@@ -49,6 +49,47 @@ is no silent skip. To check against a build that is not published yet, set
 Each page ships as HTML rendered at build time (Shiki, KaTeX, GitHub alerts),
 along with its headings and search text.
 
+## Trust boundary: club docs and project docs
+
+Two compile modes, because two kinds of author.
+
+**Trusted** (`compileDocs`, the `docs-kit` binary): the club's own `docs/`,
+reviewed in pull requests here. Author HTML and SVG still go through an
+allowlist (`src/html-policy.ts`), not a blocklist; `class` and `id` are the
+extras trusted pages get. Anything off the list fails the build with the file,
+line and construct. Nothing is stripped silently.
+
+**Untrusted** (`compileUntrustedDocs(dir, { project })`, `src/untrusted.ts`):
+documentation fetched from a project's repository. The contract:
+
+- Input is Markdown (`.md`), image assets (`png jpg jpeg gif webp avif svg`)
+  and one optional `docs.manifest.json` (`version: 1`, `name`, `description`;
+  unknown keys fail). Any other file type fails the build.
+- It never runs the project's scripts, never installs its dependencies, never
+  loads its plugins, and reads no project config that changes how the compiler
+  behaves. The compiler, plugin list and policy are this package's. Frontmatter
+  is YAML data only (`---js` is refused, not evaluated) and may set only
+  `name description order section steps os`.
+- Every path is checked with `lstat`: symlinks, special files, `..`, absolute
+  paths, dotfiles and unusual names are refused, as are a `_shared` folder,
+  files over the size caps, and more files, pages, bytes or folder depth than
+  `DEFAULT_UNTRUSTED_LIMITS`. Files are opened with `O_NOFOLLOW`; the verified
+  bytes are copied into a private temporary directory and compiled from there,
+  so the source tree is not read again after it was checked.
+- Images must be files inside the docs directory that match their type's
+  signature. SVG assets and inline SVG use the same allowlist (no script,
+  `foreignObject`, animation, `style`, `image`, external `use`/`href`).
+- Links: only `http`, `https` and `mailto`, plus links to the project's own
+  pages. External links get `rel="noopener noreferrer nofollow"`. External and
+  `data:` images, `class`, `id` (except on elements inside an inline SVG, never
+  its root), `style`, forms, iframes, objects and `data:` URLs are refused.
+- It does not run the link check or the `pnpm` command check (the latter
+  shells out) and writes nothing outside a temporary directory it removes.
+
+Fetching a source commit, building candidates and previews, and publishing are
+not in this package; they hand it a directory that was already fetched, with
+no credentials in the environment.
+
 ## Variants
 
 A page can differ by project and by the reader's setup, written as `<details>`
@@ -100,3 +141,12 @@ pastes somewhere else.
 
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/docs-kit) ·
 [Docs system](https://devdogsuga.org/docs/toolkit/guides/docs-kit)
+
+## Requirement for the publishing stage (H2)
+
+Approved relative asset references (`![x](a.png)`, `<img src="sub/x.png">`) are
+validated against the page's folder in the docs tree but are emitted still
+relative; the browser would resolve them against the page route, which differs
+for a folder's `index.md`. H2 must rewrite approved asset references to
+absolute content-addressed URLs (the sha256 is already computed) when it
+serves them.
