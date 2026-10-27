@@ -51,7 +51,7 @@ Everything is derived from the target, as for the platform:
 | Fact               | Product value                                                                  |
 | ------------------ | ------------------------------------------------------------------------------ |
 | File               | `.env.<target>` at the root of the **product's** checkout                      |
-| Bitwarden project  | `<product>-<target>` (`dogdays-staging`, `dogpack-production`)                 |
+| Bitwarden project  | the tier project (`staging`, `production`), keys as `<product>/<KEY>`          |
 | GitHub environment | the target's name (`preflight`, `staging`, `production`) in the product's repo |
 
 The checkout is found from the current directory when you are inside it, then
@@ -62,10 +62,18 @@ the file, Bitwarden and the one GitHub environment; it does not look at
 Cloudflare, and `--prune` does not apply. `push --target production` asks and is
 refused with `--yes`, as on the platform.
 
-A product's Bitwarden projects must exist before the commands work (creating one
-needs the Secrets Manager token). The first time, put the values from the
+The existing tier Bitwarden projects must be accessible to the machine account.
+The first time, put the values from the
 hand-made Bitwarden item into `.env.<target>` in the checkout, one `KEY=value`
 line each, and run `push`.
+
+Products share the existing tier Secrets Manager projects. Product pull, push
+and audit select only their exact `<product>/` prefix and strip it for env files
+and GitHub. Platform pull, push and audit skip every Bitwarden key containing
+`/`. Push preserves keys absent from the local file, including other products
+and platform keys. Existing product keys in separate projects must be copied
+to the tier project under the product prefix before using these commands; the
+CLI does not migrate or delete them.
 
 You need `gh auth login` with the `repo` scope and admin on the repository, and
 a Secrets Manager access token — which the tool finds, or asks for once and
