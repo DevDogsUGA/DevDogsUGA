@@ -447,6 +447,12 @@ jobs:
         - Platform Worker (`production-platform`): ${{ needs.resolve.outputs.production_platform == 'false' && 'unchanged, skipped' || 'deploys: upload, preview smoke test, switch traffic, live smoke test, search index, reconcile' }}
         - Order: migrations, schema and configuration, then the catalog, then the platform.
 
+  # Its jobs skip themselves when there is nothing to apply (no pending
+  # migration, an empty schema diff and an unchanged config), and the call then
+  # reports `skipped`. The Workers below accept that as well as `success`:
+  # requiring `success` skipped both Workers on a deploy with no database work
+  # while the run still went green (run 40441210925). The call's own `if` only
+  # fails when the approval did, which the Workers check separately.
   production-database-apply:
     needs: [resolve, production-plan, production-approval]
     if: >-
@@ -491,7 +497,7 @@ jobs:
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && ((vars.ONE_APPROVAL != 'true' && needs.production-database.result == 'success')
-          || (vars.ONE_APPROVAL == 'true' && needs.production-approval.result == 'success' && needs.production-database-apply.result == 'success'))
+          || (vars.ONE_APPROVAL == 'true' && needs.production-approval.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.production-database-apply.result)))
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
     permissions:
@@ -535,7 +541,7 @@ jobs:
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && ((vars.ONE_APPROVAL != 'true' && needs.production-database.result == 'success')
-          || (vars.ONE_APPROVAL == 'true' && needs.production-approval.result == 'success' && needs.production-database-apply.result == 'success'))
+          || (vars.ONE_APPROVAL == 'true' && needs.production-approval.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.production-database-apply.result)))
       && needs.production-catalog.result == 'success'
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
