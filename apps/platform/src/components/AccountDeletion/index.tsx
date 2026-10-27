@@ -5,6 +5,7 @@ import { keepMyAccount } from "~/server/actions/accountDeletion";
 import Callout from "~/ui/callout";
 import { Card } from "~/ui/card";
 import { TextLink } from "~/ui/text-link";
+import LeaveLinks from "./LeaveLinks";
 
 import "./account-deletion.css";
 
@@ -81,28 +82,11 @@ export default function AccountDeletionPending({
               Leaving the DevDogs GitHub organization and Discord server is
               yours to do; we cannot remove you from accounts you manage. Your
               posts and contributions there stay.
-              {hasGithub || hasDiscord ? (
-                <>
-                  {" "}
-                  Leave
-                  {hasGithub ? (
-                    <>
-                      {" "}
-                      <TextLink href="https://github.com/settings/organizations">
-                        the GitHub organization
-                      </TextLink>
-                    </>
-                  ) : null}
-                  {hasGithub && hasDiscord ? " and" : null}
-                  {hasDiscord ? (
-                    <>
-                      {" "}
-                      <TextLink href={discordUrl}>the Discord server</TextLink>
-                    </>
-                  ) : null}
-                  .
-                </>
-              ) : null}
+              <LeaveLinks
+                hasGithub={hasGithub}
+                hasDiscord={hasDiscord}
+                discordUrl={discordUrl}
+              />
             </li>
             <li>
               Copies held by Bevy, Engage and UGA stay there. DevDogs apps

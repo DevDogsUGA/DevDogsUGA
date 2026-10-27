@@ -6,6 +6,12 @@ import { canUserViewAuditLog } from "~/server/actions/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { db } from "~/server/db";
 import { auditEvents, reflectionRevisions } from "~/server/db/schema";
+import {
+  actorLabel,
+  memberIdsIn,
+  resolveMembers,
+  targetLabel,
+} from "./auditLabels";
 
 export const PAGE_SIZE = 50;
 
@@ -19,10 +25,14 @@ export type AuditLogEntry = {
   id: string;
   createdAt: string;
   actor: string;
+  /** The actor as a person reads it: a name, "System", or "Deleted member". */
+  actorName: string;
   source: AuditSource;
   action: string;
   targetType: string;
   targetId: string;
+  /** Set when the target is a member: their name, or "Deleted member". */
+  targetName: string | null;
   correlationId: string | null;
   metadata: unknown;
   beforeReflectionRevisionId: string | null;
@@ -77,6 +87,8 @@ export const getAuditLogPageData = cache(
       .limit(PAGE_SIZE)
       .offset(offset);
 
+    const known = await resolveMembers(memberIdsIn(rows));
+
     const entries = rows.map((row): AuditLogEntry => {
       const actor = row.actorUserId ?? "System";
 
@@ -84,10 +96,12 @@ export const getAuditLogPageData = cache(
         id: row.id,
         createdAt: row.createdAt.toISOString(),
         actor,
+        actorName: actorLabel(row.actorUserId, known),
         source: row.source,
         action: row.action,
         targetType: row.targetType,
         targetId: row.targetId,
+        targetName: targetLabel(row, known),
         correlationId: row.correlationId,
         metadata: row.metadata,
         beforeReflectionRevisionId: row.beforeReflectionRevisionId,
@@ -140,16 +154,20 @@ export const getAuditEventDetailData = cache(async (eventId: string) => {
         }
       : null;
 
+  const known = await resolveMembers(memberIdsIn([event]));
+
   return {
     event: {
       id: event.id,
       createdAt: event.createdAt.toISOString(),
       actorType: event.actorType,
       actor: event.actorUserId ?? "System",
+      actorName: actorLabel(event.actorUserId, known),
       source: event.source,
       action: event.action,
       targetType: event.targetType,
       targetId: event.targetId,
+      targetName: targetLabel(event, known),
       correlationId: event.correlationId,
       metadata: event.metadata,
     },

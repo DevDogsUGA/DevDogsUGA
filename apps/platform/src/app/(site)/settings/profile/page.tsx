@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Fragment, Suspense } from "react";
-import { EyeIcon } from "@phosphor-icons/react/ssr";
+import { DownloadSimpleIcon, EyeIcon } from "@phosphor-icons/react/ssr";
 import AcademicFields from "~/components/AcademicFields";
+import DeleteAccountDialog from "~/components/AccountDeletion/DeleteAccountDialog";
 import AvatarField from "~/components/AvatarField";
 import BioField from "~/components/BioField";
 import {
@@ -19,11 +20,13 @@ import PublicProfileSection from "~/components/PublicProfileSection";
 import RoleDescriptionField from "~/components/RoleDescriptionField";
 import SettingsShell from "~/components/Settings/SettingsShell";
 import { Skeleton } from "~/ui/skeleton";
+import { env } from "~/env";
 import { profilePath } from "~/lib/profilePath";
 import { publicProfilesEnabled } from "~/server/features";
 import { getProfilePageData } from "~/server/loaders/console";
 import { getHandleOptions } from "~/server/loaders/publicProfiles";
 import Badge from "~/ui/badge";
+import { Button } from "~/ui/button";
 import Field from "~/ui/field";
 import { PageHeading, Panel } from "~/ui/app-shell";
 import { SettingsFormProvider } from "~/ui/settings-form";
@@ -226,6 +229,36 @@ async function ProfileContent() {
             </div>
           </Fields>
         )}
+      </Panel>
+
+      <Panel
+        id="your-data"
+        title="Your data"
+        help="A JSON file of what the DevDogs platform keeps about you: your profile, linked accounts (never their sign-in tokens), roles, attendance, reflections, survey answers, support threads, OAuth apps, schedule builder plans and the audit events you caused. DogDays and DogPack are separate apps and hold their own data about you."
+      >
+        <Button asChild variant="secondary">
+          <a href="/account/data" download>
+            <DownloadSimpleIcon aria-hidden />
+            Download my data
+          </a>
+        </Button>
+      </Panel>
+
+      {/* Outside Fields and the save bar on purpose: deleting is its own
+          action with its own confirmation, and a frozen profile can still
+          leave. */}
+      <Panel
+        id="delete-account"
+        className="danger"
+        title="Delete account"
+        help="Schedules your account for deletion in 14 days. Until then you can sign in and keep it. When the time is up, your profile, reflections, survey answers and OAuth apps are erased, and your attendance stays in the club's totals without your name. It isn't part of Save."
+      >
+        <DeleteAccountDialog
+          userId={data.id}
+          hasGithub={Boolean(data.githubIdentity)}
+          hasDiscord={Boolean(data.discordIdentity)}
+          discordUrl={`https://discord.com/channels/${env.DISCORD_GUILD_ID}`}
+        />
       </Panel>
     </>
   );

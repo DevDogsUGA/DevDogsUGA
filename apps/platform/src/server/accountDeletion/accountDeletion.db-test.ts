@@ -461,6 +461,28 @@ describe("cancelAccountDeletion", () => {
     expect(audit[1]).toMatchObject({ actorUserId: MEMBER });
   });
 
+  it("lets an officer holding canDeleteAccounts cancel, as the actor", async () => {
+    fake.officers.add(OFFICER);
+    await scheduleAccountDeletion(MEMBER, MEMBER, { now: NOW });
+
+    expect(await cancelAccountDeletion(MEMBER, OFFICER)).toBe(true);
+
+    const audit = await auditRows(MEMBER);
+    expect(audit.at(-1)).toMatchObject({
+      action: "user.deletion_cancelled",
+      actorUserId: OFFICER,
+    });
+  });
+
+  it("refuses an officer without canDeleteAccounts, and leaves it pending", async () => {
+    await scheduleAccountDeletion(MEMBER, MEMBER, { now: NOW });
+
+    await expect(cancelAccountDeletion(MEMBER, OTHER)).rejects.toThrow(
+      "canDeleteAccounts",
+    );
+    expect(await getPendingDeletion(MEMBER)).not.toBeNull();
+  });
+
   it("has nothing to cancel without a pending deletion", async () => {
     expect(await cancelAccountDeletion(MEMBER)).toBe(false);
   });
