@@ -7,6 +7,8 @@ import type {
   Meeting,
   Question,
   QuestionsConfig,
+  ResolvedWorkshop,
+  Venue,
 } from "@devdogsuga/events";
 import { db } from "~/server/db";
 import { reconcileFromConfig, type WorkerVersion } from "./reconcile";
@@ -48,6 +50,7 @@ function meeting(name: string, overrides: Partial<Meeting> = {}): Meeting {
     kicker: null,
     category: "build",
     brand: "devdogs",
+    venue: { ...DLW, room: "124" },
     building: "DLW",
     location: "124",
     startsAt: "2027-01-01T18:00:00.000Z",
@@ -62,8 +65,33 @@ function meeting(name: string, overrides: Partial<Meeting> = {}): Meeting {
   };
 }
 
-function workshop(title: string, project: string | null = null) {
-  return { title, description: null, project };
+const DLW: Venue = {
+  id: "dlw",
+  kind: "campus",
+  name: "Dining, Learning, and Well-Being Center",
+  shortName: "DLW",
+  building: "DLW",
+};
+const TBA: Venue = { id: "tba", kind: "tba", name: "TBA" };
+
+/** A fixture workshop; its id is the title in kebab case unless given. */
+function workshop(
+  title: string,
+  project: string | null = null,
+  extra: Partial<ResolvedWorkshop> = {},
+): ResolvedWorkshop {
+  return {
+    id: title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, ""),
+    title,
+    description: null,
+    project,
+    elHours: 1,
+    topics: [],
+    ...extra,
+  };
 }
 
 /**
@@ -94,10 +122,14 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
   const otherWorkshops = await db.execute<{
     meetingId: string;
     title: string;
+    definitionId: string | null;
+    elHours: string;
+    topics: string[];
     description: string | null;
     project: string | null;
   }>(sql`
-    select w."meetingId", w.title, w.description, w.project
+    select w."meetingId", w.title, w."definitionId", w."elHours", w.topics,
+      w.description, w.project
     from platform.workshops w
     join platform.meetings m on m.id = w."meetingId"
     where w."deletedAt" is null and m."deletedAt" is null
@@ -113,6 +145,8 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
     summary: string;
     series: string | null;
     category: Meeting["category"];
+    venue: string | null;
+    room: string | null;
     building: Meeting["building"];
     location: string;
     // `postgres.js` hands timestamptz columns back as ISO strings, not `Date`
@@ -127,7 +161,7 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
     surveyUrl: string | null;
     surveyQuestionIds: string[];
   }>(sql`
-    select id, slug, "nameOverride", summary, series, category, building, location,
+    select id, slug, "nameOverride", summary, series, category, venue, room, building, location,
       "startsAt", "endsAt", "rsvpUrl", "cancelledAt", "cancellationReason",
       "countsForCredit", "surveyUrl", "surveyQuestionIds"
     from platform.meetings
@@ -146,6 +180,14 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
           kicker: null,
           category: row.category,
           brand: "devdogs",
+          // Only the id and room are ever written. A row reconcile has not
+          // yet rewritten has no venue; it is carried as "tba".
+          venue: {
+            id: row.venue ?? "tba",
+            kind: "tba",
+            name: row.venue ?? "TBA",
+            room: row.room,
+          },
           building: row.building,
           location: row.location,
           // Postgres's own text format ("2026-09-14 22:00:00+00") rather
@@ -167,7 +209,14 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
             : {}),
           agenda: otherWorkshops
             .filter((w) => w.meetingId === row.id)
-            .map((w) => workshop(w.title, w.project)),
+            .map((w) =>
+              workshop(w.title, w.project, {
+                ...(w.definitionId === null ? {} : { id: w.definitionId }),
+                description: w.description,
+                elHours: Number(w.elHours),
+                topics: w.topics,
+              }),
+            ),
         })),
       ],
     },
@@ -183,9 +232,14 @@ async function meetingRow(name: string) {
     nameOverride: string | null;
     series: string | null;
     category: string | null;
+    venue: string | null;
+    room: string | null;
+    building: string | null;
+    location: string | null;
     surveyQuestionIds: string[];
   }>(sql`
-    select id, "deletedAt", "nameOverride", series, category, "surveyQuestionIds"
+    select id, "deletedAt", "nameOverride", series, category, venue, room,
+      building, location, "surveyQuestionIds"
     from platform.meetings where slug = ${`${PREFIX}${name}`}
   `);
   return rows[0] ?? null;
@@ -198,8 +252,12 @@ async function workshopRows(name: string) {
     deletedAt: Date | null;
     title: string | null;
     project: string | null;
+    definitionId: string | null;
+    elHours: string;
+    topics: string[];
   }>(sql`
-    select w.id, w."deletedAt", w.title, w.project
+    select w.id, w."deletedAt", w.title, w.project, w."definitionId",
+      w."elHours", w.topics
     from platform.workshops w
     join platform.meetings m on m.id = w."meetingId"
     where m.slug = ${`${PREFIX}${name}`}
@@ -260,7 +318,7 @@ describe("reconcileFromConfig", () => {
             title: "A One-Off",
             summary: "Stands alone.",
             category: "milestone",
-            location: "TBA",
+            venue: "tba",
             startsAt: "2027-01-01T21:00:00.000Z",
             endsAt: "2027-01-01T22:00:00.000Z",
             rsvpUrl: null,
@@ -282,10 +340,13 @@ describe("reconcileFromConfig", () => {
             headline: "series",
             numbered: true,
             summary: "A series night.",
-            location: "124",
+            venue: "dlw",
+            room: "124",
           },
         ],
       },
+      { workshops: [] },
+      { venues: [DLW, TBA] },
     );
     const live = await liveConfig(resolved.meetings);
 
@@ -297,12 +358,20 @@ describe("reconcileFromConfig", () => {
       nameOverride: "Reconcile Series #1",
       series: "reconcile-test-series",
       category: "study",
+      venue: "dlw",
+      room: "124",
+      building: "DLW",
+      location: "124",
     });
     const oneOff = await meetingRow("oneoff");
     expect(oneOff).toMatchObject({
       nameOverride: "A One-Off",
       series: null,
       category: "milestone",
+      venue: "tba",
+      room: null,
+      building: null,
+      location: "TBA",
     });
   });
 
@@ -347,26 +416,32 @@ describe("reconcileFromConfig", () => {
     expect(second!.id).not.toBe(first!.id);
   });
 
-  it("matches workshops on their title within the meeting, ignoring case", async () => {
+  it("matches workshops on their definition id within the meeting", async () => {
     await reconcileFromConfig(
       db,
       (
         await liveConfig([
-          meeting("titles", {
-            agenda: [workshop("Next.js"), workshop("Flutter")],
+          meeting("defs", {
+            agenda: [
+              workshop("Next.js", null, { id: "nextjs" }),
+              workshop("Flutter"),
+            ],
           }),
         ])
       ).config,
     );
-    const [flutter, nextjs] = await workshopRows("titles");
+    const [flutter, nextjs] = await workshopRows("defs");
 
-    // Re-cased: the same workshop. Retitled: a different one.
+    // Retitled under the same id: the same workshop. A new id: a different one.
     const result = await reconcileFromConfig(
       db,
       (
         await liveConfig([
-          meeting("titles", {
-            agenda: [workshop("next.js", "DogDays"), workshop("Flutter II")],
+          meeting("defs", {
+            agenda: [
+              workshop("Next.js: Components", "DogDays", { id: "nextjs" }),
+              workshop("Flutter II"),
+            ],
           }),
         ])
       ).config,
@@ -375,17 +450,98 @@ describe("reconcileFromConfig", () => {
     if (!result.ok) return;
     expect(result.counts.workshops.archived).toBe(1);
 
-    const rows = await workshopRows("titles");
+    const rows = await workshopRows("defs");
     const byId = new Map(rows.map((r) => [r.id, r]));
     expect(byId.get(nextjs!.id)).toMatchObject({
-      title: "next.js",
+      title: "Next.js: Components",
       project: "DogDays",
+      definitionId: "nextjs",
       deletedAt: null,
     });
     expect(byId.get(flutter!.id)!.deletedAt).not.toBeNull();
     expect(
-      rows.filter((r) => r.deletedAt === null).map((r) => r.title),
-    ).toEqual(["Flutter II", "next.js"]);
+      rows.filter((r) => r.deletedAt === null).map((r) => r.definitionId),
+    ).toEqual(["flutter-ii", "nextjs"]);
+  });
+
+  it("writes the venue and room, and the workshop's id, EL hours and topics", async () => {
+    await reconcileFromConfig(
+      db,
+      (
+        await liveConfig([
+          meeting("place", {
+            venue: { ...TBA, room: null },
+            building: null,
+            location: "TBA",
+            agenda: [
+              workshop("Supabase", "DogDays", {
+                elHours: 1.5,
+                topics: ["databases", "web"],
+              }),
+            ],
+          }),
+        ])
+      ).config,
+    );
+    expect(await meetingRow("place")).toMatchObject({
+      venue: "tba",
+      room: null,
+      building: null,
+      location: "TBA",
+    });
+    const [row] = await workshopRows("place");
+    expect(row).toMatchObject({
+      definitionId: "supabase",
+      topics: ["databases", "web"],
+    });
+    expect(Number(row!.elHours)).toBe(1.5);
+  });
+
+  it("repeated sessions of one workshop share a definition id", async () => {
+    await reconcileFromConfig(
+      db,
+      (
+        await liveConfig([
+          meeting("rerun-a", { agenda: [workshop("Supabase")] }),
+          meeting("rerun-b", { agenda: [workshop("Supabase")] }),
+        ])
+      ).config,
+    );
+    const [a] = await workshopRows("rerun-a");
+    const [b] = await workshopRows("rerun-b");
+    expect(a!.id).not.toBe(b!.id);
+    expect(a!.definitionId).toBe("supabase");
+    expect(b!.definitionId).toBe("supabase");
+  });
+
+  it("adopts a workshop row written before definitions existed, by title", async () => {
+    await reconcileFromConfig(
+      db,
+      (await liveConfig([meeting("legacy", { agenda: [] })])).config,
+    );
+    const meetingId = (await meetingRow("legacy"))!.id;
+    const legacyId = (
+      await db.execute<{ id: string }>(sql`
+        insert into platform.workshops ("meetingId", title)
+        values (${meetingId}, 'Supabase') returning id
+      `)
+    )[0]!.id;
+
+    await reconcileFromConfig(
+      db,
+      (
+        await liveConfig([
+          meeting("legacy", { agenda: [workshop("Supabase")] }),
+        ])
+      ).config,
+    );
+    const rows = await workshopRows("legacy");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: legacyId,
+      definitionId: "supabase",
+      deletedAt: null,
+    });
   });
 
   it("archives a meeting and its workshops once they drop out of the config", async () => {

@@ -34,6 +34,13 @@ function meeting(questions?: string[]): Meeting {
     kicker: null,
     category: "milestone",
     brand: "devdogs",
+    venue: {
+      id: "dlw",
+      kind: "campus",
+      name: "Dining, Learning, and Well-Being Center",
+      building: "DLW",
+      room: "124",
+    },
     building: "DLW",
     location: "124",
     startsAt: "2026-09-14T22:00:00.000Z",

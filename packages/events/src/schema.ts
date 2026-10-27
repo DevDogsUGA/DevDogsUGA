@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { ResolvedVenue } from "./venues.js";
+import type { ResolvedWorkshop } from "./workshops.js";
 
 /**
  * The shape of the club's meetings and workshops, authored as versioned data
@@ -85,8 +87,11 @@ export const MEETING_CATEGORY_LABELS: Readonly<
 /** A series' or meeting's stable id: lowercase words joined by hyphens. */
 export const SERIES_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/** Mirrors `meetings_building_choices`. */
-export const MEETING_BUILDING_CHOICES = [
+/**
+ * The campus map's ten drawable buildings, by code. A campus venue in
+ * `venues.json` names one of these as its `building`.
+ */
+export const CAMPUS_BUILDING_CODES = [
   "DLW",
   "Driftmier",
   "Plant Sciences",
@@ -97,6 +102,13 @@ export const MEETING_BUILDING_CHOICES = [
   "Poultry Science",
   "Main Library",
   "Tate",
+] as const;
+
+export type CampusBuildingCode = (typeof CAMPUS_BUILDING_CODES)[number];
+
+/** Mirrors `meetings_building_choices`: the ten buildings, plus `Other`. */
+export const MEETING_BUILDING_CHOICES = [
+  ...CAMPUS_BUILDING_CODES,
   "Other",
 ] as const;
 
@@ -127,38 +139,45 @@ const isoInstant = z
   );
 
 /**
- * A workshop: one of several sessions running in parallel at a meeting.
- *
- * `project` is free text, deliberately -- see the migration note on the
- * dropped `workshops.projectId` column and the `projects` table it pointed
- * at. A workshop recommends a body of work in words now ("DogDays", "DogDays
- * & DogPack"), the same way an officer would say it out loud, with nothing to
- * keep in sync.
+ * A workshop as a night shows it: the definition's words, with the night's
+ * own description when it has one. `project` is free text, deliberately: a
+ * workshop recommends a body of work in words now ("DogDays", "DogDays &
+ * DogPack"), the same way an officer would say it out loud.
  */
-export const workshopSchema = z.strictObject({
-  title: z.string().min(1).max(WORKSHOP_TITLE_MAX_LENGTH).meta({
-    description:
-      "One schedule row's worth. Unique within its meeting: it is the workshop's identity.",
-  }),
-  description: z
-    .string()
-    .max(WORKSHOP_DESCRIPTION_MAX_LENGTH)
-    .nullable()
-    .meta({ description: "Shown in the meeting's detail dialog." }),
-  project: z.string().min(1).nullable().meta({
-    description: 'The work it recommends, in words ("DogDays & DogPack").',
-  }),
-});
+export interface Workshop {
+  title: string;
+  description: string | null;
+  project: string | null;
+}
 
-export type Workshop = z.infer<typeof workshopSchema>;
+/**
+ * One line of a meeting's agenda, as authored: a workshop's id from
+ * `workshops.json`, or the id with a description for this night only.
+ */
+export const agendaEntrySchema = z.union([
+  z.string().regex(SERIES_ID_PATTERN).meta({
+    description: "The id of a workshop in workshops.json.",
+  }),
+  z.strictObject({
+    workshop: z.string().regex(SERIES_ID_PATTERN).meta({
+      description: "The id of a workshop in workshops.json.",
+    }),
+    description: z.string().max(WORKSHOP_DESCRIPTION_MAX_LENGTH).meta({
+      description:
+        "Replaces the workshop's own description on this night only.",
+    }),
+  }),
+]);
+
+export type AgendaEntry = z.infer<typeof agendaEntrySchema>;
 
 /**
  * A meeting as AUTHORED in `meetings.json`: the in-person moment. Its agenda
- * is the workshops running that night, written inline rather than
- * cross-referenced, because a workshop belongs to exactly one meeting.
+ * is the ids of the workshops running that night, from `workshops.json`; its
+ * place is a venue from `venues.json` and a room.
  *
  * A meeting may name a `series` (from `series.json`) and inherit its category,
- * brand, summary, location and building. An authored value always wins, a
+ * brand, summary, venue and room. An authored value always wins, a
  * one-off (no series) sets its own `title` and `category`, and `resolveMeetings`
  * turns this shape into the {@link Meeting} everything downstream reads.
  */
@@ -176,7 +195,7 @@ export const meetingSchema = z
       }),
     series: z.string().regex(SERIES_ID_PATTERN).optional().meta({
       description:
-        "The id of a series in series.json. The meeting inherits the series' category, brand, summary, location and building, and its title is derived from the series unless one is authored.",
+        "The id of a series in series.json. The meeting inherits the series' category, brand, summary, venue and room, and its title is derived from the series unless one is authored.",
     }),
     title: z.string().min(1).max(MEETING_TITLE_MAX_LENGTH).optional().meta({
       description:
@@ -194,12 +213,13 @@ export const meetingSchema = z
       description:
         "devdogs (Cosmic) or gdgc (Paper). Defaults to the series' brand, then devdogs.",
     }),
-    building: z.enum(MEETING_BUILDING_CHOICES).nullable().optional().meta({
-      description: "Defaults to the series' building, then null.",
-    }),
-    location: z.string().min(1).optional().meta({
+    venue: z.string().regex(SERIES_ID_PATTERN).optional().meta({
       description:
-        'The room, or "TBA" until there is one. Defaults to the series\' location.',
+        "The id of a venue in venues.json. Defaults to the series' venue; a meeting that names a venue does not inherit the series' room.",
+    }),
+    room: z.string().min(1).optional().meta({
+      description:
+        "The room or space inside the venue, or \"TBA\" until there is one. Defaults to the series' room (when the venue is the series' too).",
     }),
     startsAt: isoInstant.meta({
       description:
@@ -240,9 +260,10 @@ export const meetingSchema = z
       description:
         "Ids of meeting-scoped questions from questions.json to ask after check-in, in order.",
     }),
-    agenda: z
-      .array(workshopSchema)
-      .meta({ description: "The workshops running that night." }),
+    agenda: z.array(agendaEntrySchema).meta({
+      description:
+        "The workshops running that night, by id from workshops.json. Parallel workshops share a meeting; sequential ones are separate meetings.",
+    }),
   })
   .refine((meeting) => new Date(meeting.endsAt) > new Date(meeting.startsAt), {
     message: "endsAt must be after startsAt",
@@ -271,7 +292,15 @@ export interface Meeting {
   summary: string;
   category: MeetingCategory;
   brand: MeetingBrand;
+  /** Where it is: the venue, with the room. */
+  venue: ResolvedVenue;
+  /**
+   * Backwards-compatible: the campus-map building the venue maps to (`Other`
+   * for somewhere the map does not draw), as the platform's `building`
+   * column stores it. Derived from `venue`; readers move to `venue` later.
+   */
   building: (typeof MEETING_BUILDING_CHOICES)[number] | null;
+  /** Backwards-compatible: the room line printed beside `building`. */
   location: string;
   startsAt: string;
   endsAt: string;
@@ -281,7 +310,8 @@ export interface Meeting {
   countsForCredit: boolean;
   surveyUrl: string | null;
   questions?: string[] | undefined;
-  agenda: Workshop[];
+  /** The workshops running that night, definitions resolved. */
+  agenda: ResolvedWorkshop[];
 }
 
 export const clubConfigSchema = z.strictObject({

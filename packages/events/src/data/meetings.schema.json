@@ -16,7 +16,7 @@
             "description": "The meeting's identity and its URL on the platform and posters: its Eastern date (YYYY-MM-DD), plus a lowercase descriptor when another meeting shares the date. Unique across the file. Changing it makes a new meeting."
           },
           "series": {
-            "description": "The id of a series in series.json. The meeting inherits the series' category, brand, summary, location and building, and its title is derived from the series unless one is authored.",
+            "description": "The id of a series in series.json. The meeting inherits the series' category, brand, summary, venue and room, and its title is derived from the series unless one is authored.",
             "type": "string",
             "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
           },
@@ -49,32 +49,13 @@
             "type": "string",
             "enum": ["devdogs", "gdgc"]
           },
-          "building": {
-            "description": "Defaults to the series' building, then null.",
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "DLW",
-                  "Driftmier",
-                  "Plant Sciences",
-                  "Boyd",
-                  "MLC",
-                  "Science Learning Center",
-                  "Science Library",
-                  "Poultry Science",
-                  "Main Library",
-                  "Tate",
-                  "Other"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "venue": {
+            "description": "The id of a venue in venues.json. Defaults to the series' venue; a meeting that names a venue does not inherit the series' room.",
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
           },
-          "location": {
-            "description": "The room, or \"TBA\" until there is one. Defaults to the series' location.",
+          "room": {
+            "description": "The room or space inside the venue, or \"TBA\" until there is one. Defaults to the series' room (when the venue is the series' too).",
             "type": "string",
             "minLength": 1
           },
@@ -147,43 +128,32 @@
           "agenda": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "title": {
+              "anyOf": [
+                {
                   "type": "string",
-                  "minLength": 1,
-                  "maxLength": 80,
-                  "description": "One schedule row's worth. Unique within its meeting: it is the workshop's identity."
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "description": "The id of a workshop in workshops.json."
                 },
-                "description": {
-                  "anyOf": [
-                    {
+                {
+                  "type": "object",
+                  "properties": {
+                    "workshop": {
                       "type": "string",
-                      "maxLength": 280
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                      "description": "The id of a workshop in workshops.json."
                     },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "description": "Shown in the meeting's detail dialog."
-                },
-                "project": {
-                  "anyOf": [
-                    {
+                    "description": {
                       "type": "string",
-                      "minLength": 1
-                    },
-                    {
-                      "type": "null"
+                      "maxLength": 280,
+                      "description": "Replaces the workshop's own description on this night only."
                     }
-                  ],
-                  "description": "The work it recommends, in words (\"DogDays & DogPack\")."
+                  },
+                  "required": ["workshop", "description"],
+                  "additionalProperties": false
                 }
-              },
-              "required": ["title", "description", "project"],
-              "additionalProperties": false
+              ]
             },
-            "description": "The workshops running that night."
+            "description": "The workshops running that night, by id from workshops.json. Parallel workshops share a meeting; sequential ones are separate meetings."
           }
         },
         "required": [

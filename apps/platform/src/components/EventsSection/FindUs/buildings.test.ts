@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { MEETING_BUILDING_CHOICES as FROM_CLUB_CONFIG } from "@devdogsuga/events";
+import {
+  MEETING_BUILDING_CHOICES as FROM_CLUB_CONFIG,
+  getVenues,
+} from "@devdogsuga/events";
 import { HIGHLIGHT_PATHS, HIGHLIGHT_PINS } from "./campusMapData";
 import { BUILDING_CENTERS, BUILDING_KEYS, VIEW } from "./campusMapMeta";
 import {
+  BUILDING_ADDRESS,
+  BUILDING_FULL_NAME,
   BUILDING_LABEL,
   BUILDING_NAME,
   MEETING_BUILDING_CHOICES,
@@ -30,6 +35,22 @@ describe("the building list", () => {
 
   it("offers exactly the buildings the map can draw, plus Other", () => {
     expect([...MEETING_BUILDING_CHOICES]).toEqual([...BUILDING_KEYS, "Other"]);
+  });
+
+  it("has a venue in the events catalog for every drawable building, saying what the dialog says", () => {
+    const venues = getVenues().venues;
+    for (const key of BUILDING_KEYS) {
+      const venue = venues.find((v) => v.building === key);
+      expect(venue, `${key} venue`).toBeDefined();
+      expect(venue).toMatchObject({
+        kind: "campus",
+        name: BUILDING_FULL_NAME[key],
+        shortName: BUILDING_LABEL[key],
+        address: BUILDING_ADDRESS[key],
+      });
+      // Nothing is verified until an officer has walked it.
+      expect(venue!.verified).toBeUndefined();
+    }
   });
 
   it("has a footprint, a pin and a centroid for every drawable building", () => {

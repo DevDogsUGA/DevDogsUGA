@@ -1,0 +1,113 @@
+{
+  "$schema": "./venues.schema.json",
+  "venues": [
+    {
+      "id": "dlw",
+      "kind": "campus",
+      "name": "Dining, Learning, and Well-Being Center",
+      "shortName": "DLW",
+      "building": "DLW",
+      "address": "301 E Cloverhurst Ave, Athens, GA 30605"
+    },
+    {
+      "id": "driftmier",
+      "kind": "campus",
+      "name": "Driftmier Engineering Center",
+      "shortName": "Driftmier",
+      "building": "Driftmier",
+      "address": "597 D. W. Brooks Dr, Athens, GA 30602"
+    },
+    {
+      "id": "plant-sciences",
+      "kind": "campus",
+      "name": "Miller Plant Sciences Building",
+      "shortName": "Plant Sciences",
+      "building": "Plant Sciences",
+      "address": "120 Carlton St, Athens, GA 30602"
+    },
+    {
+      "id": "boyd",
+      "kind": "campus",
+      "name": "Boyd Research Center",
+      "shortName": "Boyd",
+      "building": "Boyd",
+      "address": "200 D. W. Brooks Dr, Athens, GA 30602"
+    },
+    {
+      "id": "mlc",
+      "kind": "campus",
+      "name": "Zell B. Miller Learning Center",
+      "shortName": "MLC",
+      "building": "MLC",
+      "address": "48 Baxter St, Athens, GA 30602"
+    },
+    {
+      "id": "science-learning-center",
+      "kind": "campus",
+      "name": "Science Learning Center",
+      "shortName": "SLC",
+      "building": "Science Learning Center",
+      "address": "130 Carlton St, Athens, GA 30602"
+    },
+    {
+      "id": "science-library",
+      "kind": "campus",
+      "name": "Science Library",
+      "shortName": "Science Library",
+      "building": "Science Library",
+      "address": "210 D. W. Brooks Dr, Athens, GA 30602"
+    },
+    {
+      "id": "poultry-science",
+      "kind": "campus",
+      "name": "Poultry Science Building",
+      "shortName": "Poultry Science",
+      "building": "Poultry Science",
+      "address": "110 Cedar St, Athens, GA 30602"
+    },
+    {
+      "id": "main-library",
+      "kind": "campus",
+      "name": "Main Library",
+      "shortName": "Main Library",
+      "building": "Main Library",
+      "address": "320 S Jackson St, Athens, GA 30602"
+    },
+    {
+      "id": "tate",
+      "kind": "campus",
+      "name": "Tate Student Center",
+      "shortName": "Tate",
+      "building": "Tate",
+      "address": "45 Baxter St, Athens, GA 30602"
+    },
+    {
+      "id": "dawson-hall",
+      "kind": "campus",
+      "name": "Dawson Hall",
+      "shortName": "Dawson"
+    },
+    {
+      "id": "myers-quad",
+      "kind": "campus",
+      "name": "Myers Quad"
+    },
+    {
+      "id": "morehouse-college",
+      "kind": "offCampus",
+      "name": "Morehouse College",
+      "address": "Morehouse College, Atlanta, GA",
+      "locality": "Atlanta"
+    },
+    {
+      "id": "virtual",
+      "kind": "virtual",
+      "name": "Virtual"
+    },
+    {
+      "id": "tba",
+      "kind": "tba",
+      "name": "TBA"
+    }
+  ]
+}

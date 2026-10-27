@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   MEETING_BRANDS,
-  MEETING_BUILDING_CHOICES,
   MEETING_CATEGORIES,
   MEETING_SUMMARY_MAX_LENGTH,
   SERIES_ID_PATTERN,
@@ -69,9 +68,11 @@ export const seriesSchema = z.strictObject({
   summary: z.string().min(1).max(MEETING_SUMMARY_MAX_LENGTH).optional().meta({
     description: "The summary a night uses when it does not write its own.",
   }),
-  building: z.enum(MEETING_BUILDING_CHOICES).nullable().optional(),
-  location: z.string().min(1).optional().meta({
-    description: "The room a night uses when it does not name one.",
+  venue: z.string().regex(SERIES_ID_PATTERN).optional().meta({
+    description: "The id of a venue in venues.json a night uses by default.",
+  }),
+  room: z.string().min(1).optional().meta({
+    description: "The room a night uses when it does not name a venue or room.",
   }),
 });
 

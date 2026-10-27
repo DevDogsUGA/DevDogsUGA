@@ -1,8 +1,20 @@
 import { describe, expect, it } from "vitest";
 import meetingsFile from "./data/meetings.json" with { type: "json" };
 import seriesFile from "./data/series.json" with { type: "json" };
-import { getClubConfig, parseConfigFiles } from "./index";
-import { deriveTitle, resolveMeetings, seriesNumbers, termOf } from "./resolve";
+import {
+  getClubConfig,
+  getVenues,
+  getWorkshops,
+  parseConfigFiles,
+} from "./index";
+import {
+  deriveTitle,
+  resolveMeetings,
+  resolveVenue,
+  seriesNumbers,
+  termOf,
+  type ResolveCatalog,
+} from "./resolve";
 import { clubConfigSchema, type AuthoredMeeting } from "./schema";
 import { seriesConfigSchema, type Series } from "./series";
 import { validateAuthored } from "./validator";
@@ -15,8 +27,8 @@ const build: Series = {
   headline: "series",
   numbered: true,
   summary: "Work on your project.",
-  building: "DLW",
-  location: "124",
+  venue: "dlw",
+  room: "124",
 };
 const merge: Series = {
   id: "merge-monday",
@@ -25,7 +37,8 @@ const merge: Series = {
   brand: "devdogs",
   headline: "series",
   summary: "Merge it.",
-  location: "124",
+  venue: "dlw",
+  room: "124",
 };
 const wednesday: Series = {
   id: "workshop-wednesday",
@@ -34,7 +47,8 @@ const wednesday: Series = {
   brand: "devdogs",
   headline: "topic",
   summary: "Learn it.",
-  location: "124",
+  venue: "dlw",
+  room: "124",
 };
 
 function meeting(overrides: Partial<AuthoredMeeting> = {}): AuthoredMeeting {
@@ -52,11 +66,45 @@ function meeting(overrides: Partial<AuthoredMeeting> = {}): AuthoredMeeting {
   };
 }
 
-const workshop = (title: string) => ({
-  title,
-  description: null,
-  project: null,
-});
+const catalog: ResolveCatalog = {
+  workshops: [
+    "Next.js II",
+    "Flutter II",
+    "Supabase",
+    "Supabase II",
+    "A",
+    "B",
+    "C",
+  ].map((title) => ({
+    id: title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/-$/, ""),
+    title,
+    description: `About ${title}.`,
+    project: null,
+    elHours: 1,
+  })),
+  venues: [
+    {
+      id: "dlw",
+      kind: "campus",
+      name: "DLW Center",
+      shortName: "DLW",
+      building: "DLW",
+    },
+    {
+      id: "dawson-hall",
+      kind: "campus",
+      name: "Dawson Hall",
+      shortName: "Dawson",
+    },
+    { id: "tba", kind: "tba", name: "TBA" },
+  ],
+};
+
+/** Titles for `deriveTitle`, which only reads them. */
+const titles = (...names: string[]) => names.map((title) => ({ title }));
 
 describe("termOf", () => {
   it("reads the semester off the club's clock", () => {
@@ -117,52 +165,54 @@ describe("numbering", () => {
 
 describe("deriveTitle", () => {
   it("shows the series name, with #n", () => {
-    expect(deriveTitle(meeting(), build, 3).title).toBe("Build Session #3");
+    expect(deriveTitle(meeting(), [], build, 3).title).toBe("Build Session #3");
   });
 
   it("drops #n for a cancelled night (no number)", () => {
-    expect(deriveTitle(meeting(), build, undefined).title).toBe(
+    expect(deriveTitle(meeting(), [], build, undefined).title).toBe(
       "Build Session",
     );
   });
 
   it("adds the night's workshops after a colon", () => {
-    const agenda = [workshop("Next.js II"), workshop("Flutter II")];
-    expect(deriveTitle(meeting({ agenda }), merge, undefined).title).toBe(
-      "Merge Monday: Next.js II & Flutter II",
-    );
     expect(
-      deriveTitle(meeting({ agenda: [workshop("Supabase")] }), merge, undefined)
-        .title,
+      deriveTitle(
+        meeting(),
+        titles("Next.js II", "Flutter II"),
+        merge,
+        undefined,
+      ).title,
+    ).toBe("Merge Monday: Next.js II & Flutter II");
+    expect(
+      deriveTitle(meeting(), titles("Supabase"), merge, undefined).title,
     ).toBe("Merge Monday: Supabase");
   });
 
   it("falls back to 'Workshops' past two workshops", () => {
-    const agenda = [workshop("A"), workshop("B"), workshop("C")];
-    expect(deriveTitle(meeting({ agenda }), merge, undefined).title).toBe(
-      "Merge Monday: Workshops",
-    );
+    expect(
+      deriveTitle(meeting(), titles("A", "B", "C"), merge, undefined).title,
+    ).toBe("Merge Monday: Workshops");
   });
 
   it("lets an authored title win", () => {
     expect(
-      deriveTitle(meeting({ title: "Merge Monday: Special" }), merge, undefined)
-        .title,
+      deriveTitle(
+        meeting({ title: "Merge Monday: Special" }),
+        [],
+        merge,
+        undefined,
+      ).title,
     ).toBe("Merge Monday: Special");
   });
 
   it("leads a topic series with the workshop topic, the series as kicker", () => {
     expect(
-      deriveTitle(
-        meeting({ agenda: [workshop("Supabase II")] }),
-        wednesday,
-        undefined,
-      ),
+      deriveTitle(meeting(), titles("Supabase II"), wednesday, undefined),
     ).toEqual({ title: "Supabase II", kicker: "Workshop Wednesday" });
   });
 
   it("names a topic night by its series until a workshop is announced", () => {
-    expect(deriveTitle(meeting(), wednesday, undefined)).toEqual({
+    expect(deriveTitle(meeting(), [], wednesday, undefined)).toEqual({
       title: "Workshop Wednesday",
       kicker: null,
     });
@@ -179,14 +229,17 @@ describe("resolveMeetings", () => {
         summary: "Go.",
         category: "milestone",
         brand: "gdgc",
-        location: "TBA",
-        building: null,
+        venue: "tba",
       }),
     ],
   });
 
   it("inherits from the series and lets the meeting override", () => {
-    const [night, oneOff] = resolveMeetings(authored, [build]).meetings;
+    const [night, oneOff] = resolveMeetings(
+      authored,
+      [build],
+      catalog,
+    ).meetings;
     expect(night).toMatchObject({
       title: "Build Session #1",
       series: "build-session",
@@ -196,26 +249,84 @@ describe("resolveMeetings", () => {
       location: "124",
       summary: "Work on your project.",
     });
+    expect(night!.venue).toMatchObject({ id: "dlw", room: "124" });
     expect(oneOff).toMatchObject({
       title: "Kickoff",
       series: null,
       category: "milestone",
       brand: "gdgc",
       building: null,
+      location: "TBA",
     });
   });
 
-  it("keeps an explicitly null building over the series'", () => {
+  it("resolves a night's workshops from their definitions", () => {
     const cfg = clubConfigSchema.parse({
-      meetings: [meeting({ series: "build-session", building: null })],
+      meetings: [
+        meeting({
+          series: "workshop-wednesday",
+          agenda: [
+            "supabase-ii",
+            { workshop: "flutter-ii", description: "Tonight: forms." },
+          ],
+        }),
+      ],
     });
-    expect(resolveMeetings(cfg, [build]).meetings[0]!.building).toBeNull();
+    const [night] = resolveMeetings(cfg, [wednesday], catalog).meetings;
+    expect(
+      night!.agenda.map((w) => [w.id, w.title, w.description, w.elHours]),
+    ).toEqual([
+      ["supabase-ii", "Supabase II", "About Supabase II.", 1],
+      ["flutter-ii", "Flutter II", "Tonight: forms.", 1],
+    ]);
+    expect(night!.title).toBe("Supabase II & Flutter II");
+  });
+
+  it("refuses an unknown workshop rather than dropping it", () => {
+    const cfg = clubConfigSchema.parse({
+      meetings: [meeting({ series: "build-session", agenda: ["ghost"] })],
+    });
+    expect(() => resolveMeetings(cfg, [build], catalog)).toThrow(/ghost/);
+  });
+});
+
+describe("resolveVenue", () => {
+  const venues = new Map(catalog.venues.map((v) => [v.id, v]));
+  const one = (m: Partial<AuthoredMeeting>, series?: Series) =>
+    resolveVenue({ slug: "2026-09-16", ...m }, series, venues);
+
+  it("takes the series' venue and room by default", () => {
+    expect(one({}, build)).toMatchObject({ id: "dlw", room: "124" });
+  });
+
+  it("lets the meeting's room override the series'", () => {
+    expect(one({ room: "110" }, build)).toMatchObject({
+      id: "dlw",
+      room: "110",
+    });
+  });
+
+  it("does not carry the series' room into another venue", () => {
+    expect(one({ venue: "dawson-hall" }, build)).toMatchObject({
+      id: "dawson-hall",
+      room: null,
+    });
+  });
+
+  it("never falls back to a default: no venue, or an unknown one, throws", () => {
+    expect(() => one({})).toThrow(/no venue/);
+    expect(() => one({ venue: "dlw-124" })).toThrow(/dlw-124/);
   });
 });
 
 describe("validateAuthored", () => {
   const codes = (meetings: AuthoredMeeting[], series: Series[]) =>
-    validateAuthored({ meetings }, { series }).map((i) => i.code);
+    validateAuthored(
+      { meetings },
+      { series },
+      { workshops: catalog.workshops as never },
+      { venues: catalog.venues as never },
+    ).map((i) => i.code);
 
   it("flags an unknown series", () => {
     expect(codes([meeting({ series: "nope" })], [build])).toEqual([
@@ -223,15 +334,35 @@ describe("validateAuthored", () => {
     ]);
   });
 
-  it("flags a one-off with no title or category", () => {
-    expect(codes([meeting({ summary: "x", location: "y" })], [])).toEqual([
+  it("flags a one-off with no title, category or venue", () => {
+    expect(codes([meeting({ summary: "x" })], [])).toEqual([
       "missing_title",
       "missing_category",
+      "missing_venue",
     ]);
   });
 
   it("flags duplicate series ids", () => {
     expect(codes([], [build, build])).toEqual(["duplicate_series_id"]);
+  });
+
+  it("flags an unknown venue or workshop, and a workshop twice in a night", () => {
+    expect(
+      codes(
+        [
+          meeting({
+            series: "build-session",
+            venue: "dlw-124",
+            agenda: ["ghost", "supabase", "supabase"],
+          }),
+        ],
+        [build],
+      ),
+    ).toEqual([
+      "unknown_venue",
+      "unknown_workshop",
+      "duplicate_workshop_in_meeting",
+    ]);
   });
 });
 
@@ -272,5 +403,59 @@ describe("the committed files", () => {
         { series: [] },
       ),
     ).toThrow(/ghost/);
+  });
+
+  it("keeps every place the pages already printed", () => {
+    const place = new Map(
+      getClubConfig().meetings.map((m) => [m.slug, [m.building, m.location]]),
+    );
+    expect(place.get("2026-09-14")).toEqual(["DLW", "124"]);
+    expect(place.get("2026-10-05-workshop")).toEqual(["DLW", "110"]);
+    expect(place.get("2026-10-07")).toEqual(["Other", "Myers Quad"]);
+    expect(place.get("2026-10-08-georgia-311")).toEqual([
+      "Other",
+      "Dawson 110",
+    ]);
+    expect(place.get("2026-10-11-georgia-311")).toEqual([
+      "Other",
+      "Virtual — Bevy (recorded)",
+    ]);
+    expect(place.get("2026-10-14-georgia-311")).toEqual(["DLW", "124"]);
+    expect(place.get("2026-10-30")).toEqual([
+      null,
+      "Morehouse College, Atlanta",
+    ]);
+    expect(place.get("2026-11-18")).toEqual([null, "TBA"]);
+  });
+
+  it("resolves workshops from definitions with their old words", () => {
+    const night = getClubConfig().meetings.find(
+      (m) => m.slug === "2026-09-21",
+    )!;
+    expect(
+      night.agenda.map((w) => [w.id, w.title, w.project, w.elHours]),
+    ).toEqual([
+      ["nextjs", "Next.js", "DogDays", 1],
+      ["flutter", "Flutter", "DogPack", 1],
+    ]);
+  });
+
+  it("leaves every venue unverified: nothing has been walked yet", () => {
+    for (const venue of getVenues().venues) {
+      expect(venue.verified).toBeUndefined();
+    }
+    expect(getWorkshops().workshops.length).toBeGreaterThan(0);
+  });
+
+  it("refuses a meeting naming a venue that does not exist", () => {
+    expect(() =>
+      parseConfigFiles(
+        { meetings: [meeting({ series: "build-session", venue: "dlw-124" })] },
+        { questions: [] },
+        { series: [build] },
+        { workshops: [] },
+        { venues: catalog.venues },
+      ),
+    ).toThrow(/dlw-124/);
   });
 });

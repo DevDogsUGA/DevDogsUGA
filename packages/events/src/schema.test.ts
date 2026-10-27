@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { clubConfigSchema, meetingSchema, workshopSchema } from "./schema";
+import { clubConfigSchema, meetingSchema } from "./schema";
+import { workshopDefinitionSchema } from "./workshops";
+import { venueSchema, venuesConfigSchema } from "./venues";
 
 function workshop(overrides: Record<string, unknown> = {}) {
   return {
+    id: "supabase",
     title: "Supabase",
     description: null,
     project: null,
@@ -16,8 +19,8 @@ function meeting(overrides: Record<string, unknown> = {}) {
     title: "Cold Start",
     summary: "The first meeting of the year.",
     category: "milestone",
-    building: "DLW",
-    location: "124",
+    venue: "dlw",
+    room: "124",
     startsAt: "2026-09-14T22:00:00.000Z",
     endsAt: "2026-09-14T23:30:00.000Z",
     rsvpUrl: null,
@@ -30,26 +33,83 @@ function meeting(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("workshopSchema", () => {
-  it("accepts a minimal workshop", () => {
-    expect(workshopSchema.parse(workshop())).toMatchObject({
+describe("workshopDefinitionSchema", () => {
+  it("accepts a minimal workshop, one EL hour by default", () => {
+    expect(workshopDefinitionSchema.parse(workshop())).toMatchObject({
+      id: "supabase",
       title: "Supabase",
+      elHours: 1,
     });
   });
 
-  it("accepts a free-text project recommendation", () => {
-    const parsed = workshopSchema.parse(
-      workshop({ project: "DogDays & DogPack" }),
+  it("accepts a free-text project recommendation and topics", () => {
+    const parsed = workshopDefinitionSchema.parse(
+      workshop({ project: "DogDays & DogPack", topics: ["databases"] }),
     );
     expect(parsed.project).toBe("DogDays & DogPack");
+    expect(parsed.topics).toEqual(["databases"]);
   });
 
-  it("rejects an id: the title is a workshop's identity", () => {
-    expect(() => workshopSchema.parse(workshop({ id: "supabase" }))).toThrow();
+  it("carries its own EL allowance", () => {
+    expect(
+      workshopDefinitionSchema.parse(workshop({ elHours: 2 })).elHours,
+    ).toBe(2);
+    expect(() =>
+      workshopDefinitionSchema.parse(workshop({ elHours: 0 })),
+    ).toThrow();
+    expect(() =>
+      workshopDefinitionSchema.parse(workshop({ elHours: 9 })),
+    ).toThrow();
   });
 
-  it("rejects an empty title", () => {
-    expect(() => workshopSchema.parse(workshop({ title: "" }))).toThrow();
+  it("needs a kebab id and a title", () => {
+    expect(() =>
+      workshopDefinitionSchema.parse(workshop({ id: "Next JS" })),
+    ).toThrow();
+    expect(() =>
+      workshopDefinitionSchema.parse(workshop({ title: "" })),
+    ).toThrow();
+  });
+});
+
+describe("venueSchema", () => {
+  const venue = (overrides: Record<string, unknown> = {}) => ({
+    id: "dawson-hall",
+    kind: "campus",
+    name: "Dawson Hall",
+    ...overrides,
+  });
+
+  it("accepts a campus venue with no building code", () => {
+    expect(venueSchema.parse(venue()).kind).toBe("campus");
+  });
+
+  it("accepts the map's buildings only", () => {
+    expect(venueSchema.parse(venue({ building: "DLW" })).building).toBe("DLW");
+    expect(() => venueSchema.parse(venue({ building: "Other" }))).toThrow();
+  });
+
+  it("rejects a kind outside the closed list", () => {
+    expect(() => venueSchema.parse(venue({ kind: "moon" }))).toThrow();
+  });
+
+  it("takes verified details only with the day they were verified", () => {
+    expect(
+      venueSchema.parse(
+        venue({
+          verified: { verifiedOn: "2026-10-30", entrance: "North door" },
+        }),
+      ).verified?.entrance,
+    ).toBe("North door");
+    expect(() =>
+      venueSchema.parse(venue({ verified: { entrance: "North door" } })),
+    ).toThrow();
+  });
+
+  it("parses a catalog", () => {
+    expect(venuesConfigSchema.parse({ venues: [venue()] }).venues).toHaveLength(
+      1,
+    );
   });
 });
 
@@ -64,7 +124,7 @@ describe("meetingSchema", () => {
     expect(() => meetingSchema.parse(meeting({ id: "cold-start" }))).toThrow();
   });
 
-  it.each(["title", "summary", "location"])(
+  it.each(["title", "summary", "room"])(
     "refuses a null or empty %s, which every newsletter card draws",
     (field) => {
       expect(() => meetingSchema.parse(meeting({ [field]: null }))).toThrow();
@@ -117,21 +177,30 @@ describe("meetingSchema", () => {
       title: undefined,
       summary: undefined,
       category: undefined,
-      location: undefined,
-      building: undefined,
+      venue: undefined,
+      room: undefined,
     });
     expect(parsed.series).toBe("merge-monday");
   });
 
-  it("rejects a building outside the closed list", () => {
-    expect(() =>
-      meetingSchema.parse(meeting({ building: "The Moon" })),
-    ).toThrow();
+  it("rejects a legacy building or location: a place is a venue and a room", () => {
+    expect(() => meetingSchema.parse(meeting({ building: "DLW" }))).toThrow();
+    expect(() => meetingSchema.parse(meeting({ location: "124" }))).toThrow();
   });
 
-  it("carries a nested agenda of workshops", () => {
-    const parsed = meetingSchema.parse(meeting({ agenda: [workshop()] }));
-    expect(parsed.agenda).toHaveLength(1);
+  it("carries an agenda of workshop ids, with an optional night description", () => {
+    const parsed = meetingSchema.parse(
+      meeting({
+        agenda: ["supabase", { workshop: "flutter", description: "Tonight." }],
+      }),
+    );
+    expect(parsed.agenda).toHaveLength(2);
+  });
+
+  it("rejects an inline workshop in the agenda", () => {
+    expect(() =>
+      meetingSchema.parse(meeting({ agenda: [workshop()] })),
+    ).toThrow();
   });
 });
 

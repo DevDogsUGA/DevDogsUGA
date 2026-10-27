@@ -3,12 +3,20 @@ import { type z } from "zod";
 import meetingsFile from "./data/meetings.json" with { type: "json" };
 import seriesFile from "./data/series.json" with { type: "json" };
 import questionsFile from "./data/questions.json" with { type: "json" };
+import venuesFile from "./data/venues.json" with { type: "json" };
+import workshopsFile from "./data/workshops.json" with { type: "json" };
 import { ClubConfigError } from "./index.js";
 import { questionsConfigSchema } from "./questions.js";
 import { resolveMeetings } from "./resolve.js";
 import { clubConfigSchema } from "./schema.js";
 import { seriesConfigSchema } from "./series.js";
-import { validateAuthored, validateClubConfig } from "./validator.js";
+import {
+  validateAuthored,
+  validateCatalog,
+  validateClubConfig,
+} from "./validator.js";
+import { venuesConfigSchema } from "./venues.js";
+import { workshopsConfigSchema } from "./workshops.js";
 
 /**
  * `pnpm --filter @devdogsuga/events check:events` -- the CI gate.
@@ -33,17 +41,40 @@ function main(): number {
   const meetings = clubConfigSchema.safeParse(meetingsFile);
   const series = seriesConfigSchema.safeParse(seriesFile);
   const questions = questionsConfigSchema.safeParse(questionsFile);
+  const workshops = workshopsConfigSchema.safeParse(workshopsFile);
+  const venues = venuesConfigSchema.safeParse(venuesFile);
+  if (!workshops.success) shapeErrors("workshops.json", workshops.error);
+  if (!venues.success) shapeErrors("venues.json", venues.error);
   if (!meetings.success) shapeErrors("meetings.json", meetings.error);
   if (!series.success) shapeErrors("series.json", series.error);
   if (!questions.success) shapeErrors("questions.json", questions.error);
-  if (!meetings.success || !series.success || !questions.success) return 1;
+  if (
+    !meetings.success ||
+    !series.success ||
+    !questions.success ||
+    !workshops.success ||
+    !venues.success
+  ) {
+    return 1;
+  }
 
-  const authoredIssues = validateAuthored(meetings.data, series.data);
+  const authoredIssues = [
+    ...validateCatalog(workshops.data, venues.data),
+    ...validateAuthored(
+      meetings.data,
+      series.data,
+      workshops.data,
+      venues.data,
+    ),
+  ];
   if (authoredIssues.length > 0) {
     process.stderr.write(`${new ClubConfigError(authoredIssues).message}\n`);
     return 1;
   }
-  const resolved = resolveMeetings(meetings.data, series.data.series);
+  const resolved = resolveMeetings(meetings.data, series.data.series, {
+    workshops: workshops.data.workshops,
+    venues: venues.data.venues,
+  });
   const issues = validateClubConfig(resolved, questions.data);
   if (issues.length > 0) {
     process.stderr.write(`${new ClubConfigError(issues).message}\n`);
@@ -55,7 +86,7 @@ function main(): number {
     0,
   );
   process.stdout.write(
-    `events: ok (${resolved.meetings.length} meetings, ${series.data.series.length} series, ${workshopCount} workshops, ` +
+    `events: ok (${resolved.meetings.length} meetings, ${series.data.series.length} series, ${workshops.data.workshops.length} workshops defined (${workshopCount} on agendas), ${venues.data.venues.length} venues, ` +
       `${questions.data.questions.length} questions)\n`,
   );
   return 0;

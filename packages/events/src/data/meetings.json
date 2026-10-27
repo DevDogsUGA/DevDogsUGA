@@ -6,8 +6,6 @@
       "title": "Cold Start",
       "summary": "The inaugural meeting for the 2026-2027 school year. Get set up to contribute to this year's projects! We've simplified the onboarding process this year, and we're excited to get everyone rocking and rolling for the rest of the semester.",
       "category": "milestone",
-      "building": "DLW",
-      "location": "124",
       "startsAt": "2026-09-14T22:00:00.000Z",
       "endsAt": "2026-09-14T23:30:00.000Z",
       "rsvpUrl": "https://uga.campuslabs.com/engage/event/12664196",
@@ -15,21 +13,15 @@
       "cancellationReason": null,
       "countsForCredit": true,
       "surveyUrl": null,
-      "agenda": [
-        {
-          "title": "Collaborative Coding",
-          "description": "Get set up with the DevDogs Monorepo, understand best practices on how to contribute to a large codebase, and learn the basics of working with Git and GitHub.",
-          "project": "DogDays & DogPack"
-        }
-      ]
+      "agenda": ["collaborative-coding"],
+      "venue": "dlw",
+      "room": "124"
     },
     {
       "slug": "2026-09-09",
       "title": "Interest Meeting",
       "summary": "Come meet the new leadership team and get the details on all things DevDogs! If you're returning, you can learn more about what's changing, what's staying the same, and how to get involved this year. We'll have free food!",
       "category": "info",
-      "building": "DLW",
-      "location": "110",
       "startsAt": "2026-09-09T22:00:00.000Z",
       "endsAt": "2026-09-09T23:00:00.000Z",
       "rsvpUrl": "https://uga.campuslabs.com/engage/event/12664203",
@@ -37,7 +29,9 @@
       "cancellationReason": null,
       "countsForCredit": false,
       "surveyUrl": null,
-      "agenda": []
+      "agenda": [],
+      "venue": "dlw",
+      "room": "110"
     },
     {
       "slug": "2026-09-16",
@@ -56,8 +50,6 @@
       "title": "Workshops: Next.js and Flutter",
       "summary": "A framework double-header: build for the web with Next.js and go cross-platform with Flutter.",
       "category": "workshop",
-      "building": "DLW",
-      "location": "124",
       "startsAt": "2026-09-21T22:00:00.000Z",
       "endsAt": "2026-09-21T23:30:00.000Z",
       "rsvpUrl": null,
@@ -65,18 +57,9 @@
       "cancellationReason": null,
       "countsForCredit": true,
       "surveyUrl": null,
-      "agenda": [
-        {
-          "title": "Next.js",
-          "description": null,
-          "project": "DogDays"
-        },
-        {
-          "title": "Flutter",
-          "description": null,
-          "project": "DogPack"
-        }
-      ]
+      "agenda": ["nextjs", "flutter"],
+      "venue": "dlw",
+      "room": "124"
     },
     {
       "slug": "2026-09-23",
@@ -95,8 +78,6 @@
       "title": "Workshop: Supabase",
       "summary": "Get hands-on with Supabase: Postgres, auth, and realtime data for this year's projects.",
       "category": "workshop",
-      "building": "DLW",
-      "location": "124",
       "startsAt": "2026-09-28T22:00:00.000Z",
       "endsAt": "2026-09-28T23:30:00.000Z",
       "rsvpUrl": null,
@@ -104,13 +85,9 @@
       "cancellationReason": null,
       "countsForCredit": true,
       "surveyUrl": null,
-      "agenda": [
-        {
-          "title": "Supabase",
-          "description": null,
-          "project": "DogDays & DogPack"
-        }
-      ]
+      "agenda": ["supabase"],
+      "venue": "dlw",
+      "room": "124"
     },
     {
       "slug": "2026-09-30",
@@ -141,8 +118,6 @@
       "title": "Workshop: Career Fair Readiness",
       "summary": "Get ready for the fall career fair with recruiters from FAST: resume polish, portfolio pointers, and how to talk about what you've built. Free food provided!",
       "category": "workshop",
-      "building": "DLW",
-      "location": "110",
       "startsAt": "2026-10-05T23:00:00.000Z",
       "endsAt": "2026-10-06T00:00:00.000Z",
       "rsvpUrl": null,
@@ -150,13 +125,9 @@
       "cancellationReason": null,
       "countsForCredit": true,
       "surveyUrl": null,
-      "agenda": [
-        {
-          "title": "Career Fair Prep",
-          "description": null,
-          "project": null
-        }
-      ]
+      "agenda": ["career-fair-prep"],
+      "venue": "dlw",
+      "room": "110"
     },
     {
       "slug": "2026-10-07",
@@ -185,7 +156,6 @@
     {
       "slug": "2026-10-11-georgia-311",
       "series": "georgia-311-interest",
-      "location": "Virtual — Bevy (recorded)",
       "startsAt": "2026-10-11T21:00:00.000Z",
       "endsAt": "2026-10-11T21:30:00.000Z",
       "rsvpUrl": "https://gdg.community.dev/events/details/google-gdg-on-campus-university-of-georgia-athens-united-states-presents-georgia-311-challenge-interest-meeting-virtual-oct-11/",
@@ -194,7 +164,9 @@
       "countsForCredit": false,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": []
+      "agenda": [],
+      "venue": "virtual",
+      "room": "Bevy (recorded)"
     },
     {
       "slug": "2026-10-12",
@@ -209,18 +181,7 @@
       "countsForCredit": true,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": [
-        {
-          "title": "Next.js II: Components, State, and Styling",
-          "description": null,
-          "project": "DogDays"
-        },
-        {
-          "title": "Flutter II: Screens, Forms & Navigation",
-          "description": null,
-          "project": "DogPack"
-        }
-      ]
+      "agenda": ["nextjs-ii", "flutter-ii"]
     },
     {
       "slug": "2026-10-14",
@@ -239,8 +200,6 @@
     {
       "slug": "2026-10-14-georgia-311",
       "series": "georgia-311-interest",
-      "building": "DLW",
-      "location": "124",
       "startsAt": "2026-10-14T23:00:00.000Z",
       "endsAt": "2026-10-14T23:30:00.000Z",
       "rsvpUrl": "https://gdg.community.dev/events/details/google-gdg-on-campus-university-of-georgia-athens-united-states-presents-georgia-311-challenge-interest-meeting-dlw-124-oct-14/",
@@ -249,15 +208,15 @@
       "countsForCredit": false,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": []
+      "agenda": [],
+      "venue": "dlw",
+      "room": "124"
     },
     {
       "slug": "2026-10-19",
       "title": "Georgia 311 Kickoff",
       "summary": "Georgia 311 teams kick off their sprint for Mableton. Not competing? DLW 124 stays open, so keep working on your pull request.",
       "category": "milestone",
-      "building": "DLW",
-      "location": "124",
       "startsAt": "2026-10-19T22:00:00.000Z",
       "endsAt": "2026-10-20T00:00:00.000Z",
       "rsvpUrl": null,
@@ -266,7 +225,9 @@
       "countsForCredit": false,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": []
+      "agenda": [],
+      "venue": "dlw",
+      "room": "124"
     },
     {
       "slug": "2026-10-21",
@@ -312,8 +273,6 @@
       "title": "Georgia 311 Demo Day",
       "summary": "Georgia 311 teams present their projects to Mableton Mayor Michael Owens and the judges at DevFest Atlanta.",
       "category": "milestone",
-      "building": null,
-      "location": "Morehouse College, Atlanta",
       "startsAt": "2026-10-30T13:00:00.000Z",
       "endsAt": "2026-10-30T19:00:00.000Z",
       "rsvpUrl": "https://gdg.community.dev/events/details/google-gdg-on-campus-morehouse-college-atlanta-united-states-of-america-presents-georgia-311-challenge-2026/",
@@ -322,7 +281,8 @@
       "countsForCredit": false,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": []
+      "agenda": [],
+      "venue": "morehouse-college"
     },
     {
       "slug": "2026-11-02",
@@ -349,13 +309,7 @@
       "countsForCredit": false,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": [
-        {
-          "title": "Supabase II: Editing Our App Schemas",
-          "description": null,
-          "project": "DogDays & DogPack"
-        }
-      ]
+      "agenda": ["supabase-ii"]
     },
     {
       "slug": "2026-11-09",
@@ -375,8 +329,6 @@
       "title": "Bug Bash",
       "summary": "Hunt down and fix bugs in DogDays before its Public Beta on Nov 12. Bring a laptop.",
       "category": "build",
-      "building": "DLW",
-      "location": "124",
       "startsAt": "2026-11-11T23:00:00.000Z",
       "endsAt": "2026-11-12T00:00:00.000Z",
       "rsvpUrl": null,
@@ -385,15 +337,15 @@
       "countsForCredit": false,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": []
+      "agenda": [],
+      "venue": "dlw",
+      "room": "124"
     },
     {
       "slug": "2026-11-16",
       "title": "DevDogs Demo Day",
       "summary": "DogDays and DogPack show what they shipped this semester.",
       "category": "milestone",
-      "building": "DLW",
-      "location": "124",
       "startsAt": "2026-11-17T00:00:00.000Z",
       "endsAt": "2026-11-17T01:00:00.000Z",
       "rsvpUrl": null,
@@ -402,14 +354,14 @@
       "countsForCredit": false,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": []
+      "agenda": [],
+      "venue": "dlw",
+      "room": "124"
     },
     {
       "slug": "2026-11-18",
       "series": "touch-grass",
       "summary": "No laptops required! Just come outside, get some air, and hang out with the club one last time before finals.",
-      "building": null,
-      "location": "TBA",
       "startsAt": "2026-11-18T23:00:00.000Z",
       "endsAt": "2026-11-19T00:30:00.000Z",
       "rsvpUrl": null,
@@ -418,7 +370,8 @@
       "countsForCredit": false,
       "surveyUrl": null,
       "questions": ["how_did_you_learn"],
-      "agenda": []
+      "agenda": [],
+      "venue": "tba"
     },
     {
       "slug": "2026-11-30",
