@@ -29,8 +29,8 @@ const PRODUCT_REPO: CommandOption = {
   value: "<product>",
   summary:
     "Work on a product repo instead of DevDogsUGA: dogdays or dogpack. " +
-    "Its file sits in the product checkout, its Bitwarden project is " +
-    "<product>-<target>, and push goes to that repo's GitHub environment.",
+    "Its file sits in the product checkout; Bitwarden uses the tier project " +
+    "with <product>/<KEY> keys, and push goes to that repo's GitHub environment.",
 };
 
 const PRODUCT_CHECKOUT: CommandOption = {

@@ -220,14 +220,15 @@ export function holdsOnlyNarrowedKeys(target: EnvTarget): boolean {
 //   | Fact                | Product value                                    |
 //   |---------------------|--------------------------------------------------|
 //   | file                | `fileFor(target)`, inside the PRODUCT's checkout |
-//   | Bitwarden project   | `<product>-<projectFor(target)>`                 |
+//   | Bitwarden project   | `projectFor(target)`                            |
+//   | Bitwarden key       | `<product>/<KEY>`                               |
 //   | GitHub repository   | the product's `repo`                             |
 //   | GitHub environment  | the target's own name                            |
 //
 // ⚠️ SINGLE MAPPING, KEPT. The file name and the vault project name are still
 // made in exactly one place each (`fileFor()` and `projectFor()` above); the
 // product functions below only wrap them. Do not hand-write
-// `".env.staging"` or `"dogdays-staging"` anywhere else: a second copy is how
+// `".env.staging"` or project names anywhere else: a second copy is how
 // the two-enum bug this file's header describes got made.
 //
 // The GitHub environment is the target's name because both product repos name
@@ -296,12 +297,12 @@ export function productFileFor(_product: Product, target: VaultTarget): string {
   return fileFor(target);
 }
 
-/** The Bitwarden project backing a product target, e.g. `dogdays-staging`. */
+/** Products share the tier project; their keys use a `<product>/` prefix. */
 export function productProjectFor(
-  product: Product,
+  _product: Product,
   target: VaultTarget,
 ): string {
-  return `${product}-${TARGETS[target].project}`;
+  return TARGETS[target].project;
 }
 
 /** The product's GitHub environment for a target. */

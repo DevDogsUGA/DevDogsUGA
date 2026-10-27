@@ -12,8 +12,8 @@
  * Everything per-target comes from the one table in
  * `@devdogsuga/sdk/env/targets` (see "Product targets" there): the file is
  * `.env.<target>` inside the PRODUCT's checkout, the Bitwarden project is
- * `<product>-<target>`, the GitHub repository is the product's, and its
- * environment is the target's own name. Nothing is spelled out here.
+ * the tier's project with keys as `<product>/<KEY>`, the GitHub repository is
+ * the product's, and its environment is the target's own name.
  *
  * What differs from the platform path, and why it is a module of its own
  * rather than a flag on `commands.ts`:
@@ -56,7 +56,6 @@ import { fingerprint } from "@devdogsuga/cli-core/env/fingerprint";
 import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { explain, unwrap } from "@devdogsuga/cli-core/ui";
 import {
-  byKey,
   createSecret,
   listSecrets as listBwsSecrets,
   projectIdFor,
@@ -156,6 +155,19 @@ const MANAGED = "Managed by `backstage env push`.";
  * platform's: it unlocks the vault this would be stored in.
  */
 const NEVER_STORE: ReadonlySet<string> = new Set(["BWS_ACCESS_TOKEN"]);
+
+/** Index by env name, retaining the original prefixed record for SDK updates. */
+function productSecrets(
+  secrets: BwsSecret[],
+  product: Product,
+): Map<string, BwsSecret> {
+  const prefix = `${product}/`;
+  return new Map(
+    secrets
+      .filter((secret) => secret.key.startsWith(prefix))
+      .map((secret) => [secret.key.slice(prefix.length), secret]),
+  );
+}
 
 // ── where the checkout is ────────────────────────────────────────────────────
 
@@ -359,21 +371,24 @@ export async function runProductPull(
   const ctx = context(options);
   if (!ctx) return;
   const projectId = await deps.bws.projectIdFor(ctx.project);
-  const all = await deps.bws.listSecrets(projectId);
+  const all = productSecrets(
+    await deps.bws.listSecrets(projectId),
+    options.product,
+  );
 
   const remote = new Map<string, string>();
-  for (const s of all) {
-    if (NEVER_STORE.has(s.key)) {
+  for (const [key, s] of all) {
+    if (NEVER_STORE.has(key)) {
       log.warn(
         `${s.key} is in ${ctx.project} and must not be. Not written to ${ctx.path}.`,
       );
       continue;
     }
-    remote.set(s.key, s.value);
+    remote.set(key, s.value);
   }
   if (remote.size === 0) {
     log.warn(
-      `${ctx.project} contains no secrets. Writing nothing, because an empty ` +
+      `${ctx.project} contains no secrets for ${options.product}/. Writing nothing, because an empty ` +
         `result and a successful pull look identical afterwards. ${FIRST_TIME_HINT}`,
     );
     return;
@@ -450,8 +465,10 @@ export async function runProductPush(
   }
 
   const projectId = await deps.bws.projectIdFor(ctx.project);
-  const existing = await deps.bws.listSecrets(projectId);
-  const index = byKey(existing);
+  const index = productSecrets(
+    await deps.bws.listSecrets(projectId),
+    options.product,
+  );
   const created: string[] = [];
   const updated: string[] = [];
   for (const [key, value] of stored) {
@@ -459,7 +476,7 @@ export async function runProductPush(
     if (!current) created.push(key);
     else if (current.value !== value) updated.push(key);
   }
-  const orphaned = existing.map((s) => s.key).filter((k) => !stored.has(k));
+  const orphaned = [...index.keys()].filter((k) => !stored.has(k));
 
   if (created.length === 0 && updated.length === 0) {
     log.success(`${ctx.project} already matches ${ctx.path}.`);
@@ -508,7 +525,12 @@ export async function runProductPush(
       }
     }
     for (const key of created) {
-      await deps.bws.createSecret(projectId, key, stored.get(key)!, MANAGED);
+      await deps.bws.createSecret(
+        projectId,
+        `${options.product}/${key}`,
+        stored.get(key)!,
+        MANAGED,
+      );
     }
     for (const key of updated) {
       await deps.bws.updateSecret(index.get(key)!, stored.get(key)!, MANAGED);
@@ -599,7 +621,9 @@ export async function runProductAudit(
   const doc = await readDocument(ctx.path);
 
   const projectId = await deps.bws.projectIdFor(ctx.project);
-  const bwsSecrets = await deps.bws.listSecrets(projectId);
+  const bwsSecrets = [
+    ...productSecrets(await deps.bws.listSecrets(projectId), options.product),
+  ].map(([key, secret]) => ({ ...secret, key }));
 
   const github: GithubEntry[] = [];
   const githubVariables: GithubVariableEntry[] = [];
