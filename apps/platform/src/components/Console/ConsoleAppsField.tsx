@@ -160,18 +160,21 @@ export default function ConsoleAppsField({ apps }: { apps: ConsoleApp[] }) {
                 )}
 
                 {!published && (
-                  <form
+                  <ConfirmDestructiveAction
                     action={() =>
                       run(app, async () => {
-                        await setStatus(app.clientId, "in_production");
-                        return `${app.label} is in production`;
+                        const result = await setStatus(
+                          app.clientId,
+                          "in_production",
+                        );
+                        return result.counts
+                          ? `${app.label} is in production. ${countsMessage(result.counts)}`
+                          : `${app.label} is in production`;
                       })
                     }
-                    title={
-                      app.missing.length > 0
-                        ? `Before publishing, add ${app.missing.join(", ")}`
-                        : undefined
-                    }
+                    title={`Publish ${app.label}?`}
+                    description={`Publishing ${app.label} signs out every member who is signed in through its test accounts. They will need to sign in again. The counts are shown when it is done.`}
+                    submitLabel="Publish"
                   >
                     <FormButton
                       theme="cyan"
@@ -179,10 +182,15 @@ export default function ConsoleAppsField({ apps }: { apps: ConsoleApp[] }) {
                       type="submit"
                       disabled={app.missing.length > 0 || working}
                       aria-label={`Publish ${app.label}`}
+                      title={
+                        app.missing.length > 0
+                          ? `Before publishing, add ${app.missing.join(", ")}`
+                          : undefined
+                      }
                     >
                       Publish
                     </FormButton>
-                  </form>
+                  </ConfirmDestructiveAction>
                 )}
                 {!published && app.missing.length > 0 && (
                   <span className="small muted">

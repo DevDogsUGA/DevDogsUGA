@@ -1,11 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { appLogoPath, isHttpsUrl, parseDetailUrl } from "./appDetails";
+import {
+  appLogoPath,
+  isAppLogoPath,
+  isHttpsUrl,
+  parseDetailUrl,
+} from "./appDetails";
 
 const APP = "11111111-1111-4111-8111-111111111111";
 
 describe("app logo path", () => {
-  it("is one fixed path under apps/ in the bucket", () => {
-    expect(appLogoPath(APP)).toBe(`apps/${APP}.webp`);
+  const V = "22222222-2222-4222-8222-222222222222";
+  it("is a per-upload path in the app's folder under apps/", () => {
+    expect(appLogoPath(APP, V)).toBe(`apps/${APP}/${V}.webp`);
+  });
+
+  it("recognises only this app's upload paths", () => {
+    expect(isAppLogoPath(APP, `apps/${APP}/${V}.webp`)).toBe(true);
+    expect(isAppLogoPath(APP, `apps/${APP}.webp`)).toBe(false);
+    expect(isAppLogoPath(APP, `apps/${V}/${V}.webp`)).toBe(false);
+    expect(isAppLogoPath(APP, `apps/${APP}/../x/${V}.webp`)).toBe(false);
+    expect(isAppLogoPath(APP, `apps/${APP}/${V}.png`)).toBe(false);
   });
 });
 
