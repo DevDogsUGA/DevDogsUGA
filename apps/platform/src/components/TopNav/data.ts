@@ -19,7 +19,7 @@ import type { MeResponse, VerificationData } from "./NavUserProvider";
 export interface NavUser {
   profile: typeof profiles.$inferSelect;
   permissions: ResolvedPermissions | null;
-  /** Holds a role marked `isLeadership`: an officer. */
+  /** Holds a leadership role (any officer). */
   isLeader: boolean;
   highestRole: HighestRankingRole;
   verification: VerificationData | null;

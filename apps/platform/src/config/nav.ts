@@ -39,10 +39,11 @@ export interface NavItem {
 
 export interface ConsoleItem extends NavItem {
   /**
-   * The permission flag that reveals this item, or `graphics` for the pages
-   * any officer may open (see `mayUseGraphics`).
+   * The permission flag that reveals this item, `isLeader` for pages any
+   * officer (holder of a leadership role) may open, or `graphics` for the
+   * graphics pages (see `mayUseGraphics`).
    */
-  permission: keyof ResolvedPermissions | "graphics";
+  permission: keyof ResolvedPermissions | "isLeader" | "graphics";
 }
 
 export interface SwitcherEntry {
@@ -152,6 +153,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
     icon: "NotePencilIcon",
     permission: "canManageAttendance",
     description: "Set the word minimum and submission window for reflections.",
+  },
+  {
+    label: "Badges",
+    href: "/console/badges",
+    icon: "SealCheckIcon",
+    permission: "isLeader",
+    description:
+      "Award Workshop Host, Guide Author, Mentor and Event Organizer badges with a public citation, or withdraw one.",
   },
   {
     label: "Data tools",
@@ -347,11 +356,13 @@ export function visibleConsoleItems(
 ): ConsoleItem[] {
   if (!permissions) return [];
   return CONSOLE_ITEMS.filter((item) =>
-    item.permission === "graphics"
-      ? mayUseGraphics({
-          isLeader,
-          canManageAttendance: permissions.canManageAttendance,
-        })
-      : permissions[item.permission],
+    item.permission === "isLeader"
+      ? isLeader
+      : item.permission === "graphics"
+        ? mayUseGraphics({
+            isLeader,
+            canManageAttendance: permissions.canManageAttendance,
+          })
+        : permissions[item.permission],
   );
 }

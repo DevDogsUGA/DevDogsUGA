@@ -76,6 +76,37 @@ function ReflectionCard({
               : "Window closed"}
         </Badge>
       </div>
+      {activity.workshops.length === 1 ? (
+        <input
+          type="hidden"
+          name="workshopDefinitionId"
+          value={activity.workshops[0]!.id}
+        />
+      ) : (
+        <Field
+          label="Which workshop did you attend?"
+          description="Pick the one you went to. It earns you that workshop's badge once you submit."
+          htmlFor={`${countId}-workshop`}
+        >
+          <span className="input select">
+            <select
+              id={`${countId}-workshop`}
+              name="workshopDefinitionId"
+              defaultValue={activity.workshopDefinitionId ?? ""}
+              disabled={!activity.canEdit}
+            >
+              <option value="" disabled>
+                Choose a workshop
+              </option>
+              {activity.workshops.map((workshop) => (
+                <option key={workshop.id} value={workshop.id}>
+                  {workshop.title}
+                </option>
+              ))}
+            </select>
+          </span>
+        </Field>
+      )}
       <Field label="Your reflection" htmlFor={`${countId}-text`}>
         <Textarea
           id={`${countId}-text`}

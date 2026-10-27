@@ -7,6 +7,7 @@ import {
 } from "~/lib/directoryQuery";
 import { formatEventDate } from "~/lib/eventTime";
 import { handleFromSegment, profilePath } from "~/lib/profilePath";
+import { multiplierLabel } from "~/server/badges/display";
 import { publicProfilesEnabled } from "~/server/features";
 import { getCurrentOfficers } from "~/server/loaders/officers";
 import {
@@ -165,6 +166,32 @@ export const communityProfile = terminal(
           rows: [
             { label: "meetings", value: String(activity.stars.meetingStars) },
           ],
+        },
+      );
+    }
+    if (activity.badges.length > 0) {
+      body.push(
+        { type: "heading", text: "badges" },
+        {
+          type: "entries",
+          items: activity.badges.map((badge) => ({
+            label: multiplierLabel(badge)
+              ? `${badge.name} ${multiplierLabel(badge)}`
+              : badge.name,
+            meta: badge.awards
+              .map((award) =>
+                award.awardedByLabel
+                  ? `${formatEventDate(award.awardedAt)}, awarded by ${award.awardedByLabel}`
+                  : formatEventDate(award.awardedAt),
+              )
+              .join("; "),
+            headline: badge.description || undefined,
+            text:
+              badge.awards
+                .flatMap((award) => (award.citation ? [award.citation] : []))
+                .join(" / ") || undefined,
+          })),
+          empty: "",
         },
       );
     }

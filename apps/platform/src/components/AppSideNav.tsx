@@ -9,6 +9,7 @@ import {
   ListMagnifyingGlassIcon,
   NotePencilIcon,
   QrCodeIcon,
+  SealCheckIcon,
   ShieldCheckIcon,
   UploadSimpleIcon,
   UserIcon,
@@ -95,6 +96,11 @@ export default async function AppSideNav({ current }: { current?: string }) {
       label: "Reflections",
       href: "/console/reflections",
       icon: <NotePencilIcon />,
+    },
+    user?.isLeader && {
+      label: "Badges",
+      href: "/console/badges",
+      icon: <SealCheckIcon />,
     },
     p?.canManageRoles && {
       label: "Permissions",

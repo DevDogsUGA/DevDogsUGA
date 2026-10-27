@@ -27,6 +27,13 @@ const inputSchema = z.object({
   activityId: z.string().uuid(),
   content: z.string().max(12_000),
   intent: z.enum(["save", "submit"]),
+  // The workshop attended (Q95). Optional so a draft can be saved first; a
+  // submission needs one, defaulting to the meeting's only workshop.
+  workshopDefinitionId: z
+    .string()
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 export async function saveReflection(
@@ -95,6 +102,25 @@ async function writeReflection(
       );
     }
 
+    // One workshop per reflection (Q98), and only one this meeting ran.
+    const offered = await tx.execute<{ definitionId: string }>(sql`
+      select distinct "definitionId" from platform.workshops
+      where "meetingId" = ${input.activityId}::uuid
+        and "definitionId" is not null and "deletedAt" is null
+    `);
+    const offeredIds = offered.map((row) => row.definitionId);
+    let workshopDefinitionId: string | null =
+      input.workshopDefinitionId ?? null;
+    if (workshopDefinitionId && !offeredIds.includes(workshopDefinitionId)) {
+      throw new ReflectionError("That workshop did not run at this meeting.");
+    }
+    if (!workshopDefinitionId && offeredIds.length === 1) {
+      workshopDefinitionId = offeredIds[0]!;
+    }
+    if (input.intent === "submit" && !workshopDefinitionId) {
+      throw new ReflectionError("Choose the workshop you attended.");
+    }
+
     const activityWhere = and(
       eq(reflections.userId, userId),
       eq(reflections.meetingId, input.activityId),
@@ -134,7 +160,12 @@ async function writeReflection(
       beforeRevisionId = before?.id;
       await tx
         .update(reflections)
-        .set({ content: input.content, submittedAt, updatedAt: new Date() })
+        .set({
+          content: input.content,
+          submittedAt,
+          workshopDefinitionId,
+          updatedAt: new Date(),
+        })
         .where(activityWhere);
       reflectionId = existing.id;
     } else {
@@ -145,6 +176,7 @@ async function writeReflection(
           meetingId: input.activityId,
           content: input.content,
           submittedAt,
+          workshopDefinitionId,
         })
         .returning({ id: reflections.id });
       if (!created) throw new Error("Reflection was not created.");

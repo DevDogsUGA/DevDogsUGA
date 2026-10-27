@@ -97,6 +97,8 @@ Categories are `build`, `workshop`, `social`, `info` (Info Session), `study` and
 
 ## Workshops and venues
 
+`src/data/badges.json` defines the badges (Workshop completed, one per workshop definition; First Merge; and the officer-awarded Workshop Host, Guide Author, Mentor and Event Organizer): `kind` (`automatic` or `manual`), `repeatable` and `perWorkshop`. Awards live in the database (`platform.badgeAwards`), never here; `pnpm --filter @devdogsuga/events check:events` validates the file.
+
 `src/data/workshops.json` holds each reusable workshop once: a stable kebab `id`, `title`, `description`, `project`, `elHours` (the EL allowance attending earns, independent of the meeting's times; one hour by default) and optional `topics`. A meeting's `agenda` lists the ids running that night, or `{ "workshop": id, "description": "…" }` to override the description for one night. Workshops in parallel share a meeting; sequential ones are separate meetings. A repeated session of one workshop reuses its id.
 
 `src/data/venues.json` is the venue catalog: `kind` is `campus`, `offCampus` (needs an `address`), `virtual` or `tba`; a campus venue may carry a campus-map `building` code (the ten buildings the map draws). `verified` (`entrance`, `accessibleRoute`, `floorPlan`, `verifiedOn`, `notes`) is optional and stays empty until an officer has walked the route. A meeting names a `venue` and a `room`, else it takes its series' (a meeting that names its own venue does not inherit the series' room). An unknown venue fails `check:events`; nothing falls back to the DLW.

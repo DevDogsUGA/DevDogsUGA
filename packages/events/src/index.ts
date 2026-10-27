@@ -1,8 +1,14 @@
+import badges from "./data/badges.json" with { type: "json" };
 import meetings from "./data/meetings.json" with { type: "json" };
 import questions from "./data/questions.json" with { type: "json" };
 import series from "./data/series.json" with { type: "json" };
 import venues from "./data/venues.json" with { type: "json" };
 import workshops from "./data/workshops.json" with { type: "json" };
+import {
+  badgesConfigSchema,
+  validateBadges,
+  type BadgesConfig,
+} from "./badges.js";
 import { questionsConfigSchema, type QuestionsConfig } from "./questions.js";
 import { resolveMeetings } from "./resolve.js";
 import { clubConfigSchema, type ClubConfig } from "./schema.js";
@@ -17,6 +23,7 @@ import { venuesConfigSchema, type VenuesConfig } from "./venues.js";
 import { workshopsConfigSchema, type WorkshopsConfig } from "./workshops.js";
 
 export * from "./answers.js";
+export * from "./badges.js";
 export * from "./questions.js";
 export * from "./resolve.js";
 export * from "./schema.js";
@@ -64,6 +71,23 @@ export function getSeries(): SeriesConfig {
 /** The reusable workshops meeting agendas reference, from `workshops.json`. */
 export function getWorkshops(): WorkshopsConfig {
   return getConfigFiles().workshops;
+}
+
+/** The badge definitions, from `badges.json`. */
+export function getBadges(): BadgesConfig {
+  return parseBadges(badges);
+}
+
+/** Parses and validates a badges file, throwing a readable error. */
+export function parseBadges(raw: unknown): BadgesConfig {
+  const parsed = badgesConfigSchema.parse(raw);
+  const issues = validateBadges(parsed);
+  if (issues.length > 0) {
+    throw new Error(
+      `badges.json: ${issues.map((i) => `[${i.id}] ${i.message}`).join(" ")}`,
+    );
+  }
+  return parsed;
 }
 
 /** The venue catalog meetings and series reference, from `venues.json`. */
