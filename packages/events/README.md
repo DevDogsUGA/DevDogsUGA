@@ -84,3 +84,13 @@ gates merges in the product repo.
 Backstage's own platform app, slides and CLIs import `@devdogsuga/events` as a
 workspace package. It is private and no longer published to npm; DevDogsUGA
 does not depend on it.
+
+## Series
+
+`src/data/series.json` holds the recurring kinds of night (Merge Monday, Build Session, Touch Grass). A meeting names one with `series` and inherits its category, brand, summary, location and building; anything the meeting writes itself wins, and a one-off (no series) sets its own `title` and `category`. `getClubConfig()` returns meetings with the series applied, and `resolveMeetings` is the only place a title is decided:
+
+- headline `series`: the series name, plus ` #n` if the series is `numbered` (counted per term, skipping cancelled nights), plus `: <workshops>` when the night has workshops;
+- headline `topic`: the workshop topic, with the series name as the meeting's `kicker`;
+- an authored `title` always wins.
+
+Categories are `build`, `workshop`, `social`, `info` (Info Session), `study` and `milestone` (Kickoff, Cold Start, Demo Day).

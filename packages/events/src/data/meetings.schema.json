@@ -15,37 +15,42 @@
             "pattern": "^(\\d{4}-\\d{2}-\\d{2})(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$",
             "description": "The meeting's identity and its URL on the platform and posters: its Eastern date (YYYY-MM-DD), plus a lowercase descriptor when another meeting shares the date. Unique across the file. Changing it makes a new meeting."
           },
+          "series": {
+            "description": "The id of a series in series.json. The meeting inherits the series' category, brand, summary, location and building, and its title is derived from the series unless one is authored.",
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
           "title": {
+            "description": "The heading on the events page and newsletter card. Always wins over the series-derived title; required for a one-off (no series).",
             "type": "string",
             "minLength": 1,
-            "maxLength": 80,
-            "description": "The heading on the events page and newsletter card."
+            "maxLength": 80
           },
           "summary": {
+            "description": "About two sentences, for the events card. Defaults to the series' summary.",
             "type": "string",
             "minLength": 1,
-            "maxLength": 240,
-            "description": "About two sentences, for the events card."
+            "maxLength": 240
           },
-          "kind": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "Build Session",
-                  "Study Session",
-                  "Interest Meeting",
-                  "Social",
-                  "Demo Night"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The kind of night, or null for a one-off."
+          "category": {
+            "description": "What the night is. Defaults to the series' category; required for a one-off.",
+            "type": "string",
+            "enum": [
+              "build",
+              "workshop",
+              "social",
+              "info",
+              "study",
+              "milestone"
+            ]
+          },
+          "brand": {
+            "description": "devdogs (Cosmic) or gdgc (Paper). Defaults to the series' brand, then devdogs.",
+            "type": "string",
+            "enum": ["devdogs", "gdgc"]
           },
           "building": {
+            "description": "Defaults to the series' building, then null.",
             "anyOf": [
               {
                 "type": "string",
@@ -69,9 +74,9 @@
             ]
           },
           "location": {
+            "description": "The room, or \"TBA\" until there is one. Defaults to the series' location.",
             "type": "string",
-            "minLength": 1,
-            "description": "The room, or \"TBA\" until there is one."
+            "minLength": 1
           },
           "startsAt": {
             "type": "string",
@@ -183,11 +188,6 @@
         },
         "required": [
           "slug",
-          "title",
-          "summary",
-          "kind",
-          "building",
-          "location",
           "startsAt",
           "endsAt",
           "rsvpUrl",

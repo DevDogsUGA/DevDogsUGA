@@ -48,7 +48,7 @@ export async function getReflectionActivities(
 
   const rows = await db.execute<ActivityRow>(sql`
     select 'meeting'::text as "activityType", m.id as "activityId",
-      coalesce(m."nameOverride", m.kind, 'Meeting') as label,
+      coalesce(m."nameOverride", 'Meeting') as label,
       m."endsAt", r.id as "reflectionId", r.content, r."submittedAt"
     from platform.attendance a
     join platform.meetings m on m.id = a."meetingId"

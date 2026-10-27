@@ -11,7 +11,7 @@
 // black-border, block-shadow look, but keeping the same shape: eyebrow
 // over name over time/location, in a date-led row.
 import { computed } from 'vue'
-import { EVENT_KIND_VISUALS, EVENT_SEGMENT_VISUALS } from '@devdogsuga/sdk/brand/event'
+import { EVENT_CATEGORY_VISUALS } from '@devdogsuga/sdk/brand/event'
 import type { DeckMeeting } from '../vite/meetings'
 
 const props = withDefaults(defineProps<{
@@ -40,23 +40,19 @@ const endsAt = computed(() => new Date(props.meeting.endsAt))
 const weekday = computed(() => WEEKDAY_FMT.format(startsAt.value))
 const day = computed(() => DAY_FMT.format(startsAt.value))
 
-// title / kind / date fallback -- the same order as the platform's
-// `meetingTitle`, minus the workshop-agenda step: this deck's data has no
-// per-meeting workshop list to fall back to before the date.
-const title = computed(() => props.meeting.title ?? props.meeting.kind ?? DATE_FMT.format(startsAt.value))
+// The resolved title from the events config (series applied), else the date.
+const title = computed(() => props.meeting.title ?? DATE_FMT.format(startsAt.value))
 
 const timeSpan = computed(() => `${TIME_FMT.format(startsAt.value)} – ${TIME_FMT.format(endsAt.value)}`)
 
 const location = computed(() => [props.meeting.building, props.meeting.location].filter(Boolean).join(' '))
 
-// The event's own colour, as on the website's calendar: by kind, and
-// workshops (which carry no kind) in the workshop green. Not the slide's
-// accent, so the cards don't blend into the heading and chip.
+// The event's own colour, as on the website's calendar: by its resolved
+// category. Not the slide's accent, so the cards don't blend into the heading
+// and chip.
 const accent = computed(() => {
-  const kind = props.meeting.kind as keyof typeof EVENT_KIND_VISUALS | null
-  if (kind && kind in EVENT_KIND_VISUALS) return EVENT_KIND_VISUALS[kind].accent
-  if (/^workshop/i.test(props.meeting.title ?? '')) return EVENT_SEGMENT_VISUALS.workshop.accent
-  return undefined
+  const category = props.meeting.category as keyof typeof EVENT_CATEGORY_VISUALS
+  return category in EVENT_CATEGORY_VISUALS ? EVENT_CATEGORY_VISUALS[category].accent : undefined
 })
 </script>
 

@@ -24,6 +24,7 @@ import FindUs from "./FindUs";
 import AddToCalendar from "./AddToCalendar";
 import { calendarLinks } from "~/lib/calendarEvent";
 import { env } from "~/env";
+import { seriesKicker } from "~/server/config/seriesKicker";
 import {
   clubDay,
   EVENT_TZ,
@@ -92,8 +93,9 @@ export default function MeetingDetail({
   /** Read once by the caller so every state below agrees on the moment. */
   now: Date;
 }) {
-  const category = meetingCategory({ kind: meeting.kind, workshops });
+  const category = meetingCategory({ category: meeting.category });
   const title = meetingTitle(meeting, workshops);
+  const kicker = seriesKicker(meeting.series, title);
 
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
   const ended = now >= meeting.endsAt;
@@ -186,6 +188,7 @@ export default function MeetingDetail({
               </Badge>
             ) : null}
           </div>
+          {kicker !== null && <p className="eyebrow">{kicker}</p>}
           <h1 className="display">{title}</h1>
           {/* A cancelled night keeps this URL rather than 404ing: the link is
               already in Discord and in people's calendars, and a vanished page

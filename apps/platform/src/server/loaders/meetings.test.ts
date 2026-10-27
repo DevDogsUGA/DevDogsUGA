@@ -26,7 +26,6 @@ function structure(
   overrides: Partial<MeetingStructure> = {},
 ): MeetingStructure {
   return {
-    kind: null,
     workshops: [],
     ...overrides,
   };
@@ -37,44 +36,17 @@ function segmentsOf(overrides: Partial<MeetingStructure> = {}) {
 }
 
 describe("resolveMeetingSegments", () => {
-  it("falls back to `open` when nothing is scheduled", () => {
-    // Not an error state and not an empty one. A night with no workshops is a
-    // real meeting the club still holds.
-    expect(segmentsOf()).toEqual(["open"]);
-  });
-
-  it("never returns an empty set when there is no kind", () => {
-    expect(segmentsOf().length).toBeGreaterThan(0);
+  it("is empty when nothing is scheduled: there is no `open` fallback", () => {
+    // A night with no workshops is a real meeting the club still holds. Its
+    // chip is its category's; nothing prints an "Unscheduled" label.
+    expect(segmentsOf()).toEqual([]);
   });
 
   it("calls a workshop night `workshop`", () => {
     expect(segmentsOf({ workshops: [{}] })).toEqual(["workshop"]);
   });
 
-  it("keeps the derived set when an officer also named the night", () => {
-    // A social that also runs a workshop is a real night, and the workshop
-    // still has to reach the page. The caller renders the kind beside these.
-    // It is not returned here: that would be a pass-through of a field every
-    // call site already holds.
-    const billing = resolveMeetingSegments(
-      structure({ kind: "Social", workshops: [{}] }),
-    );
-    expect(billing.segments).toEqual(["workshop"]);
-  });
-
-  it("suppresses `open` when an officer named the night", () => {
-    // `open` means structural silence and `kind` is the officer's word for a
-    // night structure cannot describe, the same condition twice. Both
-    // speaking would render "Unscheduled · Build Session", the fallback
-    // contradicting the person who told us what the night was.
-    expect(
-      resolveMeetingSegments(structure({ kind: "Build Session" })),
-    ).toEqual({
-      segments: [],
-    });
-  });
-
-  it("still falls back to `open` when there is neither structure nor kind", () => {
-    expect(resolveMeetingSegments(structure()).segments).toEqual(["open"]);
+  it("keeps `workshop` however many workshops run", () => {
+    expect(segmentsOf({ workshops: [{}, {}] })).toEqual(["workshop"]);
   });
 });

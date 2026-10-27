@@ -26,7 +26,6 @@ export const getStarsForUser = cache(
         earnedAt: memberStars.earnedAt,
         label: sql<string>`coalesce(
           (select m."nameOverride" from platform.meetings m where m.id = ${memberStars.meetingId}),
-          (select m.kind from platform.meetings m where m.id = ${memberStars.meetingId}),
           'Meeting'
         )`,
       })

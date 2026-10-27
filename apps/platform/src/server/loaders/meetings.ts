@@ -38,14 +38,13 @@ export interface MeetingSummary {
   id: string;
   slug: string;
   /**
-   * A name for this night, when it has one worth reading: "Cold Start",
-   * "Midterm Study Session".
+   * The night's resolved title, written by reconcile for every meeting:
+   * authored, else derived from its series ("Build Session #3").
    *
-   * Null is the ORDINARY case: a sprint Monday derives its heading from its
-   * workshops and its judging, and the schedule renders no heading at all for
-   * one. Surfaces that need a string regardless (the `<title>`, the JSON-LD,
-   * the dialog's accessible name, the stars table) go through `meetingTitle`
-   * rather than reading this directly.
+   * Null only on a row reconcile has not rewritten yet. Surfaces that need a
+   * string regardless (the `<title>`, the JSON-LD, the dialog's accessible
+   * name, the stars table) go through `meetingTitle` rather than reading this
+   * directly.
    */
   nameOverride: string | null;
   /**
@@ -77,21 +76,18 @@ export interface MeetingSummary {
   startsAt: Date;
   endsAt: Date;
   /**
-   * An officer's override for what the night is, for the nights structure
-   * cannot describe. One of the five `MEETING_KIND_CHOICES`: `Build Session`,
-   * `Study Session`, `Interest Meeting`, `Social`, `Demo Night`.
+   * What the night is: `build`, `workshop`, `social`, `info`, `study` or
+   * `milestone`, resolved in config (the meeting's own, else its series') and
+   * written by reconcile. Null only on a row reconcile has not rewritten yet;
+   * `categoryOf` reads it and treats null as a build night.
    *
-   * Null is the ordinary case and means "read the derived segments", NOT
-   * "unknown".
-   *
-   * Typed as free text rather than as `MeetingKind` because that is what the
-   * column is: the list is enforced by `parseMeetingKind` on the way in and by
-   * `meetings_kind_choices` in the database, neither of which a row already
-   * stored can be re-checked against here. Widening it costs nothing, since
-   * the values are Title Case display strings and every render path prints the
-   * string rather than switching on it.
+   * Typed as free text rather than a union: it is a closed list enforced by the
+   * config schema and a check constraint, not a type, and `categoryOf` is the
+   * one place that narrows it.
    */
-  kind: string | null;
+  category: string | null;
+  /** The series id (series.json), or null for a one-off. */
+  series: string | null;
   /** An authored sentence or two for the calendar popover. Null means the page
    *  falls back to the workshop list, which is usually the better blurb, so
    *  this is worth printing only when an officer bothered to write it. */
@@ -119,7 +115,8 @@ const summaryColumns = {
   location: meetings.location,
   startsAt: meetings.startsAt,
   endsAt: meetings.endsAt,
-  kind: meetings.kind,
+  category: meetings.category,
+  series: meetings.series,
   summary: meetings.summary,
   rsvpUrl: meetings.rsvpUrl,
   attendanceCount: correlatedCount(

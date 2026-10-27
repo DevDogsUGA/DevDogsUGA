@@ -26,7 +26,8 @@ const CUTOFF = "2026-09-28T22:00:00.000Z";
 export interface DeckMeeting {
   slug: string;
   title: string | null;
-  kind: string | null;
+  category: string;
+  kicker: string | null;
   building: string | null;
   location: string | null;
   startsAt: string;
@@ -37,7 +38,8 @@ function toDeckMeeting(m: Meeting): DeckMeeting {
   return {
     slug: m.slug,
     title: m.title,
-    kind: m.kind,
+    category: m.category,
+    kicker: m.kicker,
     building: m.building,
     location: m.location,
     startsAt: m.startsAt,

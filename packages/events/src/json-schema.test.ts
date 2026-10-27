@@ -15,7 +15,7 @@ describe("data/*.schema.json", () => {
   );
 
   it("is what each data file's $schema points at", () => {
-    for (const file of ["meetings", "questions"]) {
+    for (const file of ["meetings", "series", "questions"]) {
       const data = JSON.parse(
         readFileSync(new URL(`./data/${file}.json`, import.meta.url), "utf8"),
       ) as { $schema?: string };

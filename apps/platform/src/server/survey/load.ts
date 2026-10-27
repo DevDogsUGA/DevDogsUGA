@@ -51,7 +51,7 @@ export async function attendedMeeting(
     label: string;
     endsAt: string;
   }>(sql`
-    select m.id, coalesce(m."nameOverride", m.kind, 'Meeting') as label,
+    select m.id, coalesce(m."nameOverride", 'Meeting') as label,
       m."endsAt"
     from platform.attendance a
     join platform.meetings m on m.id = a."meetingId"

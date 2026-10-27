@@ -1,34 +1,29 @@
+import { MEETING_CATEGORIES } from "@devdogsuga/events";
 import { describe, expect, it } from "vitest";
-import { categoryOf } from "./eventKind";
+import { categoryOf, EVENT_CATEGORIES } from "./eventKind";
 
 describe("categoryOf (D12)", () => {
-  it.each([
-    ["Build Session", "build"],
-    ["Study Session", "study"],
-    ["Interest Meeting", "info"],
-    ["Social", "social"],
-    ["Demo Night", "milestone"],
-  ] as const)("maps %s to %s", (kind, category) => {
-    expect(categoryOf({ kind })).toBe(category);
+  it.each(EVENT_CATEGORIES)("reads the resolved category %s", (category) => {
+    expect(categoryOf({ category })).toBe(category);
   });
 
-  it("falls back to build for a one-off with no kind", () => {
-    expect(categoryOf({ kind: null })).toBe("build");
-    expect(categoryOf({ kind: null, segments: ["open"] })).toBe("build");
+  it("matches the categories the events config allows", () => {
+    expect([...EVENT_CATEGORIES]).toEqual([...MEETING_CATEGORIES]);
   });
 
-  it("falls back to build for an unknown kind", () => {
-    expect(categoryOf({ kind: "Hack Night" })).toBe("build");
+  it("falls back to build for a row reconcile has not rewritten", () => {
+    expect(categoryOf({ category: null })).toBe("build");
   });
 
-  it("lets a workshop segment win over the authored kind", () => {
-    expect(categoryOf({ kind: "Social", segments: ["workshop"] })).toBe(
-      "workshop",
-    );
-    expect(categoryOf({ kind: null, workshops: [{}] })).toBe("workshop");
+  it("falls back to build for an unknown category", () => {
+    expect(categoryOf({ category: "hack-night" })).toBe("build");
   });
 
   it("does not inherit from Object.prototype", () => {
-    expect(categoryOf({ kind: "constructor" })).toBe("build");
+    expect(categoryOf({ category: "constructor" })).toBe("build");
+  });
+
+  it("is not changed by workshops on the night: the category is authored", () => {
+    expect(categoryOf({ category: "build" })).toBe("build");
   });
 });

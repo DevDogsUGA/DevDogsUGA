@@ -24,7 +24,7 @@ export const MEETING_QUERY = `
 select
   m."id"::text as "id",
   m."slug",
-  coalesce(m."nameOverride", m."kind", 'Meeting') as "title",
+  coalesce(m."nameOverride", 'Meeting') as "title",
   m."startsAt",
   m."endsAt",
   m."cancelledAt",

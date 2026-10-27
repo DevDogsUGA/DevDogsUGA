@@ -33,18 +33,22 @@ export type ThemeName = "cosmic" | "paper";
 export type KindKey =
   "build" | "interest" | "workshop" | "demo" | "social" | "study";
 
-/** The authored meeting kind to its theme key; a night with no kind is a workshop. */
-export function kindKey(kind: string | null | undefined): KindKey {
-  switch (kind) {
-    case "Build Session":
+/**
+ * A meeting's resolved category to its theme key. The theme keeps its older
+ * `interest` and `demo` names for `info` and `milestone`: the hosted glow
+ * images are filed under them. Unknown categories read as a workshop.
+ */
+export function kindKey(category: string | null | undefined): KindKey {
+  switch (category) {
+    case "build":
       return "build";
-    case "Interest Meeting":
+    case "info":
       return "interest";
-    case "Demo Night":
+    case "milestone":
       return "demo";
-    case "Social":
+    case "social":
       return "social";
-    case "Study Session":
+    case "study":
       return "study";
     default:
       return "workshop";

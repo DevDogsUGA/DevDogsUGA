@@ -241,8 +241,9 @@ export async function reconcileFromConfig(
         const values = {
           slug: meeting.slug,
           nameOverride: meeting.title,
+          series: meeting.series,
+          category: meeting.category,
           summary: meeting.summary,
-          kind: meeting.kind,
           building: meeting.building,
           location: meeting.location,
           startsAt: new Date(meeting.startsAt),

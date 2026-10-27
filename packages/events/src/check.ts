@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import { type z } from "zod";
 import meetingsFile from "./data/meetings.json" with { type: "json" };
+import seriesFile from "./data/series.json" with { type: "json" };
 import questionsFile from "./data/questions.json" with { type: "json" };
 import { ClubConfigError } from "./index.js";
 import { questionsConfigSchema } from "./questions.js";
+import { resolveMeetings } from "./resolve.js";
 import { clubConfigSchema } from "./schema.js";
-import { validateClubConfig } from "./validator.js";
+import { seriesConfigSchema } from "./series.js";
+import { validateAuthored, validateClubConfig } from "./validator.js";
 
 /**
  * `pnpm --filter @devdogsuga/events check:events` -- the CI gate.
@@ -28,23 +31,31 @@ function shapeErrors(file: string, error: z.ZodError): void {
 
 function main(): number {
   const meetings = clubConfigSchema.safeParse(meetingsFile);
+  const series = seriesConfigSchema.safeParse(seriesFile);
   const questions = questionsConfigSchema.safeParse(questionsFile);
   if (!meetings.success) shapeErrors("meetings.json", meetings.error);
+  if (!series.success) shapeErrors("series.json", series.error);
   if (!questions.success) shapeErrors("questions.json", questions.error);
-  if (!meetings.success || !questions.success) return 1;
+  if (!meetings.success || !series.success || !questions.success) return 1;
 
-  const issues = validateClubConfig(meetings.data, questions.data);
+  const authoredIssues = validateAuthored(meetings.data, series.data);
+  if (authoredIssues.length > 0) {
+    process.stderr.write(`${new ClubConfigError(authoredIssues).message}\n`);
+    return 1;
+  }
+  const resolved = resolveMeetings(meetings.data, series.data.series);
+  const issues = validateClubConfig(resolved, questions.data);
   if (issues.length > 0) {
     process.stderr.write(`${new ClubConfigError(issues).message}\n`);
     return 1;
   }
 
-  const workshopCount = meetings.data.meetings.reduce(
+  const workshopCount = resolved.meetings.reduce(
     (total, meeting) => total + meeting.agenda.length,
     0,
   );
   process.stdout.write(
-    `events: ok (${meetings.data.meetings.length} meetings, ${workshopCount} workshops, ` +
+    `events: ok (${resolved.meetings.length} meetings, ${series.data.series.length} series, ${workshopCount} workshops, ` +
       `${questions.data.questions.length} questions)\n`,
   );
   return 0;

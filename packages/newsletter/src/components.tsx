@@ -556,32 +556,21 @@ function CtaButton({
   );
 }
 
-/** The chip accent for each kind, from `KIND` so `darkModeCss()` pins it. */
-const KIND_COLOR: Record<string, string> = {
-  "Interest Meeting": KIND.interest,
-  "Build Session": KIND.build,
-  "Study Session": KIND.study,
-  Social: KIND.social,
-  "Demo Night": KIND.demo,
-};
-
 function inEventZone(at: Date, options: Intl.DateTimeFormatOptions): string {
   return at.toLocaleString("en-US", { timeZone: EVENT_TZ, ...options });
 }
 
 /**
- * What a card prints for a meeting, in Eastern time. A night with no kind is
- * a workshop night, the same reading the site's calendar gives it, unless the
- * issue gives it one (`FeaturedEvent.kind`): a one-off like a kickoff has no
- * kind to read until the series redesign gives every meeting a category.
+ * What a card prints for a meeting, in Eastern time. Its colours come from the
+ * meeting's resolved category, unless the issue overrides them
+ * (`FeaturedEvent.kind`).
  */
 function eventCard(meeting: Meeting, kindOverride?: KindKey) {
   const startsAt = new Date(meeting.startsAt);
+  const kind = kindOverride ?? kindKey(meeting.category);
   return {
-    kind: kindOverride ?? kindKey(meeting.kind),
-    color: kindOverride
-      ? KIND[kindOverride]
-      : ((meeting.kind && KIND_COLOR[meeting.kind]) ?? KIND.workshop),
+    kind,
+    color: KIND[kind],
     dow: inEventZone(startsAt, { weekday: "short" }).toUpperCase(),
     month: inEventZone(startsAt, { month: "short" }),
     day: inEventZone(startsAt, { day: "numeric" }),
@@ -608,7 +597,7 @@ function EventArt({
   return (
     <ThemeImg
       ctx={ctx}
-      name={`${cosmic ? "sprite" : "emoji"}-${eventArt(meeting.title, kind)}`}
+      name={`${cosmic ? "sprite" : "emoji"}-${eventArt(meeting.kicker ? `${meeting.kicker} ${meeting.title}` : meeting.title, kind)}`}
       width={size}
       height={size}
       style={cosmic ? PIXELATED : undefined}
@@ -707,6 +696,20 @@ function EventRow({
                 <tbody>
                   <tr>
                     <td valign="top">
+                      {meeting.kicker ? (
+                        <div
+                          className={tc(t.mute)}
+                          style={{
+                            ...ambient(700, 11, 1.4),
+                            color: t.mute,
+                            letterSpacing: "1px",
+                            textTransform: "uppercase",
+                            padding: "0 0 2px",
+                          }}
+                        >
+                          {meeting.kicker}
+                        </div>
+                      ) : null}
                       <div
                         className={tc(t.ink)}
                         style={{

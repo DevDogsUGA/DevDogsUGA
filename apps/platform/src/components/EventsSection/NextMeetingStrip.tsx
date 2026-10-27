@@ -10,10 +10,7 @@ import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
 import { EVENT_TZ, clubDateKey, formatEventTime } from "~/lib/eventTime";
 import { categoryOf, type EventCategory } from "~/lib/eventKind";
 import { meetingTitle } from "~/lib/meetingTitle";
-import {
-  resolveMeetingSegments,
-  type MeetingInRange,
-} from "~/server/loaders/meetings";
+import { type MeetingInRange } from "~/server/loaders/meetings";
 import { Card } from "~/ui/card";
 import { Chip } from "~/ui/chip";
 import { DateTile } from "~/ui/date-tile";
@@ -87,12 +84,7 @@ export function timeRange(startsAt: Date, endsAt: Date): string {
 }
 
 function parts(meeting: MeetingInRange) {
-  const { segments } = resolveMeetingSegments(meeting);
-  const kind = categoryOf({
-    kind: meeting.kind,
-    segments,
-    workshops: meeting.workshops,
-  });
+  const kind = categoryOf(meeting);
   return {
     kind,
     title: meetingTitle(meeting, meeting.workshops),

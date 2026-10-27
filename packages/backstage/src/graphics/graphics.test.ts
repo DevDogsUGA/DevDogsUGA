@@ -10,7 +10,7 @@ import {
   runGraphics,
   wantsEvents,
 } from "./commands.js";
-import { configEvents, meetingTitle } from "./events.js";
+import { configEvents } from "./events.js";
 import {
   assertUniqueStems,
   eventGraphics,
@@ -155,14 +155,14 @@ describe("the real schedule", () => {
     expect(() => assertUniqueStems([...registry, ...graphics])).not.toThrow();
   });
 
-  it("titles a meeting by authored name, then kind, then agenda, then date", () => {
-    const at = new Date("2026-09-10T22:00:00Z");
-    expect(meetingTitle("Kickoff", "Social", at, [])).toBe("Kickoff");
-    expect(meetingTitle(null, "Social", at, [])).toBe("Social");
-    expect(meetingTitle(null, null, at, ["React"])).toBe("Workshop: React");
-    expect(meetingTitle(null, null, at, ["A", "B", "C"])).toBe(
-      "September 10, 2026",
-    );
+  it("titles every poster with the resolved title, and carries category and brand", async () => {
+    const meetings = await configEvents().meetings();
+    const night = meetings.find((m) => m.slug === "2026-09-16")!;
+    expect(night.detail.title).toBe("Build Session #1");
+    expect(night.detail.category).toBe("build");
+    expect(night.detail.brand).toBe("devdogs");
+    const topic = meetings.find((m) => m.slug === "2026-11-04")!;
+    expect(topic.detail.kicker).toBe("Workshop Wednesday");
   });
 });
 

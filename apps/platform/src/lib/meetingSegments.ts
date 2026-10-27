@@ -19,70 +19,36 @@
  */
 
 /**
- * What a meeting is, derived from its structure: the one thing a meeting's
- * rows can say about themselves.
- *
- * | Segment    | Derived from                                     |
- * | ---------- | ------------------------------------------------- |
- * | `workshop` | one or more live `workshops` rows on this meeting  |
- * | `open`     | none of the above, the structural fallback         |
+ * What a meeting's structure says it has: `workshop` when one or more live
+ * `workshops` rows hang off it. That is the only derived segment. What a night
+ * IS (build, social, milestone...) is its authored `category`; a night with no
+ * workshops has no segments, and nothing prints a fallback label for it.
  */
-export type MeetingSegment = "workshop" | "open";
+export type MeetingSegment = "workshop";
 
 /**
  * The subset of a meeting the resolver reads.
  *
  * Narrowed to exactly this rather than taking a `MeetingInRange` so the rule can
- * be exercised without a database. The page's colour coding and copy hang off
- * these segments, and a rule needing live Postgres to test stops being tested.
+ * be exercised without a database.
  */
 export interface MeetingStructure {
-  kind: string | null;
   workshops: readonly unknown[];
 }
 
 export interface MeetingBilling {
   /**
-   * What the STRUCTURE says, ordered; see `resolveMeetingSegments`.
-   *
-   * **Can be empty**, which it could not before. A night whose `kind` an officer
-   * authored, a build session or a study session, has no structure to derive
-   * from, and `open` is suppressed there so the two do not both speak. A caller
-   * rendering chips must render `meeting.kind` alongside this or such a night
-   * gets no chip at all.
-   *
-   * This does NOT carry the officer's `kind`: that would be a pass-through
-   * of something every call site already has in scope.
+   * What the STRUCTURE says. Empty for a night with no workshops, which is
+   * normal: the chip for such a night is its category's.
    */
   segments: MeetingSegment[];
 }
 
-/**
- * What a meeting's structure says it is.
- *
- * ## The ordering
- *
- * `workshop` → `open`, and callers take the first as the primary: the
- * calendar's dot colour, the badge that fits on a narrow card. The two are
- * already mutually exclusive -- `open` fires only when there is no workshop
- * to report.
- */
+/** What a meeting's structure says it is. */
 export function resolveMeetingSegments(
   meeting: MeetingStructure,
 ): MeetingBilling {
   const segments: MeetingSegment[] = [];
-
   if (meeting.workshops.length > 0) segments.push("workshop");
-
-  // `open` is what structural SILENCE looks like, and `kind` is the officer's
-  // word for a night the structure cannot describe: the same condition said the
-  // other way round, so they must never both speak. A build session would
-  // otherwise render "Unscheduled · Build Session", the derived fallback
-  // contradicting the person who told us what the night was.
-  //
-  // This is why `segments` can come back empty. A caller rendering only these
-  // and not `meeting.kind` gives an authored night no chip at all.
-  if (segments.length === 0 && meeting.kind === null) segments.push("open");
-
   return { segments };
 }

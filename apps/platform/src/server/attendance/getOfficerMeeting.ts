@@ -13,7 +13,7 @@ export async function getOfficerAttendanceMeeting(meetingId: string) {
     .select({
       id: meetings.id,
       nameOverride: meetings.nameOverride,
-      kind: meetings.kind,
+      category: meetings.category,
       building: meetings.building,
       location: meetings.location,
       startsAt: meetings.startsAt,
@@ -39,7 +39,7 @@ export async function getOfficerAttendanceMeetings() {
     .select({
       id: meetings.id,
       nameOverride: meetings.nameOverride,
-      kind: meetings.kind,
+      category: meetings.category,
       startsAt: meetings.startsAt,
       endsAt: meetings.endsAt,
       cancelledAt: meetings.cancelledAt,
