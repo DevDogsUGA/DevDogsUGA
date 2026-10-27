@@ -65,11 +65,19 @@ export default async function AuditEventPage({
         description={`${event.action} · ${formatEventDateTime(event.createdAt)}`}
       />
 
-      <Panel title={`${event.targetType}: ${event.targetId}`}>
+      <Panel
+        title={`${event.targetType}: ${event.targetName ?? event.targetId}`}
+      >
         <DefinitionList
           items={[
             { term: "Source", detail: event.source },
-            { term: "Actor", detail: `${event.actorType} · ${event.actor}` },
+            {
+              term: "Actor",
+              detail:
+                event.actorName === event.actor
+                  ? `${event.actorType} · ${event.actor}`
+                  : `${event.actorType} · ${event.actorName} (${event.actor})`,
+            },
             { term: "Event ID", detail: <code>{event.id}</code> },
             {
               term: "Correlation ID",

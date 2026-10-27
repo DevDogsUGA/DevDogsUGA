@@ -31,7 +31,7 @@ export default async function Privacy() {
         <strong>Effective date:</strong> October 10, 2024
       </p>
       <p>
-        <strong>Last updated:</strong> October 10, 2026
+        <strong>Last updated:</strong> October 23, 2026
       </p>
       <p>
         DevDogs is a registered student organization at the University of
@@ -415,7 +415,9 @@ export default async function Privacy() {
       </ul>
       <p>
         These records are kept even after the action ends, so we can handle
-        repeat problems fairly.
+        repeat problems fairly. They are also kept when a member deletes their
+        account, with the people in them removed: the report stays, but it no
+        longer says who filed it or who it was about (§8).
       </p>
       <h2 id="7-cookies">7. Cookies</h2>
       <p>We use only the cookies the platform needs to work:</p>
@@ -459,47 +461,83 @@ export default async function Privacy() {
       <h2 id="8-your-choices-and-rights">8. Your choices and rights</h2>
       <ul>
         <li>
-          <strong>Get a copy:</strong> email{" "}
+          <strong>Get a copy:</strong> choose <strong>Download my data</strong>{" "}
+          in Settings. It&apos;s always available, and gives you a JSON file of
+          what the DevDogs platform holds about you. DogDays and DogPack keep
+          their own data, which isn&apos;t in that file (§13, §14). If you can
+          sign in, use Settings; if you can&apos;t, email{" "}
           <strong>
             <a href="mailto:devdogs@uga.edu">devdogs@uga.edu</a>
           </strong>{" "}
-          with the subject &quot;Data Request&quot; and your name. We&apos;ll
-          send you a copy of the data we hold about you.
+          with the subject &quot;Data Request&quot; and your name, and
+          we&apos;ll send you a copy.
         </li>
         <li>
-          <strong>Delete your data:</strong> email{" "}
+          <strong>Delete your account:</strong> choose{" "}
+          <strong>Delete account</strong> in Settings, under Profile. Your
+          account is scheduled for deletion and is deleted after 14 days. Until
+          then, your profile is hidden and you&apos;re signed out. Sign in and
+          choose <strong>Keep my account</strong> to cancel, and nothing is
+          lost. If you can&apos;t use Settings, email{" "}
           <strong>
             <a href="mailto:devdogs@uga.edu">devdogs@uga.edu</a>
           </strong>{" "}
-          with the subject &quot;Data Removal Request&quot; and your name.
-          We&apos;ll delete your account, profile, connected accounts and
-          personal records, including your DogDays and DogPack data, and tell
-          you when it&apos;s done.
+          with the subject &quot;Data Removal Request&quot; and your name, and
+          we&apos;ll do it for you. Some officers can also schedule a
+          member&apos;s account for deletion; you&apos;re emailed and can keep
+          your account during the 14 days.
           <ul>
             <li>
-              <strong>Reflections and reports:</strong> your reflections and
-              their edit history are deleted with your account. So are reports
-              you filed and reports filed about you. The audit log keeps a
-              record that changes happened, without the reflection text and
-              without anything that identifies you.
+              <strong>What is erased:</strong> your account, profile, connected
+              accounts, roles, reflections and their edit history, check-in
+              survey answers, badges, project reports, saved meeting edits,
+              support conversations on the platform, schedule plans, and the
+              OAuth apps you made.
             </li>
             <li>
-              <strong>Outside our systems:</strong> we&apos;ll also remove you
-              from the DevDogs GitHub organization and Discord server. We
-              can&apos;t delete data already sent to UGA or Google (§4), but
-              we&apos;ll tell you where it went.
+              <strong>Attendance:</strong> your attendance records stay in the
+              club&apos;s totals, without your name. Any credit tied to them,
+              such as EL credit, is lost.
             </li>
             <li>
-              <strong>Marketing materials:</strong> we stop distributing
-              marketing materials that include photos of you by the time we
-              respond to your request. We can&apos;t recall materials that were
-              already distributed: posts others have shared, printed flyers, and
-              so on. Until we respond, materials already in circulation may keep
-              being used.
+              <strong>Reports and the audit log:</strong> reports you filed or
+              that were filed about you are kept, with the people in them
+              removed (§6). The audit log keeps a record that changes happened,
+              without reflection text. After your account is deleted, its
+              entries show &quot;Deleted member&quot; in place of you.
+            </li>
+            <li>
+              <strong>DevDogs apps:</strong> we tell DogDays, DogPack and any
+              other registered app to delete your account. They do this on a
+              best-effort basis, and we can&apos;t promise it.
+            </li>
+            <li>
+              <strong>Apps other members made:</strong> an app a member built
+              with Sign in with DevDogs is told too, but the club can&apos;t
+              delete what that app stored. Ask the app&apos;s owner.
+            </li>
+            <li>
+              <strong>GitHub and Discord:</strong> this applies only to accounts
+              you linked. We can&apos;t remove you from the DevDogs GitHub
+              organization or Discord server for you; you leave them yourself,
+              and Settings and the page you see after scheduling give you direct
+              links. Your Discord posts and GitHub contributions stay. Officers
+              can remove Discord posts on request.
+            </li>
+            <li>
+              <strong>Outside our systems:</strong> we can&apos;t delete data
+              already sent to UGA, Bevy or Google (§4), but we&apos;ll tell you
+              where it went.
+            </li>
+            <li>
+              <strong>Photos:</strong> we don&apos;t promise to take down photos
+              of you. Photos posted on a social platform are the platform&apos;s
+              to remove, so use its reporting tools to ask for a photo of you to
+              come down. You can also email us and we&apos;ll help where we can.
             </li>
             <li>
               <strong>
-                Your account can&apos;t be recovered after deletion.
+                Your account can&apos;t be recovered after the 14 days.
               </strong>
             </li>
           </ul>
@@ -510,7 +548,7 @@ export default async function Privacy() {
           yourself.
         </li>
       </ul>
-      <p>We respond to requests within 30 days.</p>
+      <p>We respond to emailed requests within 30 days.</p>
       <h2 id="9-how-long-we-keep-data">9. How long we keep data</h2>
       <ul>
         <li>
@@ -521,6 +559,10 @@ export default async function Privacy() {
           <strong>After you graduate:</strong> we anonymize or aggregate your
           data and move it off the platform. Event photos are the exception: we
           may keep and use them indefinitely to promote the club.
+        </li>
+        <li>
+          <strong>Deleted accounts:</strong> removed once the 14-day window ends
+          (§8).
         </li>
         <li>
           <strong>Support guests:</strong> deleted 90 days after the last visit
@@ -612,8 +654,9 @@ export default async function Privacy() {
           are never public.
         </li>
         <li>
-          <strong>Deleting it:</strong> ask us (§8) and we delete your DogDays
-          account and everything saved in it.
+          <strong>Deleting it:</strong> when you delete your DevDogs account,
+          DogDays is told to delete your DogDays account and everything saved in
+          it. That is best effort (§8). You can also ask us (§8).
         </li>
       </ul>
       <h2 id="dogpack">14. DogPack</h2>
@@ -707,8 +750,9 @@ export default async function Privacy() {
           <strong>Delete my data:</strong> DogPack has a delete-my-data option
           that removes your DogPack profile, enrollments, the sessions you host
           and your memberships in others. It doesn&apos;t delete your DevDogs
-          account; for that, follow §8. Reports you filed or that were filed
-          about you are handled under §6 and §8.
+          account; for that, follow §8, which also tells DogPack to delete yours
+          (best effort). Reports you filed or that were filed about you are
+          handled under §6 and §8.
         </li>
         <li>
           <strong>How long we keep it:</strong> DogPack keeps sessions only to

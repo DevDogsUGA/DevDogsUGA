@@ -12,6 +12,7 @@ export const ACCOUNT_DELETION_AUDIT_ACTIONS = [
   "user.deletion_scheduled",
   "user.deletion_cancelled",
   "user.deleted",
+  "user.data_exported",
 ] as const;
 
 export type AccountDeletionAuditAction =

@@ -20,8 +20,8 @@ import { deletionDueAt, formatDeletionDate } from "./dates";
 export const PRESIDENT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
 
 export const SOLE_PRESIDENT_ERROR = "Grant President to someone else first";
-const NOT_ALLOWED = "Not authorized: canDeleteAccounts required";
-const NO_SUCH_MEMBER = "No such member";
+export const NOT_ALLOWED = "Not authorized: canDeleteAccounts required";
+export const NO_SUCH_MEMBER = "No such member";
 
 /** What the emails call a member: their preferred name, or "there". */
 export function greetingName(name: string | null | undefined): string {
@@ -212,7 +212,15 @@ export async function scheduleAccountDeletion(
  * started may already have removed the member's apps, so it runs to the end.
  * (The row outlives the auth user for a moment, so that is checked too.)
  */
-export async function cancelAccountDeletion(userId: string): Promise<boolean> {
+export async function cancelAccountDeletion(
+  userId: string,
+  /** Who cancels: the member (Keep my account) or an officer holding `canDeleteAccounts`. */
+  actorUserId: string = userId,
+): Promise<boolean> {
+  const cancelledByOfficer = actorUserId !== userId;
+  if (cancelledByOfficer && !(await canUserDeleteAccounts(actorUserId))) {
+    throw new Error(NOT_ALLOWED);
+  }
   const cancelled = await db.transaction(async (tx) => {
     const [stillThere] = await tx
       .select({ id: usersInAuth.id })
@@ -234,10 +242,11 @@ export async function cancelAccountDeletion(userId: string): Promise<boolean> {
 
     await tx.insert(auditEvents).values(
       accountDeletionAuditEvent({
-        actorUserId: userId,
+        actorUserId,
         action: "user.deletion_cancelled",
         userId,
         metadata: {
+          cancelledByOfficer,
           byOfficer:
             removed[0]!.requestedBy !== null &&
             removed[0]!.requestedBy !== userId,

@@ -110,12 +110,12 @@ export default function AuditLogContent({
                   </Link>
                 </Td>
                 <Td wrap className="mono">
-                  {entry.targetType}: {entry.targetId}
+                  {entry.targetType}: {entry.targetName ?? entry.targetId}
                 </Td>
                 <Td>
                   <Badge>{humanize(entry.source)}</Badge>
                 </Td>
-                <Td wrap>{entry.actor}</Td>
+                <Td wrap>{entry.actorName}</Td>
                 <Td>{formatEventDateTime(entry.createdAt)}</Td>
               </Tr>
             ))}

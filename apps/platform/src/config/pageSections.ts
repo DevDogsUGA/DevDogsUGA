@@ -100,6 +100,8 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
         },
       ],
     },
+    { id: "your-data", label: "Your data" },
+    { id: "delete-account", label: "Delete account" },
   ],
 
   "/settings/accounts": [
