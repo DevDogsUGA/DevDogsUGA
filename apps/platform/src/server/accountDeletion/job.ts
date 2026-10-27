@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull, lte, or, sql } from "drizzle-orm";
+import { eraseAttendanceInvitesForEmail } from "~/server/attendance/officerAttendance";
 import { stripSyncedRolesFromGuild } from "~/server/discord/memberSync";
 import { db } from "~/server/db";
 import { accountDeletions, auditEvents } from "~/server/db/schema";
@@ -181,6 +182,10 @@ async function finishDeletion(
 
     // 3. The schedule builder's tables have no foreign key on purpose.
     await eraseScheduleBuilder(userId);
+
+    // 3b. Attendance invites still pending for the member's address (Q168).
+    //     Ones they claimed cascade with the auth user below.
+    if (member.email) await eraseAttendanceInvitesForEmail(member.email);
 
     // 4. Discord roles the platform synced, which nothing reconciles once the
     //    identity is gone.

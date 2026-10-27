@@ -8,7 +8,7 @@ export const graduationSemesterInPlatform = platform.enum("graduationSemester", 
 export const academicProgramCategoryInPlatform = platform.enum("academicProgramCategory", ["undergraduate_major", "graduate_major", "undergraduate_minor", "undergraduate_certificate", "graduate_certificate", "professional_program"])
 export const roleTypeInPlatform = platform.enum("roleType", ["default", "custom"])
 export const oauthRegistrationTypeInPlatform = platform.enum("oauthRegistrationType", ["development", "production"])
-export const checkInMethodInPlatform = platform.enum("checkInMethod", ["qr", "manual_code", "import"])
+export const checkInMethodInPlatform = platform.enum("checkInMethod", ["qr", "manual_code", "import", "officer"])
 export const auditEventSourceInPlatform = platform.enum("auditEventSource", ["platform", "qr", "manual_code", "system"])
 export const contentActionInPlatform = platform.enum("contentAction", ["quarantine", "no_action"])
 export const filerActionInPlatform = platform.enum("filerAction", ["warn", "suspend", "no_action"])
@@ -85,6 +85,27 @@ export const attendanceInPlatform = platform.table.withRLS("attendance", {
 
 	pgPolicy("own_select", { for: "select", to: ["authenticated"], using: sql`(( SELECT auth.uid() AS uid) = "userId")` }),
 ]);
+
+export const attendanceInvitesInPlatform = platform.table.withRLS("attendanceInvites", {
+	id: uuid().defaultRandom().primaryKey(),
+	meetingId: uuid().notNull().references(() => meetingsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	ugaEmail: text().notNull(),
+	tokenHash: text().notNull(),
+	createdBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	expiresAt: timestamp({ withTimezone: true }).default(sql`(now() + '14 days'::interval)`).notNull(),
+	claimedAt: timestamp({ withTimezone: true }),
+	claimedBy: uuid().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+}, (table) => [
+	uniqueIndex("attendanceInvites_tokenHash_key").using("btree", table.tokenHash.asc().nullsLast()),
+	uniqueIndex("attendanceInvites_pending_key").using("btree", table.meetingId.asc().nullsLast(), table.ugaEmail.asc().nullsLast()).where(sql`("claimedAt" IS NULL)`),
+	index("attendanceInvites_ugaEmail_idx").using("btree", table.ugaEmail.asc().nullsLast()),
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+check("attendanceInvites_ugaEmail_lowercase", sql`("ugaEmail" = lower("ugaEmail"))`),check("attendanceInvites_claim_shape", sql`(("claimedAt" IS NULL) = ("claimedBy" IS NULL))`),]);
 
 export const auditEventsInPlatform = platform.table.withRLS("auditEvents", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -1044,6 +1065,7 @@ export { accountDeletionsInPlatform as accountDeletions };
 export { appKindInPlatform as appKind };
 export { appsInPlatform as apps };
 export { attendanceInPlatform as attendance };
+export { attendanceInvitesInPlatform as attendanceInvites };
 export { auditEventSourceInPlatform as auditEventSource };
 export { auditEventsInPlatform as auditEvents };
 export { checkInMethodInPlatform as checkInMethod };

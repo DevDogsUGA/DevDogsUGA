@@ -1,7 +1,11 @@
 import { sql } from "drizzle-orm";
 import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
-import { reflectionDeadline, reflectionWordCount } from "./policy";
+import {
+  reflectionDeadline,
+  reflectionWindowStart,
+  reflectionWordCount,
+} from "./policy";
 
 export interface ReflectionActivity {
   activityType: "meeting";
@@ -26,6 +30,7 @@ interface ActivityRow {
   // text for every column, so these two arrive as strings and are converted
   // explicitly below.
   endsAt: string;
+  recordedAt: string;
   reflectionId: string | null;
   content: string | null;
   submittedAt: string | null;
@@ -50,7 +55,7 @@ export async function getReflectionActivities(
   const rows = await db.execute<ActivityRow>(sql`
     select 'meeting'::text as "activityType", m.id as "activityId",
       coalesce(m."nameOverride", 'Meeting') as label,
-      m."endsAt", r.id as "reflectionId", r.content, r."submittedAt"
+      m."endsAt", a."recordedAt", r.id as "reflectionId", r.content, r."submittedAt"
     from platform.attendance a
     join platform.meetings m on m.id = a."meetingId"
     left join platform.reflections r
@@ -65,7 +70,10 @@ export async function getReflectionActivities(
     minimumWordCount: policy.minimumWordCount,
     activities: rows.map((row) => {
       const endsAt = new Date(row.endsAt);
-      const deadline = reflectionDeadline(endsAt, policy.submissionWindowDays);
+      const deadline = reflectionDeadline(
+        reflectionWindowStart(endsAt, new Date(row.recordedAt)),
+        policy.submissionWindowDays,
+      );
       const content = row.content ?? "";
       const submittedAt =
         row.submittedAt === null ? null : new Date(row.submittedAt);

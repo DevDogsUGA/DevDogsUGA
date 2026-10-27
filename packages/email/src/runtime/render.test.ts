@@ -24,6 +24,13 @@ const deletion = {
   keepUrl: "https://devdogsuga.org/account/deletion",
 };
 
+const attendanceInvite = {
+  meetingTitle: "Intro to Git",
+  whenLine: "Monday, October 26",
+  claimUrl: "https://devdogsuga.org/attendance/claim?invite=abc",
+  expiresDate: "Monday, November 9, 2026",
+};
+
 describe("render", () => {
   it("produces subject, html and text", () => {
     const email = render("TeamInvite", invite);
@@ -43,6 +50,7 @@ describe("render", () => {
         competitionName: "Spring Sprint",
         reviewUrl: "https://devdogsuga.org/teams/abc/requests",
         ...deletion,
+        ...attendanceInvite,
       } as never);
       expect(email.text.trim().length).toBeGreaterThan(40);
     }
@@ -59,6 +67,7 @@ describe("render", () => {
         competitionName: "Spring Sprint",
         reviewUrl: "https://devdogsuga.org/teams/abc/requests",
         ...deletion,
+        ...attendanceInvite,
       } as never);
 
       for (const part of [email.subject, email.html, email.text]) {
@@ -107,6 +116,7 @@ describe("render", () => {
     expect([...templateNames].sort()).toEqual([
       "AccountDeletionComplete",
       "AccountDeletionScheduled",
+      "AttendanceInvite",
       "JoinRequest",
       "TeamInvite",
     ]);
@@ -142,5 +152,18 @@ describe("render", () => {
     expect(email.subject).toBe("Your DevDogs account has been deleted");
     expect(email.html).toContain("permanently deleted");
     expect(email.html).not.toContain("Keep my account");
+  });
+
+  it("sends the claim link once, escaped, with the expiry in the body", () => {
+    const email = render("AttendanceInvite", {
+      ...attendanceInvite,
+      meetingTitle: "<i>Git</i>",
+    });
+
+    expect(email.subject).toBe("Confirm your attendance at <i>Git</i>");
+    expect(email.html).toContain(`href="${attendanceInvite.claimUrl}"`);
+    expect(email.html).toContain("&lt;i&gt;Git&lt;/i&gt;");
+    expect(email.html).toContain("Monday, November 9, 2026");
+    expect(email.text).toContain(attendanceInvite.claimUrl);
   });
 });

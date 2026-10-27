@@ -24,6 +24,12 @@ const FIXTURES = {
     scheduledDate: "Saturday, November 7",
     keepUrl: "https://devdogsuga.org/account/deletion",
   },
+  AttendanceInvite: {
+    meetingTitle: "Workshop Wednesday: Supabase II",
+    whenLine: "Wednesday, November 4, 6–7 PM",
+    claimUrl: "https://devdogsuga.org/attendance/claim?invite=example",
+    expiresDate: "Wednesday, November 18",
+  },
   JoinRequest: {
     leadName: "Jordan",
     applicantName: "Avery",

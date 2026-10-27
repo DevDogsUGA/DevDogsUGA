@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { reflectionDeadline, reflectionWordCount } from "./policy";
+import {
+  reflectionDeadline,
+  reflectionWindowStart,
+  reflectionWordCount,
+} from "./policy";
 
 describe("reflection policy", () => {
   it("counts words across whitespace without counting blank content", () => {
@@ -12,5 +16,17 @@ describe("reflection policy", () => {
     expect(reflectionDeadline(end, 7).toISOString()).toBe(
       "2026-09-15T23:30:00.000Z",
     );
+  });
+
+  it("opens the window at the later of the meeting's end and the attendance record", () => {
+    const end = new Date("2026-09-08T23:30:00.000Z");
+    const early = new Date("2026-09-08T20:00:00.000Z");
+    const late = new Date("2026-09-12T10:00:00.000Z");
+    expect(reflectionWindowStart(end, early)).toBe(end);
+    expect(reflectionWindowStart(end, late)).toBe(late);
+    // A member added three days after the meeting still gets a full week.
+    expect(
+      reflectionDeadline(reflectionWindowStart(end, late), 7).toISOString(),
+    ).toBe("2026-09-19T10:00:00.000Z");
   });
 });
