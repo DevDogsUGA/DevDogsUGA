@@ -24,6 +24,9 @@ export default async function Terms() {
   return (
     <article className="content-legal">
       <h1 id="devdogs-terms-of-service">DevDogs Terms of Service</h1>
+      {/* The effective date is when these terms first applied and never
+          changes. An update adds or changes a "Last updated" line below it,
+          as the privacy policy does (§12 says so). */}
       <p>
         <strong>Effective date:</strong> October 27, 2026
       </p>
@@ -260,10 +263,11 @@ export default async function Terms() {
       </p>
       <h2 id="12-changes">12. Changes</h2>
       <p>
-        We may update these terms. When we do, we change the effective date
-        above. For significant changes, we also announce them on Discord. If you
-        keep using DevDogs after a change, you&apos;re agreeing to the updated
-        terms.
+        We may update these terms. When we do, we add or change a &quot;Last
+        updated&quot; date above; the effective date stays the date these terms
+        first applied. For significant changes, we also announce them on
+        Discord. If you keep using DevDogs after a change, you&apos;re agreeing
+        to the updated terms.
       </p>
       <h2 id="13-questions">13. Questions</h2>
       <p>

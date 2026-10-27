@@ -25,6 +25,8 @@ export default async function Privacy() {
   return (
     <article className="content-legal">
       <h1 id="devdogs-privacy-policy">DevDogs Privacy Policy</h1>
+      {/* The effective date is when the first policy applied and never
+          changes. A rewrite changes "Last updated" (§11 says so). */}
       <p>
         <strong>Effective date:</strong> October 10, 2024
       </p>
