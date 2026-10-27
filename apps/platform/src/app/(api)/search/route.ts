@@ -3,6 +3,7 @@ import { getCallerContext } from "~/server/actions/permissions";
 import { expectSession } from "~/server/auth";
 import { buildAppSearchEntries } from "~/server/search/appEntries";
 import { searchDocs } from "~/server/search/docsSearch";
+import { searchPublishedDocs } from "~/server/search/publishedDocsSearch";
 import { matchEntries } from "~/server/search/match";
 import { supportConfig } from "~/server/support/config";
 import { searchForumEntries } from "~/server/support/search";
@@ -40,9 +41,15 @@ export async function GET(request: Request) {
   );
 
   const pages = matchEntries(appEntries, query, 8);
-  const [docs, forum] = await Promise.all([
+  const [docs, publishedDocs, forum] = await Promise.all([
     searchDocs(query, { limit: 10 }).catch((error) => {
       console.error("[search] docs full-text search failed", error);
+      return [];
+    }),
+    // Projects published through the docs pipeline, matched in memory from
+    // their `search.json`; nothing is written to the database index.
+    searchPublishedDocs(query, { limit: 5 }).catch((error) => {
+      console.error("[search] published docs search failed", error);
       return [];
     }),
     // Anonymized FAQ posts from the support forum. Off with the widget.
@@ -58,6 +65,7 @@ export async function GET(request: Request) {
     ...(supportConfig() && HELP_QUERY.test(query) ? [GET_HELP] : []),
     ...pages,
     ...docs,
+    ...publishedDocs,
     ...forum,
   ]);
 }
