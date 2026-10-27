@@ -1,7 +1,7 @@
-import { clubWeekKey } from "./streakPolicy";
+import { clubWeekStart } from "@devdogsuga/events";
 
 export interface WeeklyMerges {
-  /** Monday of the club week (`clubWeekKey`), `YYYY-MM-DD`. */
+  /** Monday of the club week (`clubWeekStart`), `YYYY-MM-DD`. */
   week: string;
   merged: number;
 }
@@ -10,7 +10,7 @@ export interface WeeklyMerges {
 export function countMergesByWeek(mergedAt: readonly Date[]): WeeklyMerges[] {
   const counts = new Map<string, number>();
   for (const at of mergedAt) {
-    const week = clubWeekKey(at);
+    const week = clubWeekStart(at);
     counts.set(week, (counts.get(week) ?? 0) + 1);
   }
   return [...counts.entries()]

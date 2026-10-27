@@ -16,7 +16,10 @@ import {
 } from "~/lib/directoryQuery";
 import { getPublicBadges } from "./badges";
 import type { BadgeEntry } from "../badges/display";
-import { getStarsForUser, totalStars, type StarTotals } from "./stars";
+import {
+  getWeeklyParticipation,
+  type WeeklyParticipation,
+} from "./weeklyParticipation";
 
 /**
  * Reads for public member profiles.
@@ -31,7 +34,7 @@ import { getStarsForUser, totalStars, type StarTotals } from "./stars";
  * ACCESS MODEL. The server connects to Postgres as `postgres`, which bypasses
  * RLS, and the view is granted to neither `anon` nor `authenticated`, so it is
  * unreachable from a browser. These loaders are therefore the only door.
- * Never read `profile`, `profileLinks` or `memberStars` for a public page
+ * Never read `profile` or `profileLinks` for a public page
  * directly; go through here.
  *
  * `userId` is a join key, not public data. It stays out of `PublicProfile` and
@@ -57,7 +60,6 @@ export interface PublicProfileVisibility {
   avatar: boolean;
   bio: boolean;
   links: boolean;
-  stars: boolean;
 }
 
 export interface PublicProfile {
@@ -109,7 +111,6 @@ function toProfile(row: ViewRow): PublicProfile {
       avatar: row.showAvatar!,
       bio: row.showBio!,
       links: row.showLinks!,
-      stars: row.showStars!,
     },
   };
 }
@@ -294,7 +295,12 @@ export interface PublicProfileLink {
  */
 export interface PublicProfileActivity {
   links: PublicProfileLink[] | null;
-  stars: StarTotals | null;
+  /**
+   * The weekly streak and art. Always present: it follows the streak's
+   * visibility, which has no toggle (Q175). It names no meeting and no
+   * repository, only which weeks lit.
+   */
+  weekly: WeeklyParticipation;
   /** Merged pull requests in public DevDogs repositories, newest first. */
   contributions: ContributionItem[] | null;
   /**
@@ -306,11 +312,13 @@ export interface PublicProfileActivity {
 }
 
 /**
- * Links, star totals and merged pull requests for a public profile, each gated on its own
- * visibility flag. Null when the handle is not a public profile (resolved
- * through the view, so the visibility rule is not repeated).
+ * Links, merged pull requests, badges and the weekly streak for a public
+ * profile; links and pull requests are each gated on their own visibility
+ * flag. Null when the handle is not a public profile (resolved through the
+ * view, so the visibility rule is not repeated).
  *
- * Attendance, streak and reflections are not read here and must never be.
+ * The streak is the only attendance-derived thing read here, and only as lit
+ * or unlit weeks. Meetings attended, reflections and hours are never read.
  */
 export const getPublicProfileActivity = cache(
   async (handle: string): Promise<PublicProfileActivity | null> => {
@@ -318,7 +326,6 @@ export const getPublicProfileActivity = cache(
       .select({
         userId: publicProfiles.userId,
         showLinks: publicProfiles.showLinks,
-        showStars: publicProfiles.showStars,
         showContributions: publicProfiles.showContributions,
       })
       .from(publicProfiles)
@@ -326,7 +333,7 @@ export const getPublicProfileActivity = cache(
     if (!member) return null;
     const userId = member.userId!;
 
-    const [links, stars, contributions, badges] = await Promise.all([
+    const [links, weekly, contributions, badges] = await Promise.all([
       member.showLinks
         ? db
             .select({ title: profileLinks.title, url: profileLinks.url })
@@ -334,16 +341,14 @@ export const getPublicProfileActivity = cache(
             .where(eq(profileLinks.userId, userId))
             .orderBy(asc(profileLinks.sortOrder))
         : null,
-      member.showStars
-        ? getStarsForUser(userId).then((cells) => totalStars(cells))
-        : null,
+      getWeeklyParticipation(userId),
       member.showContributions
         ? getContributionsForUser(userId, { publicOnly: true })
         : null,
       getPublicBadges(userId),
     ]);
 
-    return { links, stars, contributions, badges };
+    return { links, weekly, contributions, badges };
   },
 );
 

@@ -2,6 +2,7 @@
 import { type z } from "zod";
 import badgesFile from "./data/badges.json" with { type: "json" };
 import meetingsFile from "./data/meetings.json" with { type: "json" };
+import semestersFile from "./data/semesters.json" with { type: "json" };
 import seriesFile from "./data/series.json" with { type: "json" };
 import questionsFile from "./data/questions.json" with { type: "json" };
 import venuesFile from "./data/venues.json" with { type: "json" };
@@ -11,6 +12,7 @@ import { ClubConfigError } from "./index.js";
 import { questionsConfigSchema } from "./questions.js";
 import { resolveMeetings } from "./resolve.js";
 import { clubConfigSchema } from "./schema.js";
+import { semestersConfigSchema, validateSemesters } from "./semesters.js";
 import { seriesConfigSchema } from "./series.js";
 import {
   validateAuthored,
@@ -46,6 +48,8 @@ function main(): number {
   const workshops = workshopsConfigSchema.safeParse(workshopsFile);
   const venues = venuesConfigSchema.safeParse(venuesFile);
   const badges = badgesConfigSchema.safeParse(badgesFile);
+  const semesters = semestersConfigSchema.safeParse(semestersFile);
+  if (!semesters.success) shapeErrors("semesters.json", semesters.error);
   if (!badges.success) shapeErrors("badges.json", badges.error);
   if (!workshops.success) shapeErrors("workshops.json", workshops.error);
   if (!venues.success) shapeErrors("venues.json", venues.error);
@@ -58,7 +62,8 @@ function main(): number {
     !questions.success ||
     !workshops.success ||
     !venues.success ||
-    !badges.success
+    !badges.success ||
+    !semesters.success
   ) {
     return 1;
   }
@@ -96,12 +101,22 @@ function main(): number {
     return 1;
   }
 
+  const semesterIssues = validateSemesters(semesters.data, resolved.meetings);
+  if (semesterIssues.length > 0) {
+    for (const issue of semesterIssues) {
+      process.stderr.write(
+        `events: semesters.json [${issue.id}] ${issue.message}\n`,
+      );
+    }
+    return 1;
+  }
+
   const workshopCount = resolved.meetings.reduce(
     (total, meeting) => total + meeting.agenda.length,
     0,
   );
   process.stdout.write(
-    `events: ok (${resolved.meetings.length} meetings, ${series.data.series.length} series, ${workshops.data.workshops.length} workshops defined (${workshopCount} on agendas), ${venues.data.venues.length} venues, ` +
+    `events: ok (${resolved.meetings.length} meetings, ${series.data.series.length} series, ${workshops.data.workshops.length} workshops defined (${workshopCount} on agendas), ${venues.data.venues.length} venues, ${semesters.data.semesters.length} semesters, ` +
       `${questions.data.questions.length} questions)\n`,
   );
   return 0;

@@ -6,6 +6,7 @@ import {
   getPublicProfileActivity,
   getPublicProfileByHandle,
 } from "~/server/loaders/publicProfiles";
+import { emptyWeekTreatment } from "~/server/loaders/weeklyParticipation";
 import { handleFromSegment } from "~/lib/profilePath";
 import { publicProfilesEnabled } from "~/server/features";
 
@@ -59,5 +60,11 @@ export default async function CommunityProfilePage({
   ]);
   if (!profile || !activity) notFound();
 
-  return <PublicProfile profile={profile} activity={activity} />;
+  return (
+    <PublicProfile
+      profile={profile}
+      activity={activity}
+      treatment={emptyWeekTreatment()}
+    />
+  );
 }

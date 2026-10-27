@@ -17,7 +17,7 @@ export type RecordAttendanceResult =
  * Every meeting records attendance, including ones that don't count for
  * credit (build sessions): a meeting having a workshop (`meeting_has_workshop`)
  * decides stars, streaks, reflections and EL eligibility, each of which
- * filters on it where it reads attendance (`memberStars`, the streak loader,
+ * filters on it where it reads attendance (`memberStars`, the weekly streak loader,
  * reflections), not whether a member was in the room -- and the check-in survey follows that record.
  */
 export async function recordMemberAttendance(
