@@ -10,6 +10,7 @@ import {
 } from "./parse.js";
 import { linkSourceOf } from "./links.js";
 import { renderBody } from "./render.js";
+import type { RenderPolicy } from "./sanitize.js";
 import type {
   CompiledPage,
   DocsFolder,
@@ -516,12 +517,18 @@ export function compileDocs(contentRoot: string): {
  */
 export async function renderPages(
   compiled: readonly CompiledPage[],
+  policyFor?: (page: CompiledPage) => RenderPolicy,
 ): Promise<DocsPage[]> {
   const pages: DocsPage[] = [];
   for (const { content, variants, ...page } of compiled) {
     pages.push({
       ...page,
-      html: await renderBody(content, variants, linkSourceOf(page)),
+      html: await renderBody(
+        content,
+        variants,
+        linkSourceOf(page),
+        policyFor?.({ ...page, content, variants }),
+      ),
     });
   }
   return pages;

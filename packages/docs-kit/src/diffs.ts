@@ -32,7 +32,7 @@
  * to sit between whole elements, never inside a list item or a quote; a
  * nested one stays an ordinary `diff` code block.
  */
-import type { Code, Root } from "mdast";
+import type { Code, Root, RootContent } from "mdast";
 import { metaAttribute as attribute, vscodeLink } from "./codeblocks.js";
 import { codeIcon, type CodeIcon } from "./codeicons.js";
 import { DocsBuildError } from "./errors.js";
@@ -190,10 +190,15 @@ export function remarkDiffs() {
       if (node.type !== "code") return node;
       const diff = readDiff(node);
       if (!diff) return node;
+      // An element, not an `html` node: raw HTML is author-written and held
+      // to the allowlist (sanitize.ts); this is the compiler's own output.
       return {
-        type: "html",
-        value: `<div data-docs-diff="${encodeDiff(diff)}"></div>`,
-      };
+        type: "diffPlaceholder",
+        data: {
+          hName: "div",
+          hProperties: { dataDocsDiff: encodeDiff(diff) },
+        },
+      } as unknown as RootContent;
     });
   };
 }

@@ -25,3 +25,13 @@ export type {
   DocsSection,
   ParsedDocFile,
 } from "./types.js";
+export {
+  compileUntrustedDocs,
+  DEFAULT_UNTRUSTED_LIMITS,
+  MANIFEST_FILE,
+  type UntrustedAsset,
+  type UntrustedCompileOptions,
+  type UntrustedCompileResult,
+  type UntrustedLimits,
+  type UntrustedManifest,
+} from "./untrusted.js";

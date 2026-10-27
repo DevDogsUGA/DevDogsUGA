@@ -8,6 +8,7 @@ import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
+import { DocsBuildError } from "./errors.js";
 import type { DocHeading, ParsedDocFile } from "./types.js";
 import { resolveVariants, type VariantContext } from "./variants.js";
 
@@ -123,12 +124,44 @@ function blockText(node: Node): string {
 }
 
 /**
+ * Frontmatter engines. gray-matter ships a `---js` engine that `eval`s the
+ * block, which is code execution from a markdown file; the YAML engine
+ * (`---` or `---yaml`) and JSON are data, and are all that is allowed.
+ */
+function refuseEngine(language: string) {
+  return () => {
+    throw new DocsBuildError(
+      `frontmatter written as ${language} isn't supported — use plain YAML between --- lines`,
+    );
+  };
+}
+
+function readFrontmatter(source: string, fileName: string) {
+  try {
+    return matter(source, {
+      engines: {
+        js: refuseEngine("JavaScript"),
+        javascript: refuseEngine("JavaScript"),
+        json: (text: string) => JSON.parse(text) as object,
+      },
+    });
+  } catch (error) {
+    if (error instanceof DocsBuildError) {
+      throw new DocsBuildError(`${fileName}: ${error.message}`);
+    }
+    throw new DocsBuildError(
+      `${fileName}: unreadable frontmatter (${error instanceof Error ? error.message.split("\n")[0] : String(error)})`,
+    );
+  }
+}
+
+/**
  * Parses a raw markdown source into everything a docs page needs. Heading ids
  * use github-slugger so they match the anchors that rehype-slug generates at
  * render time.
  */
 export function parseDocFile(source: string, fileName: string): ParsedDocFile {
-  const { data: frontmatter, content } = matter(source);
+  const { data: frontmatter, content } = readFrontmatter(source, fileName);
 
   const tree = processor.parse(content);
   const headings = headingsOf(tree);
