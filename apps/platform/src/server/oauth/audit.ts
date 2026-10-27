@@ -37,6 +37,8 @@ export const OAUTH_AUDIT_ACTIONS = [
   "oauth_app.consent_changed",
   "oauth_app.transferred_to_devdogs",
   "oauth_app.approval_forgotten",
+  // The logo, homepage or privacy policy of an app members sign in with.
+  "oauth_app.details_changed",
 ] as const;
 
 export type OAuthAuditAction = (typeof OAUTH_AUDIT_ACTIONS)[number];

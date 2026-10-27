@@ -109,6 +109,11 @@ export const TERMINAL_PATHS = [
   },
 
   {
+    pattern: "/console/apps",
+    regex: /^\/console\/apps\/?$/,
+    page: "(site)/console/apps/page.tsx",
+  },
+  {
     pattern: "/console/graphics",
     regex: /^\/console\/graphics\/?$/,
     page: "(site)/console/graphics/page.tsx",

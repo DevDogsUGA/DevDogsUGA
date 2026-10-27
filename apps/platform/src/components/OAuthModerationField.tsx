@@ -82,7 +82,7 @@ export default function OAuthModerationField({
 
             {!client.enabled && client.production ? (
               <p className="help">
-                A production client is turned on by registering it under Apps
+                An app In production is turned on by registering it under Apps
                 Outside the Platform on the moderation page of the console. The
                 secret is shown there once, and rotated here if it is lost.
               </p>

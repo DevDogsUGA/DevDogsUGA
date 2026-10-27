@@ -1,8 +1,7 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { TestAccount } from "~/server/actions/testAccounts";
-import { canUserManageOAuthApps } from "~/server/actions/permissions";
 import { expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
 import {
@@ -16,7 +15,11 @@ import {
   getVerificationStatus,
 } from "~/server/loaders/verification";
 import { testAccountName } from "~/lib/testAccountName";
+import { env } from "~/env";
+import { logoUrl } from "~/server/oauth/consentScreen";
+import { MAX_APPS_PER_MEMBER, type OAuthStatus } from "~/server/oauth/status";
 import { supabaseAdmin } from "~/supabase/admin";
+import { oauthConsentsInAuth } from "~/supabase/drizzle/schema";
 
 export type AssignedRole = {
   roleId: string;
@@ -114,28 +117,30 @@ export const getProfilePageData = cache(async () => {
 export type OAuthClientSummary = {
   clientId: string;
   label: string;
+  status: OAuthStatus;
   redirectUris: string[];
-  /** The registering member's preferred name; set for production clients. */
-  ownerName: string | null;
+  /** The logo's public URL in our own storage, or null (a letter tile shows). */
+  logoUrl: string | null;
+  homepageUrl: string | null;
+  privacyPolicyUrl: string | null;
+  /** The test accounts that currently hold an approval of this app. */
+  approvedTestAccountIds: string[];
 };
+
+/** Public URL of a logo in the avatars bucket, for the settings and console UI. */
+export function appLogoUrl(logoPath: string | null): string | null {
+  return logoUrl(logoPath, {
+    baseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+    bucket: env.NEXT_PUBLIC_AVATARS_BUCKET,
+  });
+}
 
 export const getOAuthPageData = cache(async () => {
   const {
     id: userId,
-    profile,
     githubIdentity,
     testAccounts,
   } = await expectUserWith({
-    profile: {
-      with: {
-        // Testing apps only: an app that is In production is listed below,
-        // for whoever holds `canManageOAuthApps`, whoever registered it.
-        oauthRegistrations: {
-          columns: { clientId: true, label: true },
-          where: { status: "testing" },
-        },
-      },
-    },
     githubIdentity: { columns: { id: true } },
     testAccounts: {
       columns: { createdAt: true },
@@ -148,46 +153,62 @@ export const getOAuthPageData = cache(async () => {
     },
   }).catch(() => redirect("/auth"));
 
-  const canManageOAuthApps = await canUserManageOAuthApps(userId);
+  // Every app this member registered, Testing or In production: they keep
+  // managing it after it is published (Q155). DevDogs apps are not theirs.
+  const registrations = await db.query.oauthRegistrations.findMany({
+    columns: {
+      clientId: true,
+      label: true,
+      status: true,
+      logoPath: true,
+      homepageUrl: true,
+      privacyPolicyUrl: true,
+    },
+    where: { userId },
+    orderBy: { label: "asc" },
+  });
 
-  const summarise = async (
-    clientId: string,
-    label: string,
-    ownerName: string | null,
-  ): Promise<OAuthClientSummary> => {
-    const { data } = await supabaseAdmin.auth.admin.oauth.getClient(clientId);
-    return {
-      clientId,
-      label,
-      ownerName,
-      redirectUris: data?.redirect_uris ?? [],
-    };
-  };
-
-  const registrations = profile?.oauthRegistrations ?? [];
+  const testAccountIds = testAccounts.map(({ user }) => user.id);
+  const approvals =
+    registrations.length > 0 && testAccountIds.length > 0
+      ? await db
+          .select({
+            clientId: oauthConsentsInAuth.clientId,
+            userId: oauthConsentsInAuth.userId,
+          })
+          .from(oauthConsentsInAuth)
+          .where(
+            and(
+              inArray(
+                oauthConsentsInAuth.clientId,
+                registrations.map((r) => r.clientId),
+              ),
+              inArray(oauthConsentsInAuth.userId, testAccountIds),
+              isNull(oauthConsentsInAuth.revokedAt),
+            ),
+          )
+      : [];
 
   // One OAuth client per project since migration 32 -- fetch each
   // registration's live redirect URIs from the Admin SDK in parallel.
   const clients: OAuthClientSummary[] = await Promise.all(
-    registrations.map(({ clientId, label }) =>
-      summarise(clientId, label, null),
-    ),
-  );
-
-  const productionRegistrations = canManageOAuthApps
-    ? await db.query.oauthRegistrations.findMany({
-        columns: { clientId: true, label: true },
-        where: {
-          OR: [{ status: "in_production" }, { userId: { isNull: true } }],
-        },
-        with: { profile: { columns: { preferredName: true } } },
-        orderBy: { label: "asc" },
-      })
-    : [];
-  const productionClients: OAuthClientSummary[] = await Promise.all(
-    productionRegistrations.map(({ clientId, label, profile: owner }) =>
-      summarise(clientId, label, owner?.preferredName ?? null),
-    ),
+    registrations.map(async (registration) => {
+      const { data } = await supabaseAdmin.auth.admin.oauth.getClient(
+        registration.clientId,
+      );
+      return {
+        clientId: registration.clientId,
+        label: registration.label,
+        status: registration.status,
+        redirectUris: data?.redirect_uris ?? [],
+        logoUrl: appLogoUrl(registration.logoPath),
+        homepageUrl: registration.homepageUrl,
+        privacyPolicyUrl: registration.privacyPolicyUrl,
+        approvedTestAccountIds: approvals
+          .filter((a) => a.clientId === registration.clientId)
+          .map((a) => a.userId),
+      };
+    }),
   );
 
   const mappedTestAccounts: TestAccount[] = testAccounts.map(
@@ -200,11 +221,8 @@ export const getOAuthPageData = cache(async () => {
 
   return {
     clients,
-    productionClients,
-    canManageOAuthApps,
-    // The gate asks a member with no client of their own to enable OAuth. It
-    // has nothing to say to someone who is here to manage production clients.
-    hasAnyClient: clients.length > 0 || canManageOAuthApps,
+    appCount: clients.length,
+    maxApps: MAX_APPS_PER_MEMBER,
     hasGithub: githubIdentity !== null,
     testAccounts: mappedTestAccounts,
   };

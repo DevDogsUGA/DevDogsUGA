@@ -51,7 +51,7 @@ max_client_conn = 100
 # app instead and give the account a role with `pnpm devtools roles grant`.
 [db.seed]
 enabled = true
-sql_paths = ["./seed/roles/*.sql"]
+sql_paths = ["./seed/roles/*.sql", "./seed/apps/*.sql"]
 
 [realtime]
 enabled = false
@@ -79,6 +79,10 @@ enabled = false
 public = true
 file_size_limit = "256KiB"
 allowed_mime_types = ["image/webp"]
+# The DogDays and DogPack app icons (apps/<name>.webp): `backstage deploy
+# avatars` uploads what the bucket lacks. The seed that sets their `logoPath`
+# is seed/apps/logos.sql.
+objects_path = "./seed/app-icons"
 
 [auth]
 enabled = true

@@ -107,7 +107,7 @@ export default async function oauthModerationAction(
     case "enable": {
       if (production) {
         return fail(
-          "A production client is turned on by registering it under Apps Outside the Platform in the console",
+          "An app In production is turned on by registering it under Apps Outside the Platform in the console",
         );
       }
       const endpointUrl = field(formData, "endpointUrl");
@@ -207,7 +207,7 @@ export default async function oauthModerationAction(
       if (!existing) return fail("Turn moderation on first");
       if (production || existing.appId) {
         return fail(
-          "This client is a registered production app. Test actions only go to development clients",
+          "This client is a registered production app. Test actions only go to apps in Testing",
         );
       }
       if (!existing.endpointUrl) return fail("Set an endpoint URL first");

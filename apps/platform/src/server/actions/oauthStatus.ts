@@ -25,7 +25,7 @@ import { canUserManageOAuthApps } from "./permissions";
  * accounts, or any member's, for themselves.
  */
 
-export const NOT_AUTHORIZED = "Not authorized: canManageOAuthApps required";
+const NOT_AUTHORIZED = "Not authorized: canManageOAuthApps required";
 
 const uuid = z.uuid();
 
