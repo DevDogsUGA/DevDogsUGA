@@ -20,9 +20,13 @@ section: infrastructure
 | The GitHub OAuth app (`GH_CLIENT_ID`, `GH_CLIENT_SECRET`)                         | Members signing in with GitHub                                                                     | Bitwarden, Supabase auth config |
 | `WORKSHOPS_READ_TOKEN`                                                            | A fine-grained token that reads the private workshop repositories, for the slides build            | A repository secret             |
 | The read-only GitHub App (`GH_APP_ID`, `GH_APP_PRIVATE_KEY`, `GH_WEBHOOK_SECRET`) | Merged pull requests for member profiles ([Contributions](../../platform/guides/contributions.md)) | Bitwarden, the platform Worker  |
+| The config-PR GitHub App (`GH_CONFIG_APP_ID`, `GH_CONFIG_APP_PRIVATE_KEY`)        | The console's schedule editor opens pull requests that edit `packages/events/src/data/*.json`      | Bitwarden, the platform Worker  |
 | Renovate                                                                          | A GitHub App (Mend's), installed by an owner                                                       | The App's own installation      |
 
-The platform holds no GitHub App that administers the organization: teams and competitions left the platform, and with them that administration. The OAuth app signs members in. The one App it uses is read-only (`devdogs-platform`, and a staging twin): it reports merged pull requests and nothing else.
+The platform holds no GitHub App that administers the organization: teams and competitions left the platform, and with them that administration. The OAuth app signs members in. Two Apps do the rest, split by privilege because an App's write permission covers every repository it is installed on:
+
+- **`devdogs-platform`** (and a staging twin) is read-only: it reports merged pull requests and nothing else.
+- **"DevDogs config PRs"** (the former `devdogs-deploy-pr`; one app, with the same `GH_CONFIG_*` values on the staging and production Workers) is the only writer: Contents and Pull requests write, installed on DevDogsUGA only. The console's schedule editor uses it to open a config pull request from its own branch, naming the officer in the body and as co-author, so officers need no repository access. Staging opens draft pull requests labelled `staging`. Without `GH_CONFIG_APP_ID` and `GH_CONFIG_APP_PRIVATE_KEY` the editor still saves edits and shows the diff, and Open PR reports itself unavailable. The private key may be PKCS#1 or PKCS#8.
 
 ## Rotating
 

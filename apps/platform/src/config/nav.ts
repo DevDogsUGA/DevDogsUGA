@@ -155,6 +155,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
     description: "Set the word minimum and submission window for reflections.",
   },
   {
+    label: "Schedule editor",
+    href: "/console/meetings",
+    icon: "CalendarDotsIcon",
+    permission: "isLeader",
+    description:
+      "Propose changes to meetings, workshops and venues. Edits are saved privately; Open PR sends them to GitHub for review.",
+  },
+  {
     label: "Badges",
     href: "/console/badges",
     icon: "SealCheckIcon",
