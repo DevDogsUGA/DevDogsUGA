@@ -8,7 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * Shared by the two ways consent happens on this platform: a production
  * client's automatic approval (`/oauth/consent`, signed in as the member) and a
  * development client's owner approving as one of their test accounts
- * (`approveTestAccountAuthorization`). Neither decision is made here: callers
+ * (`allowConsent`, via `approveAs`). Neither decision is made here: callers
  * have already checked the tier and who is allowed to approve.
  */
 export async function approveAuthorization(

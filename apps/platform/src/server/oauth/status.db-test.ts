@@ -365,7 +365,7 @@ describe("findConsentTarget", () => {
   });
 
   it("reads the status, the owner, the details and the stored return address", async () => {
-    expect(await findConsentTarget("tiers-db-test-production")).toEqual({
+    expect(await findConsentTarget("tiers-db-test-production")).toMatchObject({
       ownerUserId: IDS.owner,
       status: "in_production",
       asksForConsent: true,

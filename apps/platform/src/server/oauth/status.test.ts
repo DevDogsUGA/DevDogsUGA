@@ -70,14 +70,14 @@ describe("decideConsent", () => {
   });
 
   it("refuses test identities on an In production app (Q164)", () => {
-    expect(decide({ isTestIdentity: true })).toBe("not-found");
+    expect(decide({ isTestIdentity: true })).toBe("test-identity");
     expect(
       decide({
         ownerUserId: null,
         asksForConsent: false,
         isTestIdentity: true,
       }),
-    ).toBe("not-found");
+    ).toBe("test-identity");
   });
 
   it("is a 404 for an unknown status or a return address the redirect rule refuses", () => {
