@@ -268,7 +268,8 @@ export default function PublicProfileSection({
           </Row>
         ))}
         <p className="help" style={{ marginTop: 20 }}>
-          Never shown publicly: your email, graduation date and academics.
+          Always shown on a public profile: your majors and graduation year.
+          Never shown: your email, graduation semester, minors and certificates.
         </p>
       </div>
 

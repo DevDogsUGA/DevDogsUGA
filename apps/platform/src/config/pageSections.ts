@@ -59,13 +59,13 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "graduation",
           label: "Graduation",
           description:
-            "Your expected graduation semester and year. Used to verify your student status; never shown publicly.",
+            "Your expected graduation semester and year. Used to verify your student status. Only the year is shown on your public profile.",
         },
         {
           id: "academics",
           label: "Academics",
           description:
-            "Select all of your UGA programs of study, including majors, minors, graduate programs, and certificates. Never shown publicly.",
+            "Select all of your UGA programs of study, including majors, minors, graduate programs, and certificates. Your majors (not minors or certificates) are shown on your public profile.",
         },
         {
           id: "bio",

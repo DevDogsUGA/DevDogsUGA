@@ -112,14 +112,14 @@ async function ProfileContent() {
             <Field
               id="graduation"
               label="Graduation"
-              description="Your expected graduation semester and year. Used to verify your student status; never shown publicly."
+              description="Your expected graduation semester and year. Used to verify your student status. Only the year is shown on your public profile."
             >
               <GraduationDateField {...data} />
             </Field>
             <Field
               id="academics"
               label="Academics"
-              description="Select all of your UGA programs of study, including majors, minors, graduate programs, and certificates. Never shown publicly."
+              description="Select all of your UGA programs of study, including majors, minors, graduate programs, and certificates. Your majors (not minors or certificates) are shown on your public profile."
             >
               <AcademicFields {...data} />
             </Field>

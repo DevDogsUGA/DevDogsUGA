@@ -11,6 +11,8 @@ const base: PublicProfile = {
   githubHandle: null,
   discordHandle: null,
   linkedinName: null,
+  graduationYear: 2030,
+  majors: ["Computer Science"],
   visibility: {
     name: true,
     avatar: true,

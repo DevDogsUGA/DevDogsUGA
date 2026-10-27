@@ -1,13 +1,20 @@
 import { INVOLVEMENT_NETWORK_ROSTER_URL } from "~/config/nav";
+import {
+  academicsLine,
+  directoryHref,
+  isFiltered,
+  parseDirectoryQuery,
+} from "~/lib/directoryQuery";
 import { formatEventDate } from "~/lib/eventTime";
 import { handleFromSegment, profilePath } from "~/lib/profilePath";
 import { publicProfilesEnabled } from "~/server/features";
 import { getCurrentOfficers } from "~/server/loaders/officers";
 import {
+  getDirectoryFacets,
   getPublicHandlesByUserId,
   getPublicProfileActivity,
   getPublicProfileByHandle,
-  listPublicProfiles,
+  searchPublicProfiles,
 } from "~/server/loaders/publicProfiles";
 import type { Block, Entry, Field } from "../blocks";
 import { gatedBy, NOT_FOUND, page, terminal } from "../define";
@@ -23,19 +30,19 @@ export const communityDirectory = terminal(
     kind: "redirect",
     url: INVOLVEMENT_NETWORK_ROSTER_URL,
   }),
-  async () => {
-    const [officers, members] = await Promise.all([
+  async ({ search }) => {
+    const query = parseDirectoryQuery(search);
+    const filtered = isFiltered(query);
+    const [officers, directory, facets] = await Promise.all([
       getCurrentOfficers(),
-      listPublicProfiles(),
+      searchPublicProfiles({ ...query, excludeLeadership: !filtered }),
+      getDirectoryFacets(),
     ]);
     const officerHandles = await getPublicHandlesByUserId(
       officers.map((officer) => officer.slug),
     );
-    // Officers lead; a member who is also an officer isn't listed twice.
-    const officerHandleSet = new Set(officerHandles.values());
-    const others = members.filter(
-      (member) => !officerHandleSet.has(member.handle),
-    );
+    const { members, total, totalPages } = directory;
+    const pageNumber = directory.page;
 
     const leadership: Entry[] = officers.map((officer) => {
       const handle = officerHandles.get(officer.slug);
@@ -48,29 +55,69 @@ export const communityDirectory = terminal(
         path: handle ? profilePath(handle) : undefined,
       };
     });
-    const directory: Entry[] = others.map((member) => ({
+    const entries: Entry[] = members.map((member) => ({
       label: member.displayName ?? `@${member.handle}`,
       meta: member.displayName ? `@${member.handle}` : undefined,
+      headline: academicsLine(member) ?? undefined,
       text: member.bio ?? undefined,
       path: profilePath(member.handle),
     }));
 
-    return page({
-      banner: "COMMUNITY",
-      accent: "emerald",
-      aside: [`${officers.length + others.length} people`],
-      command: "community --list",
-      body: [
-        { type: "text", text: "Meet the members and leadership of DevDogs." },
+    const body: Block[] = [
+      { type: "text", text: "Meet the members and leadership of DevDogs." },
+    ];
+    // The board is part of the unfiltered first page only, as in the browser.
+    if (!filtered && pageNumber === 1) {
+      body.push(
         { type: "heading", text: "leadership" },
         {
           type: "entries",
           items: leadership,
           empty: "No officers listed yet.",
         },
-        { type: "heading", text: "members" },
-        { type: "entries", items: directory, empty: "No public profiles yet." },
+      );
+    }
+    body.push(
+      { type: "heading", text: filtered ? "results" : "members" },
+      {
+        type: "entries",
+        items: entries,
+        empty: filtered
+          ? "No one matches that search."
+          : "No public profiles yet.",
+      },
+    );
+    const nav: Field[] = [];
+    if (pageNumber > 1)
+      nav.push({ label: "prev", value: directoryHref(query, pageNumber - 1) });
+    if (pageNumber < totalPages)
+      nav.push({ label: "next", value: directoryHref(query, pageNumber + 1) });
+    nav.push({
+      label: "filters",
+      value: "?q=NAME&major=NAME&year=YYYY&leadership=1&page=N",
+    });
+    if (facets.majors.length) {
+      nav.push({ label: "majors", value: facets.majors.join(", ") });
+    }
+    if (facets.years.length) {
+      nav.push({ label: "years", value: facets.years.join(", ") });
+    }
+    body.push(
+      { type: "heading", text: "navigate" },
+      { type: "fields", rows: nav },
+    );
+
+    return page({
+      banner: "COMMUNITY",
+      accent: "emerald",
+      aside: [
+        `${total} ${total === 1 ? "person" : "people"}`,
+        ...(totalPages > 1 ? [`page ${pageNumber}/${totalPages}`] : []),
       ],
+      command: filtered
+        ? `community --search ${JSON.stringify(query.q)}`
+        : "community --list",
+      body,
     });
   },
 );
@@ -90,6 +137,8 @@ export const communityProfile = terminal(
       { type: "lead", text: profile.displayName ?? `@${profile.handle}` },
     ];
     if (profile.bio) body.push({ type: "text", text: profile.bio });
+    const academics = academicsLine(profile);
+    if (academics) body.push({ type: "text", text: academics });
     if (profile.roleDescription) {
       body.push({ type: "text", text: profile.roleDescription, tone: "dim" });
     }

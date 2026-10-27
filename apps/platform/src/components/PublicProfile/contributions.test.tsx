@@ -15,6 +15,8 @@ const profile: Profile = {
   githubHandle: null,
   discordHandle: null,
   linkedinName: null,
+  graduationYear: null,
+  majors: [],
   visibility: { name: true, avatar: true, bio: true, links: true, stars: true },
 };
 

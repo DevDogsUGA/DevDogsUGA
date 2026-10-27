@@ -30,6 +30,25 @@
   .cosmic .cm-count b {
     color: var(--text);
   }
+  .cosmic .cm-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto auto;
+    gap: 16px;
+    align-items: end;
+    margin-bottom: var(--space-6);
+  }
+  .cosmic .cm-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .cosmic .cm-filter-check {
+    min-height: 44px;
+    align-items: center;
+  }
+  .cosmic .pagination-nav {
+    margin-top: var(--space-6);
+  }
   .cosmic .cm-grid {
     list-style: none;
     margin: 0;
@@ -111,6 +130,11 @@
     font-size: 14px;
     color: var(--text-3);
   }
+  .cosmic .cm-academics {
+    margin: 8px 0 0;
+    font-size: 14.5px;
+    color: var(--text-2);
+  }
   .cosmic .cm-role {
     margin: 12px 0 0;
     font-weight: 600;
@@ -153,7 +177,18 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
+  @media (max-width: 1024px) {
+    .cosmic .cm-filters {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .cosmic .cm-filters > :first-child {
+      grid-column: 1 / -1;
+    }
+  }
   @media (max-width: 720px) {
+    .cosmic .cm-filters {
+      grid-template-columns: minmax(0, 1fr);
+    }
     .cosmic .cm-grid {
       grid-template-columns: minmax(0, 1fr);
       gap: 20px;
