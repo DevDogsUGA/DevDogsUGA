@@ -17,8 +17,9 @@ name: Renovate
 # through GitHub's API (platformCommit), and the rulesets name it as the bypass
 # actor on `main-reviews`. The App must be installed on all three repositories.
 #
-# The `renovate` environment holds the App's id (variable RENOVATE_APP_ID) and
-# private key (secret RENOVATE_APP_PRIVATE_KEY). It has no reviewers, because a
+# The `renovate` environment holds the App's client ID (variable
+# RENOVATE_APP_CLIENT_ID) and private key (secret RENOVATE_APP_PRIVATE_KEY, the
+# whole .pem file, BEGIN and END lines included). It has no reviewers, because a
 # scheduled job cannot wait for an approval, and only `main` may deploy to it.
 #
 # A ticked checkbox on a Dependency Dashboard takes effect at the next run, not
@@ -52,7 +53,7 @@ jobs:
       - id: token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          app-id: ${{ vars.RENOVATE_APP_ID }}
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: DevDogsUGA,DogDays,DogPack
