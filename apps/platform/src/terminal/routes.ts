@@ -8,6 +8,7 @@ import {
   consoleExports,
   consoleImports,
   consoleMeeting,
+  consoleMeetings,
   consoleProjects,
   meetingGraphics,
 } from "./routes/console";
@@ -42,6 +43,8 @@ export const TERMINAL_ROUTES = {
   "/preview/kit": kitGallery,
   "/account/deletion": accountDeletion,
   "/console/attendance/:meetingId": consoleMeeting,
+  "/console/meetings": consoleMeetings,
+  "/console/meetings/:collection/:key": consoleMeetings,
   "/console/badges": consoleBadges,
   "/console/badges/:userId": consoleBadges,
   "/console/projects": consoleProjects,

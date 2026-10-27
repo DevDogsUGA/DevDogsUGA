@@ -220,7 +220,7 @@ const server = {
       secrecy: "secret",
     },
   ),
-  // The read-only GitHub App (devdogs-platform, and its staging twin) that
+  // The read-only GitHub App (devdogs-platform, with a staging twin) that
   // feeds merged pull requests into platform.contributions. All three are
   // optional so a deploy or a local run without them boots: the webhook then
   // answers 503 and the backfill refuses to run, both loudly and harmlessly.
@@ -238,6 +238,29 @@ const server = {
       "The GitHub App's private key (PEM, PKCS#8 or PKCS#1; literal \\n " +
       "sequences are accepted). Signs the short-lived JWT the backfill " +
       "exchanges for an installation token.",
+    scope: "environment",
+    secrecy: "secret",
+  }),
+  // The writing GitHub App (devdogs-deploy-pr, renamed "DevDogs config PRs"):
+  // Contents and Pull requests write, installed on DevDogsUGA only. It opens
+  // the console's config pull requests from its own branch. Both are optional:
+  // without them the console reports pull requests as unavailable, and saved
+  // edits and diffs keep working.
+  GH_CONFIG_APP_ID: define(z.string().optional(), {
+    doc:
+      "Id of the GitHub App that opens the console's config pull requests " +
+      "(DevDogs config PRs; Contents and Pull requests write, installed on " +
+      "DevDogsUGA only; the same app and values in staging and production, " +
+      "where staging is told apart by a draft PR labelled staging). Without it, " +
+      "'Open PR' on the console's schedule editor reports itself unavailable.",
+    scope: "environment",
+    secrecy: "public",
+  }),
+  GH_CONFIG_APP_PRIVATE_KEY: define(z.string().optional(), {
+    doc:
+      "The config-PR GitHub App's private key (PEM, PKCS#8 or PKCS#1; " +
+      "literal \\n sequences are accepted). Signs the short-lived JWT the " +
+      "platform exchanges for an installation token scoped to DevDogsUGA.",
     scope: "environment",
     secrecy: "secret",
   }),

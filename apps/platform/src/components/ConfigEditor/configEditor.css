@@ -1,0 +1,129 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
+/* The console's schedule editor: item lists, the edit form and the diff. Every selector hangs off a `cfg-` class. */
+@layer cosmic {
+  .cosmic .cfg-inline {
+    display: inline-block;
+  }
+  .cosmic .cfg-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .cosmic .cfg-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 640px;
+  }
+  .cosmic .cfg-pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .cosmic .cfg-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+  }
+  .cosmic .cfg-status {
+    margin: 0;
+    font-size: 13.5px;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .cfg-status.bad {
+    color: var(--bad);
+  }
+  .cosmic .cfg-status.ok {
+    color: var(--ok);
+  }
+  .cosmic .cfg-errors {
+    margin: 4px 0 0;
+    padding-left: 18px;
+    font-size: 13.5px;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .cfg-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .cosmic .cfg-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border, currentColor);
+  }
+  .cosmic .cfg-row:first-child {
+    border-top: 0;
+  }
+  .cosmic .cfg-row-title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .cfg-row-meta {
+    color: var(--text-2);
+    font-size: 13.5px;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .cfg-changes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .cosmic .cfg-change-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    margin-bottom: 6px;
+  }
+  .cosmic .cfg-fields {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13.5px;
+  }
+  .cosmic .cfg-field-name {
+    display: block;
+    color: var(--text-2);
+  }
+  .cosmic .cfg-before,
+  .cosmic .cfg-after {
+    display: block;
+    margin: 2px 0 0;
+    padding: 4px 8px;
+    border-radius: var(--radius-1, 6px);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: var(--font-mono, monospace);
+    font-size: 13px;
+  }
+  .cosmic .cfg-before {
+    background: color-mix(in srgb, var(--bad) 12%, transparent);
+  }
+  .cosmic .cfg-after {
+    background: color-mix(in srgb, var(--ok) 14%, transparent);
+  }
+  .cosmic .cfg-before::before {
+    content: "Official: ";
+    font-family: var(--font-body, inherit);
+    color: var(--text-2);
+  }
+  .cosmic .cfg-after::before {
+    content: "Yours: ";
+    font-family: var(--font-body, inherit);
+    color: var(--text-2);
+  }
+}

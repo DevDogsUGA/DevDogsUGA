@@ -27,6 +27,32 @@ export const consoleMeeting = terminal(PUBLIC, ({ path }) =>
 );
 
 /**
+ * The schedule editor holds an officer's private, unpublished edits and opens
+ * pull requests in their name, and a curl request carries no session, so the
+ * terminal says what the page is and where to sign in. It never lists a
+ * meeting edit or a proposal.
+ */
+export const consoleMeetings = terminal(PUBLIC, ({ path }) =>
+  page({
+    banner: "DEVDOGS",
+    accent: "cyan",
+    aside: ["officers only", "sign in required"],
+    command: "console meetings",
+    body: [
+      {
+        type: "notice",
+        notice: {
+          tone: "info",
+          title: "The schedule editor lives in the browser",
+          text: "Officers can edit meetings, workshops and venues, see the difference from the official config, and open a pull request on GitHub, after signing in. Edits are saved privately until then.",
+          url: `${SITE}${path}`,
+        },
+      },
+    ],
+  }),
+);
+
+/**
  * Awarding a badge names a member and writes a public citation, and a curl
  * request carries no session, so the terminal says what the page is and where
  * to sign in. It never names a member or an award.
