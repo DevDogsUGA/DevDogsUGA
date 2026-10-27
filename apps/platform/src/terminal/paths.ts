@@ -135,6 +135,11 @@ export const TERMINAL_PATHS = [
     page: "(site)/console/data/page.tsx",
   },
   {
+    pattern: "/console/data/exports",
+    regex: /^\/console\/data\/exports\/?$/,
+    page: "(site)/console/data/exports/page.tsx",
+  },
+  {
     pattern: "/console/data/imports",
     regex: /^\/console\/data\/imports\/?$/,
     page: "(site)/console/data/imports/page.tsx",

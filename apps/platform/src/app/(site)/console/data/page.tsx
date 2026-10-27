@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { UploadSimpleIcon } from "@phosphor-icons/react/ssr";
+import {
+  DownloadSimpleIcon,
+  UploadSimpleIcon,
+} from "@phosphor-icons/react/ssr";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import { canUserManageAttendance } from "~/server/actions/permissions";
 import { requirePermission } from "~/server/auth/require";
@@ -13,9 +16,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * The home of the console's member-data tools (Q72). Imports live here now;
- * exports join them in the next stage. Everything on it needs
- * `canManageAttendance` and nothing else (Q16).
+ * The home of the console's member-data tools (Q72): imports and exports.
+ * Everything on it needs `canManageAttendance` and nothing else (Q16).
  */
 export default async function DataToolsPage() {
   await requirePermission(canUserManageAttendance);
@@ -23,7 +25,7 @@ export default async function DataToolsPage() {
     <ConsoleShell current="/console/data">
       <PageHeading
         title="Data tools"
-        description="Bring attendance sheets and the Involvement roster into the platform. Every import is previewed first and recorded in the audit log."
+        description="Bring attendance sheets and the Involvement roster into the platform, and take attendance, reflections and survey answers out. Imports are previewed first; every import and export is recorded in the audit log."
       />
       <Panel title="Imports">
         <ListRow
@@ -34,6 +36,23 @@ export default async function DataToolsPage() {
           end={
             <LinkButton
               href="/console/data/imports"
+              variant="outline"
+              size="sm"
+            >
+              Open
+            </LinkButton>
+          }
+        />
+      </Panel>
+      <Panel title="Exports">
+        <ListRow
+          variant="account"
+          icon={<DownloadSimpleIcon />}
+          title="Export attendance, reflections or survey answers"
+          description="Pick a dataset, a format and a range, check the counts and who was left out, then download."
+          end={
+            <LinkButton
+              href="/console/data/exports"
               variant="outline"
               size="sm"
             >

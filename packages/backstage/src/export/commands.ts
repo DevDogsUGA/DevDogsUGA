@@ -44,7 +44,6 @@ import { multiselect, text as askText } from "@clack/prompts";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { errorMessage, unwrap, UsageError } from "@devdogsuga/cli-core/ui";
-import { BOM } from "../csv/write.js";
 import {
   connect,
   dbError,
@@ -68,24 +67,23 @@ import {
 import { askSavePath } from "../production/save-path.js";
 import { parseBound } from "../production/time.js";
 import {
+  auditFilters,
+  BOM,
   bevyFormat,
   bevyRequiredColumns,
   bevySurvey,
-  formatFor,
-  FORMATS_BY_KIND,
-  parseFormats,
-  type Format,
-  type FormatName,
-  type Row,
-} from "./formats.js";
-import {
-  auditFilters,
   EXPORT_KINDS,
   EXPORTS,
   exportParams,
+  formatFor,
+  FORMATS_BY_KIND,
+  parseFormats,
   type ExportFilters,
   type ExportKind,
-} from "./queries.js";
+  type Format,
+  type FormatName,
+  type Row,
+} from "@devdogsuga/events/exports";
 
 /** Production, as an export uses it. One connection for the whole run. */
 export interface ExportSource {

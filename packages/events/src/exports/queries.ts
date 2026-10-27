@@ -10,7 +10,8 @@
  * a meeting id; each null when not given.
  */
 
-import { describeAnswer, type Answer, type Question } from "@devdogsuga/events";
+import { describeAnswer, type Answer } from "../answers.js";
+import type { Question } from "../questions.js";
 
 export const EXPORT_KINDS = [
   "stars",

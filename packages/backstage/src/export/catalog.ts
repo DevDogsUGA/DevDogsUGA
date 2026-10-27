@@ -12,7 +12,7 @@ import {
   type CommandNode,
   type CommandOption,
 } from "@devdogsuga/cli-core/catalog";
-import { EXPORTS, type ExportKind } from "./queries.js";
+import { EXPORTS, type ExportKind } from "@devdogsuga/events/exports";
 
 const FROM: CommandOption = {
   flag: "--from",

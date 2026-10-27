@@ -122,6 +122,9 @@ export const db = new Proxy({} as PlatformDb, {
   get(_target, property): unknown {
     const database = currentDb();
     const value: unknown = Reflect.get(database, property, database);
+    // postgres.js's client is a function whose methods (`unsafe`, `begin`,
+    // `end`) hang off it; wrapping it would hide them.
+    if (property === "$client") return value;
     return typeof value === "function"
       ? (...args: unknown[]): unknown =>
           Reflect.apply(value, database, args) as unknown
