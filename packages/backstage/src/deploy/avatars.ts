@@ -52,6 +52,26 @@ export function seededBuckets(configToml: string, supabaseDir: string) {
   return found;
 }
 
+/**
+ * Every file under `dir` as its path relative to it (`/` separated), sorted.
+ * A folder is part of an object's key: `apps/dogdays.webp` under the bucket's
+ * `objects_path` is uploaded as the key `apps/dogdays.webp`, which is how the
+ * DogDays and DogPack icons land where an app's `logoPath` says (the consent
+ * screen reads `apps/<name>.webp` in the public avatars bucket).
+ */
+export async function objectNames(dir: string, prefix = ""): Promise<string[]> {
+  const found: string[] = [];
+  for (const entry of await readdir(join(dir, prefix), {
+    withFileTypes: true,
+  })) {
+    if (entry.name.startsWith(".")) continue;
+    const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) found.push(...(await objectNames(dir, name)));
+    else if (entry.isFile()) found.push(name);
+  }
+  return found.sort();
+}
+
 /** The content type Storage needs, from the bytes; the seeds have no extension. */
 export function sniffImageType(bytes: Uint8Array): string | undefined {
   const ascii = (from: number, to: number) =>
@@ -77,7 +97,7 @@ export async function uploadIfMissing(
   contentType: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<UploadResult> {
-  const url = `${apiUrl.replace(/\/+$/, "")}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeURIComponent(name)}`;
+  const url = `${apiUrl.replace(/\/+$/, "")}/storage/v1/object/${encodeURIComponent(bucket)}/${name.split("/").map(encodeURIComponent).join("/")}`;
   const res = await fetchImpl(url, {
     method: "POST",
     headers: {
@@ -132,10 +152,7 @@ export async function runDeployAvatars(
   let uploaded = 0;
   let existing = 0;
   for (const { bucket, dir } of seededBuckets(config, supabaseDir)) {
-    const names = (await readdir(dir, { withFileTypes: true }))
-      .filter((e) => e.isFile() && !e.name.startsWith("."))
-      .map((e) => e.name)
-      .sort();
+    const names = await objectNames(dir);
     for (const name of names) {
       const bytes = new Uint8Array(await readFile(join(dir, name)));
       const type = sniffImageType(bytes);

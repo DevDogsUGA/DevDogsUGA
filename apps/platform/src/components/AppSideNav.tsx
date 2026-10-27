@@ -1,4 +1,5 @@
 import {
+  AppWindowIcon,
   BookOpenIcon,
   CalendarCheckIcon,
   FlagIcon,
@@ -103,6 +104,11 @@ export default async function AppSideNav({ current }: { current?: string }) {
       label: "Audit log",
       href: "/console/audit-log",
       icon: <ListMagnifyingGlassIcon />,
+    },
+    p?.canManageOAuthApps && {
+      label: "Apps",
+      href: "/console/apps",
+      icon: <AppWindowIcon />,
     },
     p?.canPreviewDocs && {
       label: "Docs preview",

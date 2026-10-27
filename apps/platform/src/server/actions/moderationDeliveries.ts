@@ -134,14 +134,14 @@ export async function registerExternalApp(
       return {
         ok: false,
         message:
-          "No OAuth client registered through /tools/oauth has that id. Create the production client there first",
+          "No OAuth client registered through /tools/oauth has that id. Create the app there first",
       };
     }
     if (cause.includes("moderation:development_client")) {
       return {
         ok: false,
         message:
-          "That is a development client. Only a production client can be registered",
+          "That app is in Testing. Only an app In production can be registered",
       };
     }
     if (cause.includes("is a platform app")) {

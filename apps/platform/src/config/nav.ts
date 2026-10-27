@@ -178,6 +178,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "A record of moderation actions and content reports filed across all production OAuth clients.",
   },
   {
+    label: "Apps",
+    href: "/console/apps",
+    icon: "AppWindowIcon",
+    permission: "canManageOAuthApps",
+    description:
+      "Publish OAuth apps, return them to Testing, transfer them to DevDogs and choose which skip the consent screen.",
+  },
+  {
     label: "Docs preview",
     href: "/preview/docs",
     icon: "BookOpenIcon",

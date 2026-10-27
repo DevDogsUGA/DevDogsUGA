@@ -1,6 +1,6 @@
 import type { TerminalRoute } from "./define";
 import type { TerminalPattern } from "./paths";
-import { accountDeletion } from "./routes/account";
+import { accountDeletion, consoleApps } from "./routes/account";
 import { changelogArchive, changelogIssue } from "./routes/changelog";
 import { brandGraphics, meetingGraphics } from "./routes/console";
 import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
@@ -31,6 +31,7 @@ export const TERMINAL_ROUTES = {
   "/docs/:project/*": docs,
   "/preview/kit": kitGallery,
   "/account/deletion": accountDeletion,
+  "/console/apps": consoleApps,
   "/console/graphics": brandGraphics,
   "/console/attendance/:meetingId/graphics": meetingGraphics,
   "/help": help,

@@ -135,12 +135,13 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
         },
       ],
     },
+    { id: "connected-apps", label: "Connected apps" },
     { id: "verification", label: "Verification" },
   ],
 
   "/settings/oauth": [
     { id: "issuer", label: "Issuer URL" },
-    { id: "dev-clients", label: "Development clients" },
+    { id: "apps", label: "Your apps" },
     { id: "test-accounts", label: "Test accounts" },
     {
       id: "moderation",
@@ -150,11 +151,10 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "moderation-clients",
           label: "Report and Block",
           description:
-            "Sign reports from your app's backend, and receive the decisions moderators make. Reports from a development client land in the sandbox below, never in the moderators' queue.",
+            "Sign reports from your app's backend, and receive the decisions moderators make. Reports from an app in Testing land in the sandbox below, never in the moderators' queue.",
         },
       ],
     },
-    { id: "production-clients", label: "Production clients" },
   ],
 
   "/console/permissions": [

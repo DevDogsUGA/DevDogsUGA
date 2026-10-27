@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/ui/alert-dialog";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   useActionState,
@@ -28,6 +28,7 @@ import OAuthClientSheet, {
   MAX_REDIRECT_URIS,
 } from "~/components/Settings/OAuthClientSheet";
 import OAuthClientTable from "~/components/Settings/OAuthClientTable";
+import { Button } from "~/ui/button";
 import EmptyState from "~/ui/empty-state";
 
 type OAuthData = Awaited<ReturnType<typeof getOAuthPageData>>;
@@ -35,6 +36,9 @@ type OAuthData = Awaited<ReturnType<typeof getOAuthPageData>>;
 export default function OAuthCredentialsField({
   clients,
   hasGithub,
+  appCount,
+  maxApps,
+  testAccounts,
   prefillRedirectUri,
 }: OAuthData & { prefillRedirectUri?: string }) {
   const router = useRouter();
@@ -166,43 +170,87 @@ export default function OAuthCredentialsField({
         </AlertDialogContent>
       </AlertDialog>
 
+      <div className="row" style={{ gap: 12, marginBottom: 16 }}>
+        <NewAppButton
+          hasGithub={hasGithub}
+          appCount={appCount}
+          maxApps={maxApps}
+        />
+        <span className="small muted">
+          {appCount} of {maxApps} apps
+        </span>
+      </div>
+
       {clients.length === 0 ? (
         <EmptyState
           image={false}
-          title="No development clients yet"
+          title="No apps yet"
           description={
             hasGithub
-              ? "Create one to get a client ID and secret for testing DevDogs sign-in locally."
-              : "Development clients need a linked GitHub account. Link one, then come back here."
+              ? "Create one to get a client ID and secret for testing DevDogs sign-in. Every new app starts in Testing."
+              : "Apps need a linked GitHub account. Link one, then come back here."
           }
-        >
-          {hasGithub ? (
-            <Link href="/settings/oauth/new" className="btn secondary">
-              <PlusIcon aria-hidden />
-              Create your first client
-            </Link>
-          ) : (
-            <Link href="/settings/accounts#github" className="btn secondary">
-              Link GitHub account
-            </Link>
-          )}
-        </EmptyState>
-      ) : (
-        <OAuthClientTable
-          clients={clients}
-          tier="development"
-          onEdit={setOpenId}
         />
+      ) : (
+        <OAuthClientTable clients={clients} onEdit={setOpenId} />
       )}
 
       <OAuthClientSheet
         client={openClient}
-        tier="development"
+        testAccounts={testAccounts}
         dispatch={dispatch}
         isPending={isPending}
         secret={revealed}
         onClose={() => setOpenId(null)}
       />
     </>
+  );
+}
+
+/**
+ * The create button. It turns into a disabled button with the reason when the
+ * member already owns the most apps they may (three, Testing or In production),
+ * or has no GitHub account linked yet.
+ */
+export function NewAppButton({
+  hasGithub,
+  appCount,
+  maxApps,
+}: {
+  hasGithub: boolean;
+  appCount: number;
+  maxApps: number;
+}) {
+  if (appCount >= maxApps) {
+    return (
+      <>
+        <Button
+          type="button"
+          variant="outline"
+          disabled
+          aria-describedby="new-app-reason"
+        >
+          <PlusIcon aria-hidden />
+          New OAuth app
+        </Button>
+        <span id="new-app-reason" className="small muted">
+          You own {maxApps} apps, the most a member can. Delete one to create
+          another.
+        </span>
+      </>
+    );
+  }
+  if (!hasGithub) {
+    return (
+      <Link href="/settings/accounts#github" className="btn secondary">
+        Link GitHub account
+      </Link>
+    );
+  }
+  return (
+    <Link href="/settings/oauth/new" className="btn secondary">
+      <PlusIcon aria-hidden />
+      New OAuth app
+    </Link>
   );
 }

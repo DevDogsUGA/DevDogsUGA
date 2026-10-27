@@ -63,6 +63,7 @@ describe("matchTerminalPath", () => {
     ["/changelog/3.0.2", "/changelog/:version"],
     ["/changelog/v3.0.2", "/changelog/:version"],
     ["/events/directions", "/events/directions"],
+    ["/console/apps/", "/console/apps"],
     ["/events/2026-10-05-workshop", "/events/:slug"],
     ["/community/@sloan", "/community/:handle"],
     ["/docs/platform/getting-started/setup", "/docs/:project/*"],

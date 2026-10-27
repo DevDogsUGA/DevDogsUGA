@@ -119,7 +119,7 @@ export async function handleFileReport(
     return fail(
       403,
       "client_not_registered",
-      "This production client is not registered as a moderation app. An officer registers it in the moderation console",
+      "This In production app is not registered as a moderation app. An officer registers it in the moderation console",
     );
   }
 

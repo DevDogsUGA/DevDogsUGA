@@ -5,13 +5,14 @@ import { useActionState } from "react";
 import { CheckIcon, LockIcon, PlusIcon } from "@phosphor-icons/react/ssr";
 import FormButton from "~/components/FormButton";
 import Input from "~/components/Input";
+import { REDIRECT_RULE_HELP } from "~/components/Settings/OAuthClientSheet";
 import oauthAction from "~/server/actions/oauth";
 import { buttonVariants } from "~/ui/button";
 import Callout from "~/ui/callout";
 import { Panel } from "~/ui/app-shell";
 
 /**
- * The two steps of making a development client (settings-oauth-new.html):
+ * The two steps of making an app (settings-oauth-new.html):
  * describe it, then copy its secret. Step 2 replaces step 1 in place once the
  * server answers, because the secret exists only in that one response.
  */
@@ -75,7 +76,7 @@ export default function OAuthNewClient({
   }
 
   return (
-    <Panel id="step-1" title="Create the client">
+    <Panel id="step-1" title="Create the app">
       <div className="eyebrow" style={{ marginTop: -8 }}>
         Step 1 of 2
       </div>
@@ -83,7 +84,7 @@ export default function OAuthNewClient({
         <input type="hidden" name="intent" value="create-client" />
         <div className="fields" style={{ marginTop: 18 }}>
           <label className="field">
-            <span className="label">Client name</span>
+            <span className="label">App name</span>
             <Input
               name="label"
               placeholder="my-project"
@@ -104,28 +105,20 @@ export default function OAuthNewClient({
               ))}
             </ul>
             <span className="help">
-              Development clients only accept{" "}
-              <span className="mono" style={{ fontSize: 13 }}>
-                http://localhost:&lt;port&gt;/…
-              </span>{" "}
-              addresses. A new client starts with the one above; add more from
-              its edit panel.
+              {REDIRECT_RULE_HELP} A new app starts with the one above; add more
+              from its edit panel.
             </span>
           </div>
           <div className="field">
-            <span className="label">Environment</span>
+            <span className="label">Status</span>
             <span className="input">
               <LockIcon aria-hidden className="shrink-0 text-[var(--text-3)]" />
-              <input
-                value="Development"
-                disabled
-                aria-label="Environment"
-                readOnly
-              />
+              <input value="Testing" disabled aria-label="Status" readOnly />
             </span>
             <span className="help">
-              Members create Development clients. Production clients are
-              officer-only.
+              Every new app starts in Testing: only you and your test accounts
+              can sign in. An officer publishes it once it has a logo, a
+              homepage and a privacy policy.
             </span>
           </div>
         </div>
@@ -135,7 +128,7 @@ export default function OAuthNewClient({
           </Link>
           <FormButton theme="cyan" type="submit" disabled={isPending}>
             <PlusIcon aria-hidden />
-            Create client
+            Create app
           </FormButton>
         </div>
       </form>

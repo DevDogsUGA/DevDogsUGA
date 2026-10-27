@@ -3,31 +3,33 @@
 import { PencilSimpleIcon } from "@phosphor-icons/react/ssr";
 import { CopyButton } from "~/ui/copy-field";
 import type { OAuthClientSummary } from "~/server/loaders/console";
+import Badge from "~/ui/badge";
 import { Table, TBody, Td, Th, THead, Tr } from "~/ui/table";
 
+/** The label of a status, as the badge shows it. */
+export function statusLabel(status: OAuthClientSummary["status"]): string {
+  return status === "in_production" ? "In production" : "Testing";
+}
+
 /**
- * The clients of one tier as a table (settings-oauth.html): name, client ID
- * with a copy button, redirect URIs and the edit button that opens the drawer.
- * The "Created" column the mockup draws is left out: neither the loader nor
- * the registration table carries a creation date.
+ * The member's apps as a table (settings-oauth.html): name with its status,
+ * client ID with a copy button, how many redirect URIs it has and the edit
+ * button that opens the drawer.
  */
 export default function OAuthClientTable({
   clients,
-  tier,
   onEdit,
 }: {
   clients: OAuthClientSummary[];
-  tier: "development" | "production";
   onEdit: (clientId: string) => void;
 }) {
-  const production = tier === "production";
   return (
-    <Table caption={production ? "Production clients" : "Development clients"}>
+    <Table caption="Your apps">
       <THead>
         <tr>
-          <Th>Client</Th>
+          <Th>App</Th>
           <Th>Client ID</Th>
-          <Th>{production ? "Callback" : "Redirect URIs"}</Th>
+          <Th>Redirect URIs</Th>
           <Th>
             <span className="sr-only">Actions</span>
           </Th>
@@ -38,9 +40,11 @@ export default function OAuthClientTable({
           <Tr key={client.clientId}>
             <Td wrap>
               <div className="set-name">{client.label}</div>
-              {client.ownerName && (
-                <div className="small muted">Created by {client.ownerName}</div>
-              )}
+              <Badge
+                variant={client.status === "in_production" ? "warning" : "info"}
+              >
+                {statusLabel(client.status)}
+              </Badge>
             </Td>
             <Td>
               <span className="set-cid">
@@ -51,11 +55,7 @@ export default function OAuthClientTable({
                 />
               </span>
             </Td>
-            <Td className={production ? "small mono" : undefined}>
-              {production
-                ? (client.redirectUris[0] ?? "None")
-                : client.redirectUris.length}
-            </Td>
+            <Td>{client.redirectUris.length}</Td>
             <Td style={{ textAlign: "right" }}>
               <button
                 type="button"

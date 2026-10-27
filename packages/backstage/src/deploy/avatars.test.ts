@@ -82,6 +82,19 @@ describe("deploy avatars", () => {
     }
   });
 
+  it("uploads a file in a folder under its folder key", async () => {
+    mkdirSync(join(root, "supabase/seed/officers/avatars/apps"));
+    writeFileSync(
+      join(root, "supabase/seed/officers/avatars/apps/dogdays.webp"),
+      WEBP,
+    );
+    const { calls, fetchImpl } = storage(new Set(["avatars/a", "avatars/b"]));
+    await runDeployAvatars(ENV, { root, fetch: fetchImpl });
+    expect(calls.map((c) => c.url)).toContain(
+      "https://api.example/storage/v1/object/avatars/apps/dogdays.webp",
+    );
+  });
+
   it("reads older Storage's 400-with-409-body as already there", async () => {
     const { fetchImpl } = storage(
       new Set(["avatars/a", "avatars/b"]),
@@ -133,5 +146,40 @@ describe("sniffImageType", () => {
   it("knows WebP, and nothing it was not taught", () => {
     expect(sniffImageType(WEBP)).toBe("image/webp");
     expect(sniffImageType(new Uint8Array([1, 2, 3]))).toBeUndefined();
+  });
+});
+
+describe("the DevDogs app icons", () => {
+  // The platform's consent screen reads `logoPath` relative to the public
+  // avatars bucket, and a member's logo goes to `apps/<client id>.webp`. The
+  // icons must land at the same scheme, and the seed must point at them.
+  const supabaseDir = join(__dirname, "../../../../supabase");
+
+  it("sit under the avatars bucket's objects_path as apps/<name>.webp", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const config = readFileSync(join(supabaseDir, "config.toml"), "utf8");
+    const [avatars] = seededBuckets(config, supabaseDir).filter(
+      (b) => b.bucket === "avatars",
+    );
+    expect(avatars).toBeDefined();
+    expect(readdirSync(join(avatars!.dir, "apps")).sort()).toEqual([
+      "dogdays.webp",
+      "dogpack.webp",
+    ]);
+    for (const name of ["dogdays", "dogpack"]) {
+      expect(
+        sniffImageType(
+          readFileSync(join(avatars!.dir, "apps", `${name}.webp`)),
+        ),
+      ).toBe("image/webp");
+    }
+  });
+
+  it("have their logoPath set by an insert-only seed", async () => {
+    const { readFileSync } = await import("node:fs");
+    const seed = readFileSync(join(supabaseDir, "seed/apps/logos.sql"), "utf8");
+    expect(seed).toContain(`"logoPath" = 'apps/dogdays.webp'`);
+    expect(seed).toContain(`"logoPath" = 'apps/dogpack.webp'`);
+    expect(seed.match(/"logoPath" is null/g)).toHaveLength(2);
   });
 });

@@ -10,13 +10,13 @@ import { Skeleton } from "~/ui/skeleton";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "New OAuth client | Settings | DevDogs",
+  title: "New OAuth app | Settings | DevDogs",
   robots: { index: false },
 };
 
 const PATH = "/settings/oauth/new";
 
-/** What a development client starts with; the server's `DEFAULT_REDIRECT_URIS`. */
+/** What a new app starts with; the server's `DEFAULT_REDIRECT_URIS`. */
 const DEFAULT_REDIRECT_URIS = ["http://localhost:3000/auth"];
 
 async function NewClient() {
@@ -28,10 +28,22 @@ async function NewClient() {
 
   if (!data.hasGithub) {
     return (
-      <Callout tone="warning" title="Link GitHub to create clients">
-        Development clients need a linked GitHub account.{" "}
+      <Callout tone="warning" title="Link GitHub to create apps">
+        Apps need a linked GitHub account.{" "}
         <Link href="/settings/accounts#github" className="textlink">
           Link GitHub account
+        </Link>
+      </Callout>
+    );
+  }
+
+  if (data.appCount >= data.maxApps) {
+    return (
+      <Callout tone="warning" title="You own the most apps a member can">
+        You have {data.appCount} of {data.maxApps} apps. Delete one to create
+        another.{" "}
+        <Link href="/settings/oauth" className="textlink">
+          Back to your apps
         </Link>
       </Callout>
     );
@@ -51,10 +63,10 @@ export default function NewOAuthClientPage() {
       <PageHeading
         crumbs={[
           { label: "OAuth apps", href: "/settings/oauth" },
-          { label: "New client" },
+          { label: "New app" },
         ]}
-        title="New OAuth client"
-        description="Two steps: describe the client, then copy its secret. The secret is shown once."
+        title="New OAuth app"
+        description="Two steps: describe the app, then copy its secret. The secret is shown once."
       />
       <Suspense fallback={<Skeleton className="h-64 w-full max-w-[720px]" />}>
         <NewClient />

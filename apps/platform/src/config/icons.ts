@@ -1,4 +1,5 @@
 export {
+  AppWindowIcon,
   ArrowSquareOutIcon,
   BookOpenIcon,
   BusIcon,

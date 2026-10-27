@@ -7,7 +7,9 @@ import LinkedinField from "~/components/ConnectedAccountField/LinkedinField";
 import SettingsAnchor from "~/components/Settings/SettingsAnchor";
 import SettingsShell from "~/components/Settings/SettingsShell";
 import VerificationStatusField from "~/components/VerificationStatusField";
+import ConnectedAppsField from "~/components/Settings/ConnectedAppsField";
 import { getProfilePageData } from "~/server/loaders/console";
+import { getConnectedApps } from "~/server/loaders/oauthApps";
 import { PageHeading, Panel } from "~/ui/app-shell";
 import Callout from "~/ui/callout";
 import { Skeleton } from "~/ui/skeleton";
@@ -52,7 +54,10 @@ function LinkResult({ params }: { params: Params }) {
 }
 
 async function AccountsContent() {
-  const data = await getProfilePageData();
+  const [data, connectedApps] = await Promise.all([
+    getProfilePageData(),
+    getConnectedApps(),
+  ]);
   return (
     <>
       <Panel id="accounts" title="Accounts">
@@ -86,6 +91,14 @@ async function AccountsContent() {
             <LinkedinField {...data} />
           </SettingsAnchor>
         </div>
+      </Panel>
+
+      <Panel
+        id="connected-apps"
+        title="Connected apps"
+        help="Apps you have approved to sign you in with DevDogs. Remove access to sign out of one app and make it ask again."
+      >
+        <ConnectedAppsField apps={connectedApps} userId={data.id} />
       </Panel>
 
       <Panel
