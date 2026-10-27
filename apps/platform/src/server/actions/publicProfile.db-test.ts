@@ -136,12 +136,13 @@ describe("getPublicProfileSettings", () => {
       id: A,
       handle: "ppact-s",
       github: "ppact-s",
-      profile: { showStars: false },
+      profile: { showStars: false, showContributions: false },
     });
     const settings = (await getPublicProfileSettings())!;
     expect(settings.isVerified).toBe(true);
     expect(settings.current).toBe("ppact-s");
     expect(settings.switches.showStars).toBe(false);
+    expect(settings.switches.showContributions).toBe(false);
     expect(settings.switches.publicProfile).toBe(true);
     expect(settings.options.map((o) => o.handle)).toContain("ppact-s");
   });

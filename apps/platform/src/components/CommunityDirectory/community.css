@@ -137,6 +137,13 @@
     gap: 6px;
     align-items: center;
   }
+  .cosmic .cm-contributions {
+    margin-top: var(--space-8);
+  }
+  .cosmic .cm-contributions h2 {
+    font-size: 20px;
+    margin: 0 0 16px;
+  }
   .cosmic .cm-stars h2 {
     font-size: 20px;
     margin: 0 0 16px;

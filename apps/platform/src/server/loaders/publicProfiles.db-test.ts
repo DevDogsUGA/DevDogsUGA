@@ -732,17 +732,20 @@ describe("getPublicProfileActivity", () => {
       { title: "Site", url: "https://example.test/a" },
     ]);
     expect(activity?.stars).toEqual({ meetingStars: 0 });
+    expect(activity?.contributions).toEqual([]);
   });
 
   it("returns null for each section its flag hides", async () => {
     await seedActivity();
     await db.execute(sql`
-      update platform.profile set "showLinks" = false, "showStars" = false
+      update platform.profile
+      set "showLinks" = false, "showStars" = false, "showContributions" = false
       where "userId" = ${A}::uuid
     `);
     expect(await getPublicProfileActivity("ppdb-active")).toEqual({
       links: null,
       stars: null,
+      contributions: null,
     });
   });
 
