@@ -37,8 +37,6 @@ CREATE VIEW "platform"."publicProfiles" AS  SELECT p."userId",
     p."showAvatar",
     p."showBio",
     p."showLinks",
-    p."showCompetitions",
-    p."showContributions",
     p."showStars"
    FROM (platform.profile p
      JOIN platform."profileWithVerification" v ON ((v."userId" = p."userId")))

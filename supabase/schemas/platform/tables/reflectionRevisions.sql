@@ -2,15 +2,13 @@ CREATE TABLE "platform"."reflectionRevisions" (
   "id"              uuid                     NOT NULL DEFAULT gen_random_uuid(),
   "reflectionId"    uuid                     NOT NULL,
   "userId"          uuid                     NOT NULL,
-  "meetingId"       uuid,
-  "competitionId"   uuid,
+  "meetingId"       uuid                     NOT NULL,
   "content"         text                     NOT NULL,
   "submittedAt"     timestamp with time zone,
   "createdAt"       timestamp with time zone NOT NULL DEFAULT now(),
   "createdByUserId" uuid                     NOT NULL,
   "changeReason"    text,
   CONSTRAINT "reflectionRevisions_changeReason_length" CHECK ((("changeReason" IS NULL) OR (char_length("changeReason") <= 500))),
-  CONSTRAINT "reflectionRevisions_exactly_one_activity" CHECK ((((("meetingId" IS NOT NULL))::integer + (("competitionId" IS NOT NULL))::integer) = 1)),
   CONSTRAINT "reflectionRevisions_pkey" PRIMARY KEY (id),
   CONSTRAINT "reflectionRevisions_reflectionId_fkey" FOREIGN KEY ("reflectionId") REFERENCES platform.reflections(id) ON UPDATE CASCADE ON DELETE CASCADE
 );

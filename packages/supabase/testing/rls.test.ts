@@ -352,8 +352,6 @@ describe("platform public profiles", () => {
         showAvatar: false,
         showBio: false,
         showLinks: false,
-        showCompetitions: false,
-        showContributions: false,
         showStars: false,
       })
       .eq("userId", member.userId);
@@ -441,11 +439,9 @@ describe("platform public profiles", () => {
   });
 });
 
-describe("platform meetings, teams and attendance", () => {
+describe("platform meetings and attendance", () => {
   const meetingId = "bbbbbbbb-0000-4000-a000-000000000001";
   const workshopId = "cccccccc-0000-4000-a000-000000000001";
-  const competitionId = "dddddddd-0000-4000-a000-000000000001";
-  const teamId = "eeeeeeee-0000-4000-a000-000000000001";
   const reflectionId = "ffffffff-0000-4000-a000-000000000001";
   const auditEventId = "11111111-0000-4000-a000-000000000001";
 
@@ -462,36 +458,6 @@ describe("platform meetings, teams and attendance", () => {
     await a
       .from("workshops")
       .insert({ id: workshopId, meetingId, project: "RLS Project" });
-    await a.from("competitions").insert({
-      id: competitionId,
-      slug: "rls-comp",
-      issueNodeId: "RLS_ISSUE_NODE_ID",
-      issueNumber: 1,
-      repo: "DevDogsUGA/DevDogsUGA",
-      url: "https://github.com/DevDogsUGA/DevDogsUGA/issues/1",
-      title: "RLS Competition",
-      kickedOffAt: new Date(now).toISOString(),
-    });
-    await a.from("teams").insert({
-      id: teamId,
-      slug: "rls-team",
-      name: "RLS Team",
-      joinCode: "SECRET-CODE",
-      createdBy: member.userId,
-    });
-    await a
-      .from("teamMembers")
-      .insert({ teamId, userId: member.userId, role: "lead" });
-    // A departed stint: joined and left before this fixture ran, so it
-    // exercises the "leftAt is not null" branch of the roster policy rather
-    // than only ever the current-roster branch.
-    await a.from("teamMembers").insert({
-      teamId,
-      userId: moderator.userId,
-      role: "member",
-      joinedAt: new Date(now - 172_800_000).toISOString(),
-      leftAt: new Date(now - 86_400_000).toISOString(),
-    });
     await a.from("attendance").insert({
       meetingId,
       userId: member.userId,
@@ -533,36 +499,11 @@ describe("platform meetings, teams and attendance", () => {
 
   it("publishes the schedule to logged-out visitors", async () => {
     const client = anon();
-    for (const table of ["meetings", "workshops", "competitions"] as const) {
+    for (const table of ["meetings", "workshops"] as const) {
       const { data, error } = await client.from(table).select("id");
       expect(error, `${table} should be anon-readable`).toBeNull();
       expect(data?.length ?? 0).toBeGreaterThan(0);
     }
-  });
-
-  // No fixture row here: this is a read-only-policy check, so an empty
-  // table is a legitimate answer. In production the pull_request webhook
-  // and reconcileEntries backstop keep this table populated, but the RLS
-  // policy under test doesn't care whether any rows exist.
-  it("publishes competition entries to logged-out visitors, read-only", async () => {
-    const client = anon();
-    const { data, error } = await client
-      .from("competitionEntries")
-      .select("id");
-    expect(error).toBeNull();
-    expect(data).toEqual([]);
-
-    const { error: insert } = await member.client
-      .from("competitionEntries")
-      .insert({
-        competitionId,
-        teamId,
-        prNodeId: "PR_rogue",
-        prNumber: 1,
-        url: "https://github.com/DevDogsUGA/DevDogsUGA/pull/1",
-        openedAt: new Date().toISOString(),
-      });
-    expect(insert?.code).toBe("42501");
   });
 
   it("refuses client writes to the schedule", async () => {
@@ -603,66 +544,6 @@ describe("platform meetings, teams and attendance", () => {
     // PGRST204 (unknown column) and 23502 (not-null violation) now fail here
     // instead of masquerading as a pass.
     expect(insert?.code).toBe("42501");
-  });
-
-  // The join code is the whole secret. A row policy cannot say "every column
-  // but one", so this is a column grant. The case that matters is the
-  // signed-in member, not the anonymous visitor.
-  it("never serves joinCode to any client", async () => {
-    const { error: anonRead } = await anon()
-      .from("teams")
-      .select("joinCode")
-      .eq("id", teamId);
-    expect(anonRead).not.toBeNull();
-
-    const { error: memberRead } = await member.client
-      .from("teams")
-      .select("joinCode")
-      .eq("id", teamId);
-    expect(memberRead).not.toBeNull();
-
-    // The rest of the row still reads, or the meetings page breaks.
-    const { data, error } = await anon()
-      .from("teams")
-      .select("id, name, slug, createdBy")
-      .eq("id", teamId)
-      .single();
-    expect(error).toBeNull();
-    expect(data?.name).toBe("RLS Team");
-  });
-
-  it("keeps rosters signed-in-only", async () => {
-    const { data: anonRows } = await anon()
-      .from("teamMembers")
-      .select("userId");
-    expect(anonRows ?? []).toHaveLength(0);
-
-    const { data: memberRows, error } = await member.client
-      .from("teamMembers")
-      .select("userId");
-    expect(error).toBeNull();
-    expect(memberRows?.length ?? 0).toBeGreaterThan(0);
-  });
-
-  // A departed stint is history, not roster: it names when someone joined and
-  // left, which the design note's "the team page shows who is on each team"
-  // does not extend to every signed-in account. Only the team's own current
-  // members can see it; `suspended` is on no team at all.
-  it("hides a departed member's stint from non-members but shows it to the team", async () => {
-    const { data: outsiderRows } = await suspended.client
-      .from("teamMembers")
-      .select("userId")
-      .eq("teamId", teamId)
-      .not("leftAt", "is", null);
-    expect(outsiderRows ?? []).toHaveLength(0);
-
-    const { data: insiderRows, error } = await member.client
-      .from("teamMembers")
-      .select("userId")
-      .eq("teamId", teamId)
-      .not("leftAt", "is", null);
-    expect(error).toBeNull();
-    expect(insiderRows?.some((r) => r.userId === moderator.userId)).toBe(true);
   });
 
   // Officers read other people's attendance through a server action holding
