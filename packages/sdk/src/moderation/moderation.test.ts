@@ -141,6 +141,7 @@ describe("messages", () => {
       "user.suspend",
       "user.ban",
       "user.restore",
+      "user.delete",
     ] as const) {
       expect(
         parseMessage(JSON.stringify(buildMessage({ type }))),

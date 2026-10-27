@@ -200,14 +200,22 @@ export const getReportDetailData = cache(async (reportId: string) => {
     .where(eq(moderationDeliveries.reportId, reportId))
     .orderBy(moderationDeliveries.createdAt);
 
+  // A deleted member's id on the report is null (the report outlives them).
   const [reporterData, reportedData] = await Promise.all([
-    supabaseAdmin.auth.admin.getUserById(report.reporterUserId),
-    supabaseAdmin.auth.admin.getUserById(report.reportedUserId),
+    report.reporterUserId
+      ? supabaseAdmin.auth.admin.getUserById(report.reporterUserId)
+      : null,
+    report.reportedUserId
+      ? supabaseAdmin.auth.admin.getUserById(report.reportedUserId)
+      : null,
   ]);
 
   function getDisplayName(
-    data: Awaited<ReturnType<typeof supabaseAdmin.auth.admin.getUserById>>,
+    data: Awaited<
+      ReturnType<typeof supabaseAdmin.auth.admin.getUserById>
+    > | null,
   ): string {
+    if (!data) return "Deleted member";
     const meta = data.data?.user?.user_metadata;
     if (meta && typeof meta === "object") {
       if ("preferred_name" in meta && typeof meta.preferred_name === "string") {
@@ -220,11 +228,13 @@ export const getReportDetailData = cache(async (reportId: string) => {
     return data.data?.user?.email ?? "(unknown)";
   }
 
-  const suspension = await db.query.userSuspensions.findFirst({
-    columns: { reason: true },
-    where: { userId: report.reportedUserId, service: "global" },
-  });
-  const bannedUntil = reportedData.data?.user?.banned_until;
+  const suspension = report.reportedUserId
+    ? await db.query.userSuspensions.findFirst({
+        columns: { reason: true },
+        where: { userId: report.reportedUserId, service: "global" },
+      })
+    : undefined;
+  const bannedUntil = reportedData?.data?.user?.banned_until;
   const isBanned = bannedUntil != null && new Date(bannedUntil) > new Date();
 
   return {

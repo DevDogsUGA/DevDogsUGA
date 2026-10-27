@@ -79,6 +79,12 @@ async function cleanup() {
       where "actorUserId" in (${IDS.member}::uuid, ${IDS.stranger}::uuid)
     `);
   });
+  // Attendance outlives a deleted account (its userId goes null, so totals
+  // stay right), so it has to go explicitly before the meetings can.
+  await db.execute(sql`
+    delete from platform.attendance
+    where "meetingId" in (${IDS.meeting}::uuid, ${IDS.earlier}::uuid, ${IDS.closed}::uuid)
+  `);
   // Deleting the accounts cascades to answers and their revisions.
   await db.execute(
     sql`delete from auth.users where id in (${IDS.member}::uuid, ${IDS.stranger}::uuid)`,

@@ -182,7 +182,7 @@ describe("moderation samples", () => {
 });
 
 describe("isMessageType", () => {
-  it("accepts the six actions only", () => {
+  it("accepts the seven actions only", () => {
     for (const type of [
       "content.hide",
       "content.remove",
@@ -190,6 +190,7 @@ describe("isMessageType", () => {
       "user.suspend",
       "user.ban",
       "user.restore",
+      "user.delete",
     ]) {
       expect(isMessageType(type)).toBe(true);
     }

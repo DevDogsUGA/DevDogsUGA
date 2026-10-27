@@ -98,6 +98,17 @@ describe("decideConsent", () => {
     ).toBe("auto-approve");
   });
 
+  it("approves an ownerless production client (a DevDogs app) for anyone", () => {
+    expect(
+      decideConsent({
+        tier: "production",
+        redirectUri: supabase,
+        ownerUserId: null,
+        userId: stranger,
+      }),
+    ).toBe("auto-approve");
+  });
+
   it("404s a production client whose return address is not a Supabase callback", () => {
     for (const redirectUri of [
       "http://localhost:3000/auth",

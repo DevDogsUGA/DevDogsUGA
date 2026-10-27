@@ -120,7 +120,6 @@ export const relations = defineRelations(
       profile: r.one.profile({
         from: r.oauthRegistrations.userId,
         to: r.profile.userId,
-        optional: false,
       }),
       authorizations: r.many.oauthAuthorizationsInAuth({
         from: r.oauthRegistrations.clientId,

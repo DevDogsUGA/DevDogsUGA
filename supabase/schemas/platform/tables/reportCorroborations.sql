@@ -1,12 +1,12 @@
 CREATE TABLE "platform"."reportCorroborations" (
   "id"             uuid                        NOT NULL DEFAULT gen_random_uuid(),
   "reportId"       uuid                        NOT NULL,
-  "reporterUserId" uuid                        NOT NULL,
+  "reporterUserId" uuid,
   "description"    character varying(1000),
   "createdAt"      timestamp without time zone NOT NULL DEFAULT now(),
   CONSTRAINT "reportCorroborations_pkey" PRIMARY KEY (id),
   CONSTRAINT "reportCorroborations_report_reporter_key" UNIQUE ("reportId", "reporterUserId"),
-  CONSTRAINT "reportCorroborations_reporterUserId_fkey" FOREIGN KEY ("reporterUserId") REFERENCES auth.users(id) ON DELETE CASCADE,
+  CONSTRAINT "reportCorroborations_reporterUserId_fkey" FOREIGN KEY ("reporterUserId") REFERENCES auth.users(id) ON DELETE SET NULL,
   CONSTRAINT "reportCorroborations_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES platform.reports(id) ON DELETE CASCADE
 );
 

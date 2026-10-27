@@ -39,14 +39,11 @@ max_client_conn = 100
 # Seeds run on `supabase db reset` only, never on `db push` (a hosted tier is
 # seeded by hand with `supabase db push --include-seed`, and Supabase records
 # each file's hash in `supabase_migrations.seed_files` so an edited file is not
-# run again). `roles/` is the role catalogue, one file per role, and `officers/`
-# is the officer board, one file per officer. Patterns run in the listed order,
-# so roles exist before officers are granted them; within a pattern files run
-# alphabetically. `**` does not search subfolders, so keep both folders flat
-# (`officers/avatars/` is storage objects, not SQL).
+# run again). `roles/` is the role catalogue, one file per role; files run
+# alphabetically. `**` does not search subfolders, so keep the folder flat.
 #
 # Every file is insert-only (`on conflict do nothing`): a rerun never
-# overwrites what an officer or an admin has since edited.
+# overwrites what an admin has since edited.
 #
 # There is deliberately no `development/` set. It used to hold password-login
 # personas, and because any reset runs this list, a reset of a hosted tier
@@ -54,7 +51,7 @@ max_client_conn = 100
 # app instead and give the account a role with `pnpm devtools roles grant`.
 [db.seed]
 enabled = true
-sql_paths = ["./seed/roles/*.sql", "./seed/officers/*.sql"]
+sql_paths = ["./seed/roles/*.sql"]
 
 [realtime]
 enabled = false
@@ -82,11 +79,6 @@ enabled = false
 public = true
 file_size_limit = "256KiB"
 allowed_mime_types = ["image/webp"]
-# Seeded objects are named for the user id with no extension, because that is
-# the object key the app reads: `useAvatarSrc` and the officers loader both
-# build `/object/public/avatars/<userId>`. Without this path the bucket is
-# created empty and every officer card falls back to initials.
-objects_path = "./seed/officers/avatars"
 
 [auth]
 enabled = true

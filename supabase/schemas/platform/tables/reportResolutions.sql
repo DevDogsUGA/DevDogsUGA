@@ -1,11 +1,11 @@
 CREATE TABLE "platform"."reportResolutions" (
   "id"              uuid                        NOT NULL DEFAULT gen_random_uuid(),
   "reportId"        uuid                        NOT NULL,
-  "moderatorUserId" uuid                        NOT NULL,
+  "moderatorUserId" uuid,
   "appliedGlobally" boolean                     NOT NULL DEFAULT false,
   "moderatorNote"   text,
   "createdAt"       timestamp without time zone NOT NULL DEFAULT now(),
-  CONSTRAINT "reportResolutions_moderatorUserId_fkey" FOREIGN KEY ("moderatorUserId") REFERENCES auth.users(id) ON DELETE RESTRICT,
+  CONSTRAINT "reportResolutions_moderatorUserId_fkey" FOREIGN KEY ("moderatorUserId") REFERENCES auth.users(id) ON DELETE SET NULL,
   CONSTRAINT "reportResolutions_pkey" PRIMARY KEY (id),
   CONSTRAINT "reportResolutions_reportId_key" UNIQUE ("reportId"),
   CONSTRAINT "reportResolutions_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES platform.reports(id) ON DELETE CASCADE

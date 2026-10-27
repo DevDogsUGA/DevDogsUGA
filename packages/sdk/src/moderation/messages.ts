@@ -95,6 +95,7 @@ export const USER_MESSAGE_TYPES = [
   "user.suspend",
   "user.ban",
   "user.restore",
+  "user.delete",
 ] as const;
 export const MESSAGE_TYPES = [
   ...CONTENT_MESSAGE_TYPES,

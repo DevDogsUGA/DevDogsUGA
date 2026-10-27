@@ -239,9 +239,8 @@ module and the route types first, so there is nothing to build beforehand.
 
 ## Roles and test data
 
-The seeds give the officers' roles, President included, to the officers' own
-accounts, not yours. Give your account President to hold every permission on
-your instance:
+The seeds create the roles (President included) but grant them to no one. Give
+your account President to hold every permission on your instance:
 
 ```bash
 pnpm devtools roles grant you@uga.edu President

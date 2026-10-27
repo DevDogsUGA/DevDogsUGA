@@ -1,10 +1,10 @@
 CREATE TABLE "platform"."oauthRegistrations" (
   "clientId" uuid NOT NULL,
-  "userId"   uuid NOT NULL,
+  "userId"   uuid,
   "label"    text NOT NULL DEFAULT 'Default Client'::text,
   CONSTRAINT "oauthRegistrations_clientId_oauth_clients_id_fkey" FOREIGN KEY ("clientId") REFERENCES auth.oauth_clients(id) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT "oauthRegistrations_pkey" PRIMARY KEY ("clientId"),
-  CONSTRAINT "oauthRegistrations_userId_users_id_fkey" FOREIGN KEY ("userId") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE RESTRICT
+  CONSTRAINT "oauthRegistrations_userId_users_id_fkey" FOREIGN KEY ("userId") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 ALTER TABLE "platform"."oauthRegistrations"

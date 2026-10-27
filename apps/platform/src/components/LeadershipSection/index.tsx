@@ -24,7 +24,7 @@ export default async function LeadershipSection() {
           <p className="muted">{LEADERSHIP_BLURB}</p>
         </div>
 
-        {/* An empty board is a seeding failure, not a state worth designing
+        {/* An empty board is a fresh database, not a state worth designing
             for. But rendering the cluster with nothing in it produces a 660px
             void under the heading, so the section closes up instead. */}
         {officers.length > 0 && <LeaderCluster profiles={officers} />}

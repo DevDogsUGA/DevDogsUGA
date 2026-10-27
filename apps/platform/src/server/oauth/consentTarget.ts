@@ -2,8 +2,8 @@ import { db } from "~/server/db";
 import { parseTier, type OAuthTier } from "./tier";
 
 export interface ConsentTarget {
-  /** The member who registered the client. */
-  ownerUserId: string;
+  /** The member who registered the client; null for a DevDogs app. */
+  ownerUserId: string | null;
   tier: OAuthTier | null;
   /** The `redirect_uri` stored on the authorization row. */
   redirectUri: string | null;

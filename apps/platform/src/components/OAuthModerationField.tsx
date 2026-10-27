@@ -26,6 +26,7 @@ const ACTIONS = [
   ["user.suspend", "Suspend me"],
   ["user.ban", "Ban me"],
   ["user.restore", "Restore me"],
+  ["user.delete", "Delete me"],
 ] as const;
 
 /**

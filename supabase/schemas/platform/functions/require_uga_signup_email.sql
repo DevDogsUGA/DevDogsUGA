@@ -19,6 +19,17 @@ begin
   end if;
 
   if email ~ '^[^@[:space:]]+@uga[.]edu$' then
+    -- The UGA address is the subject a deleted account is blocked by (see
+    -- platform."deletedAccountBlocks").
+    if "platform".is_deleted_account_blocked(email) then
+      return jsonb_build_object(
+        'error', jsonb_build_object(
+          'http_code', 403,
+          'message', 'This account was deleted while a moderation action was in effect. Contact DevDogs to sign in.'
+        )
+      );
+    end if;
+
     return '{}'::jsonb;
   end if;
 

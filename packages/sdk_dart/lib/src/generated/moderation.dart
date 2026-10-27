@@ -76,7 +76,7 @@ sealed class ModerationMessage {
   factory ModerationMessage.fromJson(Map<String, dynamic> json) {
     final tag = json['type'];
     if (const <String>{'content.hide', 'content.remove', 'content.restore'}.contains(tag)) return ContentMessage.fromJson(json);
-    if (const <String>{'user.suspend', 'user.ban', 'user.restore'}.contains(tag)) return UserMessage.fromJson(json);
+    if (const <String>{'user.suspend', 'user.ban', 'user.restore', 'user.delete'}.contains(tag)) return UserMessage.fromJson(json);
     throw FormatException('Unknown ModerationMessage type: $tag');
   }
 
@@ -288,7 +288,8 @@ class UserMessageData {
 enum UserMessageType {
   userSuspend('user.suspend'),
   userBan('user.ban'),
-  userRestore('user.restore');
+  userRestore('user.restore'),
+  userDelete('user.delete');
 
   const UserMessageType(this.value);
 
