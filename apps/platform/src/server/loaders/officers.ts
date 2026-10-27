@@ -1,9 +1,10 @@
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, notExists, sql } from "drizzle-orm";
 import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { db } from "~/server/db";
 import { env } from "~/env";
 import {
   academicPrograms,
+  accountDeletions,
   profileAcademicPrograms,
   profileLinks,
   profiles,
@@ -112,7 +113,19 @@ export async function getCurrentOfficers(): Promise<LeaderProfile[]> {
     .from(userRoles)
     .innerJoin(roles, eq(roles.id, userRoles.roleId))
     .innerJoin(profiles, eq(profiles.userId, userRoles.userId))
-    .where(eq(roles.isLeadership, true))
+    .where(
+      and(
+        eq(roles.isLeadership, true),
+        // An officer whose account is scheduled for deletion is hidden like
+        // any member's profile; scheduling and cancelling revalidate the board.
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(accountDeletions)
+            .where(eq(accountDeletions.userId, profiles.userId)),
+        ),
+      ),
+    )
     .groupBy(profiles.userId)
     .orderBy(sql`min(${roles.rank}) asc`);
 

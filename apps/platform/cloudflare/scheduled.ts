@@ -85,7 +85,7 @@ export const CRON_ROUTES: Record<
   // deploy-time call itself fails partway.
   "*/15 * * * *": {
     label:
-      "Config reconcile (meetings, workshops), support forum index, Discord role sync, moderation delivery re-queue, daily job heartbeats",
+      "Config reconcile (meetings, workshops), support forum index, Discord role sync, moderation delivery re-queue, account deletions, daily job heartbeats",
     monitorSlug: "platform-cron-config-reconcile",
     // Role sync pages through every guild member, so the runtime ceiling is
     // looser than the config pass alone needs.
@@ -104,6 +104,12 @@ export const CRON_ROUTES: Record<
       // of, so a decision a moderator made reaches its app eventually. Cheap
       // when there is nothing to do.
       "/cron/moderation-deliveries",
+      // Deletes accounts whose fourteen-day window has ended. Before the
+      // heartbeats, after the delivery re-queue so the `user.delete` messages
+      // it queues are not swept up in the same pass. A deletion that fails
+      // stays pending and this slot retries it, and the route answers 500
+      // while one is stuck, which errors this slot's monitor.
+      "/cron/account-deletions",
       // Fails while a daily job is overdue, which errors this slot's
       // monitor: the daily jobs have none of their own. Last, and cheap.
       "/cron/heartbeats",

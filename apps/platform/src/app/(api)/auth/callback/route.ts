@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound, redirect, unauthorized } from "next/navigation";
 import type { NextRequest } from "next/server";
+import { getPendingDeletion } from "~/server/accountDeletion/schedule";
 import { expectUserWith } from "~/server/auth";
 import * as discord from "~/server/auth/providers/discord";
 import * as github from "~/server/auth/providers/github";
@@ -79,6 +80,10 @@ export async function GET(request: NextRequest) {
         "google",
       );
     }
+    // A member who signed in while their account is scheduled for deletion
+    // lands on the page that says so, with Keep my account, wherever they were
+    // headed (account-deletion Q4).
+    if (await getPendingDeletion(user.id)) redirect("/account/deletion");
     redirect(callbackPath);
   }
 

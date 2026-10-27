@@ -60,6 +60,16 @@ describe("planAttendance", () => {
     expect(plan.remove).toEqual([]);
   });
 
+  it("ignores a deleted member's row (userId null) even with replace", () => {
+    const plan = planAttendance(
+      [attendee("imp@uga.edu")],
+      ACCOUNTS,
+      [...EXISTING, { userId: null, method: "import" }],
+      true,
+    );
+    expect(plan.remove.map((r) => r.userId)).toEqual(["u-gone"]);
+  });
+
   it("with replace, removes only imported rows the sheet no longer lists", () => {
     const plan = planAttendance(
       [attendee("imp@uga.edu")],

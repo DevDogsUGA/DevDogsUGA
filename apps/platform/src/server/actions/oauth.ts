@@ -7,10 +7,13 @@ import {
   auditEvents,
   moderationClients,
   oauthRegistrations,
-  oauthTestAccounts,
 } from "../db/schema";
 import { supabaseAdmin } from "../../supabase/admin";
 import { oauthAuditEvent } from "../oauth/audit";
+import {
+  cleanUpTestAccountsIfNoClientsRemain,
+  deleteSupabaseClient,
+} from "../oauth/ownedClients";
 import { createOauthClientAndRegister } from "../oauth/registerClient";
 import {
   parseTier,
@@ -38,36 +41,6 @@ export type OAuthState = {
 const EMPTY_STATE: OAuthState = { clientId: null, clientSecret: null };
 
 const NOT_FOUND = "OAuth client not found";
-
-/**
- * Deletes every test account this user owns and their backing `auth.users`
- * rows, once they hold zero OAuth clients (test accounts exist only to sign
- * into somebody's client).
- */
-async function cleanUpTestAccountsIfNoClientsRemain(
-  userId: string,
-): Promise<void> {
-  const remaining = await db.query.oauthRegistrations.findFirst({
-    columns: { clientId: true },
-    where: { userId },
-  });
-  if (remaining) return;
-
-  const testAccounts = await db.query.oauthTestAccounts.findMany({
-    columns: { testUserId: true },
-    where: { ownerUserId: userId },
-  });
-  if (testAccounts.length === 0) return;
-
-  await db
-    .delete(oauthTestAccounts)
-    .where(eq(oauthTestAccounts.ownerUserId, userId));
-  await Promise.all(
-    testAccounts.map(({ testUserId }) =>
-      supabaseAdmin.auth.admin.deleteUser(testUserId),
-    ),
-  );
-}
 
 /**
  * The registration of a client the caller may manage, or a "not found" error.
@@ -98,14 +71,6 @@ async function clientIsLive(clientId: string): Promise<boolean> {
   const { data, error } =
     await supabaseAdmin.auth.admin.oauth.getClient(clientId);
   return !error && data !== null;
-}
-
-/** Deletes a Supabase OAuth client; one that is already gone counts as deleted. */
-async function deleteSupabaseClient(clientId: string): Promise<void> {
-  const { error } = await supabaseAdmin.auth.admin.oauth.deleteClient(clientId);
-  if (error && error.status !== 404) {
-    throw new Error(`Failed to delete OAuth client: ${error.message}`);
-  }
 }
 
 /** Replaces a client's redirect URIs; a rejected update is an error, not a no-op. */

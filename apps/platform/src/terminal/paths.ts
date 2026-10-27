@@ -102,6 +102,12 @@ export const TERMINAL_PATHS = [
     page: "(site)/preview/kit/page.tsx",
   },
 
+  {
+    pattern: "/account/deletion",
+    regex: /^\/account\/deletion\/?$/,
+    page: "(site)/account/deletion/page.tsx",
+  },
+
   { pattern: "/help", regex: /^\/help\/?$/, page: null },
   {
     pattern: "/help/:threadId",

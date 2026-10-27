@@ -17,6 +17,13 @@ const invite = {
   acceptUrl: "https://devdogsuga.org/teams/abc/invite",
 };
 
+const deletion = {
+  name: "Sam Rivera",
+  requestedLine: "You asked to delete your account.",
+  scheduledDate: "Friday, November 6, 2026",
+  keepUrl: "https://devdogsuga.org/account/deletion",
+};
+
 describe("render", () => {
   it("produces subject, html and text", () => {
     const email = render("TeamInvite", invite);
@@ -35,6 +42,7 @@ describe("render", () => {
         applicantName: "Sam Rivera",
         competitionName: "Spring Sprint",
         reviewUrl: "https://devdogsuga.org/teams/abc/requests",
+        ...deletion,
       } as never);
       expect(email.text.trim().length).toBeGreaterThan(40);
     }
@@ -50,6 +58,7 @@ describe("render", () => {
         applicantName: "Sam Rivera",
         competitionName: "Spring Sprint",
         reviewUrl: "https://devdogsuga.org/teams/abc/requests",
+        ...deletion,
       } as never);
 
       for (const part of [email.subject, email.html, email.text]) {
@@ -94,7 +103,44 @@ describe("render", () => {
     expect(email.text).toContain(invite.acceptUrl);
   });
 
-  it("compiles both templates the design calls for", () => {
-    expect([...templateNames].sort()).toEqual(["JoinRequest", "TeamInvite"]);
+  it("compiles every template", () => {
+    expect([...templateNames].sort()).toEqual([
+      "AccountDeletionComplete",
+      "AccountDeletionScheduled",
+      "JoinRequest",
+      "TeamInvite",
+    ]);
+  });
+
+  it("tells the member when the account goes and how to keep it", () => {
+    const email = render("AccountDeletionScheduled", deletion);
+
+    expect(email.subject).toBe(
+      "Your DevDogs account will be deleted on Friday, November 6, 2026",
+    );
+    expect(email.html).toContain("Friday, November 6, 2026");
+    expect(email.html).toContain("You asked to delete your account.");
+    expect(email.html).toContain(`href="${deletion.keepUrl}"`);
+    expect(email.html).toContain("Keep my account");
+    expect(email.text).toContain(deletion.keepUrl);
+    expect(email.text).toContain("Friday, November 6, 2026");
+  });
+
+  it("escapes the member's name in the deletion emails", () => {
+    const hostile = { ...deletion, name: "<b>Sam</b>" };
+    const scheduled = render("AccountDeletionScheduled", hostile);
+    const complete = render("AccountDeletionComplete", hostile);
+
+    expect(scheduled.html).not.toContain("<b>Sam</b>");
+    expect(scheduled.html).toContain("&lt;b&gt;Sam&lt;/b&gt;");
+    expect(complete.html).toContain("&lt;b&gt;Sam&lt;/b&gt;");
+  });
+
+  it("says the deletion is done, with nothing to click", () => {
+    const email = render("AccountDeletionComplete", deletion);
+
+    expect(email.subject).toBe("Your DevDogs account has been deleted");
+    expect(email.html).toContain("permanently deleted");
+    expect(email.html).not.toContain("Keep my account");
   });
 });

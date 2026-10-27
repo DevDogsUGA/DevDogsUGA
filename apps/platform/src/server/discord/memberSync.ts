@@ -144,3 +144,45 @@ export async function removeSyncedRolesOnUnlink(userId: string): Promise<void> {
     .delete(discordRoleMemberships)
     .where(eq(discordRoleMemberships.userId, userId));
 }
+
+/**
+ * Run when a member's account is deleted. Takes the Discord roles the platform
+ * synced off their Discord account, because once the identity is gone nothing
+ * reconciles them again (`reconcileMembership` only visits linked users), so
+ * they would keep a leadership role in the guild for good.
+ *
+ * Only roles with a `discordRoleId` are touched, the ones the platform
+ * created or imported; every other role the member holds in the guild is
+ * theirs and the server's. Leaving the server is the member's own step (the
+ * deletion email and pending page say so). A member who is not in the guild,
+ * or whose Discord id is unknown, has nothing to strip. A Discord error
+ * throws so the deletion job retries it.
+ */
+export async function stripSyncedRolesFromGuild(
+  userId: string,
+): Promise<number> {
+  const discordUserId = await getDiscordUserId(userId);
+  if (!discordUserId) return 0;
+
+  const member = (await asBot()
+    .get(Routes.guildMember(env.DISCORD_GUILD_ID, discordUserId))
+    .catch((err: unknown) => {
+      if (err instanceof DiscordAPIError && err.status === 404) return null;
+      throw err;
+    })) as APIGuildMember | null;
+  if (!member) return 0;
+
+  const held = new Set(member.roles);
+  const synced = await db
+    .select({ discordRoleId: roles.discordRoleId })
+    .from(roles)
+    .where(isNotNull(roles.discordRoleId));
+
+  let stripped = 0;
+  for (const { discordRoleId } of synced) {
+    if (discordRoleId === null || !held.has(discordRoleId)) continue;
+    await pushMemberRoleChange(discordUserId, discordRoleId, "remove");
+    stripped++;
+  }
+  return stripped;
+}

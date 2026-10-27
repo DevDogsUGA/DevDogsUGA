@@ -31,6 +31,7 @@ export type RoleRow = {
   canManageAttendance: boolean | null;
   canPreviewDocs: boolean | null;
   canManageOAuthApps: boolean | null;
+  canDeleteAccounts: boolean | null;
   discordRoleId: string | null;
   discordSyncedName: string | null;
   discordRolePosition: number | null;
@@ -105,6 +106,7 @@ export const getPermissionsPageData = cache(
         canManageAttendance: r.canManageAttendance,
         canPreviewDocs: r.canPreviewDocs,
         canManageOAuthApps: r.canManageOAuthApps,
+        canDeleteAccounts: r.canDeleteAccounts,
         discordRoleId: r.discordRoleId,
         discordSyncedName: r.discordSyncedName,
         discordRolePosition:

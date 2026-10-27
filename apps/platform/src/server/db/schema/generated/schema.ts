@@ -155,6 +155,29 @@ export const contentTypesInPlatform = platform.table.withRLS("contentTypes", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 ]);
 
+export const accountDeletionsInPlatform = platform.table.withRLS("accountDeletions", {
+	userId: uuid().primaryKey(),
+	scheduledFor: timestamp({ withTimezone: true }).notNull(),
+	requestedBy: uuid().references(() => users.id, { onDelete: "set null" } ),
+	reason: text(),
+	email: text().notNull(),
+	name: text(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	attempts: integer().default(0).notNull(),
+	lastAttemptAt: timestamp({ withTimezone: true }),
+	lastError: text(),
+}, (table) => [
+	index("accountDeletions_scheduledFor_idx").using("btree", table.scheduledFor.asc().nullsLast()),
+
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+]);
+
 export const deletedAccountBlocksInPlatform = platform.table.withRLS("deletedAccountBlocks", {
 	subjectHash: bytea().primaryKey(),
 	expiresAt: timestamp({ withTimezone: true }),
@@ -713,6 +736,7 @@ export const rolesInPlatform = platform.table.withRLS("roles", {
 	canManageAttendance: boolean(),
 	canPreviewDocs: boolean(),
 	canManageOAuthApps: boolean(),
+	canDeleteAccounts: boolean(),
 }, (table) => [
 	index("roles_isLeadership_rank_idx").using("btree", table.rank.asc().nullsLast()).where(sql`"isLeadership"`),
 	unique("roles_discordRoleId_key").on(table.discordRoleId),	unique("roles_rank_key").on(table.rank),	unique("roles_title_key").on(table.title),
@@ -984,7 +1008,7 @@ export const publicProfilesInPlatform = platform.view("publicProfiles", {	userId
 	showBio: boolean(),
 	showLinks: boolean(),
 	showStars: boolean(),
-}).as(sql`SELECT p."userId", p.handle, CASE WHEN p."showName" THEN p."preferredName" ELSE NULL::character varying END AS "displayName", p."showAvatar" AND (EXISTS ( SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'avatars'::text AND o.name = p."userId"::text)) AS "hasAvatar", CASE WHEN p."showBio" THEN p.bio ELSE NULL::character varying END AS bio, CASE WHEN p."showBio" THEN p."roleDescription" ELSE NULL::character varying END AS "roleDescription", CASE WHEN p."showGithub" THEN ( SELECT lower(i.identity_data ->> 'user_name'::text) AS lower FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text) ELSE NULL::text END AS "githubHandle", CASE WHEN p."showDiscord" THEN ( SELECT i.identity_data ->> 'full_name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text) ELSE NULL::text END AS "discordHandle", CASE WHEN p."showLinkedin" THEN ( SELECT i.identity_data ->> 'name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'linkedin_oidc'::text) ELSE NULL::text END AS "linkedinName", p."showName", p."showAvatar", p."showBio", p."showLinks", p."showStars" FROM platform.profile p JOIN platform."profileWithVerification" v ON v."userId" = p."userId" WHERE v.verified AND p."publicProfile" AND p.handle IS NOT NULL AND p."quarantinedBy" IS NULL AND NOT platform.is_suspended(p."userId")`);
+}).as(sql`SELECT p."userId", p.handle, CASE WHEN p."showName" THEN p."preferredName" ELSE NULL::character varying END AS "displayName", p."showAvatar" AND (EXISTS ( SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'avatars'::text AND o.name = p."userId"::text)) AS "hasAvatar", CASE WHEN p."showBio" THEN p.bio ELSE NULL::character varying END AS bio, CASE WHEN p."showBio" THEN p."roleDescription" ELSE NULL::character varying END AS "roleDescription", CASE WHEN p."showGithub" THEN ( SELECT lower(i.identity_data ->> 'user_name'::text) AS lower FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text) ELSE NULL::text END AS "githubHandle", CASE WHEN p."showDiscord" THEN ( SELECT i.identity_data ->> 'full_name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text) ELSE NULL::text END AS "discordHandle", CASE WHEN p."showLinkedin" THEN ( SELECT i.identity_data ->> 'name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'linkedin_oidc'::text) ELSE NULL::text END AS "linkedinName", p."showName", p."showAvatar", p."showBio", p."showLinks", p."showStars" FROM platform.profile p JOIN platform."profileWithVerification" v ON v."userId" = p."userId" WHERE v.verified AND p."publicProfile" AND p.handle IS NOT NULL AND p."quarantinedBy" IS NULL AND NOT platform.is_suspended(p."userId") AND NOT (EXISTS ( SELECT 1 FROM platform."accountDeletions" d WHERE d."userId" = p."userId"))`);
 
 export const resolvedUserPermissionsInPlatform = platform.materializedView("resolvedUserPermissions", {	userId: uuid(),
 	canModerate: boolean(),
@@ -994,6 +1018,7 @@ export const resolvedUserPermissionsInPlatform = platform.materializedView("reso
 	canManageAttendance: boolean(),
 	canPreviewDocs: boolean(),
 	canManageOAuthApps: boolean(),
+	canDeleteAccounts: boolean(),
 	isLeader: boolean(),
 	minRank: doublePrecision(),
 }).as(sql`WITH user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canManageAttendance", r."canPreviewDocs", r."canManageOAuthApps" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageAttendance" IS NOT NULL))[1] AS "canManageAttendance", (array_agg(ucr."canPreviewDocs" ORDER BY ucr.rank) FILTER (WHERE ucr."canPreviewDocs" IS NOT NULL))[1] AS "canPreviewDocs" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", COALESCE(fnn."canModerate", false) AS "canModerate", COALESCE(fnn."canManageRoles", false) AS "canManageRoles", COALESCE(fnn."canManageSuspensions", false) AS "canManageSuspensions", COALESCE(fnn."canViewAuditLog", false) AS "canViewAuditLog", COALESCE(fnn."canManageAttendance", false) AS "canManageAttendance", COALESCE(fnn."canPreviewDocs", false) AS "canPreviewDocs", COALESCE(fnn."canManageOAuthApps", false) AS "canManageOAuthApps", COALESCE(fnn."isLeader", false) AS "isLeader", COALESCE(fnn."minRank", 'Infinity'::double precision) AS "minRank" FROM all_users au LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`);
@@ -1001,6 +1026,7 @@ export const resolvedUserPermissionsInPlatform = platform.materializedView("reso
 // Schema-suffix aliases — appended by types:drizzle
 export { academicProgramCategoryInPlatform as academicProgramCategory };
 export { academicProgramsInPlatform as academicPrograms };
+export { accountDeletionsInPlatform as accountDeletions };
 export { appKindInPlatform as appKind };
 export { appsInPlatform as apps };
 export { attendanceInPlatform as attendance };
@@ -1011,6 +1037,7 @@ export { configReconcileStateInPlatform as configReconcileState };
 export { contentActionInPlatform as contentAction };
 export { contentTypesInPlatform as contentTypes };
 export { contentVisibilityInPlatform as contentVisibility };
+export { deletedAccountBlocksInPlatform as deletedAccountBlocks };
 export { deliveryStatusInPlatform as deliveryStatus };
 export { discordRoleMembershipsInPlatform as discordRoleMemberships };
 export { docsIndexStateInPlatform as docsIndexState };
