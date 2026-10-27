@@ -73,7 +73,7 @@ A second report of content that already has an open report becomes a corroborati
 
 ## Receiving decisions
 
-The platform POSTs to the endpoint URL you registered. Six message types:
+The platform POSTs to the endpoint URL you registered. Seven message types:
 
 | `type`                            | Means                                                               |
 | --------------------------------- | ------------------------------------------------------------------- |
@@ -81,6 +81,7 @@ The platform POSTs to the endpoint URL you registered. Six message types:
 | `content.restore`                 | clear it                                                            |
 | `user.suspend` / `user.ban`       | a Supabase `ban_duration` on the user with that DevDogs identity    |
 | `user.restore`                    | lift it                                                             |
+| `user.delete`                     | the member deleted their account: erase what you hold on them       |
 
 ```json
 { "type": "content.hide", "timestamp": "2027-01-01T00:00:00.000Z",

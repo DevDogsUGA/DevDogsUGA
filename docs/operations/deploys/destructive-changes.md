@@ -15,7 +15,7 @@ Generated SQL may only add. A change that drops or rewrites data is stopped on t
 
 - the SQL the **schema tree** changes compared with where the pull request started (removing a column from a file in `supabase/schemas/` makes the diff contain `DROP COLUMN`). The check builds a scratch database at the base commit and another at the head, and reads the SQL between them;
 - every **hand-written migration** the pull request adds, edits or renames;
-- every **seed file** under `supabase/seed/` it adds or edits (and `supabase/roles.sql`). `include_seed` runs seeds on staging and production, and seeds are insert only, so a seed that updates, deletes, drops, alters or upserts is destructive. A `DO` block in a seed is read rather than distrusted (the officer seeds use one): it passes unless its body does one of those things or runs dynamic SQL (`EXECUTE`). The deploy plan classifies the seed files it is about to run the same way, so a seed cannot skip the gate by not being a migration.
+- every **seed file** under `supabase/seed/` it adds or edits (and `supabase/roles.sql`). `include_seed` runs seeds on staging and production, and seeds are insert only, so a seed that updates, deletes, drops, alters or upserts is destructive. A `DO` block in a seed is read rather than distrusted: it passes unless its body does one of those things or runs dynamic SQL (`EXECUTE`). The deploy plan classifies the seed files it is about to run the same way, so a seed cannot skip the gate by not being a migration.
 
 ## Stop one: the pull request
 

@@ -68,7 +68,7 @@ function signInAs(id: string, github = true) {
 
 async function registration(clientId: string) {
   const rows = await db.execute<{
-    userId: string;
+    userId: string | null;
     tier: string;
     label: string;
   }>(

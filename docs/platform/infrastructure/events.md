@@ -117,7 +117,7 @@ every run counts as a change.
 
 ## Local development
 
-`supabase/seed/` only ever holds roles and officers — meetings and
+`supabase/seed/` only ever holds the role catalogue — meetings and
 workshops are not part of it, because they come from `@devdogsuga/events` via
 the reconcile, and the reconcile is a platform route rather than a
 devtools-side function (it needs the app's Drizzle client, relations and

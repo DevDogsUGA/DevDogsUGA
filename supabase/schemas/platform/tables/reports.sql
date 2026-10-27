@@ -1,8 +1,8 @@
 CREATE TABLE "platform"."reports" (
   "id"              uuid                        NOT NULL DEFAULT gen_random_uuid(),
   "appId"           uuid                        NOT NULL,
-  "reporterUserId"  uuid                        NOT NULL,
-  "reportedUserId"  uuid                        NOT NULL,
+  "reporterUserId"  uuid,
+  "reportedUserId"  uuid,
   "contentType"     text                        NOT NULL,
   "contentRef"      text                        NOT NULL,
   "contentSnapshot" character varying(5000)     NOT NULL,
@@ -12,8 +12,8 @@ CREATE TABLE "platform"."reports" (
   "resolvedAt"      timestamp without time zone,
   CONSTRAINT "reports_appId_fkey" FOREIGN KEY ("appId") REFERENCES platform.apps(id) ON DELETE CASCADE,
   CONSTRAINT "reports_pkey" PRIMARY KEY (id),
-  CONSTRAINT "reports_reportedUserId_fkey" FOREIGN KEY ("reportedUserId") REFERENCES auth.users(id) ON DELETE CASCADE,
-  CONSTRAINT "reports_reporterUserId_fkey" FOREIGN KEY ("reporterUserId") REFERENCES auth.users(id) ON DELETE CASCADE
+  CONSTRAINT "reports_reportedUserId_fkey" FOREIGN KEY ("reportedUserId") REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT "reports_reporterUserId_fkey" FOREIGN KEY ("reporterUserId") REFERENCES auth.users(id) ON DELETE SET NULL
 );
 
 ALTER TABLE "platform"."reports"

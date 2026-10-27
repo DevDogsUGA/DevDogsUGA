@@ -213,8 +213,9 @@ jobs:
   # reviewers, so nothing waits here. A destructive plan is refused unless the
   # pull request that produced the commit approved it (allow-destructive).
   #
-  # `--include-seed` runs the seed files staging has not recorded yet; they are
-  # insert-only, so a rerun or an edited file changes nothing there.
+  # `--include-seed` runs the seed files staging has not recorded yet (the
+  # role catalogue); they are insert-only, so a rerun or an edited file
+  # changes nothing there.
   staging-database:
     needs: [resolve, staging-preflight]
     if: needs.staging-preflight.outputs.paused != 'true'

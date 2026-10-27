@@ -200,7 +200,8 @@
           "enum": [
             "user.suspend",
             "user.ban",
-            "user.restore"
+            "user.restore",
+            "user.delete"
           ]
         },
         "timestamp": {

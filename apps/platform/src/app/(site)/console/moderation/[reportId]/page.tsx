@@ -100,7 +100,9 @@ export default async function ReportDetail({
                 <>
                   {reporterName}
                   <br />
-                  <code className="con-code">{report.reporterUserId}</code>
+                  {report.reporterUserId && (
+                    <code className="con-code">{report.reporterUserId}</code>
+                  )}
                 </>
               ),
             },
@@ -121,7 +123,9 @@ export default async function ReportDetail({
                 <>
                   {reportedName}
                   <br />
-                  <code className="con-code">{report.reportedUserId}</code>
+                  {report.reportedUserId && (
+                    <code className="con-code">{report.reportedUserId}</code>
+                  )}
                 </>
               ),
             },
@@ -130,12 +134,14 @@ export default async function ReportDetail({
               detail: (
                 <span className="con-meta">
                   <StandingBadge standing={standingOf(isBanned, suspension)} />
-                  <Link
-                    href={`/console/moderation/users/${report.reportedUserId}`}
-                    className="textlink"
-                  >
-                    Standing and history
-                  </Link>
+                  {report.reportedUserId && (
+                    <Link
+                      href={`/console/moderation/users/${report.reportedUserId}`}
+                      className="textlink"
+                    >
+                      Standing and history
+                    </Link>
+                  )}
                 </span>
               ),
             },

@@ -78,15 +78,16 @@ begin
     );
   end if;
 
+  -- A deleted member's id on the report is null: there is nobody to act on.
   if coalesce(apply_globally, false) then
-    if subject_action in ('suspend', 'ban') then
+    if subject_action in ('suspend', 'ban') and report."reportedUserId" is not null then
       insert into "platform"."userSuspensions" ("userId", "service", "suspendedBy")
       values (report."reportedUserId", 'global', actor)
       on conflict ("userId", "service") do update
         set "suspendedBy" = actor, "suspendedAt" = now();
     end if;
 
-    if filer_action = 'suspend' then
+    if filer_action = 'suspend' and report."reporterUserId" is not null then
       insert into "platform"."userSuspensions" ("userId", "service", "suspendedBy")
       values (report."reporterUserId", 'global', actor)
       on conflict ("userId", "service") do update
@@ -102,12 +103,12 @@ begin
     reason_txt := report."reason"::text;
     scope_app := case when coalesce(apply_globally, false) then null else report."appId" end;
 
-    if subject_action in ('suspend', 'ban') then
+    if subject_action in ('suspend', 'ban') and report."reportedUserId" is not null then
       deliveries := deliveries || "platform".enqueue_user_standing(
         report."reportedUserId", subject_action::text, reason_txt, report_id, scope_app
       );
     end if;
-    if filer_action = 'suspend' then
+    if filer_action = 'suspend' and report."reporterUserId" is not null then
       deliveries := deliveries || "platform".enqueue_user_standing(
         report."reporterUserId", 'suspend', reason_txt, report_id, scope_app
       );
@@ -120,6 +121,7 @@ begin
     -- caller with admin credentials.
     'bannedUserId', case
       when coalesce(apply_globally, false) and subject_action = 'ban'
+        and report."reportedUserId" is not null
       then report."reportedUserId"
     end,
     -- The deliveries this decision owes that are ready to send, for the caller

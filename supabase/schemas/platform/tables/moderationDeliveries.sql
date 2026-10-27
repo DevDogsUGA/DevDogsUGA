@@ -17,7 +17,7 @@ CREATE TABLE "platform"."moderationDeliveries" (
   CONSTRAINT "moderationDeliveries_pkey" PRIMARY KEY (id),
   CONSTRAINT "moderationDeliveries_target_check" CHECK ((("appId" IS NOT NULL) OR sandbox)),
   CONSTRAINT "moderationDeliveries_type_check"
-    CHECK ((type = ANY (ARRAY['content.hide'::text, 'content.remove'::text, 'content.restore'::text, 'user.suspend'::text, 'user.ban'::text, 'user.restore'::text]))),
+    CHECK ((type = ANY (ARRAY['content.hide'::text, 'content.remove'::text, 'content.restore'::text, 'user.suspend'::text, 'user.ban'::text, 'user.restore'::text, 'user.delete'::text]))),
   CONSTRAINT "moderationDeliveries_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES platform.reports(id) ON DELETE SET NULL
 );
 

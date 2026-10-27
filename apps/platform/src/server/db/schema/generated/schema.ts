@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, integer, boolean, text, pgEnum, varchar, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, integer, boolean, text, pgEnum, varchar, timestamp, smallint, date, jsonb, doublePrecision, customType, bytea, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by types:drizzle after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -69,7 +69,7 @@ check("apps_kind_shape_check", sql`(((kind = 'internal'::platform."appKind") AND
 export const attendanceInPlatform = platform.table.withRLS("attendance", {
 	id: uuid().defaultRandom().primaryKey(),
 	meetingId: uuid().notNull().references(() => meetingsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
-	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	userId: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
 	method: checkInMethodInPlatform().notNull(),
 	recordedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 }, (table) => [
@@ -153,6 +153,21 @@ export const contentTypesInPlatform = platform.table.withRLS("contentTypes", {
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
 
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const deletedAccountBlocksInPlatform = platform.table.withRLS("deletedAccountBlocks", {
+	subjectHash: bytea().primaryKey(),
+	expiresAt: timestamp({ withTimezone: true }),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
 
 export const discordRoleMembershipsInPlatform = platform.table.withRLS("discordRoleMemberships", {
@@ -322,7 +337,7 @@ export const moderationDeliveriesInPlatform = platform.table.withRLS("moderation
 	index("moderationDeliveries_client_idx").using("btree", table.clientId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
 	index("moderationDeliveries_pending_idx").using("btree", table.queuedAt.asc().nullsLast()).where(sql`(status = 'pending'::platform."deliveryStatus")`),
 	index("moderationDeliveries_report_idx").using("btree", table.reportId.asc().nullsLast()),
-check("moderationDeliveries_target_check", sql`(("appId" IS NOT NULL) OR sandbox)`),check("moderationDeliveries_type_check", sql`(type = ANY (ARRAY['content.hide'::text, 'content.remove'::text, 'content.restore'::text, 'user.suspend'::text, 'user.ban'::text, 'user.restore'::text]))`),]);
+check("moderationDeliveries_target_check", sql`(("appId" IS NOT NULL) OR sandbox)`),check("moderationDeliveries_type_check", sql`(type = ANY (ARRAY['content.hide'::text, 'content.remove'::text, 'content.restore'::text, 'user.suspend'::text, 'user.ban'::text, 'user.restore'::text, 'user.delete'::text]))`),]);
 
 export const oauthConnectCodesInPlatform = platform.table.withRLS("oauthConnectCodes", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -373,7 +388,7 @@ export const oauthDeviceCodesInPlatform = platform.table.withRLS("oauthDeviceCod
 
 export const oauthRegistrationsInPlatform = platform.table.withRLS("oauthRegistrations", {
 	clientId: uuid().primaryKey().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	userId: uuid().notNull().references(() => users.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	userId: uuid().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	type: oauthRegistrationTypeInPlatform().default("development").notNull(),
 	label: text().default("Default Client").notNull(),
 	tier: oauthTierInPlatform().default("development").notNull(),
@@ -594,7 +609,7 @@ check("reflectionSettings_minimumWordCount_positive", sql`("minimumWordCount" > 
 export const reportCorroborationsInPlatform = platform.table.withRLS("reportCorroborations", {
 	id: uuid().defaultRandom().primaryKey(),
 	reportId: uuid().notNull().references(() => reportsInPlatform.id, { onDelete: "cascade" } ),
-	reporterUserId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	reporterUserId: uuid().references(() => users.id, { onDelete: "set null" } ),
 	reason: reportReasonInPlatform().notNull(),
 	description: varchar({ length: 1000 }),
 	createdAt: timestamp().default(sql`now()`).notNull(),
@@ -631,7 +646,7 @@ export const reportReasonsInPlatform = platform.table.withRLS("reportReasons", {
 export const reportResolutionsInPlatform = platform.table.withRLS("reportResolutions", {
 	id: uuid().defaultRandom().primaryKey(),
 	reportId: uuid().notNull().references(() => reportsInPlatform.id, { onDelete: "cascade" } ),
-	moderatorUserId: uuid().notNull().references(() => users.id, { onDelete: "restrict" } ),
+	moderatorUserId: uuid().references(() => users.id, { onDelete: "set null" } ),
 	subjectAction: subjectActionInPlatform().notNull(),
 	filerAction: filerActionInPlatform().notNull(),
 	contentAction: contentActionInPlatform().notNull(),
@@ -654,8 +669,8 @@ export const reportResolutionsInPlatform = platform.table.withRLS("reportResolut
 export const reportsInPlatform = platform.table.withRLS("reports", {
 	id: uuid().defaultRandom().primaryKey(),
 	appId: uuid().notNull().references(() => appsInPlatform.id, { onDelete: "cascade" } ),
-	reporterUserId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
-	reportedUserId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	reporterUserId: uuid().references(() => users.id, { onDelete: "set null" } ),
+	reportedUserId: uuid().references(() => users.id, { onDelete: "set null" } ),
 	contentType: text().notNull(),
 	contentRef: text().notNull(),
 	contentSnapshot: varchar({ length: 5000 }).notNull(),

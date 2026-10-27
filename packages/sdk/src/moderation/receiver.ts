@@ -67,7 +67,7 @@ export async function applyModerationEvent(
 }
 
 export type ContentState = "visible" | "hidden" | "removed";
-export type UserState = "active" | "suspended" | "banned";
+export type UserState = "active" | "suspended" | "banned" | "deleted";
 
 export interface MemoryStore extends ModerationStore {
   readonly content: ReadonlyMap<string, ContentState>;
@@ -114,7 +114,9 @@ export function createMemoryStore(): MemoryStore {
             ? "suspended"
             : message.type === "user.ban"
               ? "banned"
-              : "active",
+              : message.type === "user.delete"
+                ? "deleted"
+                : "active",
         );
       }
     },

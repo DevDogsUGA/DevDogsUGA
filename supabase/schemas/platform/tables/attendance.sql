@@ -1,11 +1,11 @@
 CREATE TABLE "platform"."attendance" (
   "id"         uuid                     NOT NULL DEFAULT gen_random_uuid(),
   "meetingId"  uuid                     NOT NULL,
-  "userId"     uuid                     NOT NULL,
+  "userId"     uuid,
   "recordedAt" timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT "attendance_meetingId_userId_key" UNIQUE ("meetingId", "userId"),
   CONSTRAINT "attendance_pkey" PRIMARY KEY (id),
-  CONSTRAINT "attendance_userId_fkey" FOREIGN KEY ("userId") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT "attendance_userId_fkey" FOREIGN KEY ("userId") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT "attendance_meetingId_fkey" FOREIGN KEY ("meetingId") REFERENCES platform.meetings(id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 

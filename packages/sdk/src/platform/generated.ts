@@ -81,7 +81,7 @@ export interface UserMessageData {
   reportId: string | null;
 }
 
-export const USER_MESSAGE_TYPE_VALUES = ["user.suspend", "user.ban", "user.restore"] as const;
+export const USER_MESSAGE_TYPE_VALUES = ["user.suspend", "user.ban", "user.restore", "user.delete"] as const;
 export type UserMessageType = (typeof USER_MESSAGE_TYPE_VALUES)[number];
 
 export interface PlatformClient {

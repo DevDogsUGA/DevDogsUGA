@@ -86,8 +86,8 @@ export function decideConsent(input: {
   tier: OAuthTier | null;
   /** The `redirect_uri` stored on the authorization row. */
   redirectUri: string | null;
-  /** The member who registered the client. */
-  ownerUserId: string;
+  /** The member who registered the client; null for a DevDogs app. */
+  ownerUserId: string | null;
   /** The signed-in member. */
   userId: string;
 }): ConsentDecision {
