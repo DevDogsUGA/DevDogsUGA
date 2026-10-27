@@ -1,10 +1,8 @@
 import "~/styles/globals.css";
 
-import { Suspense } from "react";
 import { type Metadata } from "next";
 import { Alan_Sans, Cascadia_Code, Hanken_Grotesk } from "next/font/google";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
-import NavigationProgress from "~/ui/navigation-progress";
 import QueryProvider from "~/ui/query-provider";
 import Toaster from "~/components/Toaster";
 import { cn } from "~/lib/cn";
@@ -180,13 +178,6 @@ export default function RootLayout({
           precedence="default"
           dangerouslySetInnerHTML={{ __html: displayFallbackFace }}
         />
-        {/* NavigationProgress reads usePathname(), which is dynamic under
-            Cache Components and must sit inside a <Suspense> boundary. It
-            renders null, so the prerendered shell shows nothing for it until
-            it hydrates. */}
-        <Suspense>
-          <NavigationProgress />
-        </Suspense>
         <TooltipProvider>
           <QueryProvider>
             <Toaster />

@@ -1,6 +1,9 @@
+"use client";
+
 import * as React from "react";
 
 import { cn } from "~/lib/cn";
+import { useFieldControlProps } from "~/ui/field";
 
 /**
  * The kit's `.input.area` frame around a native `<textarea>`. Props forward to
@@ -11,8 +14,9 @@ import { cn } from "~/lib/cn";
 function Textarea({
   className,
   style,
-  ...props
+  ...rest
 }: React.ComponentProps<"textarea">) {
+  const props = { ...rest, ...useFieldControlProps(rest) };
   return (
     <span
       data-slot="textarea-frame"

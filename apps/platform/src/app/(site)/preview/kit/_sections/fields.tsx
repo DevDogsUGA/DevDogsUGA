@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   CheckIcon,
   LockIcon,
@@ -67,6 +68,37 @@ const noop = () => undefined;
 const MONTHS = ["Spring 2027", "Fall 2027", "Spring 2028"];
 
 /** Every state of the live field primitives. */
+/** A select-all over three options: mixed while some, not all, are picked. */
+function MixedCheckExample() {
+  const options = ["Workshops", "Socials", "Competitions"];
+  const [picked, setPicked] = useState<string[]>(["Workshops"]);
+  const all = picked.length === options.length;
+  return (
+    <div className="col" style={{ gap: 10 }}>
+      <Checkbox
+        label="All event emails"
+        checked={all}
+        indeterminate={picked.length > 0 && !all}
+        onChange={() => setPicked(all ? [] : options)}
+      />
+      <div className="col" style={{ gap: 10, paddingLeft: 30 }}>
+        {options.map((o) => (
+          <Checkbox
+            key={o}
+            label={o}
+            checked={picked.includes(o)}
+            onChange={() =>
+              setPicked((cur) =>
+                cur.includes(o) ? cur.filter((x) => x !== o) : [...cur, o],
+              )
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function FieldsSection() {
   return (
     <>
@@ -330,6 +362,7 @@ export default function FieldsSection() {
             <Checkbox disabled label="Unchecked, disabled" />
             <Checkbox aria-invalid label="Unchecked, invalid" />
             <Checkbox aria-label="Bare box, no text" />
+            <MixedCheckExample />
           </div>
           <div
             className="col"

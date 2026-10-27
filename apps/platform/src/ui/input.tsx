@@ -1,6 +1,9 @@
+"use client";
+
 import * as React from "react";
 
 import { cn } from "~/lib/cn";
+import { useFieldControlProps } from "~/ui/field";
 
 /**
  * Input types that are not a text box: they keep the browser's own control (or
@@ -35,8 +38,10 @@ function Input({
   className,
   style,
   type,
-  ...props
+  ...rest
 }: React.ComponentProps<"input">) {
+  const aria = useFieldControlProps(rest);
+  const props = { ...rest, ...aria };
   if (type && UNFRAMED_TYPES.has(type)) {
     return (
       <input

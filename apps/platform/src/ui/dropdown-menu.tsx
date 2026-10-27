@@ -35,6 +35,7 @@ function DropdownMenuContent({
   className,
   align = "start",
   sideOffset = 4,
+  children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
@@ -44,11 +45,17 @@ function DropdownMenuContent({
         sideOffset={sideOffset}
         align={align}
         className={cn(
-          "menu data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--radix-dropdown-menu-content-available-height) origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto duration-100 data-[state=closed]:overflow-hidden",
+          "menu data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 z-50 origin-(--radix-dropdown-menu-content-transform-origin) duration-100",
           className,
         )}
         {...props}
-      />
+      >
+        {/* The frame (.menu's ::before/::after) stays put; only the rows scroll
+            in here, capped to what the viewport has left less the 6px padding. */}
+        <div className="menu-scroll max-h-[calc(var(--radix-dropdown-menu-content-available-height)-12px)] overflow-x-hidden overflow-y-auto">
+          {children}
+        </div>
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   );
 }

@@ -33,24 +33,42 @@ function Collapsible({
   );
 }
 
+const caret = <CaretRightIcon weight="bold" className="dt-caret" aria-hidden />;
+
+/**
+ * With `disclosure` the caret leads the trigger. Under `asChild` the trigger
+ * must stay a single element for Radix's Slot, so the caret goes inside the
+ * child (before its own children) instead of beside it.
+ */
 function CollapsibleTrigger({
   children,
+  asChild,
   ...props
 }: React.ComponentProps<typeof CollapsiblePrimitive.CollapsibleTrigger>) {
   const disclosure = React.useContext(DisclosureContext);
+  let content = children;
+  if (disclosure) {
+    if (asChild) {
+      const child = React.Children.only(children);
+      content = React.isValidElement<{ children?: React.ReactNode }>(child)
+        ? React.cloneElement(child, undefined, caret, child.props.children)
+        : child;
+    } else {
+      content = (
+        <>
+          {caret}
+          {children}
+        </>
+      );
+    }
+  }
   return (
     <CollapsiblePrimitive.CollapsibleTrigger
       data-slot="collapsible-trigger"
+      asChild={asChild}
       {...props}
     >
-      {disclosure ? (
-        <>
-          <CaretRightIcon weight="bold" className="dt-caret" aria-hidden />
-          {children}
-        </>
-      ) : (
-        children
-      )}
+      {content}
     </CollapsiblePrimitive.CollapsibleTrigger>
   );
 }

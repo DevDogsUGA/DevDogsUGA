@@ -76,7 +76,7 @@ function CodeInput({
               {...code.cellProps(i)}
               aria-invalid={invalid ? true : undefined}
               disabled={disabled}
-              className="text-center text-[18px]"
+              className="h-full text-center text-[18px]"
             />
           </span>
         </Fragment>
