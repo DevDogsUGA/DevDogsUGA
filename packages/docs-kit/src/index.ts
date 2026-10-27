@@ -35,3 +35,13 @@ export {
   type UntrustedLimits,
   type UntrustedManifest,
 } from "./untrusted.js";
+export {
+  buildCandidate,
+  digestOf,
+  summarizeChanges,
+  verifyCandidate,
+  type CandidateContent,
+  type CandidateManifest,
+  type CandidateSource,
+  type ChangeSummary,
+} from "./candidate.js";

@@ -39,6 +39,7 @@ import { remarkRewriteLinks, type LinkSource } from "./links.js";
 import {
   rehypeExternalLinks,
   rehypeMarkGenerated,
+  rehypePrefixIds,
   rehypeSanitizeHtml,
   remarkCheckFenceLinks,
   type RenderPolicy,
@@ -90,6 +91,8 @@ const processor = unified()
   .use(rehypeSanitizeHtml)
   .use(rehypeExternalLinks)
   .use(rehypeSlug)
+  // Untrusted docs only: ids get a per-project prefix before the heading links are built.
+  .use(rehypePrefixIds)
   .use(rehypeAutolinkHeadings, { behavior: "wrap" })
   .use(rehypeUnwrapImages)
   .use(rehypeShiki, {
