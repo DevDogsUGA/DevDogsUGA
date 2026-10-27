@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "badges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "The badge's identity; awards reference it. Never reuse an id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60,
+            "description": "What the badge is called. A per-workshop badge shows \"<name>: <workshop title>\"."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "description": "What earning it means, in one or two sentences."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["automatic", "manual"],
+            "description": "Automatic badges are awarded by the platform; manual ones by an officer."
+          },
+          "repeatable": {
+            "type": "boolean",
+            "description": "True when it can be awarded again (shown as a multiplier); false for a one-time achievement."
+          },
+          "perWorkshop": {
+            "default": false,
+            "description": "True when there is one badge per workshop definition rather than one overall.",
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "name", "description", "kind", "repeatable"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["badges"],
+  "additionalProperties": false,
+  "title": "DevDogs badges",
+  "description": "The badges members can hold and how each is awarded (Backstage packages/events)."
+}

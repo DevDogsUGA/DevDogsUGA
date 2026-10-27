@@ -14,6 +14,8 @@ import {
   pageBounds,
   type DirectoryQuery,
 } from "~/lib/directoryQuery";
+import { getPublicBadges } from "./badges";
+import type { BadgeEntry } from "../badges/display";
 import { getStarsForUser, totalStars, type StarTotals } from "./stars";
 
 /**
@@ -295,6 +297,12 @@ export interface PublicProfileActivity {
   stars: StarTotals | null;
   /** Merged pull requests in public DevDogs repositories, newest first. */
   contributions: ContributionItem[] | null;
+  /**
+   * Live badges the member has not hidden (Q89), each with its dated awards.
+   * Public whenever the profile is: there is no section switch, only the
+   * per-badge hide in Settings.
+   */
+  badges: BadgeEntry[];
 }
 
 /**
@@ -318,7 +326,7 @@ export const getPublicProfileActivity = cache(
     if (!member) return null;
     const userId = member.userId!;
 
-    const [links, stars, contributions] = await Promise.all([
+    const [links, stars, contributions, badges] = await Promise.all([
       member.showLinks
         ? db
             .select({ title: profileLinks.title, url: profileLinks.url })
@@ -332,9 +340,10 @@ export const getPublicProfileActivity = cache(
       member.showContributions
         ? getContributionsForUser(userId, { publicOnly: true })
         : null,
+      getPublicBadges(userId),
     ]);
 
-    return { links, stars, contributions };
+    return { links, stars, contributions, badges };
   },
 );
 

@@ -3,6 +3,7 @@ import type { TerminalPattern } from "./paths";
 import { accountDeletion, consoleApps } from "./routes/account";
 import {
   brandGraphics,
+  consoleBadges,
   consoleData,
   consoleExports,
   consoleImports,
@@ -39,11 +40,13 @@ export const TERMINAL_ROUTES = {
   "/preview/kit": kitGallery,
   "/account/deletion": accountDeletion,
   "/console/attendance/:meetingId": consoleMeeting,
+  "/console/badges": consoleBadges,
+  "/console/badges/:userId": consoleBadges,
+  "/help": help,
+  "/help/:threadId": helpThread,
   "/console/data": consoleData,
   "/console/data/exports": consoleExports,
   "/console/data/imports": consoleImports,
-  "/help": help,
-  "/help/:threadId": helpThread,
   "/console/apps": consoleApps,
   "/console/graphics": brandGraphics,
   "/console/attendance/:meetingId/graphics": meetingGraphics,

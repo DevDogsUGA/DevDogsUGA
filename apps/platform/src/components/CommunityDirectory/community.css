@@ -161,9 +161,11 @@
     gap: 6px;
     align-items: center;
   }
-  .cosmic .cm-contributions {
+  .cosmic .cm-contributions,
+  .cosmic .cm-badges {
     margin-top: var(--space-8);
   }
+  .cosmic .cm-badges h2,
   .cosmic .cm-contributions h2 {
     font-size: 20px;
     margin: 0 0 16px;

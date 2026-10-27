@@ -1,3 +1,4 @@
+import { getWorkshops } from "@devdogsuga/events";
 import { sql } from "drizzle-orm";
 import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
@@ -18,6 +19,15 @@ export interface ReflectionActivity {
   submittedAt: Date | null;
   wordCount: number;
   canEdit: boolean;
+  /** The workshops this meeting ran, to pick from (Q95). Never empty. */
+  workshops: ReflectionWorkshop[];
+  /** The workshop the member chose, or null before they have. */
+  workshopDefinitionId: string | null;
+}
+
+export interface ReflectionWorkshop {
+  id: string;
+  title: string;
 }
 
 interface ActivityRow {
@@ -34,6 +44,7 @@ interface ActivityRow {
   reflectionId: string | null;
   content: string | null;
   submittedAt: string | null;
+  workshopDefinitionId: string | null;
 }
 
 export async function getReflectionActivities(
@@ -55,7 +66,8 @@ export async function getReflectionActivities(
   const rows = await db.execute<ActivityRow>(sql`
     select 'meeting'::text as "activityType", m.id as "activityId",
       coalesce(m."nameOverride", 'Meeting') as label,
-      m."endsAt", a."recordedAt", r.id as "reflectionId", r.content, r."submittedAt"
+      m."endsAt", a."recordedAt", r.id as "reflectionId", r.content, r."submittedAt",
+      r."workshopDefinitionId"
     from platform.attendance a
     join platform.meetings m on m.id = a."meetingId"
     left join platform.reflections r
@@ -65,6 +77,42 @@ export async function getReflectionActivities(
 
     order by "endsAt" desc, "activityId"
   `);
+
+  const meetingIds = rows.map((row) => row.activityId);
+  const workshopRows =
+    meetingIds.length === 0
+      ? []
+      : await db.execute<{
+          meetingId: string;
+          definitionId: string;
+          title: string | null;
+          project: string | null;
+        }>(sql`
+          select distinct on ("meetingId", "definitionId") "meetingId", "definitionId", title, project
+          from platform.workshops
+          where "meetingId" in (${sql.join(
+            meetingIds.map((id) => sql`${id}::uuid`),
+            sql`, `,
+          )})
+            and "definitionId" is not null and "deletedAt" is null
+          order by "meetingId", "definitionId"
+        `);
+  const definitions = new Map(
+    getWorkshops().workshops.map((workshop) => [workshop.id, workshop.title]),
+  );
+  const workshopsByMeeting = new Map<string, ReflectionWorkshop[]>();
+  for (const row of workshopRows) {
+    const list = workshopsByMeeting.get(row.meetingId) ?? [];
+    list.push({
+      id: row.definitionId,
+      title:
+        definitions.get(row.definitionId) ??
+        row.title ??
+        row.project ??
+        row.definitionId,
+    });
+    workshopsByMeeting.set(row.meetingId, list);
+  }
 
   return {
     minimumWordCount: policy.minimumWordCount,
@@ -85,6 +133,7 @@ export async function getReflectionActivities(
         deadline,
         wordCount: reflectionWordCount(content),
         canEdit: submittedAt === null && now <= deadline,
+        workshops: workshopsByMeeting.get(row.activityId) ?? [],
       };
     }),
   };

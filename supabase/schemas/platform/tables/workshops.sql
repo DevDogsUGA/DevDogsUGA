@@ -63,3 +63,10 @@ COMMENT ON COLUMN "platform"."workshops"."definitionId" IS 'The id of the worksh
 COMMENT ON COLUMN "platform"."workshops"."elHours" IS 'The EL (experiential learning) hours attending this workshop earns, copied from its definition. Independent of the meeting''s start and end times; one hour unless the definition says otherwise.';
 
 COMMENT ON COLUMN "platform"."workshops"."topics" IS 'Topic tags from the workshop''s definition ("web", "databases"). Empty when it has none.';
+
+-- Deferred to commit, like meetings_sync_badges.
+CREATE CONSTRAINT TRIGGER workshops_sync_badges
+  AFTER INSERT OR UPDATE OF "meetingId", "definitionId", "deletedAt" OR DELETE ON platform.workshops
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW
+  EXECUTE FUNCTION platform.badges_after_workshop();

@@ -54,3 +54,8 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 REVOKE ALL ON TABLE "platform"."contributions" FROM "anon", "authenticated";
 
 COMMENT ON TABLE "platform"."contributions" IS 'Server-only. One merged pull request in a DevDogs organization repository, fed by the GitHub App webhook and the backfill. "authorGithubId" is the author''s numeric GitHub user id (matched against auth.identities.provider_id, never the login). "userId" is the matched member, or null while the author has no linked GitHub account; platform.claim_contributions fills it when they link. Account deletion: the member''s rows are deleted with the account (ON DELETE CASCADE) because a member''s contribution history is personal data; rows with a null "userId" belong to no account and stay. "repoPrivate" rows count for the member (their own page, streaks) but are never shown on a public profile. Public reads go only through the public-profile loaders. Caveats: unique on (repo full name, PR number), so a repository rename or transfer makes a backfill record its PRs again under the new name; unlinking GitHub does not release a member''s rows.';
+
+CREATE TRIGGER contributions_award_first_merge
+  AFTER INSERT OR UPDATE OF "userId" ON platform.contributions
+  FOR EACH ROW
+  EXECUTE FUNCTION platform.badges_after_contribution();
