@@ -16,7 +16,7 @@
         "/legal/privacy",
         "/legal/terms"
       ],
-      "protectedPath": "/console/permissions",
+      "protectedPath": "/settings/profile",
       "protectedRedirectPrefix": "/auth"
     }
   },

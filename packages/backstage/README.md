@@ -100,7 +100,7 @@ DevDogsUGA, as a `smoke` field on each app's entry in `workers.json`:
         "production": "devdogsuga.org"
       },
       "publicPaths": ["/", "/events"],
-      "protectedPath": "/console/permissions",
+      "protectedPath": "/settings/profile",
       "protectedRedirectPrefix": "/auth"
     }
   }

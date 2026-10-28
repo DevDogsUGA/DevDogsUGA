@@ -10,7 +10,7 @@
  *   { "path": "apps/platform", "smoke": {
  *       "hosts": { "staging": "staging.devdogsuga.org", "production": "devdogsuga.org" },
  *       "publicPaths": ["/", "/events"],
- *       "protectedPath": "/console/permissions",
+ *       "protectedPath": "/settings/profile",
  *       "protectedRedirectPrefix": "/auth" } }
  *
  * Until that field exists in a checkout, `FALLBACK_SMOKE` (the table
@@ -25,7 +25,9 @@
  *     session. A deliberately small, stable set of informational routes.
  *   * `protectedPath`: one route an anonymous visitor cannot reach directly.
  *     It can be a synthetic path when the app gates everything not on its
- *     public allowlist.
+ *     public allowlist. It must redirect, not 404: the platform's `/console`
+ *     answers a signed-out visitor with the 404 (F1), so the platform checks
+ *     `/settings/profile`, which sends them to sign in.
  *   * `protectedRedirectPrefix`: what the `Location` of the anonymous request
  *     to `protectedPath` must start with.
  */
