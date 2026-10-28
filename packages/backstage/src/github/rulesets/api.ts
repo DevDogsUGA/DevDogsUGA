@@ -28,11 +28,14 @@ const MAX_BUFFER = 16 * 1024 * 1024;
 
 export class GhRulesetsError extends Error {}
 
-function describe(err: unknown): string {
+function describe(err: unknown, includeDetails = false): string {
   const e = err as { stdout?: string; stderr?: string; message?: string };
   const stderr = (e.stderr ?? "").trim();
   const message = e.message ?? "";
   const summary = stderr || message || "gh failed with no output.";
+  // Read callers classify missing resources from the transport summary.
+  // Free-form API details must not change that classification.
+  if (!includeDetails) return summary;
   // gh writes the API response to stdout even on a failed request. Only
   // retain diagnostic fields: never dump the response, request or headers.
   let response: unknown;
@@ -166,7 +169,7 @@ async function writeJson(
     child.on("error", (err) => reject(new GhRulesetsError(describe(err))));
     child.on("close", (code) => {
       if (code !== 0) {
-        reject(new GhRulesetsError(describe({ stdout, stderr })));
+        reject(new GhRulesetsError(describe({ stdout, stderr }, true)));
         return;
       }
       const trimmed = stdout.trim();
