@@ -165,24 +165,15 @@ describe("product targets", () => {
     for (const product of PRODUCT_NAMES) {
       for (const target of VAULT_TARGETS) {
         expect(productFileFor(product, target)).toBe(fileFor(target));
-        expect(productProjectFor(product, target)).toBe(
-          `${product}-${projectFor(target)}`,
-        );
+        expect(productProjectFor(product, target)).toBe(projectFor(target));
         expect(productGithubEnvironment(target)).toBe(target);
       }
     }
   });
 
-  it("names projects by product and target, and never the platform's", () => {
-    expect(productProjectFor("dogdays", "staging")).toBe("dogdays-staging");
-    expect(productProjectFor("dogpack", "production")).toBe(
-      "dogpack-production",
-    );
-    for (const product of PRODUCT_NAMES) {
-      for (const target of VAULT_TARGETS) {
-        expect(productProjectFor(product, target)).not.toBe(projectFor(target));
-      }
-    }
+  it("shares the existing tier projects with the platform", () => {
+    expect(productProjectFor("dogdays", "staging")).toBe("staging");
+    expect(productProjectFor("dogpack", "production")).toBe("production");
   });
 
   it("recognises products and refuses anything else", () => {

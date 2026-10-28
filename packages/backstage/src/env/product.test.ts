@@ -23,6 +23,12 @@ vi.mock("@clack/prompts", () => ({
   select: vi.fn(),
 }));
 
+import { confirm, log, note } from "@clack/prompts";
+import {
+  PRODUCTS,
+  PRODUCT_NAMES,
+  VAULT_TARGETS,
+} from "@devdogsuga/sdk/env/targets";
 import {
   resolveProduct,
   resolveProductCheckout,
@@ -221,18 +227,18 @@ describe("resolveProductCheckout", () => {
 });
 
 describe("runProductPush", () => {
-  it("writes the product's own project and repo, nothing of the platform's", async () => {
+  it("writes prefixed keys in the tier project and bare keys to the product repo", async () => {
     writeFileSync(
       join(dir, ".env.staging"),
       'PROJECT_REF="abc"\nDB_URL="postgres://x"\n',
     );
-    const { deps, calls } = fakes({ bws: { "dogdays-staging": {} } });
+    const { deps, calls } = fakes({ bws: { staging: {} } });
     await runProductPush(options(), deps);
 
-    expect(calls.projectIdFor).toEqual(["dogdays-staging"]);
+    expect(calls.projectIdFor).toEqual(["staging"]);
     expect(calls.created).toEqual([
-      ["dogdays-staging", "DB_URL"],
-      ["dogdays-staging", "PROJECT_REF"],
+      ["staging", "dogdays/DB_URL"],
+      ["staging", "dogdays/PROJECT_REF"],
     ]);
     // Secrets and variables each reach their own store, in the product repo's
     // `staging` environment.
@@ -246,7 +252,7 @@ describe("runProductPush", () => {
 
   it("reads the target's own file, not .env", async () => {
     writeFileSync(join(dir, ".env"), 'DB_URL="dev"\n');
-    const { deps, calls } = fakes({ bws: { "dogpack-preflight": {} } });
+    const { deps, calls } = fakes({ bws: { preflight: {} } });
     await runProductPush(
       options({ product: "dogpack", target: "preflight" }),
       deps,
@@ -260,7 +266,7 @@ describe("runProductPush", () => {
     writeFileSync(join(dir, ".env.staging"), 'DB_URL="x"\n');
     const { deps, calls } = fakes({});
     await expect(runProductPush(options(), deps)).rejects.toThrow(
-      /No project named "dogdays-staging"/,
+      /No project named "staging"/,
     );
     expect(calls.created).toEqual([]);
     expect(calls.setSecret).toEqual([]);
@@ -268,7 +274,7 @@ describe("runProductPush", () => {
 
   it("refuses production without a prompt, before touching anything", async () => {
     writeFileSync(join(dir, ".env.production"), 'DB_URL="x"\n');
-    const { deps, calls } = fakes({ bws: { "dogdays-production": {} } });
+    const { deps, calls } = fakes({ bws: { production: {} } });
     await runProductPush(options({ target: "production" }), deps);
     expect(process.exitCode).toBe(1);
     expect(calls.projectIdFor).toEqual([]);
@@ -278,11 +284,11 @@ describe("runProductPush", () => {
   it("updates changed values and leaves project-only keys alone", async () => {
     writeFileSync(join(dir, ".env.staging"), 'DB_URL="new"\n');
     const { deps, calls, projects } = fakes({
-      bws: { "dogdays-staging": { DB_URL: "old", KEEP: "k" } },
+      bws: { staging: { "dogdays/DB_URL": "old", "dogdays/KEEP": "k" } },
     });
     await runProductPush(options(), deps);
-    expect(calls.updated).toEqual([["dogdays-staging", "DB_URL"]]);
-    expect(projects.get("dogdays-staging")!.get("KEEP")).toBe("k");
+    expect(calls.updated).toEqual([["staging", "dogdays/DB_URL"]]);
+    expect(projects.get("staging")!.get("dogdays/KEEP")).toBe("k");
   });
 
   it("never uploads the vault token", async () => {
@@ -290,18 +296,21 @@ describe("runProductPush", () => {
       join(dir, ".env.staging"),
       'BWS_ACCESS_TOKEN="t"\nDB_URL="x"\n',
     );
-    const { deps, calls } = fakes({ bws: { "dogdays-staging": {} } });
+    const { deps, calls } = fakes({ bws: { staging: {} } });
     await runProductPush(options(), deps);
-    expect(calls.created.map(([, k]) => k)).toEqual(["DB_URL"]);
+    expect(calls.created.map(([, k]) => k)).toEqual(["dogdays/DB_URL"]);
     expect(calls.setSecret.map(([, k]) => k)).toEqual(["DB_URL"]);
   });
 });
 
 describe("runProductPull", () => {
-  it("imports the product's project into the product file", async () => {
+  it("imports the product prefix into the product file", async () => {
     const { deps } = fakes({
       bws: {
-        "dogpack-production": { DB_URL: "postgres://p", API_URL: "https://a" },
+        production: {
+          "dogpack/DB_URL": "postgres://p",
+          "dogpack/API_URL": "https://a",
+        },
       },
     });
     await runProductPull(
@@ -314,7 +323,7 @@ describe("runProductPull", () => {
   });
 
   it("writes nothing when the project is empty, and says how to start", async () => {
-    const { deps } = fakes({ bws: { "dogdays-staging": {} } });
+    const { deps } = fakes({ bws: { staging: {} } });
     await runProductPull(options(), deps);
     expect(() => readFileSync(join(dir, ".env.staging"), "utf8")).toThrow();
   });
@@ -332,7 +341,10 @@ describe("runProductAudit", () => {
     await filled();
     const { deps, calls } = fakes({
       bws: {
-        "dogdays-staging": { PROJECT_REF: "abc", DB_URL: "postgres://x" },
+        staging: {
+          "dogdays/PROJECT_REF": "abc",
+          "dogdays/DB_URL": "postgres://x",
+        },
       },
       ghSecrets: ["DB_URL"],
       ghVariables: { PROJECT_REF: "abc" },
@@ -347,7 +359,10 @@ describe("runProductAudit", () => {
     await filled();
     const { deps } = fakes({
       bws: {
-        "dogdays-staging": { PROJECT_REF: "abc", DB_URL: "postgres://x" },
+        staging: {
+          "dogdays/PROJECT_REF": "abc",
+          "dogdays/DB_URL": "postgres://x",
+        },
       },
       ghSecrets: [],
       ghVariables: { PROJECT_REF: "abc" },
@@ -360,7 +375,10 @@ describe("runProductAudit", () => {
     await filled();
     const { deps } = fakes({
       bws: {
-        "dogdays-staging": { PROJECT_REF: "abc", DB_URL: "postgres://x" },
+        staging: {
+          "dogdays/PROJECT_REF": "abc",
+          "dogdays/DB_URL": "postgres://x",
+        },
       },
       ghSecrets: ["DB_URL"],
       ghVariables: { PROJECT_REF: "other" },
@@ -373,7 +391,10 @@ describe("runProductAudit", () => {
     await filled();
     const { deps } = fakes({
       bws: {
-        "dogdays-staging": { PROJECT_REF: "abc", DB_URL: "postgres://x" },
+        staging: {
+          "dogdays/PROJECT_REF": "abc",
+          "dogdays/DB_URL": "postgres://x",
+        },
       },
       ghSecrets: ["DB_URL", "PROJECT_REF"],
       ghVariables: { PROJECT_REF: "abc" },
@@ -386,11 +407,200 @@ describe("runProductAudit", () => {
     await filled();
     const { deps } = fakes({
       bws: {
-        "dogdays-staging": { PROJECT_REF: "abc", DB_URL: "postgres://x" },
+        staging: {
+          "dogdays/PROJECT_REF": "abc",
+          "dogdays/DB_URL": "postgres://x",
+        },
       },
       ghUnreadable: true,
     });
     await runProductAudit(options(), deps);
     expect(process.exitCode).toBe(1);
   });
+});
+
+// Same-name credentials in every scope make an accidental widening observable.
+describe.each(PRODUCT_NAMES)("shared tier isolation: %s", (product) => {
+  it.each(VAULT_TARGETS)(
+    "pulls and audits only its prefix in %s",
+    async (target) => {
+      const other = product === "dogdays" ? "dogpack" : "dogdays";
+      const { deps, calls } = fakes({
+        bws: {
+          [target]: {
+            DB_URL: "platform",
+            [`${product}/DB_URL`]: "own",
+            [`${other}/DB_URL`]: "other",
+            [`${product}-extra/DB_URL`]: "near-match",
+            [`nested/${product}/DB_URL`]: "nested",
+          },
+        },
+        ghSecrets: ["DB_URL"],
+      });
+      writeFileSync(join(dir, `.env.${target}`), 'LOCAL_ONLY="keep"\n');
+      await runProductPull(options({ product, target }), deps);
+      const text = readFileSync(join(dir, `.env.${target}`), "utf8");
+      expect(text).toContain('DB_URL="own"');
+      expect(text).toContain('LOCAL_ONLY="keep"');
+      expect(text).not.toMatch(
+        /platform|other|near-match|nested|dogdays\/|dogpack\//,
+      );
+      // Drop the local-only key so this audit has precisely one credential.
+      writeFileSync(join(dir, `.env.${target}`), 'DB_URL="own"\n');
+      await runProductAudit(options({ product, target }), deps);
+      expect(process.exitCode).toBeUndefined();
+      expect(calls.projectIdFor).toEqual([target, target]);
+      expect(new Set(calls.ghRepos)).toEqual(new Set([PRODUCTS[product].repo]));
+
+      // Drift within the selected prefix must still fail, even with other copies.
+      writeFileSync(join(dir, `.env.${target}`), 'DB_URL="drift"\n');
+      await runProductAudit(options({ product, target }), deps);
+      expect(process.exitCode).toBe(1);
+    },
+  );
+
+  it.each(["preflight", "staging"] as const)(
+    "pushes only its prefix in %s",
+    async (target) => {
+      const other = product === "dogdays" ? "dogpack" : "dogdays";
+      const unrelated = {
+        DB_URL: "platform",
+        [`${other}/DB_URL`]: "other",
+        [`${product}-extra/DB_URL`]: "near-match",
+        [`${product}/KEEP`]: "preserve",
+      };
+      const { deps, calls, projects } = fakes({
+        bws: {
+          [target]: {
+            ...unrelated,
+            [`${product}/DB_URL`]: "old",
+          },
+        },
+      });
+      writeFileSync(
+        join(dir, `.env.${target}`),
+        'DB_URL="new"\nNEW_SECRET="created"\n',
+      );
+      await runProductPush(options({ product, target }), deps);
+      expect(calls.updated).toEqual([[target, `${product}/DB_URL`]]);
+      expect(calls.created).toEqual([[target, `${product}/NEW_SECRET`]]);
+      expect(Object.fromEntries(projects.get(target)!)).toEqual({
+        ...unrelated,
+        [`${product}/DB_URL`]: "new",
+        [`${product}/NEW_SECRET`]: "created",
+      });
+      expect(calls.setSecret).toEqual([
+        [target, "DB_URL", PRODUCTS[product].repo],
+        [target, "NEW_SECRET", PRODUCTS[product].repo],
+      ]);
+      expect(calls.setVariable).toEqual([]);
+    },
+  );
+});
+
+it("does not bootstrap a product from unrelated tier credentials", async () => {
+  const { deps } = fakes({
+    bws: { staging: { DB_URL: "platform", "dogpack/DB_URL": "other" } },
+  });
+  await runProductPull(options(), deps);
+  expect(() => readFileSync(join(dir, ".env.staging"), "utf8")).toThrow();
+});
+
+it("refuses a prefixed vault token on pull and reports it in audit", async () => {
+  const { deps } = fakes({
+    bws: { staging: { "dogdays/BWS_ACCESS_TOKEN": "fake-token" } },
+  });
+  await runProductPull(options(), deps);
+  expect(() => readFileSync(join(dir, ".env.staging"), "utf8")).toThrow();
+  expect(log.warn).toHaveBeenCalledWith(
+    expect.stringContaining("dogdays/BWS_ACCESS_TOKEN"),
+  );
+  await runProductAudit(options(), deps);
+  expect(process.exitCode).toBe(1);
+  expect(note).toHaveBeenCalledWith(
+    expect.stringContaining("BWS_ACCESS_TOKEN"),
+    expect.any(String),
+  );
+});
+
+it("pushes confirmed production values to the shared project under the product prefix", async () => {
+  writeFileSync(
+    join(dir, ".env.production"),
+    'API_URL="https://product.example"\n',
+  );
+  const { deps, calls } = fakes({
+    bws: { production: { API_URL: "platform" } },
+  });
+  vi.mocked(confirm).mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+  await runProductPush(options({ target: "production", yes: false }), deps);
+  expect(calls.projectIdFor).toEqual(["production"]);
+  expect(calls.created).toEqual([["production", "dogdays/API_URL"]]);
+  expect(calls.setVariable).toEqual([
+    ["production", "API_URL", "DevDogsUGA/DogDays"],
+  ]);
+});
+
+describe("product namespace validation before writes", () => {
+  const commands = [runProductPull, runProductPush, runProductAudit];
+  for (const run of commands) {
+    it.each([
+      "",
+      "nested/DB_URL",
+      "export API_URL",
+      " BWS_ACCESS_TOKEN",
+      "API_URL=OTHER",
+      "API_URL\nOTHER",
+      "KEY-WITH-DASH",
+    ])(
+      `${run.name} rejects malformed suffix %j without writes`,
+      async (suffix) => {
+        const path = join(dir, ".env.staging");
+        const original = "API_URL=https://public.example\nDB_URL=local\n";
+        writeFileSync(path, original);
+        const { deps, calls } = fakes({
+          bws: {
+            staging: {
+              "dogdays/API_URL": "https://public.example",
+              [`dogdays/${suffix}`]: "private-value-must-not-leak",
+            },
+          },
+        });
+        await expect(run(options(), deps)).rejects.toThrow(
+          "Invalid product env key",
+        );
+        expect(readFileSync(path, "utf8")).toBe(original);
+        expect(calls.created).toEqual([]);
+        expect(calls.updated).toEqual([]);
+        expect(calls.setSecret).toEqual([]);
+        expect(calls.setVariable).toEqual([]);
+      },
+    );
+    it.each([false, true])(
+      `${run.name} refuses duplicate IDs regardless of order (%s)`,
+      async (reverse) => {
+        const path = join(dir, ".env.staging");
+        const original = "DB_URL=current\n";
+        writeFileSync(path, original);
+        const { deps, calls } = fakes({ bws: { staging: {} } });
+        const records = ["first", "second"].map((id) => ({
+          id,
+          key: "dogdays/DB_URL",
+          value: id === "first" ? "older" : "current",
+          projectId: "staging",
+          note: "",
+          revisionDate: "2026-10-13T00:00:00Z",
+        }));
+        deps.bws.listSecrets = async () =>
+          reverse ? records.toReversed() : records;
+        await expect(run(options(), deps)).rejects.toThrow(
+          "Duplicate product env key",
+        );
+        expect(readFileSync(path, "utf8")).toBe(original);
+        expect(calls.created).toEqual([]);
+        expect(calls.updated).toEqual([]);
+        expect(calls.setSecret).toEqual([]);
+        expect(calls.setVariable).toEqual([]);
+      },
+    );
+  }
 });
