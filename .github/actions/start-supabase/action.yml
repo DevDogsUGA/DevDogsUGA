@@ -22,7 +22,7 @@ runs:
         echo "version=$version" >> "$GITHUB_OUTPUT"
     - name: Restore the Supabase images
       id: images
-      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/.cache/supabase-images
         key: supabase-images-${{ runner.os }}-${{ steps.cli.outputs.version }}-${{ hashFiles('supabase/config.toml') }}
@@ -44,7 +44,7 @@ runs:
           $(docker ps --format '{{.Image}}' | sort -u)
     - name: Cache the Supabase images
       if: steps.images.outputs.cache-hit != 'true'
-      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/.cache/supabase-images
         key: ${{ steps.images.outputs.cache-primary-key }}

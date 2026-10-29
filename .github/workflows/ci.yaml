@@ -73,7 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - id: cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             packages/supabase/src/database.types.ts
@@ -99,7 +99,7 @@ jobs:
         run: pnpm --filter @devdogsuga/supabase run codegen
       - name: Save the generated types
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             packages/supabase/src/database.types.ts
@@ -124,7 +124,7 @@ jobs:
       # (their pre-scripts). With the stamp restored it finds the types current
       # and never needs a database.
       - name: Restore the generated Database types
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             packages/supabase/src/database.types.ts
@@ -336,7 +336,7 @@ jobs:
       # regenerate the types against this job's own stack: the `types` job
       # already did, once, for every job.
       - name: Restore the generated Database types
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             packages/supabase/src/database.types.ts
