@@ -63,7 +63,7 @@ on:
         required: false
         type: string
         # renovate: datasource=npm depName=supabase
-        default: 2.117.0
+        default: 2.120.0
 
 concurrency:
   group: database-pr-${{ github.event_name == 'merge_group' && github.run_id || github.ref }}
@@ -85,7 +85,7 @@ jobs:
       # The fallback is for the `pull_request` and `merge_group` runs of this
       # repository, where `inputs` is empty; Renovate bumps it with the default.
       # renovate: datasource=npm depName=supabase
-      SUPABASE_VERSION: ${{ inputs.supabase_version || '2.117.0' }}
+      SUPABASE_VERSION: ${{ inputs.supabase_version || '2.120.0' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

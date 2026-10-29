@@ -87,7 +87,7 @@ on:
         required: false
         type: string
         # renovate: datasource=npm depName=supabase
-        default: 2.117.0
+        default: 2.120.0
       shared_ref:
         description: >-
           A commit of DevDogsUGA/DevDogsUGA to take the scripts from. Leave empty
