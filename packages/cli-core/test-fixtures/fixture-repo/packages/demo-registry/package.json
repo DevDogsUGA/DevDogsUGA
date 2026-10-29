@@ -5,7 +5,7 @@
   "description": "A second, richer fixture manifest — unlike demo-package (kept minimal for the contract test's 'does env discovery even work' check), this one exists for devtools' own unit tests restored from DevDogsUGA's original suite (see ../../../MOVED-TESTS.md): a handful of keys shaped like real DevDogsUGA declarations (an ordinary secret, a narrowed one, a public per-environment variable, a group of localStack ones, a committed constant, a minted credential, an apply-adjacent ordinary secret) so those tests can exercise selectForPush/pushToGithub/runEnvAudit's real classification logic without needing DevDogsUGA's actual app topology. Never installed or built; loaded directly via `DEVTOOLS_TEST_REPO_ROOT` pointed at ../.. (the fixture-repo root), the same way demo-package is for the contract test.",
   "dependencies": {
     "@devdogsuga/sdk": "*",
-    "zod": "4.4.3"
+    "zod": "4.6.6"
   },
   "type": "module"
 }
