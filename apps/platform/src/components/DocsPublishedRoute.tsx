@@ -15,6 +15,7 @@ import {
   getVisibleDocsProjects,
   type DocsFolderEntry,
 } from "~/server/docs/queries";
+import { getContributeMenu, getDocsSwitcher } from "~/server/docs/menu";
 import { getPublishedProject } from "~/server/docs/published";
 import {
   pageHtml,
@@ -50,7 +51,12 @@ export async function PublishedLayout({
   project: PublishedProject;
   children: ReactNode;
 }) {
-  const projects = await getVisibleDocsProjects("public");
+  const [switcher, contribute] = await Promise.all([
+    getDocsSwitcher("public"),
+    getContributeMenu(),
+  ]);
+  // A published project is a Project, so it is named and marked by its own row.
+  const own = contribute.find((entry) => entry.project === project.slug);
   const groups = getDocsVariantGroups();
   return (
     <DocsVariants
@@ -59,15 +65,12 @@ export async function PublishedLayout({
     >
       <DocsSidebar
         projects={[
-          ...projects.map(({ slug, name, description }) => ({
-            slug,
-            name,
-            description,
-          })),
+          ...switcher,
           {
             slug: project.slug,
-            name: project.name,
-            description: project.description,
+            name: own?.name ?? project.name,
+            description: own ? own.description : project.description,
+            mark: own?.mark ?? { kind: "fallback" },
           },
         ]}
         project={project.slug}

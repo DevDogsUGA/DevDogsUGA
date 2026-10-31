@@ -9,11 +9,11 @@ import "~/components/Docs/docs.css";
 import apple from "~/assets/os/apple.svg";
 import linux from "~/assets/os/linux.svg";
 import windows from "~/assets/os/windows.svg";
-import { DOCS_PROJECT_LABELS } from "~/config/docs";
 import { DOCS_BASE } from "~/lib/docsSlug";
 import type { DocsSidebarTree } from "~/lib/docsTree";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
+import type { DocsSwitcherEntry } from "~/server/docs/menu";
 import {
   Sheet,
   SheetContent,
@@ -79,7 +79,7 @@ function PlatformLogo({
 }
 
 export interface DocsSidebarProps {
-  projects: { slug: string; name: string; description: string | null }[];
+  projects: DocsSwitcherEntry[];
   project: string;
   /** The platforms this project's setup pages cover, in display order. */
   platforms: { value: string; label: string }[];
@@ -130,21 +130,19 @@ function SidebarContent({
           className="w-full"
         >
           {/* One line under each name, never wrapped: at this width a
-              sentence turned six choices into a wall. Brands and taglines
-              come from DOCS_PROJECT_LABELS. */}
-          {projects.map((p) => {
-            const label = DOCS_PROJECT_LABELS[p.slug];
-            return (
-              <Select.Item
-                key={p.slug}
-                value={p.slug}
-                icon={<DocsProjectMark slug={p.slug} />}
-                description={label?.tagline ?? p.description ?? p.name}
-              >
-                {label?.name ?? p.name}
-              </Select.Item>
-            );
-          })}
+              sentence turned six choices into a wall. Names and marks are the
+              ones the navbar menus use (`getDocsSwitcher`): a Project's own,
+              or a docs section's. */}
+          {projects.map((p) => (
+            <Select.Item
+              key={p.slug}
+              value={p.slug}
+              icon={<DocsProjectMark mark={p.mark} />}
+              description={p.description ?? p.name}
+            >
+              {p.name}
+            </Select.Item>
+          ))}
         </Select>
       )}
 

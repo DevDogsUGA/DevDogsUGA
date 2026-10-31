@@ -1,3 +1,4 @@
+import type { EventCategory } from "~/lib/eventKind";
 import type { NavIcon } from "./nav";
 
 /**
@@ -11,72 +12,135 @@ export const DOCS_REPO = "DevDogsUGA";
 export const DOCS_BRANCH = "main";
 
 /**
- * The mark shown for each documented project, in the sidebar's project
- * switcher, the navbar's Docs menu, and on the docs landing page.
+ * What draws a docs project's mark, wherever it shows: the navbar menus, the
+ * sidebar's project switcher and the docs landing page.
  *
- * Keyed by docs slug, which is the name of the project's workspace directory
- * (`docs/schedule-builder/` documents `apps/schedule-builder`). Each project
- * wears the icon it has elsewhere:
- *
- * - `logo`: the platform is DevDogs itself, so it gets the mascot, bare, as
- *   in the navbar and the browser tab.
- * - `glyph`: everything else is a bare mark in `color`, with no tile. An app
- *   (DogDays, DogPack) gets its own logo from
- *   components/ProjectsSection/project-icons in its brand color, as its
- *   project card shows it; a project that is not an app (the toolkit, the
- *   workshops) gets a filled Phosphor glyph in a color of its own.
- *
- * `iconBg` is the fill for the tiles on a project's folder pages. A
- * project absent from this map is not an error: it falls back to the generic
- * book below, which is what a newly documented project gets before anyone
- * picks a mark for it.
+ * - `project`: a Project's own showcase fields. Its `iconKey` and `colorKey`
+ *   name entries of the showcase registry (`~/config/showcaseKeys`), so a mark
+ *   is never markup or a class an officer typed. The icon is drawn bare in the
+ *   color, as the homepage and the app switcher draw it, or as the DevDogs
+ *   mascot when the key is the platform's.
+ * - `section`: one of the platform's own docs sections (Workshops, Shared
+ *   tooling, Ops), which are not Projects and so have no row to read. It wears
+ *   a glyph on a tile in the section's hue.
+ * - `fallback`: a documented project with no showcase fields, a generic book.
  */
-export interface DocsProjectMarkSpec {
-  kind: "logo" | "glyph";
+export type DocsMark =
+  | { kind: "project"; iconKey: string | null; colorKey: string | null }
+  | { kind: "section"; icon: NavIcon; hue?: EventCategory }
+  | { kind: "fallback" };
+
+/**
+ * One row of the navbar's Docs menu: platform-authored documentation, which is
+ * what Docs holds (Q36). Project-authored docs are the Contribute menu's, read
+ * from the Projects themselves (`~/server/docs/menu`).
+ *
+ * A row either names a docs `project` (the folder under `docs/`, whose own
+ * `index.md` gives its name and description) or points at a guide inside one,
+ * with the words written here. The guides for building on DevDogs live inside
+ * the `platform` and `toolkit` folders today, so they are rows that point into
+ * them rather than projects of their own; moving a guide into a folder of its
+ * own would change only its `href` here.
+ */
+export interface DocsMenuItem {
+  id: string;
+  href: string;
   icon: NavIcon;
-  /** The glyph's color: a Tailwind text class. */
-  color: string;
-  iconBg: string;
+  /** The tile's color: the event category it shares with the rest of the site. */
+  hue?: EventCategory;
+  /** The docs project this row opens, whose frontmatter names it. */
+  project?: string;
+  /** Required for a guide; a project's name comes from its `index.md`. */
+  name?: string;
+  description?: string;
+  /**
+   * Other folders this guide spans, for deciding which menu a page belongs to:
+   * the reporting contract is part of building a moderated app.
+   */
+  covers?: readonly string[];
 }
 
-export const DOCS_PROJECT_MARKS: Record<string, DocsProjectMarkSpec> = {
-  platform: {
-    kind: "logo",
-    icon: "HouseIcon",
-    color: "text-cyan-400",
-    iconBg: "bg-cyan-400",
-  },
-  // DogDays' primary on a dark surface (apps/schedule-builder globals.css).
-  "schedule-builder": {
-    kind: "glyph",
-    icon: "DogDaysIcon",
-    color: "text-red-600",
-    iconBg: "bg-red-400",
-  },
-  toolkit: {
-    kind: "glyph",
-    icon: "ToolboxIcon",
-    color: "text-sky-400",
-    iconBg: "bg-sky-400",
-  },
-  workshops: {
-    kind: "glyph",
+export const DOCS_MENU: readonly DocsMenuItem[] = [
+  {
+    id: "workshops",
+    project: "workshops",
+    href: "/docs/workshops",
     icon: "ChalkboardTeacherIcon",
-    color: "text-amber-400",
-    iconBg: "bg-amber-400",
+    hue: "workshop",
   },
-};
+  {
+    id: "toolkit",
+    project: "toolkit",
+    href: "/docs/toolkit",
+    icon: "ToolboxIcon",
+    hue: "build",
+  },
+  {
+    id: "operations",
+    project: "operations",
+    href: "/docs/operations",
+    icon: "BookOpenIcon",
+  },
+  {
+    id: "oauth",
+    href: "/docs/platform/guides/identity",
+    icon: "KeyIcon",
+    name: "Sign in with DevDogs",
+    description: "Let members sign in to your app with their DevDogs account.",
+  },
+  {
+    id: "moderation",
+    href: "/docs/platform/guides/moderation",
+    icon: "ShieldCheckIcon",
+    name: "Moderation",
+    description: "Make your app's content reportable and moderatable.",
+    covers: ["/docs/platform/guides/reporting"],
+  },
+  {
+    id: "sdk",
+    href: "/docs/toolkit/reference/api/sdk",
+    icon: "ToolboxIcon",
+    name: "SDK",
+    description: "The shared client library every DevDogs app builds on.",
+  },
+];
 
-export const DOCS_FALLBACK_MARK: DocsProjectMarkSpec = {
-  kind: "glyph",
-  icon: "BookOpenIcon",
-  color: "text-muted-foreground",
-  iconBg: "bg-secondary",
-};
-
-export function docsProjectMark(slug: string): DocsProjectMarkSpec {
-  return DOCS_PROJECT_MARKS[slug] ?? DOCS_FALLBACK_MARK;
+/** One row of a navbar docs menu, resolved: what it says, where it goes, how it is marked. */
+export interface DocsMenuEntry {
+  id: string;
+  href: string;
+  name: string;
+  description: string | null;
+  mark: DocsMark;
+  /**
+   * The docs project this opens, so the navbar can mark the menu a reader is
+   * inside. Null for a guide that points into another project's folder.
+   */
+  project: string | null;
+  /** Other folders a guide spans; see `DocsMenuItem.covers`. */
+  covers?: readonly string[];
 }
+
+/** The category hue a docs project's pages wear (headings, active rows), if it has one. */
+export function docsProjectHue(slug: string): EventCategory | undefined {
+  return DOCS_MENU.find((item) => item.project === slug)?.hue;
+}
+
+/** Whether `href` is inside a guide the Docs menu points at (OAuth, moderation, the SDK). */
+export function inDocsGuide(href: string): boolean {
+  return DOCS_MENU.some(
+    (item) =>
+      item.project === undefined &&
+      [item.href, ...(item.covers ?? [])].some(
+        (prefix) => href === prefix || href.startsWith(`${prefix}/`),
+      ),
+  );
+}
+
+/** The docs projects the Docs menu owns; every other bundled project is Contribute's. */
+export const DOCS_MENU_PROJECTS: ReadonlySet<string> = new Set(
+  DOCS_MENU.flatMap((item) => (item.project ? [item.project] : [])),
+);
 
 /**
  * The sidebar label for a folder's own index page.
@@ -94,36 +158,3 @@ export function docsProjectMark(slug: string): DocsProjectMarkSpec {
  * same question.
  */
 export const DOCS_INDEX_LABEL = "Overview";
-
-/**
- * How the sidebar's project switcher names each project: its brand, when it
- * has one, over a tagline that fits on one line. The brands and taglines are
- * the ones the apps' `projects` rows give them (DogDays is the schedule
- * builder), so a project renamed there wants the matching change here.
- *
- * A project absent from this map shows its docs name and its `description`,
- * cut to one line.
- */
-export const DOCS_PROJECT_LABELS: Record<
-  string,
-  { name: string; tagline: string }
-> = {
-  platform: {
-    name: "DevDogs Platform",
-    tagline: "Member Portal and Dev Tools",
-  },
-  "schedule-builder": { name: "DogDays", tagline: "Schedule Builder" },
-  toolkit: { name: "Toolkit", tagline: "Shared Packages and Tooling" },
-  workshops: { name: "Workshops", tagline: "Meeting Slides and Code" },
-};
-
-/**
- * The docs landing page's own layout (contract item 4: "Which project are
- * you working on?"). Large front-door cards for the two product apps a new
- * contributor is actually choosing between; a smaller row underneath for the
- * two projects everyone eventually touches regardless of which they pick.
- */
-export const DOCS_LANDING_LARGE: readonly string[] = ["schedule-builder"];
-export const DOCS_LANDING_SMALL: readonly string[] = ["platform", "toolkit"];
-/** The workshop write-ups, for anyone catching up on a meeting. */
-export const DOCS_LANDING_WORKSHOPS: readonly string[] = ["workshops"];
