@@ -12,6 +12,7 @@ import { createCatalog, type CommandGroup } from "@devdogsuga/cli-core/catalog";
 import { completionsCommand } from "./completions/catalog.js";
 import { checkCommand } from "./check/catalog.js";
 import { doctorCommand } from "./doctor/catalog.js";
+import { docsCommand } from "./docs/catalog.js";
 import { envCommand } from "./env/catalog.js";
 import { jobsCommand } from "./jobs/catalog.js";
 import { moderationCommand } from "./moderation/catalog.js";
@@ -72,7 +73,7 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "CI & CLI utilities",
-    commands: [checkCommand, completionsCommand],
+    commands: [checkCommand, docsCommand, completionsCommand],
   },
 ];
 

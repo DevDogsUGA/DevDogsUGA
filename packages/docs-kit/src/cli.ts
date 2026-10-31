@@ -29,6 +29,13 @@
  * compile summary, because a warning that only appears under a command somebody
  * has to think to run is a warning nobody ever reads.
  *
+ * `docs-kit readiness <dir> [--json]` says whether a project's docs folder is
+ * ready to publish: the same rules the candidate build enforces, over any
+ * folder (see `readiness.ts`). Prints each problem, or the verdict as JSON, and
+ * exits 1 when there are problems. It is what `devtools docs check` runs, from
+ * the DevDogsUGA checkout, so a project is judged by the compiler candidates are
+ * built with.
+ *
  * `docs-kit index` writes the compiled pages to the search index (see
  * `search-index.ts`). It is `@devdogsuga/docs`'s `populate:search` script and
  * touches no files, only the database `with-env` points it at.
@@ -85,6 +92,8 @@ if (subcommand === undefined) {
   // environment points at. Needs `with-env`; see search-index.ts.
   const { runIndex } = await import("./search-index.js");
   await runIndex(process.cwd());
+} else if (subcommand === "readiness") {
+  process.exitCode = await runReadiness(args);
 } else if (subcommand === "candidate") {
   // Compiles a fetched project docs directory as untrusted docs into a
   // candidate directory (see candidate.ts). No network, no credentials.
@@ -109,7 +118,7 @@ if (subcommand === undefined) {
 } else {
   console.error(`[docs-kit] unknown command "${subcommand}"`);
   console.error(
-    "[docs-kit] usage: docs-kit | docs-kit build [--force] | docs-kit check | docs-kit gen [--dry-run] | docs-kit index | docs-kit candidate … | docs-kit verify-candidate <dir> [digest]",
+    "[docs-kit] usage: docs-kit | docs-kit build [--force] | docs-kit check | docs-kit gen [--dry-run] | docs-kit index | docs-kit readiness <dir> [--json] | docs-kit candidate … | docs-kit verify-candidate <dir> [digest]",
   );
   process.exitCode = 1;
 }
@@ -175,6 +184,37 @@ async function generate(dryRun: boolean): Promise<void> {
     docsRoot: path.join(repoRoot, "docs"),
     dryRun,
   });
+}
+
+/**
+ * `readiness`: the verdict on one project docs folder. With `--json` the one
+ * line of output is the `Readiness`, so a caller (devtools) formats it itself;
+ * without, each problem is printed. Resolves the exit code: 0 when ready.
+ */
+async function runReadiness(argv: string[]): Promise<number> {
+  const json = argv.includes("--json");
+  const [dir] = argv.filter((arg) => !arg.startsWith("--"));
+  if (dir === undefined) {
+    console.error("[docs-kit] usage: docs-kit readiness <dir> [--json]");
+    return 1;
+  }
+  const { checkDocsDirReadiness } = await import("./readiness-dir.js");
+  const readiness = await checkDocsDirReadiness(dir);
+  if (json) {
+    console.log(JSON.stringify(readiness));
+  } else if (readiness.ready) {
+    console.log(
+      `[docs-kit] ready: ${readiness.pages} page(s), ${readiness.assets} image(s)`,
+    );
+  } else {
+    console.error(`[docs-kit] ${readiness.problems.length} problem(s):`);
+    for (const problem of readiness.problems) {
+      console.error(
+        `  ${problem.file === null ? "" : `${problem.file}: `}${problem.message}`,
+      );
+    }
+  }
+  return readiness.ready ? 0 : 1;
 }
 
 /** `candidate`: flags in, a candidate directory out. Resolves the exit code. */
