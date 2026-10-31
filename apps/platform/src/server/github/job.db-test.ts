@@ -176,7 +176,10 @@ describe("backfill queue", () => {
     await failBackfill(lease!, "x".repeat(900));
     expect(await row(A)).toMatchObject({ attempts: 1, leased: true });
     expect((await row(A)).lastError).toHaveLength(500);
-    expect((await claimBackfill())?.userId).toBe(B);
+    const leaseB = await claimBackfill();
+    expect(leaseB?.userId).toBe(B);
+    // B goes back unpenalised, so the next claim is decided by A's attempts alone.
+    await releaseBackfill(leaseB!);
     await db.execute(
       sql`update platform."commitBackfillRequests" set "leaseUntil"=null, attempts=8 where "userId"=${A}::uuid`,
     );
