@@ -176,7 +176,6 @@ function report(overrides: Partial<ProjectReportView> = {}): ProjectReportView {
     reviewedByName: null,
     submittedAt: new Date("2026-10-15T12:00:00Z"),
     commits: [],
-    legacyPullRequests: [],
     ...overrides,
   };
 }
@@ -260,33 +259,6 @@ describe("the report card", () => {
       </ul>,
     );
     expect(screen.getByText("Oct 12, 2026")).toBeTruthy();
-  });
-
-  it("marks pull-request evidence from before the redesign as legacy, read-only", () => {
-    render(
-      <ul>
-        <ReportCard
-          report={report({
-            legacyPullRequests: [
-              {
-                id: "c-1",
-                repo: "DevDogsUGA/DogDays",
-                number: 12,
-                title: "Add the feed",
-                url: "https://github.com/DevDogsUGA/DogDays/pull/12",
-                mergedAt: new Date("2026-10-12T12:00:00Z"),
-              },
-            ],
-          })}
-        />
-      </ul>,
-    );
-    expect(screen.getByText("Legacy evidence")).toBeTruthy();
-    expect(
-      screen
-        .getByRole("link", { name: "DevDogsUGA/DogDays#12" })
-        .getAttribute("href"),
-    ).toBe("https://github.com/DevDogsUGA/DogDays/pull/12");
   });
 });
 

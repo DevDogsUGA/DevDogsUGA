@@ -151,7 +151,6 @@ const queued = (): ProjectReportView => ({
   reviewedByName: null,
   submittedAt: new Date("2026-10-15T12:00:00Z"),
   commits: [],
-  legacyPullRequests: [],
 });
 
 const showcase = (): ShowcaseFields => ({
@@ -377,28 +376,6 @@ describe("the project page for a contributor", () => {
     expect(
       within(mine).getAllByRole("button", { name: "Delete" }),
     ).toHaveLength(1);
-  });
-
-  it("gives a legacy report with PR evidence no Edit and marks the evidence", async () => {
-    mocks.getMyReports.mockResolvedValue([
-      {
-        ...queued(),
-        authorId: ME,
-        legacyPullRequests: [
-          {
-            id: "c1",
-            repo: "DevDogsUGA/porchlight",
-            number: 4,
-            title: "Lamp",
-            url: "https://github.com/DevDogsUGA/porchlight/pull/4",
-            mergedAt: new Date("2026-10-05T12:00:00Z"),
-          },
-        ],
-      },
-    ]);
-    await renderPage();
-    expect(screen.getByText("Legacy evidence")).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
   });
 });
 
