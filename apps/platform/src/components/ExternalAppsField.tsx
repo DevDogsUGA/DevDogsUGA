@@ -136,6 +136,11 @@ export default function ExternalAppsField({
             Register app
           </FormButton>
           <CommandFeedback result={result} />
+          {/* The once-only secret keeps its instruction beside it: a toast
+              would vanish before the officer has copied it. */}
+          {result?.ok && result.data?.secret && result.message && (
+            <Callout tone="success">{result.message}</Callout>
+          )}
           {result?.ok && result.data?.secret && (
             <code className="con-code block">{result.data.secret}</code>
           )}
