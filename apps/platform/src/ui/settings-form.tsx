@@ -15,27 +15,43 @@ import {
   blockNavigation,
   shouldInterceptNavigation,
 } from "~/lib/navigationGuard";
+import {
+  ExpectedFailure,
+  failure,
+  type ActionResult,
+} from "~/lib/actionResult";
 import { WarningCircleIcon } from "@phosphor-icons/react/ssr";
 
 /**
- * One save button for a whole settings page.
+ * Draft: a form that edits saved values, held until Save or Discard.
  *
- * Replaces the per-field `InlineSave` row, where each field owned a save
- * button, a reset, a toast, an unsaved-changes warning and its own Ctrl/Cmd+S
- * handler: changing four things on the account page meant four Saves and four
- * toasts. Now each field registers `isDirty`, an `error` and the two callbacks,
- * and the page grows one bar that commits all of them at once.
+ * Each field owns its `draft` (the value being edited), its baseline (the last
+ * saved value), `isDirty` (draft differs from baseline), a `reset` back to the
+ * baseline and a `save`. A field registers them with `useSettingsField`; the
+ * page's save bar commits every dirty field at once.
  *
- * Fields still own their state and their write. `saveAll` fans out to each
- * dirty field's `save` in parallel rather than posting one combined payload,
- * because the writes differ: some go straight to PostgREST, some through a
- * server action. That makes failure partial, so two things guard it:
+ * `save` returns an `ActionResult`. The usual body is a server action that
+ * already returns one, with the field advancing its baseline only on `ok`:
  *
- *   1. Nothing saves while any dirty field reports an `error`. Those come from
- *      ~/lib/validation/profile, the same module the server actions validate
- *      with, so the client refuses exactly what the server would.
- *   2. If a write fails anyway, the bar names the fields that did not land
- *      and the rest stay dirty, so the bar is there to retry them.
+ *   save: async () => {
+ *     const result = await updateGraduation(semester, year);
+ *     if (result.ok) setSaved({ semester, year });
+ *     return result;
+ *   }
+ *
+ * Saves run in parallel, so failure is partial. A failed result keeps its
+ * `message` and `fieldErrors`: the bar names each failed field and shows the
+ * server's words, and `fieldErrors[id]` appears under that field until its
+ * draft changes. Fields that succeeded advance their baselines; the rest stay
+ * dirty for a retry. A server error never blocks the next Save, unlike a
+ * client-validation `error`, which does.
+ *
+ * Legacy saves may still resolve void or reject until every field returns a
+ * result. A rejection counts as a failed save with a generic message, unless it
+ * is an `ExpectedFailure`, which keeps its own message and field errors.
+ *
+ * Use Draft for edits held until Save or Discard. Use Command for one action
+ * that does one thing, with inline failure and a success toast.
  */
 
 export interface SettingsFieldRegistration {
@@ -44,13 +60,15 @@ export interface SettingsFieldRegistration {
   /** Human name. Used when a save fails, so it has to read well in a sentence. */
   label: string;
   isDirty: boolean;
+  /** JSON-serializable draft, compared by value. Clears server errors on edit. */
+  draft: unknown;
   /**
    * Non-null blocks the save. Fields derive it from ~/lib/validation/profile
    * and render it under themselves once blurred. See `useBlurredError`.
    */
   error: string | null;
-  /** Must reject on failure; `saveAll` reads the rejection to name the field. */
-  save: () => Promise<unknown>;
+  /** Return an Action result; legacy saves may resolve void or reject. */
+  save: () => Promise<ActionResult<unknown> | void>;
   /** Returns the field to its last-saved value. */
   reset: () => void;
 }
@@ -62,7 +80,8 @@ interface FieldSummary {
 }
 
 interface FieldHandlers {
-  save: () => Promise<unknown>;
+  setServerError: (error: string | null) => void;
+  save: () => Promise<ActionResult<unknown> | void>;
   reset: () => void;
 }
 
@@ -211,13 +230,16 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const targets = dirty.map(([id, summary]) => ({ id, summary }));
+    const targets = dirty.map(([id, summary]) => ({
+      id,
+      summary,
+      handler: handlers.current.get(id),
+    }));
     setIsSaving(true);
     setResult(null);
 
     void Promise.allSettled(
-      targets.map(({ id }) => {
-        const handler = handlers.current.get(id);
+      targets.map(({ handler }) => {
         // Wrapped because `save()` is a field's own closure and is only
         // promised to return a promise. A synchronous throw from one field
         // would escape this `map` before `allSettled` was constructed, leaving
@@ -235,9 +257,21 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
     ).then((results) => {
       setIsSaving(false);
 
-      const failed = targets
-        .filter((_, i) => results[i]?.status === "rejected")
-        .map(({ summary }) => summary.label);
+      const failed: { label: string; message: string }[] = [];
+      targets.forEach(({ id, summary, handler }, i) => {
+        const settled = results[i]!;
+        const outcome =
+          settled.status === "fulfilled"
+            ? settled.value
+            : settled.reason instanceof ExpectedFailure
+              ? failure(settled.reason.message, settled.reason.fieldErrors)
+              : failure("Something went wrong. Please try again.");
+        handler?.setServerError(
+          outcome && !outcome.ok ? (outcome.fieldErrors?.[id] ?? null) : null,
+        );
+        if (outcome && !outcome.ok)
+          failed.push({ label: summary.label, message: outcome.message });
+      });
 
       if (failed.length === 0) {
         setResult({
@@ -250,13 +284,19 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const names = listFormatter.format(failed);
+      const names = listFormatter.format(failed.map(({ label }) => label));
+      const details =
+        failed.length === 1
+          ? failed[0]!.message
+          : failed
+              .map(({ label, message }) => `${label}: ${message}`)
+              .join(" ");
       setResult({
         kind: "error",
         message:
           failed.length === targets.length
-            ? `Couldn\u2019t save ${names}. Nothing was lost; try again.`
-            : `Couldn\u2019t save ${names}. Your other changes were saved.`,
+            ? `Couldn\u2019t save ${names}. ${details} Nothing was lost; try again.`
+            : `Couldn\u2019t save ${names}. ${details} Your other changes were saved.`,
       });
     });
   }, [dirty, invalid, isSaving]);
@@ -368,6 +408,7 @@ export function useSettingsField({
   id,
   label,
   isDirty,
+  draft,
   error,
   save,
   reset,
@@ -381,9 +422,24 @@ export function useSettingsField({
   const { setSummary, unregister, handlers, isSaving, errorsRevealed } =
     context;
 
+  const draftKey = JSON.stringify(draft);
+  const [server, setServer] = useState<{
+    draftKey: string | undefined;
+    error: string | null;
+  }>({ draftKey, error: null });
+  const serverError = server.draftKey === draftKey ? server.error : null;
+  if (server.draftKey !== draftKey) setServer({ draftKey, error: null });
+
   // No dep array: the latest callbacks, every commit.
   useEffect(() => {
-    handlers.current.set(id, { save, reset });
+    handlers.current.set(id, {
+      save,
+      reset: () => {
+        setServer({ draftKey, error: null });
+        reset();
+      },
+      setServerError: (error) => setServer({ draftKey, error }),
+    });
   });
 
   useEffect(() => {
@@ -394,7 +450,7 @@ export function useSettingsField({
   // unregister the field.
   useEffect(() => () => unregister(id), [unregister, id]);
 
-  return { isSaving, errorsRevealed };
+  return { isSaving, errorsRevealed, serverError };
 }
 
 /**

@@ -18,9 +18,12 @@ export default function PreferredNameField({ id, profile }: ProfileData) {
     <SettingsField
       id="preferredName"
       label="Preferred Name"
+      draft={name}
       isDirty={nameDirty}
       error={nameError}
-      save={saveName}
+      save={async () => {
+        await saveName();
+      }}
       reset={resetName}
     >
       <Input

@@ -1,5 +1,11 @@
 "use server";
 
+import {
+  expected,
+  ExpectedFailure,
+  type ActionResult,
+} from "~/lib/actionResult";
+
 import { authorize, callerFor, rules } from "~/server/auth/access";
 
 import { eq } from "drizzle-orm";
@@ -9,10 +15,7 @@ import { z } from "zod";
 import { db } from "~/server/db";
 import { auditEvents, reflectionSettings } from "~/server/db/schema";
 
-export interface ReflectionSettingsActionState {
-  ok: boolean;
-  message: string;
-}
+export type ReflectionSettingsActionState = ActionResult;
 
 // The 100-word floor is policy (the UGAHacks EL rule, Q28); the rest are sanity limits: a word count above this is almost
 // certainly a typo (1000 words is already a long reflection), and a
@@ -45,64 +48,67 @@ export async function updateReflectionSettings(
   _previous: ReflectionSettingsActionState,
   formData: FormData,
 ): Promise<ReflectionSettingsActionState> {
-  const access = await authorize(rules.manageAttendance);
-  if (!access.ok) {
-    return {
-      ok: false,
-      message: "Not authorized: canManageAttendance required.",
-    };
-  }
+  return expected(async () => {
+    const access = await authorize(rules.manageAttendance);
+    if (!access.ok) {
+      throw new ExpectedFailure(
+        "Not authorized: canManageAttendance required.",
+      );
+    }
 
-  const userId = access.caller.userId;
-  if (!(await callerFor(userId).then(rules.manageAttendance))) {
-    return {
-      ok: false,
-      message: "Not authorized: canManageAttendance required.",
-    };
-  }
+    const userId = access.caller.userId;
+    if (!(await callerFor(userId).then(rules.manageAttendance))) {
+      throw new ExpectedFailure(
+        "Not authorized: canManageAttendance required.",
+      );
+    }
 
-  const parsed = inputSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) {
-    return {
-      ok: false,
-      message: `Minimum word count must be an integer from ${MINIMUM_WORD_COUNT_BOUNDS.min} to ${MINIMUM_WORD_COUNT_BOUNDS.max}, and the submission window must be an integer from ${SUBMISSION_WINDOW_DAYS_BOUNDS.min} to ${SUBMISSION_WINDOW_DAYS_BOUNDS.max} days.`,
-    };
-  }
+    const parsed = inputSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) {
+      throw new ExpectedFailure(
+        `Minimum word count must be an integer from ${MINIMUM_WORD_COUNT_BOUNDS.min} to ${MINIMUM_WORD_COUNT_BOUNDS.max}, and the submission window must be an integer from ${SUBMISSION_WINDOW_DAYS_BOUNDS.min} to ${SUBMISSION_WINDOW_DAYS_BOUNDS.max} days.`,
+        {
+          reflectionSettings:
+            "Check the minimum word count and submission window.",
+        },
+      );
+    }
 
-  await db.transaction(async (tx) => {
-    const [before] = await tx
-      .select({
-        minimumWordCount: reflectionSettings.minimumWordCount,
-        submissionWindowDays: reflectionSettings.submissionWindowDays,
-      })
-      .from(reflectionSettings)
-      .limit(1);
+    await db.transaction(async (tx) => {
+      const [before] = await tx
+        .select({
+          minimumWordCount: reflectionSettings.minimumWordCount,
+          submissionWindowDays: reflectionSettings.submissionWindowDays,
+        })
+        .from(reflectionSettings)
+        .limit(1);
 
-    await tx
-      .update(reflectionSettings)
-      .set({
-        minimumWordCount: parsed.data.minimumWordCount,
-        submissionWindowDays: parsed.data.submissionWindowDays,
-        updatedAt: new Date(),
-      })
-      .where(eq(reflectionSettings.id, true));
+      await tx
+        .update(reflectionSettings)
+        .set({
+          minimumWordCount: parsed.data.minimumWordCount,
+          submissionWindowDays: parsed.data.submissionWindowDays,
+          updatedAt: new Date(),
+        })
+        .where(eq(reflectionSettings.id, true));
 
-    await tx.insert(auditEvents).values({
-      actorType: "user",
-      actorUserId: userId,
-      source: "platform",
-      action: "reflectionSettings.updated",
-      // Singleton row, so there is no per-row id to key the audit log on --
-      // the fixed string is the target's whole identity, same as its primary
-      // key is a fixed boolean rather than a uuid.
-      targetType: "reflectionSettings",
-      targetId: "reflectionSettings",
-      metadata: { before, after: parsed.data },
+      await tx.insert(auditEvents).values({
+        actorType: "user",
+        actorUserId: userId,
+        source: "platform",
+        action: "reflectionSettings.updated",
+        // Singleton row, so there is no per-row id to key the audit log on --
+        // the fixed string is the target's whole identity, same as its primary
+        // key is a fixed boolean rather than a uuid.
+        targetType: "reflectionSettings",
+        targetId: "reflectionSettings",
+        metadata: { before, after: parsed.data },
+      });
     });
-  });
 
-  revalidatePath("/dashboard/meetings");
-  revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/meetings");
+    revalidatePath("/dashboard/attendance");
 
-  return { ok: true, message: "Reflection settings updated." };
+    return undefined;
+  }, "Reflection settings updated.");
 }
