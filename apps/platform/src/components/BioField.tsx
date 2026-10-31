@@ -9,10 +9,9 @@ import { PROFILE_LIMITS } from "~/lib/validation/profile";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
 
-export default function BioField({ id, profile }: ProfileData) {
+export default function BioField({ profile }: ProfileData) {
   const textareaId = useId();
   const { bio, setBio, bioDirty, bioError, saveBio, resetBio } = useBio(
-    id,
     profile.bio ?? null,
   );
 
@@ -26,9 +25,7 @@ export default function BioField({ id, profile }: ProfileData) {
       draft={bio}
       isDirty={bioDirty}
       error={bioError}
-      save={async () => {
-        await saveBio();
-      }}
+      save={saveBio}
       reset={resetBio}
       meta={`${bio.length} / ${PROFILE_LIMITS.shortText} characters`}
       secondaryMeta={lineCount > 1 ? `${lineCount} / 3 lines` : undefined}

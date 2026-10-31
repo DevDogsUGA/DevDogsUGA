@@ -181,7 +181,7 @@ export function validateGraduation(
 
 /**
  * `new URL()` accepts every scheme there is, `javascript:` and `data:` and
- * `mailto:` included, so parsing alone is not the check. The add-link action
+ * `mailto:` included, so parsing alone is not the check. The links action
  * refuses anything that is not http(s), and this has to refuse the same set.
  */
 export function isValidLinkUrl(url: string): boolean {
@@ -207,13 +207,19 @@ export function validateLinkTitle(title: string): string | null {
   return null;
 }
 
+export function validateLinkCount(count: number): string | null {
+  if (count > PROFILE_LIMITS.linkCount) {
+    return `You can only add up to ${PROFILE_LIMITS.linkCount} links.`;
+  }
+  return null;
+}
+
 /** Validates the whole staged list, which is what the page-wide save commits. */
 export function validateLinks(
   links: { url: string; title?: string | null }[],
 ): string | null {
-  if (links.length > PROFILE_LIMITS.linkCount) {
-    return `You can only add up to ${PROFILE_LIMITS.linkCount} links.`;
-  }
+  const countError = validateLinkCount(links.length);
+  if (countError) return countError;
   for (const link of links) {
     const urlError = validateLinkUrl(link.url);
     if (urlError) return urlError;

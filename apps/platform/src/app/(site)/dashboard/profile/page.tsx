@@ -156,7 +156,6 @@ async function ProfileContent() {
               platform."profile", which RLS refuses to a quarantined member. */}
           <Fields>
             <PublicProfileSection
-              userId={data.id}
               settings={{
                 ...handleChoices,
                 isVerified: data.isVerified,

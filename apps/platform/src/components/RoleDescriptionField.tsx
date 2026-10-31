@@ -9,7 +9,7 @@ import type { getProfilePageData } from "~/server/loaders/console";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
 
-export default function RoleDescriptionField({ id, profile }: ProfileData) {
+export default function RoleDescriptionField({ profile }: ProfileData) {
   const textareaId = useId();
   const {
     roleDescription,
@@ -18,7 +18,7 @@ export default function RoleDescriptionField({ id, profile }: ProfileData) {
     roleDescriptionError,
     saveRoleDescription,
     resetRoleDescription,
-  } = useRoleDescription(id, profile.roleDescription ?? null);
+  } = useRoleDescription(profile.roleDescription ?? null);
 
   return (
     <SettingsField
@@ -28,9 +28,7 @@ export default function RoleDescriptionField({ id, profile }: ProfileData) {
       draft={roleDescription}
       isDirty={roleDescriptionDirty}
       error={roleDescriptionError}
-      save={async () => {
-        await saveRoleDescription();
-      }}
+      save={saveRoleDescription}
       reset={resetRoleDescription}
       meta={`${roleDescription.length} / ${PROFILE_LIMITS.roleDescription} characters`}
     >

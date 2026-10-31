@@ -13,7 +13,6 @@ export default function VerificationStatusField() {
 
   return (
     <VerificationChecklist
-      userId={ctx.userId}
       verificationStatus={ctx.verificationStatus}
       isVerified={ctx.isVerified}
       involvementFullName={ctx.involvementFullName}
