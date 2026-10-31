@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { sql } from "drizzle-orm";
+import { eq, like, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { db } from "~/server/db";
+import { hackathons, jobHeartbeats, projectSyncJobs } from "~/server/db/schema";
 import {
   deleteMembers,
   insertMember,
@@ -37,23 +38,24 @@ const item = (
   ...over,
 });
 
-type Row = {
-  id: string;
-  source: string;
-  devpostId: string | null;
-  url: string;
-  name: string;
-  approval: string;
-  openState: string | null;
-  startsOn: string | null;
-  approvedBy: string | null;
-  lastSeenAt: Date | null;
-};
-async function rows(like = "https://d4-%"): Promise<Row[]> {
-  return db.execute<Row>(sql`
-    select id, source, "devpostId"::text as "devpostId", url, name, approval,
-      "openState", "startsOn"::text as "startsOn", "approvedBy", "lastSeenAt"
-    from platform.hackathons where url like ${like} order by url`);
+// Schema-backed selects decode timestamps; raw execute returns driver strings.
+async function rows(pattern = "https://d4-%") {
+  return db
+    .select({
+      id: hackathons.id,
+      source: hackathons.source,
+      devpostId: sql<string | null>`${hackathons.devpostId}::text`,
+      url: hackathons.url,
+      name: hackathons.name,
+      approval: hackathons.approval,
+      openState: hackathons.openState,
+      startsOn: hackathons.startsOn,
+      approvedBy: hackathons.approvedBy,
+      lastSeenAt: hackathons.lastSeenAt,
+    })
+    .from(hackathons)
+    .where(like(hackathons.url, pattern))
+    .orderBy(hackathons.url);
 }
 async function insertOther(
   n: number,
@@ -68,7 +70,8 @@ async function insertOther(
 }
 
 let originalJob: Record<string, unknown> | undefined;
-let originalBeat: Date | undefined;
+// Keep raw timestamps for restoration, including their sub-millisecond precision.
+let originalBeat: string | undefined;
 
 async function cleanup() {
   await db.execute(
@@ -81,7 +84,7 @@ beforeAll(async () => {
   [originalJob] = await db.execute(
     sql`select * from platform."projectSyncJobs" where job='devpost-sync'`,
   );
-  const [beat] = await db.execute<{ succeededAt: Date }>(
+  const [beat] = await db.execute<{ succeededAt: string }>(
     sql`select "succeededAt" from platform."jobHeartbeats" where job='platform-devpost-sync'`,
   );
   originalBeat = beat?.succeededAt;
@@ -97,15 +100,15 @@ afterAll(async () => {
       insert into platform."projectSyncJobs" (job, "leaseToken", "leaseUntil", "lastAttemptAt",
         "lastSucceededAt", "nextAttemptAt", cursor, "lastError", attempts)
       values ('devpost-sync', ${originalJob.leaseToken as string | null}::uuid,
-        ${(originalJob.leaseUntil as Date | null)?.toISOString() ?? null}::timestamptz,
-        ${(originalJob.lastAttemptAt as Date | null)?.toISOString() ?? null}::timestamptz,
-        ${(originalJob.lastSucceededAt as Date | null)?.toISOString() ?? null}::timestamptz,
-        ${(originalJob.nextAttemptAt as Date | null)?.toISOString() ?? null}::timestamptz,
+        ${originalJob.leaseUntil as string | null}::timestamptz,
+        ${originalJob.lastAttemptAt as string | null}::timestamptz,
+        ${originalJob.lastSucceededAt as string | null}::timestamptz,
+        ${originalJob.nextAttemptAt as string | null}::timestamptz,
         ${JSON.stringify(originalJob.cursor)}::jsonb, ${originalJob.lastError as string | null},
         ${originalJob.attempts as number})`);
   if (originalBeat)
     await db.execute(
-      sql`update platform."jobHeartbeats" set "succeededAt"=${originalBeat.toISOString()}::timestamptz where job='platform-devpost-sync'`,
+      sql`update platform."jobHeartbeats" set "succeededAt"=${originalBeat}::timestamptz where job='platform-devpost-sync'`,
     );
 });
 beforeEach(async () => {
@@ -208,9 +211,10 @@ describe("upsertDevpostHackathon", () => {
       approval: "approved",
       name: "D4 Hack 3",
     });
-    const [decided] = await db.execute<{ decidedAt: Date | null }>(
-      sql`select "decidedAt" from platform.hackathons where id=${id}::uuid`,
-    );
+    const [decided] = await db
+      .select({ decidedAt: hackathons.decidedAt })
+      .from(hackathons)
+      .where(eq(hackathons.id, id));
     expect(decided!.decidedAt).toBeInstanceOf(Date);
     // And from then on it is an ordinary Devpost record.
     expect(await upsertDevpostHackathon(item(3))).toBe("updated");
@@ -292,22 +296,24 @@ describe("the job lease", () => {
     );
   });
   const state = async () => {
-    const [row] = await db.execute<{
-      leaseToken: string | null;
-      cursor: Record<string, unknown>;
-      attempts: number;
-      lastError: string | null;
-      lastSucceededAt: Date | null;
-      nextAttemptAt: Date | null;
-    }>(
-      sql`select "leaseToken", cursor, attempts, "lastError", "lastSucceededAt", "nextAttemptAt" from platform."projectSyncJobs" where job='devpost-sync'`,
-    );
+    const [row] = await db
+      .select({
+        leaseToken: projectSyncJobs.leaseToken,
+        cursor: projectSyncJobs.cursor,
+        attempts: projectSyncJobs.attempts,
+        lastError: projectSyncJobs.lastError,
+        lastSucceededAt: projectSyncJobs.lastSucceededAt,
+        nextAttemptAt: projectSyncJobs.nextAttemptAt,
+      })
+      .from(projectSyncJobs)
+      .where(eq(projectSyncJobs.job, "devpost-sync"));
     return row!;
   };
   const beat = async () => {
-    const [row] = await db.execute<{ succeededAt: Date }>(
-      sql`select "succeededAt" from platform."jobHeartbeats" where job='platform-devpost-sync'`,
-    );
+    const [row] = await db
+      .select({ succeededAt: jobHeartbeats.succeededAt })
+      .from(jobHeartbeats)
+      .where(eq(jobHeartbeats.job, "platform-devpost-sync"));
     return row?.succeededAt;
   };
   const expire = () =>

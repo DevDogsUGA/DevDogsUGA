@@ -1,9 +1,10 @@
 // @vitest-environment node
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ExpectedFailure } from "~/lib/actionResult";
 import { callerFor } from "~/server/auth/access";
 import { db } from "~/server/db";
+import { hackathons } from "~/server/db/schema";
 import {
   deleteMembers,
   insertMember,
@@ -32,9 +33,14 @@ async function cleanup() {
     ALL.map((u) => sql`${u}::uuid`),
     sql`, `,
   );
-  await db.execute(
-    sql`delete from platform."auditEvents" where "actorUserId" in (${ids})`,
-  );
+  // Match the badges/projects fixtures: bypass append-only guards only in
+  // this cleanup transaction, and only delete these fixtures' audit events.
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`set local session_replication_role = replica`);
+    await tx.execute(
+      sql`delete from platform."auditEvents" where "actorUserId" in (${ids})`,
+    );
+  });
   await db.execute(
     sql`delete from platform.hackathons where url like 'https://d4s-%'`,
   );
@@ -77,19 +83,20 @@ const refusal = async (work: Promise<unknown>) => {
   return error as ExpectedFailure;
 };
 const hackathon = async (url: string) => {
-  const [row] = await db.execute<{
-    id: string;
-    source: string;
-    approval: string;
-    name: string;
-    location: string;
-    submittedBy: string | null;
-    approvedBy: string | null;
-    decidedAt: Date | null;
-    startsOn: string | null;
-  }>(
-    sql`select id, source, approval, name, location, "submittedBy", "approvedBy", "decidedAt", "startsOn"::text as "startsOn" from platform.hackathons where url=${url}`,
-  );
+  const [row] = await db
+    .select({
+      id: hackathons.id,
+      source: hackathons.source,
+      approval: hackathons.approval,
+      name: hackathons.name,
+      location: hackathons.location,
+      submittedBy: hackathons.submittedBy,
+      approvedBy: hackathons.approvedBy,
+      decidedAt: hackathons.decidedAt,
+      startsOn: hackathons.startsOn,
+    })
+    .from(hackathons)
+    .where(eq(hackathons.url, url));
   return row;
 };
 const count = async (where: ReturnType<typeof sql>) => {
