@@ -2,7 +2,7 @@
 
 import { authorize, rules, authorizeSession } from "~/server/auth/access";
 
-import type { ActionResult } from "~/lib/actionResult";
+import { expected, failure, type ActionResult } from "~/lib/actionResult";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -102,23 +102,32 @@ const hideSchema = z.object({
   hidden: z.boolean(),
 });
 
-/** The signed-in member hides or shows one of their own badges. */
+/**
+ * The signed-in member hides or shows one of their own badges. An input the
+ * switch would never send is a failure, not a thrown error.
+ */
 export async function setMyBadgeHidden(
   input: z.input<typeof hideSchema>,
-): Promise<{ changed: number }> {
+): Promise<ActionResult<{ changed: number }>> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
-  const parsed = hideSchema.parse(input);
+  const parsed = hideSchema.safeParse(input);
+  if (!parsed.success) return failure("That request is invalid.");
   const userId = access.caller.userId;
-  const changed = await setBadgeHidden(
-    userId,
-    parsed.badgeId,
-    parsed.workshopDefinitionId,
-    parsed.hidden,
+  return expected(
+    async () => {
+      const changed = await setBadgeHidden(
+        userId,
+        parsed.data.badgeId,
+        parsed.data.workshopDefinitionId,
+        parsed.data.hidden,
+      );
+      await revalidateMember(userId);
+      return { changed };
+    },
+    parsed.data.hidden
+      ? "Badge hidden from your public profile."
+      : "Badge shown on your public profile.",
   );
-  await revalidateMember(userId);
-  return { changed };
 }
