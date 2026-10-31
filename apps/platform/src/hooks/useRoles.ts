@@ -9,8 +9,8 @@ import {
   deleteRole,
   reorderRole,
   type CreateRoleInput,
-  type ResolvedPermissions,
 } from "~/server/actions/permissions";
+import type { ResolvedPermissions } from "~/server/auth/permissions";
 import type { RoleRow } from "~/server/loaders/permissions";
 
 export type { RoleRow };

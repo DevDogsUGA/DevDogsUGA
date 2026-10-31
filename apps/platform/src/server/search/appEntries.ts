@@ -6,7 +6,7 @@ import {
   type NavItem,
 } from "~/config/nav";
 import { PAGE_SECTIONS } from "~/config/pageSections";
-import type { ResolvedPermissions } from "~/server/actions/permissions";
+import type { ResolvedPermissions } from "~/server/auth/permissions";
 import { publicProfilesEnabled } from "~/server/features";
 import type { SearchEntry } from "./types";
 

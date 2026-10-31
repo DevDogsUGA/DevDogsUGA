@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { canUserPreviewDocs } from "~/server/actions/permissions";
+import { canUserPreviewDocs } from "~/server/auth/permissions";
 import { expectSession } from "~/server/auth";
 
 /**

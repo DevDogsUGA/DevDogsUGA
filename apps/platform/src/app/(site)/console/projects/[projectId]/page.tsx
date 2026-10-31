@@ -6,7 +6,7 @@ import ConsoleShell from "~/components/Console/ConsoleShell";
 import ProjectActionForm from "~/components/Projects/ProjectActionForm";
 import ReportCard from "~/components/Projects/ReportCard";
 import "~/components/Projects/projects.css";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import {
   addProjectMemberAction,
   archiveProjectAction,

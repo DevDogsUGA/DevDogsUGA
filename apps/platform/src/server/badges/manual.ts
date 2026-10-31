@@ -4,7 +4,7 @@ import {
   getBadges,
 } from "@devdogsuga/events";
 import { and, eq, isNull } from "drizzle-orm";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import { db } from "~/server/db";
 import { auditEvents, badgeAwards } from "~/server/db/schema";
 import { usersInAuth } from "~/supabase/drizzle/schema";

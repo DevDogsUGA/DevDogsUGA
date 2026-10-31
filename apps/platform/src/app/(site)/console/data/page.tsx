@@ -4,7 +4,7 @@ import {
   UploadSimpleIcon,
 } from "@phosphor-icons/react/ssr";
 import ConsoleShell from "~/components/Console/ConsoleShell";
-import { canUserManageAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { PageHeading, Panel } from "~/ui/app-shell";
 import LinkButton from "~/ui/link-button";

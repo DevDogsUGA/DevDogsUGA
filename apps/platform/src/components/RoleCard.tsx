@@ -20,10 +20,8 @@ import Field from "~/ui/field";
 import { Input } from "~/ui/input";
 import { Textarea } from "~/ui/textarea";
 import type { RoleRow } from "~/hooks/useRoles";
-import type {
-  CreateRoleInput,
-  ResolvedPermissions,
-} from "~/server/actions/permissions";
+import type { CreateRoleInput } from "~/server/actions/permissions";
+import type { ResolvedPermissions } from "~/server/auth/permissions";
 import type { DiscordSyncCapability } from "~/lib/discordCapability";
 import DiscordSyncSection from "./DiscordSyncSection";
 

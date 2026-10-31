@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import AttendanceDisplay from "~/components/AttendanceDisplay";
 import { toTitleCardMeeting } from "~/components/AttendanceDisplay/TitleCard";
 import { meetingTitle } from "~/lib/meetingTitle";
-import { canUserManageAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 import { getOfficerAttendanceMeeting } from "~/server/attendance/getOfficerMeeting";
 import { requirePermission } from "~/server/auth/require";
 

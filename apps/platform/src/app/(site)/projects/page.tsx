@@ -6,7 +6,7 @@ import ProjectActionForm from "~/components/Projects/ProjectActionForm";
 import ProposeProjectForm from "~/components/Projects/ProposeProjectForm";
 import ReportCard from "~/components/Projects/ReportCard";
 import "~/components/Projects/projects.css";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import { deleteReportAction } from "~/server/actions/projects";
 import { requireSession } from "~/server/auth/require";
 import {

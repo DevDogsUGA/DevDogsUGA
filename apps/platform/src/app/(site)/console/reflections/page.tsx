@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import ReflectionSettingsCard from "~/components/ReflectionSettingsCard";
-import { canUserManageAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { getReflectionSettings } from "~/server/reflections/settings";
 import { PageHeading } from "~/ui/app-shell";

@@ -6,7 +6,7 @@ import {
   moderationDeliveries,
   sandboxReports,
 } from "~/server/db/schema";
-import { canUserManageOAuthApps } from "~/server/actions/permissions";
+import { canUserManageOAuthApps } from "~/server/auth/permissions";
 import { expectSession } from "~/server/auth";
 import { getOAuthPageData } from "~/server/loaders/console";
 import { getConsoleApps } from "~/server/loaders/oauthApps";

@@ -3,7 +3,7 @@ import gdgFavicon from "~/assets/favicons/gdg.png";
 import googleFormsFavicon from "~/assets/favicons/google-forms.png";
 import involvementFavicon from "~/assets/favicons/involvement-network.png";
 import { mayUseGraphics } from "~/lib/graphicsAccess";
-import type { ResolvedPermissions } from "~/server/actions/permissions";
+import type { ResolvedPermissions } from "~/server/auth/permissions";
 import type * as icons from "./icons";
 import { SOCIALS } from "./socials";
 

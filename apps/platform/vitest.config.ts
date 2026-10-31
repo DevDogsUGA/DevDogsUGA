@@ -38,7 +38,15 @@ export default mergeConfig(
     // that imports `~/...` fails to TRANSFORM rather than failing an
     // assertion, which reads as a broken test rather than a missing alias.
     resolve: {
-      alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
+      alias: {
+        "~": fileURLToPath(new URL("./src", import.meta.url)),
+        // `server/auth/permissions.ts` opens with `import "server-only"`, a
+        // guard that throws outside Next's server bundle and is not a
+        // dependency of this app. Same stub as vitest.db.config.ts.
+        "server-only": fileURLToPath(
+          new URL("./vitest/server-only-stub.ts", import.meta.url),
+        ),
+      },
     },
     test: {
       include: ["src/**/*.test.{ts,tsx}", "cloudflare/**/*.test.ts"],
