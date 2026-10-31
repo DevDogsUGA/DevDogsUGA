@@ -1,11 +1,7 @@
 import { ACCENT, PageCard } from "@devdogsuga/sdk/brand";
 import { ogResponse, size } from "@devdogsuga/sdk/brand/next";
 import { toTitleCase } from "~/lib/toTitleCase";
-import {
-  docsPathExists,
-  getDocsFolder,
-  getDocsPage,
-} from "~/server/docs/queries";
+import { getDocsFolder, getDocsPage } from "~/server/docs/queries";
 
 /**
  * The link card for one docs page.
@@ -38,15 +34,8 @@ export async function GET(request: Request) {
   const project = params.get("project") ?? "";
   const path = params.get("path") ?? "";
 
-  // Both lookups answer null for anything not live yet, so a scheduled page
-  // has no card. It is a 404, not the generic Docs card: the card is what a
-  // link to the page unfurls to, and even the fallback would confirm that a
-  // path exists.
   const page = await getDocsPage(project, path);
   const folder = page ? null : await getDocsFolder(project, path);
-  if (!page && !folder && docsPathExists(project, path)) {
-    return new Response("Not found", { status: 404 });
-  }
 
   // Neither a page nor a folder: the club's generic Docs card, and never the
   // caller's strings.

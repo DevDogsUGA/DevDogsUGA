@@ -4,7 +4,6 @@ import { notFound, redirect } from "next/navigation";
 import DocPageContent from "~/components/DocPageContent";
 import DocsFolderContents from "~/components/DocsFolderContents";
 import StepPager from "~/components/DocsProgress/StepPager";
-import DocsScheduled from "~/components/DocsScheduled";
 import DocsSidebar from "~/components/DocsSidebar";
 import DocsVariants from "~/components/DocsVariants";
 import "~/components/Docs/docs.css";
@@ -18,12 +17,7 @@ import {
 } from "~/components/DocsPublishedRoute";
 import { env } from "~/env";
 import { getDocsSwitcher } from "~/server/docs/menu";
-import {
-  DOCS_BASE,
-  DOCS_PREVIEW_BASE,
-  docsHref,
-  projectPath,
-} from "~/lib/docsSlug";
+import { DOCS_BASE, docsHref, projectPath } from "~/lib/docsSlug";
 import { firstPagePath, findFolder, indexPageOf } from "~/lib/docsTree";
 import { toTitleCase } from "~/lib/toTitleCase";
 import {
@@ -33,43 +27,30 @@ import {
   getDocsSidebarTree,
   getDocsStepNav,
   getDocsTree,
+  getDocsProjects,
   getDocsVariantGroups,
-  getVisibleDocsProjects,
-  type DocsMode,
 } from "~/server/docs/queries";
 
 /**
- * The docs routes, shared by `/docs` and `/dashboard/docs-preview`.
- *
- * The two are the same pages over two readings of the same data: the public
- * one shows what is live, the preview shows everything and marks what is not
- * live yet. Keeping one implementation is what makes "the preview looks like
- * the real thing" true rather than a promise, and the mode is the only thing
- * that differs between the callers. The routes themselves stay separate, so
- * that the public one can be cached and the preview never is.
+ * The public docs routes. A project here is either one of the club's own,
+ * bundled at build time, or a Project that published its docs through the
+ * pipeline, which `DocsPublishedRoute` renders under the same chrome.
  */
-
-const baseOf = (mode: DocsMode) =>
-  mode === "preview" ? DOCS_PREVIEW_BASE : DOCS_BASE;
 
 export async function DocsProjectLayout({
   project,
-  mode,
   children,
 }: {
   project: string;
-  mode: DocsMode;
   children: ReactNode;
 }) {
-  const projects = await getVisibleDocsProjects(mode);
-  const current = projects.find((p) => p.slug === project);
+  const current = getDocsProjects().find((p) => p.slug === project);
 
   // Not one of ours: a project published through the docs pipeline, if there
   // is one under this slug. Otherwise let the page render its notFound
   // without docs chrome.
   if (!current) {
-    const published =
-      mode === "public" ? await loadPublishedFor(project) : null;
+    const published = await loadPublishedFor(project);
     if (published) {
       return <PublishedLayout project={published}>{children}</PublishedLayout>;
     }
@@ -85,14 +66,14 @@ export async function DocsProjectLayout({
       kind={docsProjectHue(project)}
     >
       <DocsSidebar
-        projects={await getDocsSwitcher(mode)}
+        projects={await getDocsSwitcher()}
         project={project}
         platforms={current.os.map((value) => ({
           value,
           label: groups.os.labels[value] ?? value,
         }))}
-        tree={await getDocsSidebarTree(project, mode)}
-        base={baseOf(mode)}
+        tree={await getDocsSidebarTree(project)}
+        base={DOCS_BASE}
       />
       <div className="docs-pagecol">{children}</div>
     </DocsVariants>
@@ -100,26 +81,19 @@ export async function DocsProjectLayout({
 }
 
 /** `/docs/<project>`: on to the project's first page, or say there is none. */
-export async function DocsProjectIndex({
-  project,
-  mode,
-}: {
-  project: string;
-  mode: DocsMode;
-}) {
+export async function DocsProjectIndex({ project }: { project: string }) {
   // Projects come from the bundled artifact, so an unrecognised slug is a 404
-  // rather than an empty project. So is one with nothing live yet.
-  if (!(await getVisibleDocsProjects(mode)).some((p) => p.slug === project)) {
-    const published =
-      mode === "public" ? await loadPublishedFor(project) : null;
+  // rather than an empty project.
+  if (!getDocsProjects().some((p) => p.slug === project)) {
+    const published = await loadPublishedFor(project);
     if (published) return <PublishedIndex project={published} />;
     notFound();
   }
 
-  const first = firstPagePath(await getDocsTree(project, mode));
+  const first = firstPagePath(await getDocsTree(project));
 
   if (first) {
-    redirect(docsHref(project, first.split("/"), baseOf(mode)));
+    redirect(docsHref(project, first.split("/"), DOCS_BASE));
   }
 
   return (
@@ -136,23 +110,11 @@ export async function DocsProjectIndex({
 export async function docsPageMetadata({
   project,
   slug,
-  mode,
 }: {
   project: string;
   slug: string[];
-  mode: DocsMode;
 }): Promise<Metadata> {
   const path = slug.join("/");
-
-  if (mode === "preview") {
-    // Never a link card, never indexed: this is not the public copy.
-    const page = await getDocsPage(project, path, mode);
-    const folder = page ? null : await getDocsFolder(project, path, mode);
-    return {
-      title: `${page?.title ?? folder?.name ?? "Preview"} | DevDogs Docs preview`,
-      robots: { index: false, follow: false },
-    };
-  }
 
   // The link card. Docs pages live under a catch-all, and Next refuses an
   // `opengraph-image.tsx` inside one ("Catch-all must be the last part of the
@@ -169,7 +131,7 @@ export async function docsPageMetadata({
     ],
   };
 
-  const page = await getDocsPage(project, path, mode);
+  const page = await getDocsPage(project, path);
   if (page) {
     return {
       title: `${page.title} | DevDogs Docs`,
@@ -178,7 +140,7 @@ export async function docsPageMetadata({
     };
   }
 
-  const folder = await getDocsFolder(project, path, mode);
+  const folder = await getDocsFolder(project, path);
   if (folder) {
     return { title: `${folder.name} | DevDogs Docs`, openGraph: card };
   }
@@ -194,27 +156,20 @@ export async function docsPageMetadata({
 export async function DocsPageRoute({
   project,
   slug: path,
-  mode,
 }: {
   project: string;
   slug: string[];
-  mode: DocsMode;
 }) {
-  const base = baseOf(mode);
+  const base = DOCS_BASE;
   const joined = path.join("/");
 
-  if (mode === "public") {
-    const published = await loadPublishedFor(project);
-    if (published)
-      return <PublishedPageRoute project={published} slug={path} />;
-  }
+  const published = await loadPublishedFor(project);
+  if (published) return <PublishedPageRoute project={published} slug={path} />;
 
-  // A page that is not live yet is not found, exactly as one that does not
-  // exist: `getDocsPage` answers null for both.
-  const page = await getDocsPage(project, joined, mode);
+  const page = await getDocsPage(project, joined);
   // Each folder by its own name, which its settings may give it, rather than
   // its directory's.
-  const tree = await getDocsTree(project, mode);
+  const tree = await getDocsTree(project);
   const breadcrumbs = [
     toTitleCase(project),
     ...path
@@ -252,7 +207,7 @@ export async function DocsPageRoute({
   // on `DocsPageContent`.
   const sourcePath = page.mountedFrom ?? projectPath(project, joined);
   const githubUrl = `https://github.com/${env.GITHUB_ORG}/${DOCS_REPO}/blob/${DOCS_BRANCH}/docs/${sourcePath}.md`;
-  const stepNav = await getDocsStepNav(project, joined, mode);
+  const stepNav = await getDocsStepNav(project, joined);
 
   return (
     <DocPageContent
@@ -264,7 +219,6 @@ export async function DocsPageRoute({
         stepNav && `Step ${stepNav.index + 1} of ${stepNav.steps.length}`
       }
       githubUrl={githubUrl}
-      notice={page.publishAt && <DocsScheduled at={page.publishAt} />}
       footer={
         stepNav && <StepPager project={project} base={base} {...stepNav} />
       }

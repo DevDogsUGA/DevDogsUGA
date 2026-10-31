@@ -26,7 +26,7 @@ interface Props {
   githubUrl?: string;
   /** Under the article: a course page's step pager. */
   footer?: ReactNode;
-  /** Above the article: the preview's "Scheduled" mark. */
+  /** A note above the article, such as the preview's. */
   notice?: ReactNode;
   /**
    * A page from a project's own repository (published through the docs
@@ -59,7 +59,7 @@ export default function DocPageContent({
   return (
     <div className="docs-page">
       <div className="docs-main">
-        {notice && <div className="docs-sched-note">{notice}</div>}
+        {notice && <div className="docs-note">{notice}</div>}
 
         {(breadcrumbs && breadcrumbs.length > 0) || githubUrl ? (
           <div className="docs-bar">

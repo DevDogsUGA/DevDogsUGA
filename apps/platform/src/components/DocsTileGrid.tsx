@@ -6,8 +6,6 @@ export interface DocsTile {
   href: string;
   title: string;
   description?: string | null;
-  /** A line under the description, e.g. the preview's "Scheduled" mark. */
-  note?: ReactNode;
   /** Right-hand column: a course's progress, say. */
   status?: ReactNode;
   /** The tile-shaped mark drawn beside the title. */
@@ -33,7 +31,6 @@ export default function DocsTileGrid({ tiles }: { tiles: DocsTile[] }) {
             {tile.description && (
               <p className="docs-list-ds">{tile.description}</p>
             )}
-            {tile.note && <div className="docs-list-note">{tile.note}</div>}
             {tile.status && <div className="docs-list-st">{tile.status}</div>}
           </Link>
         </li>

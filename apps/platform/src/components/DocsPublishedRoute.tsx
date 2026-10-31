@@ -11,8 +11,8 @@ import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import { findFolder, firstPagePath, indexPageOf } from "~/lib/docsTree";
 import { toTitleCase } from "~/lib/toTitleCase";
 import {
+  getDocsProjects,
   getDocsVariantGroups,
-  getVisibleDocsProjects,
   type DocsFolderEntry,
 } from "~/server/docs/queries";
 import { getContributeMenu, getDocsSwitcher } from "~/server/docs/menu";
@@ -29,18 +29,14 @@ import {
  * The docs routes for a project published through the docs pipeline
  * (`docs/operations/project-docs.md`), used when the slug is not one of the
  * club's own bundled projects. Same chrome as `DocsRoute`, over the compiled
- * pages read from the bucket. The public routes only: the early-access
- * preview shows what is scheduled in this repository, which a published
- * project has no part in.
+ * pages read from the bucket.
  */
 
 /** Null when `slug` is a bundled project (the caller handles it) or nothing is published under it. */
 export async function loadPublishedFor(
   slug: string,
 ): Promise<PublishedProject | null> {
-  if ((await getVisibleDocsProjects("public")).some((p) => p.slug === slug)) {
-    return null;
-  }
+  if (getDocsProjects().some((p) => p.slug === slug)) return null;
   return getPublishedProject(slug);
 }
 
@@ -52,7 +48,7 @@ export async function PublishedLayout({
   children: ReactNode;
 }) {
   const [switcher, contribute] = await Promise.all([
-    getDocsSwitcher("public"),
+    getDocsSwitcher(),
     getContributeMenu(),
   ]);
   // A published project is a Project, so it is named and marked by its own row.

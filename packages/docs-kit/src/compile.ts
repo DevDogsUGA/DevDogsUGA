@@ -150,6 +150,22 @@ function isFolderSettings(rel: string, parsed: ParsedDocFile): boolean {
   return rel.includes("/") && isIndexPath(rel) && parsed.content.trim() === "";
 }
 
+/**
+ * Front matter keys that used to do something. A page that still sets one
+ * would publish at once, which for `scheduled` is the opposite of what its
+ * author meant, so the build says so instead of ignoring it.
+ */
+function refuseRemovedKeys(
+  frontmatter: Record<string, unknown>,
+  file: string,
+): void {
+  if ("scheduled" in frontmatter) {
+    throw new DocsBuildError(
+      `${file}: "scheduled" is gone: pages are live once they merge. Remove it, or keep the page out of docs/ until it should be public`,
+    );
+  }
+}
+
 /** `steps:`, validated: a boolean, or absent for false. */
 function readSteps(
   frontmatter: Record<string, unknown>,
@@ -165,93 +181,6 @@ function readSteps(
   return raw;
 }
 
-const ISO_WITH_ZONE =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
-
-/**
- * `scheduled:`, validated and normalised to a UTC ISO string; null when
- * absent. A string has to carry a timezone: "6pm" on a club server means
- * nothing, and a reveal an hour off is worse than a build that asks. YAML
- * already turns an unquoted timestamp into a `Date`, which is unambiguous.
- */
-function readScheduled(
-  frontmatter: Record<string, unknown>,
-  file: string,
-): string | null {
-  const raw = frontmatter["scheduled"];
-  if (raw === undefined) return null;
-  let date: Date | null = null;
-  if (raw instanceof Date) {
-    date = raw;
-  } else if (typeof raw === "string" && ISO_WITH_ZONE.test(raw)) {
-    date = new Date(raw);
-  }
-  if (date === null || Number.isNaN(date.getTime())) {
-    throw new DocsBuildError(
-      `${file}: invalid "scheduled: ${JSON.stringify(raw)}" — use an ISO time with a timezone, like 2026-10-05T18:00:00-04:00`,
-    );
-  }
-  return date.toISOString();
-}
-
-/** Every directory above a path, nearest first: "a/b/c" gives "a/b", "a". */
-function ancestorDirs(dirPath: string): string[] {
-  const parts = dirPath.split("/");
-  const found: string[] = [];
-  for (let i = parts.length - 1; i >= 1; i--) {
-    found.push(parts.slice(0, i).join("/"));
-  }
-  return found;
-}
-
-/**
- * Resolves every folder's and page's `publishAt` against the folders above it.
- * A scheduled folder hides everything inside it, so a nested folder or page
- * either inherits that time or sets a later one; setting an earlier one is a
- * contradiction (it would look revealed while its folder is hidden) and fails
- * the build. Folders are resolved shallowest first, so the nearest scheduled
- * ancestor already carries the latest time along its chain.
- */
-function applySchedules(pages: CompiledPage[], folders: DocsFolder[]): void {
-  const inherited = (
-    childPath: string,
-  ): { at: string; from: string } | null => {
-    for (const dir of ancestorDirs(childPath)) {
-      const folder = folders.find((f) => f.path === dir);
-      if (folder?.publishAt) return { at: folder.publishAt, from: dir };
-    }
-    return null;
-  };
-
-  const check = (
-    own: string | null,
-    childPath: string,
-    file: string,
-  ): string | null => {
-    const above = inherited(childPath);
-    if (own === null) return above?.at ?? null;
-    if (above !== null && own < above.at) {
-      throw new DocsBuildError(
-        `${file}: "scheduled" (${own}) is earlier than its folder ${above.from} (${above.at}) — a page can only be scheduled later than its folder`,
-      );
-    }
-    return own;
-  };
-
-  for (const folder of [...folders].sort(
-    (a, b) => a.path.split("/").length - b.path.split("/").length,
-  )) {
-    folder.publishAt = check(
-      folder.publishAt,
-      folder.path,
-      `${folder.path}/index.md`,
-    );
-  }
-  for (const page of pages) {
-    page.publishAt = check(page.publishAt, page.path, `${page.path}.md`);
-  }
-}
-
 /**
  * One emitted copy's per-project fields. Headings and search text come from
  * the resolved body, because an `only{project=…}` block can add or remove a
@@ -260,10 +189,7 @@ function applySchedules(pages: CompiledPage[], folders: DocsFolder[]): void {
  */
 function emitCopy(
   parsed: ParsedDocFile,
-  fields: Pick<
-    CompiledPage,
-    "project" | "path" | "section" | "mountedFrom" | "publishAt"
-  >,
+  fields: Pick<CompiledPage, "project" | "path" | "section" | "mountedFrom">,
   variants: VariantContext,
 ): CompiledPage {
   const tree = parseBody(parsed.content, variants);
@@ -396,6 +322,7 @@ export function compileDocs(contentRoot: string): {
         "utf-8",
       );
       const parsed = parseDocFile(source, rel.split("/").at(-1)!);
+      refuseRemovedKeys(parsed.frontmatter, file);
 
       const isProjectIndex = isIndexPath(rel) && !rel.includes("/");
       const steps = readSteps(parsed.frontmatter, file);
@@ -410,7 +337,6 @@ export function compileDocs(contentRoot: string): {
           description: parsed.description,
           order: parsed.order,
           steps,
-          publishAt: readScheduled(parsed.frontmatter, file),
         });
         continue;
       }
@@ -435,7 +361,6 @@ export function compileDocs(contentRoot: string): {
             path: docsPath,
             section,
             mountedFrom: null,
-            publishAt: readScheduled(parsed.frontmatter, file),
           },
           { project: slug, projects: projectSlugs, os: project.os, file },
         ),
@@ -455,6 +380,7 @@ export function compileDocs(contentRoot: string): {
         "utf-8",
       );
       const parsed = parseDocFile(source, rel.split("/").at(-1)!);
+      refuseRemovedKeys(parsed.frontmatter, file);
       const targets = readMountTargets(parsed.frontmatter, projectSlugs, file);
 
       for (const project of targets) {
@@ -475,7 +401,6 @@ export function compileDocs(contentRoot: string): {
               path: docsPath,
               section,
               mountedFrom: rel,
-              publishAt: readScheduled(parsed.frontmatter, file),
             },
             {
               project,
@@ -489,8 +414,6 @@ export function compileDocs(contentRoot: string): {
       }
     }
   }
-
-  applySchedules(pages, folders);
 
   projects.sort(
     (a, b) =>

@@ -59,7 +59,6 @@ describe("/docs/<slug> for a published project", () => {
       DocsPageRoute({
         project: "demo",
         slug: ["guide", "start"],
-        mode: "public",
       }),
     );
     const article = container.querySelector("article")!;
@@ -77,31 +76,27 @@ describe("/docs/<slug> for a published project", () => {
   it("sends the project root on to its first page", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(
-      element(DocsProjectIndex({ project: "demo", mode: "public" })),
+      element(DocsProjectIndex({ project: "demo" })),
     ).rejects.toThrow("NEXT_REDIRECT /docs/demo/index");
   });
 
   it("lists a folder that has no index page", async () => {
     const { container } = await element(
-      DocsPageRoute({ project: "demo", slug: ["guide"], mode: "public" }),
+      DocsPageRoute({ project: "demo", slug: ["guide"] }),
     );
     expect(container.textContent).toContain("Start here");
   });
 
   it("404s an unknown project, an unknown page and an unknown folder", async () => {
     await expect(
-      element(
-        DocsPageRoute({ project: "nobody", slug: ["index"], mode: "public" }),
-      ),
+      element(DocsPageRoute({ project: "nobody", slug: ["index"] })),
     ).rejects.toThrow("NEXT_NOT_FOUND");
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(
-      element(
-        DocsPageRoute({ project: "demo", slug: ["missing"], mode: "public" }),
-      ),
+      element(DocsPageRoute({ project: "demo", slug: ["missing"] })),
     ).rejects.toThrow("NEXT_NOT_FOUND");
     await expect(
-      Promise.resolve(DocsProjectIndex({ project: "nobody", mode: "public" })),
+      Promise.resolve(DocsProjectIndex({ project: "nobody" })),
     ).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
@@ -109,19 +104,11 @@ describe("/docs/<slug> for a published project", () => {
     bucketRef.current = null;
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(
-      element(
-        DocsPageRoute({ project: "demo", slug: ["index"], mode: "public" }),
-      ),
+      element(DocsPageRoute({ project: "demo", slug: ["index"] })),
     ).rejects.toThrow("NEXT_NOT_FOUND");
     bucketRef.current = fakeBucket({});
     await expect(
-      Promise.resolve(DocsProjectIndex({ project: "demo", mode: "public" })),
-    ).rejects.toThrow("NEXT_NOT_FOUND");
-  });
-
-  it("never serves a published project in the early-access preview", async () => {
-    await expect(
-      DocsPageRoute({ project: "demo", slug: ["index"], mode: "preview" }),
+      Promise.resolve(DocsProjectIndex({ project: "demo" })),
     ).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
@@ -129,7 +116,6 @@ describe("/docs/<slug> for a published project", () => {
     const metadata = await docsPageMetadata({
       project: "demo",
       slug: ["guide", "start"],
-      mode: "public",
     });
     expect(metadata.title).toBe("Start here | Demo docs");
     expect(metadata.openGraph).toBeUndefined();
@@ -137,7 +123,6 @@ describe("/docs/<slug> for a published project", () => {
       await docsPageMetadata({
         project: "nobody",
         slug: ["x"],
-        mode: "public",
       }),
     ).toEqual({});
   });
