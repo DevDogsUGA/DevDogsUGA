@@ -25,9 +25,9 @@ import {
   submissions,
 } from "~/server/db/schema";
 import { canonicalHttpsUrl } from "~/server/hackathons/url";
+import { RESULT_MAX, TEAM_MAX } from "./policy";
 
-export const RESULT_MAX = 280;
-export const TEAM_MAX = 20;
+export { RESULT_MAX, TEAM_MAX };
 
 export type SubmissionInput = {
   url: string;

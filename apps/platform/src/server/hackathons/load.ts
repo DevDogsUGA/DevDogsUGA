@@ -8,7 +8,7 @@ import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "~/server/db";
 import { hackathons, profiles, projectSyncJobs } from "~/server/db/schema";
-import { orderHackathons } from "./present";
+import { orderHackathons, whenText } from "./present";
 
 const LISTED = {
   id: hackathons.id,
@@ -62,4 +62,25 @@ export async function getHackathonsPage(userId: string, officer: boolean) {
     /** When the Devpost feed last synced to the end, or null if it never has. */
     syncedAt: sync?.at ?? null,
   };
+}
+
+/**
+ * The approved Hackathons a Submission may be recorded against, open and
+ * upcoming first (soonest to start), then the most recent earlier ones.
+ */
+export async function getSubmittableHackathons(): Promise<
+  { id: string; name: string; when: string | null }[]
+> {
+  const approved = await db
+    .select(LISTED)
+    .from(hackathons)
+    .where(eq(hackathons.approval, "approved"))
+    .limit(APPROVED_LIMIT);
+  const today = new Date().toISOString().slice(0, 10);
+  const { current, earlier } = orderHackathons(approved, today);
+  return [...current, ...earlier].map((hackathon) => ({
+    id: hackathon.id,
+    name: hackathon.name,
+    when: whenText(hackathon),
+  }));
 }
