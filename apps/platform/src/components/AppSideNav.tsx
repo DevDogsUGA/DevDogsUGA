@@ -52,6 +52,7 @@ export default async function AppSideNav() {
                       key={section.id}
                       href={section.href}
                       icon={<Icon />}
+                      exact={section.group === "Overview"}
                     >
                       {section.label}
                     </DashboardNavLink>
