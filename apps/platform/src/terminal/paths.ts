@@ -285,11 +285,6 @@ export const TERMINAL_PATHS = [
     regex: /^\/dashboard\/reviews\/?$/,
     page: "(site)/dashboard/reviews/page.tsx",
   },
-  {
-    pattern: "/dashboard/reviews/:projectId",
-    regex: new RegExp(`^/dashboard/reviews/(?<projectId>${SLUG})/?$`),
-    page: "(site)/dashboard/reviews/[projectId]/page.tsx",
-  },
 
   {
     pattern: "/dashboard/projects",
@@ -297,9 +292,14 @@ export const TERMINAL_PATHS = [
     page: "(site)/dashboard/projects/page.tsx",
   },
   {
-    pattern: "/dashboard/projects/:projectId/report",
-    regex: new RegExp(`^/dashboard/projects/(?<projectId>${SLUG})/report/?$`),
-    page: "(site)/dashboard/projects/[projectId]/report/page.tsx",
+    pattern: "/dashboard/projects/:idOrSlug",
+    regex: new RegExp(`^/dashboard/projects/(?<idOrSlug>${SLUG})/?$`),
+    page: "(site)/dashboard/projects/[idOrSlug]/page.tsx",
+  },
+  {
+    pattern: "/dashboard/projects/:idOrSlug/report",
+    regex: new RegExp(`^/dashboard/projects/(?<idOrSlug>${SLUG})/report/?$`),
+    page: "(site)/dashboard/projects/[idOrSlug]/report/page.tsx",
   },
 
   { pattern: "/help", regex: /^\/help\/?$/, page: null },

@@ -1,62 +1,72 @@
-import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import "~/components/Settings/settings.css";
-import ProjectActionForm from "~/components/Projects/ProjectActionForm";
-import ProposeProjectForm from "~/components/Projects/ProposeProjectForm";
+import NewProjectForm from "~/components/Projects/NewProjectForm";
+import { ProjectCommand } from "~/components/Projects/ProjectCommands";
+import { StatusBadge } from "~/components/Projects/ProjectBadges";
 import ReportCard from "~/components/Projects/ReportCard";
 import "~/components/Projects/projects.css";
-
 import { deleteReportAction } from "~/server/actions/projects";
-import { requireSession } from "~/server/auth/require";
+import { requireDashboard, rules } from "~/server/auth/access";
 import {
-  advisesAnyProject,
+  getAllProjects,
   getMyProjects,
   getMyReports,
+  type ProjectSummary,
 } from "~/server/projects/load";
+import { projectPath } from "~/server/projects/slug";
 import { PageHeading, Panel } from "~/ui/app-shell";
 import Badge from "~/ui/badge";
-import { EmptyState } from "~/ui/empty-state";
 import { buttonVariants } from "~/ui/button";
+import { EmptyState } from "~/ui/empty-state";
 
 export const metadata: Metadata = {
   title: "Projects | DevDogs",
   robots: { index: false },
 };
 
-const STATUS_LABEL = {
-  proposed: "Awaiting leadership",
-  active: "Active",
-  declined: "Declined",
-  archived: "Archived",
-} as const;
+function ProjectRow({ project }: { project: ProjectSummary }) {
+  return (
+    <li className="prj-item">
+      <div className="prj-head">
+        <Link href={projectPath(project)} className="prj-title">
+          {project.name}
+        </Link>
+        <StatusBadge status={project.status} />
+        {project.isOwner && <Badge variant="info">Owner</Badge>}
+        {project.isAdvisor && <Badge variant="info">Advisor</Badge>}
+      </div>
+      {project.description && <p className="prj-meta">{project.description}</p>}
+    </li>
+  );
+}
 
 /**
- * A member's projects: the ones they are on or advise, a form to propose one,
- * and the EL reports they have written. Reports are needed only for EL credit;
- * a merged pull request counts toward a streak without one.
+ * Projects for every signed-in member: the ones they own, the ones they
+ * contribute to or advise, their EL reports, and a form to create a project
+ * from a GitHub repo. Officers also get every project, with the ones that
+ * need them first.
  */
 export default async function ProjectsPage() {
   await connection();
-  const userId = await requireSession();
-  const [projects, reports, advisor, officer] = await Promise.all([
-    getMyProjects(userId),
-    getMyReports(userId),
-    advisesAnyProject(userId),
-    loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === userId && rules.officer(caller),
-    ),
+  const caller = await requireDashboard();
+  const officer = rules.officer(caller);
+  const [projects, reports, all] = await Promise.all([
+    getMyProjects(caller.userId),
+    getMyReports(caller.userId),
+    officer ? getAllProjects() : Promise.resolve([]),
   ]);
+  const owned = projects.filter((project) => project.isOwner);
+  const other = projects.filter((project) => !project.isOwner);
 
   return (
     <div className="settings-shell">
       <PageHeading
         title="Projects"
-        description="Long-running DevDogs projects. Members propose one, leadership approves it and assigns an advisor, and the advisor keeps its member list. You write a project report only to earn EL credit; any merged pull request already counts toward your streak."
+        description="Long-running DevDogs projects, each anchored to a public GitHub repo. Anyone with a commit in a project's repos is a contributor. You write a report only to earn EL credit; your commits already count toward your streak."
         actions={
-          (advisor || officer) && (
+          rules.reviewProjectReports(caller) && (
             <Link
               href="/dashboard/reviews"
               className={buttonVariants({ variant: "secondary", size: "sm" })}
@@ -67,57 +77,23 @@ export default async function ProjectsPage() {
         }
       />
       <Panel id="mine" title="Your projects">
-        {projects.length === 0 ? (
-          <EmptyState title="You are not on a project yet" />
+        {owned.length === 0 ? (
+          <EmptyState title="You do not own a project yet" />
         ) : (
           <ul className="prj-list">
-            {projects.map((project) => (
-              <li key={project.id} className="prj-item">
-                <div className="prj-head">
-                  <span className="prj-title">{project.name}</span>
-                  <Badge
-                    variant={
-                      project.status === "active" ? "success" : "default"
-                    }
-                  >
-                    {STATUS_LABEL[project.status]}
-                  </Badge>
-                  {project.isAdvisor && <Badge variant="info">Advisor</Badge>}
-                </div>
-                {project.description && (
-                  <p className="prj-meta">{project.description}</p>
-                )}
-                <p className="prj-meta">
-                  {project.repos.length > 0
-                    ? project.repos.join(", ")
-                    : "No repositories listed"}
-                  {" · "}
-                  {project.advisorName
-                    ? `Advisor ${project.advisorName}`
-                    : "No advisor yet"}
-                </p>
-                {project.status === "active" && (
-                  <div className="prj-acts">
-                    <Link
-                      href={`/dashboard/projects/${project.id}/report`}
-                      className={buttonVariants({ size: "sm" })}
-                    >
-                      Write a report
-                    </Link>
-                    {(project.isAdvisor || officer) && (
-                      <Link
-                        href={`/dashboard/reviews/${project.id}`}
-                        className={buttonVariants({
-                          variant: "secondary",
-                          size: "sm",
-                        })}
-                      >
-                        Manage members
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </li>
+            {owned.map((project) => (
+              <ProjectRow key={project.id} project={project} />
+            ))}
+          </ul>
+        )}
+      </Panel>
+      <Panel id="contributing" title="Projects you contribute to or advise">
+        {other.length === 0 ? (
+          <EmptyState title="No commits in a project's repos yet" />
+        ) : (
+          <ul className="prj-list">
+            {other.map((project) => (
+              <ProjectRow key={project.id} project={project} />
             ))}
           </ul>
         )}
@@ -133,37 +109,74 @@ export default async function ProjectsPage() {
           <ul className="prj-list">
             {reports.map((report) => (
               <ReportCard key={report.id} report={report}>
-                {report.status !== "approved" && (
-                  <div className="prj-acts">
-                    <Link
-                      href={`/dashboard/projects/${report.projectId}/report?report=${report.id}`}
-                      className={buttonVariants({
-                        variant: "secondary",
-                        size: "sm",
-                      })}
-                    >
-                      Edit
-                    </Link>
-                    <ProjectActionForm
-                      action={deleteReportAction}
-                      fields={{ reportId: report.id }}
-                      label="Delete"
-                      variant="destructive"
-                    />
-                  </div>
-                )}
+                {report.status !== "approved" &&
+                  report.legacyPullRequests.length === 0 && (
+                    <div className="prj-acts">
+                      <Link
+                        href={`${projectPath({ slug: report.projectSlug, id: report.projectId })}/report?report=${report.id}`}
+                        className={buttonVariants({
+                          variant: "secondary",
+                          size: "sm",
+                        })}
+                      >
+                        Edit
+                      </Link>
+                      <ProjectCommand
+                        action={deleteReportAction}
+                        args={[report.id]}
+                        label="Delete"
+                        variant="destructive"
+                        confirm={{
+                          title: "Delete this report?",
+                          description:
+                            "The report is removed and its commits can back another report.",
+                        }}
+                      />
+                    </div>
+                  )}
               </ReportCard>
             ))}
           </ul>
         )}
       </Panel>
       <Panel
-        id="propose"
-        title="Propose a project"
-        help="Leadership reviews proposals, approves the ones that fit, and assigns each an advisor."
+        id="new"
+        title="New project"
+        help="Every project is tied to at least one public GitHub repo you can prove you control."
       >
-        <ProposeProjectForm />
+        <NewProjectForm />
       </Panel>
+      {officer && (
+        <Panel id="all" title="All projects">
+          {all.length === 0 ? (
+            <EmptyState title="No projects yet" />
+          ) : (
+            <ul className="prj-list">
+              {all.map((project) => (
+                <li key={project.id} className="prj-item">
+                  <div className="prj-head">
+                    <Link href={projectPath(project)} className="prj-title">
+                      {project.name}
+                    </Link>
+                    <StatusBadge status={project.status} />
+                    {project.devdogsOwned && <Badge>DevDogs-owned</Badge>}
+                    {project.pendingLinks > 0 && (
+                      <Badge variant="warning">
+                        {project.pendingLinks} repo{" "}
+                        {project.pendingLinks === 1 ? "link" : "links"} to
+                        approve
+                      </Badge>
+                    )}
+                    {project.ownerCount === 0 && !project.devdogsOwned && (
+                      <Badge variant="warning">No owners</Badge>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      )}
     </div>
   );
 }
