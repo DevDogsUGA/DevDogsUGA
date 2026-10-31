@@ -1,5 +1,11 @@
 "use server";
 
+import {
+  expected,
+  ExpectedFailure,
+  failure,
+  type ActionResult,
+} from "~/lib/actionResult";
 import { authorizeSession } from "~/server/auth/access";
 
 import { eq } from "drizzle-orm";
@@ -47,124 +53,143 @@ export type TestAccount = {
   createdAt: string;
 };
 
-export async function addTestAccount(formData: FormData) {
+/** What adding or renaming a test account returns, for the list to show. */
+export interface TestAccountName {
+  testUserId: string;
+  displayName: string;
+}
+
+/** The refusal for a display name the form would not have sent. */
+const NAME_PROBLEM = "Enter a display name of up to 255 characters.";
+
+/** Creates one of the member's sandboxed test identities, up to five. */
+export async function addTestAccount(
+  formData: FormData,
+): Promise<ActionResult<TestAccountName>> {
   const access = await authorizeSession();
   if (!access.ok) return authenticate("google", "/dashboard/oauth");
 
-  const { displayName } = await testAccountSchema.parseAsync(formData);
+  const parsed = await testAccountSchema.safeParseAsync(formData);
+  if (!parsed.success) return failure(NAME_PROBLEM);
+  const { displayName } = parsed.data;
   const user = await expectUserWith({
     testAccounts: true,
   }).catch(() => authenticate("google", "/dashboard/oauth"));
 
-  if (user.testAccounts.length >= MAX_TEST_ACCOUNTS) {
-    throw new Error(
-      `A maximum of ${MAX_TEST_ACCOUNTS} test accounts are allowed`,
-    );
-  }
+  return expected(async () => {
+    if (user.testAccounts.length >= MAX_TEST_ACCOUNTS) {
+      throw new ExpectedFailure(
+        `A maximum of ${MAX_TEST_ACCOUNTS} test accounts are allowed`,
+      );
+    }
 
-  if (!user.email) {
-    throw new Error("Failed to create test account. Please try again.");
-  }
+    if (!user.email) {
+      throw new ExpectedFailure(
+        "Failed to create test account. Please try again.",
+      );
+    }
 
-  // Synthetic email following the UGA {letters}{numbers}@{domain} convention.
-  // The local part uses initials + a seconds-mod-100000 timestamp so no DB
-  // check is needed; collisions are practically impossible given the UI
-  // enforces at least one second between submissions. The owner's MyID as
-  // subdomain scopes uniqueness per user. The .test TLD (IANA-reserved)
-  // prevents any risk of impersonation.
-  //
-  // The display name goes in `name` and `full_name`, the keys GoTrue's
-  // userinfo endpoint reports, so an OAuth client sees it as the user's name.
-  const testUserId = crypto.randomUUID();
-  const { data: createUser, error: createUserError } =
-    await supabaseAdmin.auth.admin.createUser({
-      id: testUserId,
-      email: generateTestEmail(displayName, user.email),
-      email_confirm: true,
-      user_metadata: {
-        is_test_account: true,
-        name: displayName,
-        full_name: displayName,
-      },
-    });
+    // Synthetic email following the UGA {letters}{numbers}@{domain} convention.
+    // The local part uses initials + a seconds-mod-100000 timestamp so no DB
+    // check is needed; collisions are practically impossible given the UI
+    // enforces at least one second between submissions. The owner's MyID as
+    // subdomain scopes uniqueness per user. The .test TLD (IANA-reserved)
+    // prevents any risk of impersonation.
+    //
+    // The display name goes in `name` and `full_name`, the keys GoTrue's
+    // userinfo endpoint reports, so an OAuth client sees it as the user's name.
+    const testUserId = crypto.randomUUID();
+    const { data: createUser, error: createUserError } =
+      await supabaseAdmin.auth.admin.createUser({
+        id: testUserId,
+        email: generateTestEmail(displayName, user.email),
+        email_confirm: true,
+        user_metadata: {
+          is_test_account: true,
+          name: displayName,
+          full_name: displayName,
+        },
+      });
 
-  if (createUserError ?? !createUser.user) {
-    console.error({ createUserError });
-    throw new Error("Failed to create test account. Please try again.");
-  }
+    if (createUserError ?? !createUser.user) {
+      console.error({ createUserError });
+      throw new ExpectedFailure(
+        "Failed to create test account. Please try again.",
+      );
+    }
 
-  try {
-    await db.insert(oauthTestAccounts).values({
-      testUserId,
-      ownerUserId: user.id,
-    });
-  } catch (insertError) {
-    await supabaseAdmin.auth.admin.deleteUser(createUser.user.id);
-    console.error({ insertError });
-    throw new Error("Failed to create test account.");
-  }
+    try {
+      await db.insert(oauthTestAccounts).values({
+        testUserId,
+        ownerUserId: user.id,
+      });
+    } catch (insertError) {
+      await supabaseAdmin.auth.admin.deleteUser(createUser.user.id);
+      console.error({ insertError });
+      throw new ExpectedFailure("Failed to create test account.");
+    }
 
-  return { testUserId, displayName };
+    return { testUserId, displayName };
+  }, "Test account added");
 }
 
+/** Renames one of the member's test accounts. */
 export async function updateTestAccount(
-  _prevState: unknown,
   formData: FormData,
-) {
+): Promise<ActionResult<TestAccountName>> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
   const ownerUserId = access.caller.userId;
-  const { testUserId, displayName } = await updateSchema.parseAsync(formData);
+  const parsed = await updateSchema.safeParseAsync(formData);
+  if (!parsed.success) return failure(NAME_PROBLEM);
+  const { testUserId, displayName } = parsed.data;
 
-  const account = await db.query.oauthTestAccounts.findFirst({
-    where: { ownerUserId, testUserId },
-  });
+  return expected(async () => {
+    const account = await db.query.oauthTestAccounts.findFirst({
+      where: { ownerUserId, testUserId },
+    });
 
-  if (!account) {
-    throw new Error("Test account not found");
-  }
+    if (!account) throw new ExpectedFailure("Test account not found");
 
-  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-    testUserId,
-    {
-      user_metadata: {
-        is_test_account: true,
-        name: displayName,
-        full_name: displayName,
-      },
-    },
-  );
+    const { error: updateError } =
+      await supabaseAdmin.auth.admin.updateUserById(testUserId, {
+        user_metadata: {
+          is_test_account: true,
+          name: displayName,
+          full_name: displayName,
+        },
+      });
 
-  if (updateError) {
-    console.error({ updateError });
-    throw new Error("Failed to update test user.");
-  }
+    if (updateError) {
+      console.error({ updateError });
+      throw new ExpectedFailure("Failed to update test user.");
+    }
 
-  return { testUserId, displayName };
+    return { testUserId, displayName };
+  }, "Test account updated");
 }
 
-export async function deleteTestAccount(testUserId: string): Promise<void> {
+/** Deletes one of the member's test accounts, its sign-in and its approvals. */
+export async function deleteTestAccount(
+  testUserId: string,
+): Promise<ActionResult> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
   const ownerUserId = access.caller.userId;
 
-  const account = await db.query.oauthTestAccounts.findFirst({
-    where: { ownerUserId, testUserId },
-  });
+  return expected(async (): Promise<undefined> => {
+    const account = await db.query.oauthTestAccounts.findFirst({
+      where: { ownerUserId, testUserId },
+    });
 
-  if (!account) {
-    throw new Error("Test account not found");
-  }
+    if (!account) throw new ExpectedFailure("Test account not found");
 
-  await supabaseAdmin.auth.admin.deleteUser(testUserId);
+    await supabaseAdmin.auth.admin.deleteUser(testUserId);
 
-  await db
-    .delete(oauthTestAccounts)
-    .where(eq(oauthTestAccounts.testUserId, testUserId));
+    await db
+      .delete(oauthTestAccounts)
+      .where(eq(oauthTestAccounts.testUserId, testUserId));
+  }, "Test account deleted");
 }

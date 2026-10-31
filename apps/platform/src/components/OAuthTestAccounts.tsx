@@ -1,6 +1,5 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import {
   PencilSimpleIcon,
@@ -14,7 +13,7 @@ import {
   type TestAccount,
 } from "~/server/actions/testAccounts";
 import TestAccountDialog from "./TestAccountDialog";
-import { toast } from "~/lib/toast";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 const MAX_TEST_ACCOUNTS = 5;
 
@@ -27,14 +26,9 @@ export default function OAuthTestAccounts({ initialAccounts }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<TestAccount | null>(null);
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteTestAccount,
-    onSuccess: (_, authUserId) => {
-      setAccounts((prev) => prev.filter((a) => a.userId !== authUserId));
-      toast.success("Test account deleted");
-    },
-    onError: () => toast.error("Failed to delete test account"),
-  });
+  const handleDeleted = useCallback((userId: string) => {
+    setAccounts((prev) => prev.filter((a) => a.userId !== userId));
+  }, []);
 
   const handleAdded = useCallback((account: TestAccount) => {
     setAccounts((prev) => [...prev, account]);
@@ -59,36 +53,12 @@ export default function OAuthTestAccounts({ initialAccounts }: Props) {
       ) : (
         <div className="set-rows" role="list">
           {accounts.map((account) => (
-            <div role="listitem" key={account.userId} className="arow">
-              <div className="min-w-0">
-                <b className="truncate">{account.displayName}</b>
-                <span className="small muted truncate font-mono">
-                  {account.userId}
-                </span>
-              </div>
-              <div className="end flex shrink-0 items-center gap-1">
-                <button
-                  type="button"
-                  className="iconbtn"
-                  onClick={() => setEditAccount(account)}
-                  aria-label={`Edit ${account.displayName}`}
-                >
-                  <PencilSimpleIcon />
-                </button>
-                <button
-                  type="button"
-                  className="iconbtn"
-                  onClick={() => deleteMutation.mutate(account.userId)}
-                  disabled={
-                    deleteMutation.isPending &&
-                    deleteMutation.variables === account.userId
-                  }
-                  aria-label={`Delete ${account.displayName}`}
-                >
-                  <TrashIcon />
-                </button>
-              </div>
-            </div>
+            <TestAccountRow
+              key={account.userId}
+              account={account}
+              onEdit={() => setEditAccount(account)}
+              onDeleted={() => handleDeleted(account.userId)}
+            />
           ))}
         </div>
       )}
@@ -126,5 +96,50 @@ export default function OAuthTestAccounts({ initialAccounts }: Props) {
         />
       )}
     </>
+  );
+}
+
+/** One account, with its own Delete Command so a refusal shows on its row. */
+function TestAccountRow({
+  account,
+  onEdit,
+  onDeleted,
+}: {
+  account: TestAccount;
+  onEdit: () => void;
+  onDeleted: () => void;
+}) {
+  const { run, pending, result } = useCommand(async (userId: string) => {
+    const outcome = await deleteTestAccount(userId);
+    if (outcome.ok) onDeleted();
+    return outcome;
+  });
+  return (
+    <div role="listitem" className="arow">
+      <div className="min-w-0">
+        <b className="truncate">{account.displayName}</b>
+        <span className="small muted truncate font-mono">{account.userId}</span>
+      </div>
+      <div className="end flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          className="iconbtn"
+          onClick={onEdit}
+          aria-label={`Edit ${account.displayName}`}
+        >
+          <PencilSimpleIcon />
+        </button>
+        <button
+          type="button"
+          className="iconbtn"
+          onClick={() => run(account.userId)}
+          disabled={pending}
+          aria-label={`Delete ${account.displayName}`}
+        >
+          <TrashIcon />
+        </button>
+      </div>
+      <CommandFeedback result={result} />
+    </div>
   );
 }
