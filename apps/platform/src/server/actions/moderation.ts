@@ -1,6 +1,6 @@
 "use server";
 
-import { authorize, rules, loadCaller } from "~/server/auth/access";
+import { authorize, callerFor, rules } from "~/server/auth/access";
 
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "~/server/db";
@@ -149,14 +149,7 @@ export async function updateUserRole(
 
   const callerUserId = access.caller.userId;
 
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null &&
-        caller.userId === callerUserId &&
-        rules.manageSuspensions(caller),
-    ))
-  ) {
+  if (!(await callerFor(callerUserId).then(rules.manageSuspensions))) {
     throw new Error("Not authorized to change user standing");
   }
 

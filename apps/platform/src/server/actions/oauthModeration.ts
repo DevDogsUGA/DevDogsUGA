@@ -1,6 +1,6 @@
 "use server";
 
-import { authorizeSession, rules, loadCaller } from "~/server/auth/access";
+import { authorizeSession, callerFor, rules } from "~/server/auth/access";
 
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
@@ -67,12 +67,7 @@ async function managedClient(clientId: string, userId: string) {
   if (!registration) return null;
   const allowed =
     registration.status === "in_production" || registration.userId === null
-      ? await loadCaller().then(
-          (caller) =>
-            caller !== null &&
-            caller.userId === userId &&
-            rules.manageOAuthApps(caller),
-        )
+      ? await callerFor(userId).then(rules.manageOAuthApps)
       : registration.userId === userId;
   return allowed ? registration : null;
 }

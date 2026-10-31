@@ -1,6 +1,6 @@
 "use server";
 
-import { authorize, rules, loadCaller } from "~/server/auth/access";
+import { authorize, callerFor, rules } from "~/server/auth/access";
 
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
@@ -29,12 +29,7 @@ export async function resendDelivery(deliveryId: string): Promise<void> {
   }
 
   const userId = access.caller.userId;
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === userId && rules.moderate(caller),
-    ))
-  ) {
+  if (!(await callerFor(userId).then(rules.moderate))) {
     throw new Error("Not authorized to resend moderation deliveries");
   }
   if (await resetForResend(deliveryId)) {
@@ -80,14 +75,7 @@ export async function registerExternalApp(
   }
 
   const userId = access.caller.userId;
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null &&
-        caller.userId === userId &&
-        rules.manageOAuthApps(caller),
-    ))
-  ) {
+  if (!(await callerFor(userId).then(rules.manageOAuthApps))) {
     return { ok: false, message: "You cannot register apps" };
   }
 

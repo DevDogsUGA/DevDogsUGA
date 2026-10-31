@@ -34,6 +34,10 @@ vi.mock("~/server/auth", async () => {
       if (!user) throw new Error("User expected but not found.");
       return user;
     },
+    expectSession: async () => {
+      if (!session.id) throw new Error("Session expected but not found.");
+      return session.id;
+    },
     authenticate: () => Promise.reject(new Error("sign-in required")),
   };
 });

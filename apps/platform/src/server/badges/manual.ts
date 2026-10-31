@@ -1,4 +1,4 @@
-import { rules, loadCaller } from "~/server/auth/access";
+import { callerFor, rules } from "~/server/auth/access";
 import {
   BADGE_CITATION_MAX_LENGTH,
   BADGE_WITHDRAWAL_REASON_MAX_LENGTH,
@@ -39,12 +39,7 @@ export async function awardManualBadge(
   officerId: string,
   input: { userId: string; badgeId: string; citation: string },
 ): Promise<AwardResult> {
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === officerId && rules.officer(caller),
-    ))
-  )
+  if (!(await callerFor(officerId).then(rules.officer)))
     return { status: "forbidden" };
   const definition = getBadges().badges.find((b) => b.id === input.badgeId);
   if (definition?.kind !== "manual" || definition.perWorkshop) {
@@ -121,12 +116,7 @@ export async function withdrawBadge(
   awardId: string,
   reason: string,
 ): Promise<WithdrawResult> {
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === officerId && rules.officer(caller),
-    ))
-  )
+  if (!(await callerFor(officerId).then(rules.officer)))
     return { status: "forbidden" };
   const trimmed = reason.trim();
   if (trimmed === "") return { status: "reason_required" };

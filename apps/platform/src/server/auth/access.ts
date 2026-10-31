@@ -26,6 +26,21 @@ export const loadCaller = cache(async (): Promise<Caller | null> => {
   return { userId, flags, isLeader, minRank };
 });
 
+/**
+ * The Caller for a member named explicitly, for domain code that is handed its
+ * actor (`awardBadge(officerId, ...)`, the projects store, loaders keyed by a
+ * user id) rather than reading the session. Rules apply to it exactly as to
+ * `loadCaller()`. Not request-cached: the actor need not be the signed-in member.
+ */
+export async function callerFor(userId: string): Promise<Caller> {
+  const {
+    resolvedPermissions: flags,
+    isLeader,
+    minRank,
+  } = await getCallerContext(userId);
+  return { userId, flags, isLeader, minRank };
+}
+
 /** An Access rule needs only the Caller; Record rules stay in domain modules. */
 export type Rule = (caller: Caller) => boolean;
 

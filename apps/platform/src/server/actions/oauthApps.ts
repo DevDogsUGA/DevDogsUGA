@@ -1,6 +1,6 @@
 "use server";
 
-import { authorizeSession, rules, loadCaller } from "~/server/auth/access";
+import { authorizeSession, callerFor, rules } from "~/server/auth/access";
 
 import { eq } from "drizzle-orm";
 import { env } from "~/env";
@@ -52,12 +52,7 @@ async function requireEditableApp(clientId: string) {
 
   const allowed =
     app.userId === null
-      ? await loadCaller().then(
-          (caller) =>
-            caller !== null &&
-            caller.userId === userId &&
-            rules.manageOAuthApps(caller),
-        )
+      ? await callerFor(userId).then(rules.manageOAuthApps)
       : app.userId === userId;
   if (!allowed) throw new Error(APP_NOT_FOUND);
   return { userId, app };
