@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { DocsBuildError } from "./errors.js";
 import { renderBody } from "./render.js";
 import type { VariantContext } from "./variants.js";
@@ -64,5 +64,15 @@ describe("script in a page", () => {
     expect(html).toContain("<details>");
     expect(html).toContain("<circle");
     expect(html).toContain("in a code block is fine");
+  });
+});
+
+describe("loading the module", () => {
+  it("generates nothing random until a page is sanitised (a Worker may not in global scope)", async () => {
+    vi.resetModules();
+    const spy = vi.spyOn(globalThis.crypto, "getRandomValues");
+    await import("./sanitize.js");
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

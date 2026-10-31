@@ -11,6 +11,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./preview": {
+      "types": "./src/preview.ts",
+      "default": "./src/preview.ts"
     }
   },
   "files": [

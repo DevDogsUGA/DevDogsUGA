@@ -21,6 +21,11 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
+  linkProblems,
+  overviewProblem,
+  pageContentProblems,
+} from "./readiness.js";
+import {
   compileUntrustedDocs,
   type UntrustedCompileResult,
 } from "./untrusted.js";
@@ -391,6 +396,20 @@ export async function buildCandidate(
   };
   writeFile(staged, "manifest.json", JSON.stringify(manifest, null, 2) + "\n");
 
+  // The checks are the readiness rules (readiness.ts), so a folder that passes
+  // `devtools docs check` or the project page's readiness panel passes here.
+  const contentProblems = pageContentProblems(
+    project,
+    compiled.pages.map((p) => ({
+      path: p.path,
+      title: p.title,
+      plainText: p.plainText,
+    })),
+  );
+  const overview = overviewProblem(
+    content.pages.some((p) => p.path === `${project}/index`),
+  );
+  const brokenLinks = linkProblems(project, compiled.linkErrors);
   const checks: CheckResult[] = [
     {
       name: "compiles under the untrusted policy",
@@ -399,15 +418,30 @@ export async function buildCandidate(
     },
     {
       name: "every page has a title and text",
-      ok: search.every(
-        (e) => e.title.trim() !== "" && e.plainText.trim() !== "",
-      ),
-      detail: "title and searchable text present on all pages",
+      ok: contentProblems.length === 0,
+      detail:
+        contentProblems.length === 0
+          ? "title and searchable text present on all pages"
+          : contentProblems.map((p) => p.file).join(", "),
     },
     {
       name: "has an overview page",
-      ok: content.pages.some((p) => p.path === `${project}/index`),
-      detail: `${project}/index`,
+      ok: overview === null,
+      detail: overview?.message ?? `${project}/index`,
+    },
+    {
+      name: "internal links resolve",
+      ok: brokenLinks.length === 0,
+      detail:
+        brokenLinks.length === 0
+          ? "every link to another page resolves"
+          : brokenLinks
+              .slice(0, 10)
+              .map((p) => `${p.file}: ${p.message}`)
+              .join("; ") +
+            (brokenLinks.length > 10
+              ? `; and ${brokenLinks.length - 10} more`
+              : ""),
     },
   ];
   const changes = summarizeChanges(options.live ?? null, content);
