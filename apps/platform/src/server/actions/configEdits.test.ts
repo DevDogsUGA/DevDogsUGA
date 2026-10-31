@@ -224,6 +224,24 @@ describe("resetConfigEditAction and openConfigPrAction", () => {
     expect(mocks.resetEdit).toHaveBeenCalledWith(USER, "venue", "dlw");
   });
 
+  it("resets everything, and says when there was nothing to reset", async () => {
+    expect(await resetAllConfigEditsAction()).toMatchObject({
+      ok: true,
+      message: "Everything is back to official.",
+    });
+    mocks.resetAllEdits.mockResolvedValueOnce(0);
+    expect(await resetAllConfigEditsAction()).toMatchObject({
+      ok: true,
+      message: "Nothing to reset.",
+    });
+  });
+
+  it("refuses to open a pull request for a non-officer", async () => {
+    mocks.isOfficer.mockResolvedValue(false);
+    expect(await openConfigPrAction()).toMatchObject({ ok: false });
+    expect(mocks.openConfigPr).not.toHaveBeenCalled();
+  });
+
   it("refuses a reset for an unknown collection", async () => {
     expect((await resetConfigEditAction("roles", "dlw")).ok).toBe(false);
     expect(mocks.resetEdit).not.toHaveBeenCalled();
@@ -237,7 +255,8 @@ describe("resetConfigEditAction and openConfigPrAction", () => {
     });
     expect(await openConfigPrAction()).toMatchObject({
       ok: true,
-      url: "https://github.com/x/y/pull/1",
+      data: { url: "https://github.com/x/y/pull/1" },
+      message: expect.stringMatching(/Opened a pull request/) as unknown,
     });
     mocks.openConfigPr.mockResolvedValueOnce({
       status: "invalid",
@@ -245,13 +264,30 @@ describe("resetConfigEditAction and openConfigPrAction", () => {
     });
     expect(await openConfigPrAction()).toMatchObject({
       ok: false,
-      errors: ["a: bad"],
+      fieldErrors: { "0": "a: bad" },
     });
     mocks.openConfigPr.mockResolvedValueOnce({ status: "unavailable" });
-    expect((await openConfigPrAction()).message).toMatch(/not set up/);
+    expect(await openConfigPrAction()).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/not set up/) as unknown,
+    });
     mocks.openConfigPr.mockResolvedValueOnce({ status: "rate_limited" });
-    expect((await openConfigPrAction()).message).toMatch(
-      /three pull request attempts/,
-    );
+    expect(await openConfigPrAction()).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/three pull request attempts/) as unknown,
+    });
+    mocks.openConfigPr.mockResolvedValueOnce({
+      status: "github_error",
+      message: "403",
+    });
+    expect(await openConfigPrAction()).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("(403)") as unknown,
+    });
+    mocks.openConfigPr.mockResolvedValueOnce({ status: "nothing_to_propose" });
+    expect(await openConfigPrAction()).toMatchObject({
+      ok: false,
+      message: "Nothing differs from the official config.",
+    });
   });
 });
