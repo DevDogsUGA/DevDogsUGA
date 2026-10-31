@@ -34,8 +34,12 @@ it("every exported async server action declares its access", () => {
         name: string,
         node: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression,
       ) {
-        if (!node.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword))
+        if (
+          !node.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)
+        ) {
+          missing.push(`${path}:${name}: action must be async`);
           return;
+        }
         const body = node.body?.getText(file) ?? "";
         if (!/\b(?:authorize|authorizeSession|publicAction)\s*\(/.test(body))
           missing.push(`${entry.name}:${name}`);
@@ -43,12 +47,18 @@ it("every exported async server action declares its access", () => {
           missing.push(`${entry.name}: missing public reason`);
       }
       for (const node of file.statements) {
+        if (ts.isExportDeclaration(node)) {
+          if (!node.isTypeOnly)
+            missing.push(`${path}: value re-export needs explicit coverage`);
+          continue;
+        }
         if (ts.isExportAssignment(node)) {
           if (
             ts.isArrowFunction(node.expression) ||
             ts.isFunctionExpression(node.expression)
           )
             check("default", node.expression);
+          else missing.push(`${path}: unrecognized default action export`);
           continue;
         }
         if (
@@ -69,11 +79,15 @@ it("every exported async server action declares its access", () => {
                 ts.isFunctionExpression(initializer))
             )
               check(declaration.name.getText(file), initializer);
+            else
+              missing.push(
+                `${path}:${declaration.name.getText(file)}: unrecognized action export`,
+              );
           }
         }
       }
     }
   }
-  scan(join(process.cwd(), "src/server/actions"));
+  scan(join(process.cwd(), "src"));
   expect(missing).toEqual([]);
 });

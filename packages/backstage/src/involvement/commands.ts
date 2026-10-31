@@ -2,7 +2,7 @@
  * `backstage import involvement --file <OrganizationRoster.csv>`: verify the
  * members on the UGA Involvement Network roster.
  *
- * Replaces the platform's /console/verification upload. Officers export the
+ * Replaces the platform's retired roster upload. Officers export the
  * roster from the Involvement Network (Roster → Export → Organization Roster)
  * and run this against production:
  *

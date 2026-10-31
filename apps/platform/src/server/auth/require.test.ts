@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-import { requirePermission, requireSession } from "./require";
+import { requireSession } from "./require";
 
 beforeEach(() => {
   expectSession.mockReset();
@@ -39,31 +39,6 @@ describe("requireSession", () => {
       throw new Error("no session");
     });
     const outcome = await requireSession().then(
-      () => "returned",
-      (error: Error) => error.message,
-    );
-    expect(outcome).toBe("REDIRECT");
-  });
-});
-
-describe("requirePermission", () => {
-  it("lets a permitted caller through", async () => {
-    expectSession.mockResolvedValue("u1");
-    await expect(requirePermission(async () => true)).resolves.toBe("u1");
-  });
-
-  it("shows the access-denied card to a signed-in caller who lacks it", async () => {
-    expectSession.mockResolvedValue("u1");
-    await expect(requirePermission(async () => false)).rejects.toThrow(
-      "FORBIDDEN",
-    );
-  });
-
-  it("redirects a signed-out caller", async () => {
-    expectSession.mockImplementation(async () => {
-      throw new Error("no session");
-    });
-    const outcome = await requirePermission(async () => true).then(
       () => "returned",
       (error: Error) => error.message,
     );

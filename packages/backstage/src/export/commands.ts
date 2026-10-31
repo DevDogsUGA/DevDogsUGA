@@ -1,6 +1,6 @@
 /**
  * `backstage export <evidence|attendance|reflections|responses>`: the platform's CSV
- * downloads, moved here from `/console/exports`.
+ * downloads, moved here from retired export.
  *
  *   pnpm backstage export evidence --from 2026-08-17 --to 2026-12-12
  *   pnpm backstage export attendance --meeting 2026-09-09 --format bevy,involvement
