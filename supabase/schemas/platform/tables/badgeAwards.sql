@@ -9,7 +9,6 @@ CREATE TABLE "platform"."badgeAwards" (
   "awardedBy"            uuid,
   "citation"             text,
   "meetingId"            uuid,
-  "contributionId"       uuid,
   "withdrawnAt"          timestamp with time zone,
   "withdrawnReason"      text,
   "hidden"               boolean                  NOT NULL DEFAULT false,
@@ -17,7 +16,6 @@ CREATE TABLE "platform"."badgeAwards" (
   CONSTRAINT "badgeAwards_awardedBy_fkey" FOREIGN KEY ("awardedBy") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT "badgeAwards_badgeId_format" CHECK (("badgeId" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text)),
   CONSTRAINT "badgeAwards_citation_shape" CHECK (((method = 'automatic' AND citation IS NULL AND "awardedBy" IS NULL) OR (method = 'manual' AND citation IS NOT NULL AND char_length(btrim(citation)) BETWEEN 1 AND 280))),
-  CONSTRAINT "badgeAwards_contributionId_fkey" FOREIGN KEY ("contributionId") REFERENCES platform.contributions(id) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT "badgeAwards_meetingId_fkey" FOREIGN KEY ("meetingId") REFERENCES platform.meetings(id) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT "badgeAwards_method_choices" CHECK ((method = ANY (ARRAY['automatic'::text, 'manual'::text]))),
   CONSTRAINT "badgeAwards_pkey" PRIMARY KEY (id),
@@ -75,8 +73,6 @@ COMMENT ON COLUMN "platform"."badgeAwards"."workshopDefinitionId" IS 'The worksh
 COMMENT ON COLUMN "platform"."badgeAwards"."repeatable" IS 'Copied from the badge definition at award time. Only non-repeatable awards are held to one live row per (member, badge, workshop).';
 
 COMMENT ON COLUMN "platform"."badgeAwards"."meetingId" IS 'Evidence for Workshop completed: the meeting whose attendance and submitted reflection support it. Re-pointed to another qualifying night when that one is removed; set null if the meeting row is ever deleted.';
-
-COMMENT ON COLUMN "platform"."badgeAwards"."contributionId" IS 'Legacy evidence for the retired First Merge badge (a merged pull request). Nothing writes or reads it; dropped with platform.contributions.';
 
 COMMENT ON COLUMN "platform"."badgeAwards"."commitSha" IS 'Evidence for First Commit: the member''s earliest stored default-branch commit. A later backfill that finds an older commit moves this pointer without a second award; set null if the commit is ever deleted.';
 
