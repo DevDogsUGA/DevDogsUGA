@@ -9,10 +9,10 @@ import { PROFILE_LIMITS } from "~/lib/validation/profile";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
 
-export default function PreferredNameField({ id, profile }: ProfileData) {
+export default function PreferredNameField({ profile }: ProfileData) {
   const inputId = useId();
   const { name, setName, nameDirty, nameError, saveName, resetName } =
-    useProfileIdentity(id, profile.preferredName);
+    useProfileIdentity(profile.preferredName);
 
   return (
     <SettingsField
@@ -21,9 +21,7 @@ export default function PreferredNameField({ id, profile }: ProfileData) {
       draft={name}
       isDirty={nameDirty}
       error={nameError}
-      save={async () => {
-        await saveName();
-      }}
+      save={saveName}
       reset={resetName}
     >
       <Input

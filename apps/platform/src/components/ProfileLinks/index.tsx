@@ -105,9 +105,7 @@ export default function ProfileLinks({ initialLinks }: Props) {
     label: "Links",
     isDirty: isDirtyFor(staged) || pendingUrlError !== null,
     error,
-    save: async () => {
-      await save(materialize());
-    },
+    save: () => save(materialize()),
     reset: () => {
       reset();
       clearInput();

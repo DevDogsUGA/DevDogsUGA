@@ -2,21 +2,18 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { createClient } from "~/supabase/client";
-import revalidateOfficerBoard from "~/server/actions/revalidateOfficerBoard";
+import { updateRoleDescription } from "~/server/actions/profile";
 import { validateRoleDescription } from "~/lib/validation/profile";
 import { acceptRoleDescriptionInput } from "~/lib/roleDescriptionInput";
 
 export const normalizeRoleDescription = (value: string) => value.trim();
 
 /**
- * `saveRoleDescription` neither catches nor toasts: the page-wide save bar
- * awaits it alongside every other dirty field and reports the outcome once.
+ * `saveRoleDescription` does not toast. It returns the action's result: the
+ * page-wide save bar awaits it alongside every other dirty field and reports
+ * the outcome once.
  */
-export function useRoleDescription(
-  userId: string,
-  initialRoleDescription: string | null,
-) {
+export function useRoleDescription(initialRoleDescription: string | null) {
   const initial = initialRoleDescription
     ? normalizeRoleDescription(initialRoleDescription)
     : "";
@@ -24,19 +21,12 @@ export function useRoleDescription(
   const [savedRoleDescription, setSavedRoleDescription] = useState(initial);
 
   const mutation = useMutation({
-    mutationFn: async (value: string) => {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("profile")
-        .update({ roleDescription: value || null })
-        .eq("userId", userId);
-      if (error) throw error;
-      return value;
-    },
-    onSuccess: (value) => {
-      setRoleDescriptionRaw(value);
-      setSavedRoleDescription(value);
-      void revalidateOfficerBoard().catch(() => undefined);
+    mutationFn: (value: string) => updateRoleDescription(value),
+    onSuccess: (result, value) => {
+      if (!result.ok) return;
+      const saved = result.data ?? value;
+      setRoleDescriptionRaw(saved);
+      setSavedRoleDescription(saved);
     },
   });
 

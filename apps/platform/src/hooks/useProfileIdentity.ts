@@ -2,34 +2,25 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { createClient } from "~/supabase/client";
-import revalidateOfficerBoard from "~/server/actions/revalidateOfficerBoard";
+import { updateIdentity } from "~/server/actions/profile";
 import { validatePreferredName } from "~/lib/validation/profile";
 
 /**
- * `saveName` deliberately does not catch, and does not toast. The account
- * page's save bar awaits every dirty field at once and needs the rejection to
- * know which ones failed. See ~/ui/settings-form.
+ * `saveName` does not toast. It returns the action's result, because the
+ * account page's save bar awaits every dirty field at once and needs each
+ * outcome to know which ones failed. See ~/ui/settings-form.
  */
-export function useProfileIdentity(userId: string, initialName: string) {
+export function useProfileIdentity(initialName: string) {
   const [name, setName] = useState(initialName);
   const [savedName, setSavedName] = useState(initialName);
 
   const nameMutation = useMutation({
-    mutationFn: async (preferredName: string) => {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("profile")
-        .update({ preferredName })
-        .eq("userId", userId);
-
-      if (error) throw error;
-      return preferredName;
-    },
-    onSuccess: (preferredName) => {
-      setName(preferredName);
-      setSavedName(preferredName);
-      void revalidateOfficerBoard().catch(() => undefined);
+    mutationFn: (preferredName: string) => updateIdentity({ preferredName }),
+    onSuccess: (result) => {
+      if (!result.ok) return;
+      const saved = result.data?.preferredName ?? name.trim();
+      setName(saved);
+      setSavedName(saved);
     },
   });
 
@@ -42,6 +33,5 @@ export function useProfileIdentity(userId: string, initialName: string) {
     // validation ran against.
     saveName: () => nameMutation.mutateAsync(name.trim()),
     resetName: () => setName(savedName),
-    isNamePending: nameMutation.isPending,
   };
 }
