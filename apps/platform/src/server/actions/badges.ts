@@ -2,6 +2,7 @@
 
 import { authorize, rules, authorizeSession } from "~/server/auth/access";
 
+import type { ActionResult } from "~/lib/actionResult";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -19,11 +20,6 @@ import { profiles } from "~/server/db/schema";
  * hide their own from Settings. The rules live in `server/badges/manual.ts`
  * (which re-checks the actor); this only parses input and revalidates.
  */
-
-export interface BadgeActionState {
-  ok: boolean;
-  message: string;
-}
 
 const MESSAGES = {
   forbidden: "Only officers can award or withdraw badges.",
@@ -54,10 +50,7 @@ const awardSchema = z.object({
   citation: z.string().max(2000),
 });
 
-export async function awardBadge(
-  _previous: BadgeActionState,
-  formData: FormData,
-): Promise<BadgeActionState> {
+export async function awardBadge(formData: FormData): Promise<ActionResult> {
   const access = await authorize(rules.officer);
   if (!access.ok) {
     return { ok: false, message: MESSAGES.forbidden };
@@ -80,9 +73,8 @@ const withdrawSchema = z.object({
 });
 
 export async function withdrawBadgeAward(
-  _previous: BadgeActionState,
   formData: FormData,
-): Promise<BadgeActionState> {
+): Promise<ActionResult> {
   const access = await authorize(rules.officer);
   if (!access.ok) {
     return { ok: false, message: MESSAGES.forbidden };
