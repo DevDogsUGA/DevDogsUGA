@@ -10,7 +10,7 @@ import {
   type PublishedProject,
 } from "~/server/docs/published/view";
 import { getContributeMenu, getDocsMenu } from "~/server/docs/menu";
-import { getVisibleDocsProjects } from "~/server/docs/queries";
+import { getDocsProjects } from "~/server/docs/queries";
 import { getPublishedFaqPost } from "~/server/support/forumIndex";
 import type { Block } from "../blocks";
 import { kitGalleryEnabled } from "~/server/features";
@@ -35,7 +35,7 @@ import {
  * page's markdown would be a worse copy of it, not a terminal version.
  */
 export const docs = terminal(PUBLIC, async ({ params, path }) => {
-  const projects = await getVisibleDocsProjects();
+  const projects = getDocsProjects();
   const current = params.project;
   if (current && !projects.some((p) => p.slug === current)) {
     const published = await getPublishedProject(current);

@@ -7,12 +7,12 @@ import StepPager from "~/components/DocsProgress/StepPager";
 import DocsSidebar from "~/components/DocsSidebar";
 import DocsVariants from "~/components/DocsVariants";
 import "~/components/Docs/docs.css";
-import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
+import { docsHref } from "~/lib/docsSlug";
 import { findFolder, firstPagePath, indexPageOf } from "~/lib/docsTree";
 import { toTitleCase } from "~/lib/toTitleCase";
 import {
+  getDocsProjects,
   getDocsVariantGroups,
-  getVisibleDocsProjects,
   type DocsFolderEntry,
 } from "~/server/docs/queries";
 import { getContributeMenu, getDocsSwitcher } from "~/server/docs/menu";
@@ -29,18 +29,14 @@ import {
  * The docs routes for a project published through the docs pipeline
  * (`docs/operations/project-docs.md`), used when the slug is not one of the
  * club's own bundled projects. Same chrome as `DocsRoute`, over the compiled
- * pages read from the bucket. The public routes only: the early-access
- * preview shows what is scheduled in this repository, which a published
- * project has no part in.
+ * pages read from the bucket.
  */
 
 /** Null when `slug` is a bundled project (the caller handles it) or nothing is published under it. */
 export async function loadPublishedFor(
   slug: string,
 ): Promise<PublishedProject | null> {
-  if ((await getVisibleDocsProjects("public")).some((p) => p.slug === slug)) {
-    return null;
-  }
+  if (getDocsProjects().some((p) => p.slug === slug)) return null;
   return getPublishedProject(slug);
 }
 
@@ -52,7 +48,7 @@ export async function PublishedLayout({
   children: ReactNode;
 }) {
   const [switcher, contribute] = await Promise.all([
-    getDocsSwitcher("public"),
+    getDocsSwitcher(),
     getContributeMenu(),
   ]);
   // A published project is a Project, so it is named and marked by its own row.
@@ -79,7 +75,7 @@ export async function PublishedLayout({
           label: groups.os.labels[value] ?? value,
         }))}
         tree={publishedSidebar(project)}
-        base={DOCS_BASE}
+        base={project.base}
       />
       <div className="docs-pagecol">{children}</div>
     </DocsVariants>
@@ -88,7 +84,7 @@ export async function PublishedLayout({
 
 export function PublishedIndex({ project }: { project: PublishedProject }) {
   const first = firstPagePath(publishedTree(project));
-  if (first) redirect(docsHref(project.slug, first.split("/")));
+  if (first) redirect(docsHref(project.slug, first.split("/"), project.base));
   return (
     <div className="docs-main docs-prose">
       <h1>Nothing here yet</h1>
@@ -116,9 +112,12 @@ export function publishedMetadata(
 export function PublishedPageRoute({
   project,
   slug: path,
+  notice,
 }: {
   project: PublishedProject;
   slug: string[];
+  /** A note above the page, such as the live preview's. */
+  notice?: ReactNode;
 }) {
   const joined = path.join("/");
   const tree = publishedTree(project);
@@ -138,7 +137,8 @@ export function PublishedPageRoute({
     const folder = findFolder(tree, joined);
     if (!folder) notFound();
     const index = indexPageOf(folder);
-    if (index) redirect(docsHref(project.slug, index.path.split("/")));
+    if (index)
+      redirect(docsHref(project.slug, index.path.split("/"), project.base));
     const entries: DocsFolderEntry[] = folder.children.map((node) =>
       node.type === "folder"
         ? {
@@ -160,7 +160,7 @@ export function PublishedPageRoute({
         title={folder.name}
         breadcrumbs={breadcrumbs}
         entries={entries}
-        base={DOCS_BASE}
+        base={project.base}
       />
     );
   }
@@ -169,6 +169,7 @@ export function PublishedPageRoute({
   return (
     <DocPageContent
       external
+      notice={notice}
       html={pageHtml(project, page)}
       headings={page.headings}
       breadcrumbs={breadcrumbs}
@@ -178,7 +179,7 @@ export function PublishedPageRoute({
       }
       footer={
         stepNav && (
-          <StepPager project={project.slug} base={DOCS_BASE} {...stepNav} />
+          <StepPager project={project.slug} base={project.base} {...stepNav} />
         )
       }
     />

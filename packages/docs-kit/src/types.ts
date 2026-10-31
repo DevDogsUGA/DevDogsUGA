@@ -39,13 +39,6 @@ export interface DocsFolder {
    * reader has finished.
    */
   steps: boolean;
-  /**
-   * `scheduled:`, as a UTC ISO time: the folder and everything in it is
-   * hidden from readers until then. Inherited from the nearest scheduled
-   * ancestor folder when the folder declares none, and never earlier than it.
-   * Null when nothing schedules it.
-   */
-  publishAt: string | null;
 }
 
 /** Everything `parseDocFile` derives from one markdown source. */
@@ -93,12 +86,6 @@ export interface DocsPage extends Omit<ParsedDocFile, "content"> {
    * that actually owns the content, not the copy a reader happened to land on.
    */
   mountedFrom: string | null;
-  /**
-   * When the page becomes visible, as a UTC ISO time, from its own
-   * `scheduled:` or else its folder's. A page's own time can only be later
-   * than its folder's. Null for a page that is always visible.
-   */
-  publishAt: string | null;
 }
 
 /**

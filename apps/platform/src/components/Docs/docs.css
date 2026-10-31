@@ -252,18 +252,7 @@
     color: var(--text-3);
     font-size: 14px;
   }
-  .docs-sched {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    font: 600 12.5px/1.3 var(--font-ui);
-    color: var(--warn);
-    white-space: nowrap;
-  }
-  .docs-sched svg {
-    flex: none;
-  }
-  .docs-sched-note {
+  .docs-note {
     display: flex;
     gap: 12px;
     align-items: center;
@@ -1338,9 +1327,6 @@
     font: 800 19px/1.3 var(--font-display);
     color: var(--text);
   }
-  .docs-pager-pn > a[data-sched] {
-    opacity: 0.8;
-  }
   .docs-finished {
     display: flex;
     gap: 16px;
@@ -1496,9 +1482,6 @@
     grid-column: 2;
     font-size: 14px;
     color: var(--text-3);
-  }
-  .docs-list-note {
-    grid-column: 2;
   }
   .docs-list-st {
     grid-column: 3;

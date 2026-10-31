@@ -26,8 +26,6 @@ export type IndexedPage = {
   title: string;
   description: string | null;
   plainText: string;
-  /** When the page goes live (UTC ISO); absent or null for a visible page. */
-  publishAt?: string | null;
 };
 
 /** The slice of the Supabase client `indexPages` needs, so tests can fake it. */
@@ -53,7 +51,6 @@ export async function loadIndexedPages(
     title: page.title,
     description: page.description ?? null,
     plainText: page.plainText,
-    publishAt: page.publishAt ?? null,
   }));
 }
 

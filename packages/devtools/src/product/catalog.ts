@@ -13,6 +13,7 @@ import {
   type CommandOption,
 } from "@devdogsuga/cli-core/catalog";
 import { completionsCommand } from "../completions/catalog.js";
+import { docsCommand } from "../docs/catalog.js";
 import { moderationCommand } from "../moderation/catalog.js";
 import { oauthCommand } from "../oauth/catalog.js";
 
@@ -196,7 +197,7 @@ export const productCatalog = createCatalog({
     },
     {
       title: "CI",
-      commands: [productCheckCommand, completionsCommand],
+      commands: [productCheckCommand, docsCommand, completionsCommand],
     },
   ],
 });

@@ -129,6 +129,17 @@ pnpm devtools check migrations
 pnpm devtools check scripts
 ```
 
+### Docs
+
+`docs check [<folder>]` says whether a project's `docs/` folder is ready to
+publish, by the rules the publishing build enforces. It prints one line, or one
+per problem and exits 1. See [Previewing and checking project
+docs](../../operations/project-docs-preview.md).
+
+```bash
+pnpm devtools docs check
+```
+
 ### What lives elsewhere
 
 Anything that always needs production secrets, or only your own login, is in

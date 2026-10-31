@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { connection } from "next/server";
 import "~/components/Settings/settings.css";
+import DocsPanel from "~/components/Projects/DocsPanel";
+import DocsReadiness from "~/components/Projects/DocsReadiness";
 import ProjectDraft from "~/components/Projects/ProjectDraft";
 import {
   LinkRepoForm,
@@ -31,6 +34,9 @@ import {
   unlinkRepoAction,
 } from "~/server/actions/projects";
 import { requireDashboard, rules } from "~/server/auth/access";
+import { getDocsStatus } from "~/server/docs/docsStatusLoad";
+import { mayPreviewDocs } from "~/server/docs/previewAccess";
+import { previewRepoOf } from "~/server/docs/previewTarget";
 import { getSubmittableHackathons } from "~/server/hackathons/load";
 import {
   findProjectId,
@@ -115,6 +121,13 @@ export default async function ProjectPage({
     }) === "yes";
   const reviewsHere = relation.isAdvisor || reviewer;
   const canRefresh = relation.isOwner || relation.isContributor || officer;
+  // Who may read the docs early (`server/docs/previewAccess.ts`): the same
+  // three the preview's own gate lets in.
+  const mayPreview = mayPreviewDocs({
+    isOwner: canEdit,
+    isContributor: relation.isContributor,
+    isReviewer: rules.previewDocs(caller),
+  });
   const [
     reviewQueue,
     myReports,
@@ -122,6 +135,8 @@ export default async function ProjectPage({
     hackathons,
     teamCandidates,
     showcase,
+    docs,
+    previewRepo,
   ] = await Promise.all([
     reviewsHere
       ? getReviewQueue(caller.userId, { all: reviewer, projectId })
@@ -133,6 +148,8 @@ export default async function ProjectPage({
     canEdit ? getSubmittableHackathons() : Promise.resolve([]),
     canEdit ? getTeamCandidates(projectId) : Promise.resolve([]),
     officer ? getShowcaseFields(projectId) : Promise.resolve(null),
+    getDocsStatus(projectId),
+    mayPreview ? previewRepoOf(projectId) : Promise.resolve(null),
   ]);
   const path = projectPath(project);
   const orphan = project.owners.length === 0 && !project.devdogsOwned;
@@ -501,9 +518,29 @@ export default async function ProjectPage({
         <ShowcaseDraft projectId={project.id} values={showcase} />
       )}
 
-      {/* TODO(E1): the officer docs panel goes here, once `setProjectDocs` and
-          `confirmDocsOwner` land: the docs toggle and the owner-change
-          confirmation (Q47). */}
+      <DocsPanel
+        projectId={project.id}
+        status={docs.status}
+        officer={officer}
+        preview={
+          mayPreview
+            ? {
+                href:
+                  previewRepo !== null && docs.slug !== null
+                    ? `/dashboard/docs-preview/${encodeURIComponent(docs.slug)}`
+                    : null,
+                readiness:
+                  previewRepo !== null && docs.slug !== null ? (
+                    <Suspense
+                      fallback={<p className="prj-meta">Checking the docs…</p>}
+                    >
+                      <DocsReadiness slug={docs.slug} repoId={previewRepo} />
+                    </Suspense>
+                  ) : null,
+              }
+            : null
+        }
+      />
 
       {(canEdit || canUnarchive || officer) && (
         <Panel id="lifecycle" title="Lifecycle">

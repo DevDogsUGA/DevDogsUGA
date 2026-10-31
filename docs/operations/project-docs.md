@@ -38,7 +38,7 @@ Officers don't edit the file by hand. The **Docs** toggle on a project (`setProj
 
 ## Ask for a candidate
 
-A `repository_dispatch` of type `docs-candidate` with `{ "project": "<slug>", "sha": "<commit on the default branch>" }` starts a candidate; nothing sends one yet, because the platform no longer receives GitHub webhooks. By hand:
+Owners can [preview and check the docs](./project-docs-preview.md) first. A `repository_dispatch` of type `docs-candidate` with `{ "project": "<slug>", "sha": "<commit on the default branch>" }` starts a candidate; nothing sends one yet, because the platform no longer receives GitHub webhooks. By hand:
 
 ```bash
 gh workflow run docs-candidate.yaml -f project=example -f sha=<40-character commit>
@@ -51,7 +51,7 @@ The workflow refuses a project that is not in the map, a repository whose owner 
 Open the run. The summary lists:
 
 - the source (repository, commit, default branch, directory) and the candidate's digest;
-- the **checks**: it compiled under the untrusted policy, every page has a title and text, and there is an overview page;
+- the **checks**: it compiled under the untrusted policy, every page has a title and text, there is an overview page, and links resolve;
 - the **changes against the live version**: pages and assets added, changed and removed. With no live version yet, every page is new.
 
 The `docs-preview-…` artifact holds a static preview: unzip it and open `preview/index.html`. It has no script and a locked-down content policy. A project's docs are compiled with the untrusted rules: no scripts, styles, classes, forms or external images, ids prefixed per project, links only to its own pages and assets, and no frontmatter that steers the build. A refused build names the file and line; the last good version stays live.
@@ -81,7 +81,7 @@ Publishing writes to the R2 bucket `devdogs-project-docs`. The platform reads it
 
 What the platform does with it:
 
-- **Pages.** `/docs/<slug>` redirects to the project's first page; `/docs/<slug>/<page>` renders the stored HTML inside the normal docs layout (sidebar, table of contents, step pager). The HTML is put into the page as stored. The only change is to `<img src>` and links to approved assets, which point at the version's asset route; a reference that doesn't resolve to an approved asset loses its URL. Nothing the compiler stripped is allowed back, and the site's Content-Security-Policy is unchanged (images only ever come from the site itself). An unknown slug, an unknown page, or a project that isn't published is a 404. The club's own bundled projects always win a slug, and the early-access preview never shows published projects.
+- **Pages.** `/docs/<slug>` redirects to the project's first page; `/docs/<slug>/<page>` renders the stored HTML inside the normal docs layout (sidebar, table of contents, step pager). The HTML is put into the page as stored. The only change is to `<img src>` and links to approved assets, which point at the version's asset route; a reference that doesn't resolve to an approved asset loses its URL. Nothing the compiler stripped is allowed back, and the site's Content-Security-Policy is unchanged (images only ever come from the site itself). An unknown slug, an unknown page, or a project that isn't published is a 404. The club's own bundled projects always win a slug.
 - **Freshness.** The list of pointers is cached for 30 seconds, and a page that reads it is cached for no longer, so a new publication shows within about a minute with no deploy. A version's content is cached by its digest, for good. A missing or unreadable version is only cached for those 30 seconds.
 - **Search.** Cmd-K folds in each published project's `search.json`, matched in memory and labelled with the project. Nothing is written to the database index; `populate:search` still rebuilds that on each deploy.
 - **Terminal.** `curl devdogsuga.org/docs/<slug>` lists the pages; a page prints its title, description and the start of its text, with the browser URL.
@@ -91,7 +91,7 @@ The bucket must exist before a deploy that declares it: `wrangler r2 bucket crea
 
 ## Onboard the first project
 
-1. **Map entry.** An officer turns on the project's **Docs** toggle in the dashboard, which opens the pull request that adds it to `.github/docs-projects.json` (see above), and a reviewer merges it. Don't turn it on for a project whose `docs/` folder doesn't exist yet.
+1. **Map entry.** An officer turns on the project's **Docs** toggle in the dashboard, which opens the pull request that adds it to `.github/docs-projects.json` (see above), and a reviewer merges it. Turn it on once its Docs panel says it is ready.
 2. **Source token.** Give `DOCS_SOURCE_TOKEN` read access (Contents and Metadata) to the project's repository. A fine-grained token lists repositories explicitly, so edit the token's repository selection. Metadata read is also what lets the build look the repository up by id.
 3. **Bucket and publisher.** The bucket, the `docs-publishing` environment with its reviewers, and the publish credential and variables from the table below must exist. Set `DOCS_LIVE_BASE_URL` if the bucket is public, so the change summary can compare against the live version.
 4. **First candidate, by hand.** `gh workflow run docs-candidate.yaml -f project=<slug> -f sha=<merge commit>`. Read the summary and the preview, then approve in the `docs-publishing` environment.

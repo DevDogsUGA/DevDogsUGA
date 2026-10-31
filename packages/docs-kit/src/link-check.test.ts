@@ -15,7 +15,6 @@ function page(overrides: Partial<CompiledPage> = {}): CompiledPage {
     path: "platform/index",
     section: null,
     mountedFrom: null,
-    publishAt: null,
     variants: {
       project: overrides.project ?? "platform",
       projects: [],
@@ -254,7 +253,6 @@ describe("checkLinks", () => {
       page({
         path: "platform/getting-started/troubleshooting",
         mountedFrom: "getting-started/troubleshooting",
-        publishAt: null,
         content: "[faq](../faq.md)",
       }),
       page({ path: "platform/faq" }),
@@ -262,7 +260,6 @@ describe("checkLinks", () => {
         path: "toolkit/getting-started/troubleshooting",
         project: "toolkit",
         mountedFrom: "getting-started/troubleshooting",
-        publishAt: null,
         content: "[faq](../faq.md)",
       }),
       // toolkit/faq deliberately missing, so this mount fails independently.
