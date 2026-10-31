@@ -1,4 +1,4 @@
-import { rules, loadCaller } from "~/server/auth/access";
+import { callerFor, rules } from "~/server/auth/access";
 import { and, count, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "~/server/db";
@@ -161,12 +161,7 @@ export async function decideProject(
   projectId: string,
   decision: { action: "approve"; advisorId: string } | { action: "decline" },
 ): Promise<DecideResult> {
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === officerId && rules.officer(caller),
-    ))
-  )
+  if (!(await callerFor(officerId).then(rules.officer)))
     return { status: "forbidden" };
   return db.transaction(async (tx) => {
     const [project] = await tx
@@ -221,12 +216,7 @@ export async function setProjectAdvisor(
   projectId: string,
   advisorId: string,
 ): Promise<DecideResult> {
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === officerId && rules.officer(caller),
-    ))
-  )
+  if (!(await callerFor(officerId).then(rules.officer)))
     return { status: "forbidden" };
   return db.transaction(async (tx) => {
     const [project] = await tx
@@ -255,12 +245,7 @@ export async function archiveProject(
   officerId: string,
   projectId: string,
 ): Promise<DecideResult> {
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === officerId && rules.officer(caller),
-    ))
-  )
+  if (!(await callerFor(officerId).then(rules.officer)))
     return { status: "forbidden" };
   return db.transaction(async (tx) => {
     const [project] = await tx
@@ -297,10 +282,7 @@ async function projectForManager(tx: Tx, actorId: string, projectId: string) {
   }
   if (
     project.advisorId !== actorId &&
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === actorId && rules.officer(caller),
-    ))
+    !(await callerFor(actorId).then(rules.officer))
   ) {
     return { ok: false, refusal: "forbidden" } as const;
   }
@@ -365,12 +347,7 @@ export async function updateProjectRepos(
 ): Promise<ManageResult> {
   // Leadership sets the scope at registration (Q123); the advisor keeps only
   // the member list, so the repositories that bound the evidence are officers'.
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === actorId && rules.officer(caller),
-    ))
-  )
+  if (!(await callerFor(actorId).then(rules.officer)))
     return { status: "forbidden" };
   const repos = parseRepos(input);
   if (!repos.ok) return { status: "repos_invalid", message: repos.message };
@@ -426,12 +403,7 @@ export async function submitProjectReport(
   if (problem) return { status: "invalid", problem };
   // Leadership's EL is a separate process (Q125), not an ordinary report that
   // another officer approves.
-  if (
-    await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === userId && rules.officer(caller),
-    )
-  )
+  if (await callerFor(userId).then(rules.officer))
     return { status: "leadership_separate" };
   const wanted = [...new Set(input.contributionIds)];
 
@@ -638,10 +610,7 @@ export async function reviewProjectReport(
   ) {
     return { status: "bad_hours" };
   }
-  const officer = await loadCaller().then(
-    (caller) =>
-      caller !== null && caller.userId === actorId && rules.officer(caller),
-  );
+  const officer = await callerFor(actorId).then(rules.officer);
 
   return db.transaction(async (tx) => {
     const [report] = await tx

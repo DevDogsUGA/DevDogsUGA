@@ -1,4 +1,4 @@
-import { rules, loadCaller } from "~/server/auth/access";
+import { callerFor, rules } from "~/server/auth/access";
 import { getAuthoredFiles, validateConfigFiles } from "@devdogsuga/events";
 import { sql } from "drizzle-orm";
 import { env } from "~/env";
@@ -116,12 +116,7 @@ export async function openConfigPr(
   userId: string,
   options: { fetch?: typeof fetch } = {},
 ): Promise<OpenResult> {
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null && caller.userId === userId && rules.officer(caller),
-    ))
-  )
+  if (!(await callerFor(userId).then(rules.officer)))
     return { status: "forbidden" };
   if (!configPrsAvailable()) return { status: "unavailable" };
 

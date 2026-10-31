@@ -1,6 +1,6 @@
 "use server";
 
-import { authorizeSession, rules, loadCaller } from "~/server/auth/access";
+import { authorizeSession, callerFor, rules } from "~/server/auth/access";
 
 import { eq } from "drizzle-orm";
 import { authenticate, expectUserWith } from "../auth";
@@ -52,12 +52,7 @@ async function requireManagedClient(userId: string, clientId: string) {
 
   const allowed =
     registration.userId === null
-      ? await loadCaller().then(
-          (caller) =>
-            caller !== null &&
-            caller.userId === userId &&
-            rules.manageOAuthApps(caller),
-        )
+      ? await callerFor(userId).then(rules.manageOAuthApps)
       : registration.userId === userId;
   if (!allowed) throw new Error(NOT_FOUND);
 

@@ -1,4 +1,4 @@
-import { rules, loadCaller } from "~/server/auth/access";
+import { callerFor, rules } from "~/server/auth/access";
 import { desc, inArray } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
@@ -64,12 +64,7 @@ export const getOAuthModerationData = cache(
     // the ones real members sign in with (the same rule Console → Apps lists).
     // getConsoleApps also returns members' Testing apps; those stay private.
     const published = (
-      (await loadCaller().then(
-        (caller) =>
-          caller !== null &&
-          caller.userId === userId &&
-          rules.manageOAuthApps(caller),
-      ))
+      (await callerFor(userId).then(rules.manageOAuthApps))
         ? await getConsoleApps()
         : []
     ).filter((app) => app.isDevDogs || app.status === "in_production");

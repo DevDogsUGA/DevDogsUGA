@@ -1,6 +1,6 @@
 "use server";
 
-import { authorize, rules, loadCaller } from "~/server/auth/access";
+import { authorize, callerFor, rules } from "~/server/auth/access";
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -54,14 +54,7 @@ export async function updateReflectionSettings(
   }
 
   const userId = access.caller.userId;
-  if (
-    !(await loadCaller().then(
-      (caller) =>
-        caller !== null &&
-        caller.userId === userId &&
-        rules.manageAttendance(caller),
-    ))
-  ) {
+  if (!(await callerFor(userId).then(rules.manageAttendance))) {
     return {
       ok: false,
       message: "Not authorized: canManageAttendance required.",
