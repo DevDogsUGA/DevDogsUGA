@@ -1,4 +1,5 @@
 import { count, eq } from "drizzle-orm";
+import { ExpectedFailure } from "~/lib/actionResult";
 import { db } from "~/server/db";
 import { oauthRegistrations } from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";
@@ -31,7 +32,7 @@ async function discardUnregisteredClient(clientId: string): Promise<void> {
 }
 
 /**
- * Throws when `userId` already owns the most apps a member may (Q163: three,
+ * Throws an ExpectedFailure when `userId` already owns the most apps a member may (Q163: three,
  * Testing or In production; DevDogs apps have no owner and never count). The
  * database trigger `oauthRegistrations_app_cap` enforces the same limit under
  * concurrency; this check exists so the common case fails before a Supabase
@@ -43,7 +44,7 @@ export async function assertUnderAppCap(userId: string): Promise<void> {
     .from(oauthRegistrations)
     .where(eq(oauthRegistrations.userId, userId));
   if ((row?.value ?? 0) >= MAX_APPS_PER_MEMBER) {
-    throw new Error(
+    throw new ExpectedFailure(
       `You can own at most ${MAX_APPS_PER_MEMBER} OAuth apps. Delete one to make another`,
     );
   }
@@ -76,7 +77,7 @@ export async function createOauthClientAndRegister(options: {
 
   for (const uri of redirectUris) {
     const problem = redirectUriError(uri);
-    if (problem) throw new Error(problem);
+    if (problem) throw new ExpectedFailure(problem);
   }
   await assertUnderAppCap(userId);
 
