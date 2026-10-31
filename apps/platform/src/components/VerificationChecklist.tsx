@@ -178,7 +178,7 @@ export default function VerificationChecklist({
         <Step
           met={verificationStatus.hasPronouns}
           icon={<UserIcon />}
-          href="/settings/profile#pronouns"
+          href="/dashboard/profile#pronouns"
           action="Add on Profile"
           onNavigate={onNavigate}
         >
@@ -187,7 +187,7 @@ export default function VerificationChecklist({
         <Step
           met={verificationStatus.hasGraduationDate}
           icon={<GraduationCapIcon />}
-          href="/settings/profile#graduation"
+          href="/dashboard/profile#graduation"
           action="Add on Profile"
           onNavigate={onNavigate}
         >
@@ -196,7 +196,7 @@ export default function VerificationChecklist({
         <Step
           met={verificationStatus.hasGithub}
           icon={<GithubLogoIcon />}
-          href="/settings/accounts#github"
+          href="/dashboard/accounts#github"
           action="Link GitHub"
           onNavigate={onNavigate}
         >
@@ -205,7 +205,7 @@ export default function VerificationChecklist({
         <Step
           met={verificationStatus.hasDiscord}
           icon={<DiscordLogoIcon />}
-          href="/settings/accounts#discord"
+          href="/dashboard/accounts#discord"
           action="Link Discord"
           onNavigate={onNavigate}
         >

@@ -10,7 +10,7 @@
  *   { "path": "apps/platform", "smoke": {
  *       "hosts": { "staging": "staging.devdogsuga.org", "production": "devdogsuga.org" },
  *       "publicPaths": ["/", "/events"],
- *       "protectedPath": "/settings/profile",
+ *       "protectedPath": "/dashboard/profile",
  *       "protectedRedirectPrefix": "/auth" } }
  *
  * Until that field exists in a checkout, `FALLBACK_SMOKE` (the table
@@ -27,7 +27,7 @@
  *     It can be a synthetic path when the app gates everything not on its
  *     public allowlist. It must redirect, not 404: the platform's `/console`
  *     answers a signed-out visitor with the 404 (F1), so the platform checks
- *     `/settings/profile`, which sends them to sign in.
+ *     `/dashboard/profile`, which sends them to sign in.
  *   * `protectedRedirectPrefix`: what the `Location` of the anonymous request
  *     to `protectedPath` must start with.
  */
@@ -65,11 +65,10 @@ export const FALLBACK_SMOKE: Readonly<Record<string, AppSmokeConfig>> = {
       "/docs",
       "/partners",
       "/changelog",
-      "/attendance",
       "/legal/privacy",
       "/legal/terms",
     ],
-    protectedPath: "/console/permissions",
+    protectedPath: "/dashboard",
     protectedRedirectPrefix: "/auth",
   },
   "schedule-builder": {

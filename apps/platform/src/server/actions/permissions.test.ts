@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * The read actions in `permissions.ts`. The file is `"use server"`, so the
  * browser can call every export with any arguments: each one has to check the
- * caller itself, because the /console/permissions page gate does not cover a
+ * caller itself, because the /dashboard/permissions page gate does not cover a
  * direct call. The database and Supabase are replaced; what is pinned here is
  * that a signed-in member without `canManageRoles` learns nothing.
  */

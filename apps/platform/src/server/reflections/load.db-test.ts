@@ -8,7 +8,7 @@ import { getReflectionActivities } from "./load";
  * The interesting case here is not "meeting activities load" -- it is that
  * the query PARSES AND RUNS at all. Raw SQL is only checked by Postgres, so a
  * column the table does not have would fail the WHOLE statement -- and every
- * signed-in visitor to /attendance would 500 -- while `pnpm test` stayed green.
+ * signed-in visitor to /dashboard/attendance would 500 -- while `pnpm test` stayed green.
  */
 
 const IDS = {

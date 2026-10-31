@@ -47,9 +47,9 @@ const FORBIDDEN: ConfigActionState = {
 const collectionSchema = z.string().refine(isCollection);
 
 function refresh(collection?: Collection, key?: string) {
-  revalidatePath("/console/meetings");
+  revalidatePath("/dashboard/schedule");
   if (collection && key) {
-    revalidatePath(`/console/meetings/${collection}/${key}`);
+    revalidatePath(`/dashboard/schedule/${collection}/${key}`);
   }
 }
 

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
-  usePathname: () => "/settings/oauth",
+  usePathname: () => "/dashboard/oauth",
 }));
 vi.mock("~/server/actions/oauth", () => ({ default: vi.fn() }));
 vi.mock("~/components/Settings/OAuthClientSheet", () => ({
@@ -20,7 +20,7 @@ describe("NewAppButton", () => {
     render(<NewAppButton hasGithub appCount={2} maxApps={3} />);
     expect(screen.getByRole("link", { name: /New OAuth app/ })).toHaveAttribute(
       "href",
-      "/settings/oauth/new",
+      "/dashboard/oauth/new",
     );
   });
 
@@ -38,6 +38,6 @@ describe("NewAppButton", () => {
     render(<NewAppButton hasGithub={false} appCount={0} maxApps={3} />);
     expect(
       screen.getByRole("link", { name: "Link GitHub account" }),
-    ).toHaveAttribute("href", "/settings/accounts#github");
+    ).toHaveAttribute("href", "/dashboard/accounts#github");
   });
 });

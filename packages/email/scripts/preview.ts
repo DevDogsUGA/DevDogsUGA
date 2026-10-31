@@ -22,7 +22,7 @@ const FIXTURES = {
     name: "Avery",
     requestedLine: "You asked to delete your account.",
     scheduledDate: "Saturday, November 7",
-    keepUrl: "https://devdogsuga.org/account/deletion",
+    keepUrl: "https://devdogsuga.org/dashboard/deletion",
   },
   AttendanceInvite: {
     meetingTitle: "Workshop Wednesday: Supabase II",

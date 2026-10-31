@@ -1,7 +1,7 @@
 import type { auditEvents } from "~/server/db/schema";
 
 /**
- * Audit entries for account deletion (`/console/audit-log`).
+ * Audit entries for account deletion (`/dashboard/audit-log`).
  *
  * `targetType` is `user` and `targetId` the member's id. The metadata holds
  * ids and flags, never a name or an email: the member is gone by the time the

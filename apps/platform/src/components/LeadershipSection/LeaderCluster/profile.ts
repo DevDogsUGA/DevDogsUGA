@@ -9,11 +9,11 @@
  * `imageSrc` is a URL string rather than a `StaticImageData`, because the image
  * is no longer a build-time import from `~/assets`. It is the officer's avatar,
  * keyed by user id in the `avatars` bucket, and can 404. The blur placeholder a
- * static import used to carry is gone, because an avatar uploaded from /account
+ * static import used to carry is gone, because an avatar uploaded from /dashboard/profile
  * has none to carry.
  *
  * `links` replaced the fixed portfolio/github/linkedin/email fields. Members
- * curate `platform."profileLinks"` from /account, so a card shows whatever the
+ * curate `platform."profileLinks"` from /dashboard/profile, so a card shows whatever the
  * officer put there rather than four slots the data has to be bent into.
  * GitHub, Discord and LinkedIn are separately modelled as linked identities
  * gated on `showGithub`/`showDiscord`/`showLinkedin`, which this section does

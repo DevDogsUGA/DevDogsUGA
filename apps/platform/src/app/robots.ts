@@ -25,6 +25,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: [
         // (site): signed-in or permission-gated pages.
+        "/dashboard", // signed-in member pages and officer tools
         "/console", // officer tools; every page checks a permission flag
         "/account", // the viewer's own profile
         "/settings", // the viewer's own settings

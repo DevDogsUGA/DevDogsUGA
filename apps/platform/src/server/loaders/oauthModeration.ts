@@ -51,7 +51,7 @@ const PER_CLIENT = 10;
 /**
  * Moderation state for each OAuth client the signed-in member manages: their
  * own development clients, plus every production client when they hold
- * `canManageOAuthApps` (the same rule `/settings/oauth` lists them by). Whether
+ * `canManageOAuthApps` (the same rule `/dashboard/oauth` lists them by). Whether
  * it is on, where decisions go, the sandbox reports its backend has filed and
  * the test actions sent to it. The ids come from `getOAuthPageData`, so this
  * never reads a client the member cannot manage.

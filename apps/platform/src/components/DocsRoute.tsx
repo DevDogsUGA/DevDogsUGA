@@ -39,7 +39,7 @@ import {
 } from "~/server/docs/queries";
 
 /**
- * The docs routes, shared by `/docs` and `/preview/docs`.
+ * The docs routes, shared by `/docs` and `/dashboard/docs-preview`.
  *
  * The two are the same pages over two readings of the same data: the public
  * one shows what is live, the preview shows everything and marks what is not

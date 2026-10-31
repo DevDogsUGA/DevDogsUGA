@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const expectSession = vi.hoisted(() => vi.fn());
-vi.mock("~/server/auth", () => ({ expectSession }));
+const expectSession = vi.hoisted(() => vi.fn<() => Promise<string>>());
+vi.mock("~/server/auth/access", () => ({
+  requireDashboard: async () => {
+    try {
+      return { userId: await expectSession() };
+    } catch {
+      throw new Error("REDIRECT");
+    }
+  },
+}));
 vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("NOT_FOUND");
@@ -26,7 +34,7 @@ describe("requireSession", () => {
     await expect(requireSession()).resolves.toBe("u1");
   });
 
-  it("answers a signed-out visitor with the 404, never a sign-in redirect", async () => {
+  it("redirects a signed-out visitor to sign-in", async () => {
     expectSession.mockImplementation(async () => {
       throw new Error("no session");
     });
@@ -34,7 +42,7 @@ describe("requireSession", () => {
       () => "returned",
       (error: Error) => error.message,
     );
-    expect(outcome).toBe("NOT_FOUND");
+    expect(outcome).toBe("REDIRECT");
   });
 });
 
@@ -51,7 +59,7 @@ describe("requirePermission", () => {
     );
   });
 
-  it("keeps a signed-out caller on the 404", async () => {
+  it("redirects a signed-out caller", async () => {
     expectSession.mockImplementation(async () => {
       throw new Error("no session");
     });
@@ -59,6 +67,6 @@ describe("requirePermission", () => {
       () => "returned",
       (error: Error) => error.message,
     );
-    expect(outcome).toBe("NOT_FOUND");
+    expect(outcome).toBe("REDIRECT");
   });
 });

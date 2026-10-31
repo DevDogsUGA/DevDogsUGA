@@ -316,7 +316,7 @@ describe("scheduleAccountDeletion", () => {
         scheduledDate: "Friday, November 6, 2026",
       },
     });
-    expect(fake.sent[0]!.props.keepUrl).toMatch(/\/account\/deletion$/);
+    expect(fake.sent[0]!.props.keepUrl).toMatch(/\/dashboard\/deletion$/);
   });
 
   it("changes nothing when it is scheduled twice", async () => {

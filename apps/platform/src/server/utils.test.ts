@@ -26,8 +26,10 @@ describe("callbackPathSchema", () => {
 
   it("preserves a hash fragment alongside a query string", async () => {
     await expect(
-      callbackPathSchema.parseAsync("/account?tab=links#connectedAccounts"),
-    ).resolves.toBe("/account?tab=links#connectedAccounts");
+      callbackPathSchema.parseAsync(
+        "/dashboard/profile?tab=links#connectedAccounts",
+      ),
+    ).resolves.toBe("/dashboard/profile?tab=links#connectedAccounts");
   });
 
   // `new URL(path, BASE_URL)` resolves a scheme-relative (`//host/...`) or

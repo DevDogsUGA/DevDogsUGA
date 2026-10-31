@@ -33,4 +33,4 @@ It is idempotent: a second run finds everything held and changes nothing. Each r
 
 ## Effect on EL evidence
 
-Recording the single workshop onto an old reflection has a side effect: the EL hours evidence counts a reflection only when its workshop matches one the meeting ran, so those defaulted reflections now count as workshop evidence on `/attendance` and in the officer EL export. No hours come from stars or pull-request counts. The edit writes no reflection revision; the `badge.backfill` audit event holds the counts.
+Recording the single workshop onto an old reflection has a side effect: the EL hours evidence counts a reflection only when its workshop matches one the meeting ran, so those defaulted reflections now count as workshop evidence on `/dashboard/attendance` and in the officer EL export. No hours come from stars or pull-request counts. The edit writes no reflection revision; the `badge.backfill` audit event holds the counts.

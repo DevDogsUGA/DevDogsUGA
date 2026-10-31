@@ -1,4 +1,4 @@
-/* The scheduled-deletion page (/account/deletion). The kit supplies the card, buttons, callout and type; this file adds
+/* The scheduled-deletion page (/dashboard/deletion). The kit supplies the card, buttons, callout and type; this file adds
    only layout the kit lacks. Every selector hangs off an `acctdel` class. */
 /* Same statement as globals.css line 2, kept on purpose: the first `@layer` a page sees fixes the order. */
 @layer theme, base, cosmic, components, utilities;

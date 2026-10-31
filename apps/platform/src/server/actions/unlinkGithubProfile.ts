@@ -11,7 +11,7 @@ import { supabaseAdmin } from "../../supabase/admin";
 
 export default async function unlinkGithubProfile() {
   const access = await authorizeSession();
-  if (!access.ok) return authenticate("google", "/settings/accounts");
+  if (!access.ok) return authenticate("google", "/dashboard/accounts");
 
   const user = await expectUserWith({
     profile: {
@@ -25,7 +25,7 @@ export default async function unlinkGithubProfile() {
         },
       },
     },
-  }).catch(() => authenticate("google", "/settings/accounts"));
+  }).catch(() => authenticate("google", "/dashboard/accounts"));
 
   // A GitHub identity gates every DEVELOPMENT OAuth client a member holds
   // (see OAuthGateDialog), so unlinking takes all of those, not just one.

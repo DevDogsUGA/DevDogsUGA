@@ -1,7 +1,7 @@
 /**
  * `pnpm backstage qr <text> [options]`
  *
- * The QR generator from `/console/qr`, on the command line, with every option
+ * The QR generator from `/dashboard/qr`, on the command line, with every option
  * the page has: content, size and margin, ink colour, background, a two-colour
  * gradient, module shape, error-correction level, QR version, a centre logo
  * (a brand preset, or an image file with size, padding and crop) and every

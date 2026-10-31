@@ -36,7 +36,7 @@ The scheduled smoke run ([Smoke checks](../deploys/smoke-checks.md)) tests the e
 If members can sign in to the platform but **not to DogDays or DogPack**, the product's `custom:devdogsuga` provider is the suspect:
 
 - The issuer the platform's discovery document reports must equal what the product registered. After the [vanity-subdomain switch](../deploys/vanity-subdomain-switch.md) or any change of the platform project, re-run provider registration (`config-push.mjs register`, the `register_provider` option of `deploy-database.yaml`).
-- The product's OAuth client on `/settings/oauth` may have been deleted or rolled. A production client cannot be deleted unless a replacement exists, so look for a replaced one.
+- The product's OAuth client on `/dashboard/oauth` may have been deleted or rolled. A production client cannot be deleted unless a replacement exists, so look for a replaced one.
 
 ## While it is down
 

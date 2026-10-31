@@ -51,7 +51,7 @@ export async function assertUnderAppCap(userId: string): Promise<void> {
 
 /**
  * Creates a fresh Supabase OAuth client for `label`/`redirectUris` and inserts
- * the matching `oauthRegistrations` row so it shows up under `/settings/oauth`.
+ * the matching `oauthRegistrations` row so it shows up under `/dashboard/oauth`.
  * Shared by `devtools oauth`'s two handoffs (the loopback one-click connect,
  * `~/server/actions/oauthConnect.ts`, and the device-code flow,
  * `~/server/actions/oauthDevice.ts`) and by the manual form

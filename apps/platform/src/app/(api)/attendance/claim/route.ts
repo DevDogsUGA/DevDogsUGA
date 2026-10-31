@@ -125,7 +125,7 @@ async function startInviteClaim(
 }
 
 function attendanceUrl(request: NextRequest, status: string): URL {
-  const url = new URL("/attendance", request.url);
+  const url = new URL("/dashboard/attendance", request.url);
   url.searchParams.set("status", status);
   return url;
 }

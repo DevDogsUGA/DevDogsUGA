@@ -4,21 +4,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // actions can exercise the exported loader without opening a database.
 vi.mock("react", () => ({ cache: () => vi.fn() }));
 vi.mock("~/server/auth", () => ({ expectSession: vi.fn() }));
+vi.mock("next/headers", () => ({
+  headers: async () => new Headers({ "x-request-path": requestPath }),
+}));
+let requestPath = "/dashboard";
+
 vi.mock("./permissions", () => ({ getCallerContext: vi.fn() }));
 vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("404");
+  },
+  redirect: (url: string) => {
+    throw new Error(url);
   },
   forbidden: () => {
     throw new Error("403");
   },
 }));
 
+import UnknownDashboardPage from "~/app/(site)/dashboard/[...slug]/page";
+
 import {
   authorize,
   authorizeSession,
   loadCaller,
   requireAccess,
+  requireDashboard,
   rules,
   type Caller,
 } from "./access";
@@ -99,12 +110,40 @@ it("returns a refusal or the same Caller", async () => {
   caller.isLeader = true;
   expect(await authorize(rules.officer)).toEqual({ ok: true, caller });
 });
-it("keeps the page gate's 404/403 split", async () => {
+it("redirects signed-out callers and keeps the 403 for refused members", async () => {
   vi.mocked(loadCaller).mockResolvedValue(null);
-  await expect(requireAccess(rules.officer)).rejects.toThrow("404");
+  await expect(requireAccess(rules.officer)).rejects.toThrow(
+    "/auth?callbackPath=%2Fdashboard",
+  );
   vi.mocked(loadCaller).mockResolvedValue(member());
   await expect(requireAccess(rules.officer)).rejects.toThrow("403");
   const caller = { ...member(), isLeader: true };
   vi.mocked(loadCaller).mockResolvedValue(caller);
   expect(await requireAccess(rules.officer)).toBe(caller);
+});
+
+it.each([
+  "/dashboard",
+  "/dashboard/profile?tab=links&next=%2Fevents",
+  "/dashboard/x?unknown=yes",
+  "/dashboard/a/b?x=1",
+])("preserves %s for signed-out visitors", async (path) => {
+  requestPath = path;
+  vi.mocked(loadCaller).mockResolvedValue(null);
+  await expect(requireDashboard()).rejects.toThrow(
+    `/auth?callbackPath=${encodeURIComponent(path)}`,
+  );
+});
+
+it("gates unknown pages before their not-found boundary", async () => {
+  requestPath = "/dashboard/unknown?x=1";
+  vi.mocked(loadCaller).mockResolvedValue(null);
+  await expect(UnknownDashboardPage()).rejects.toThrow(
+    "/auth?callbackPath=%2Fdashboard%2Funknown%3Fx%3D1",
+  );
+});
+
+it("returns 404 for an unknown page after sign-in", async () => {
+  vi.mocked(loadCaller).mockResolvedValue(member());
+  await expect(UnknownDashboardPage()).rejects.toThrow("404");
 });

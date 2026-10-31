@@ -69,7 +69,7 @@ export default function DeleteAccountDialog({
         }
         // The request signed the member out of every session; the pending
         // page is where they land.
-        navigate("/account/deletion");
+        navigate("/dashboard/deletion");
       } catch {
         setError("Something went wrong. Nothing was changed. Try again.");
       }

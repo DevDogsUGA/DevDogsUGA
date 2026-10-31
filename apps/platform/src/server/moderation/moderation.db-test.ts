@@ -133,7 +133,7 @@ async function registerApp(
   ],
   { registration = true } = {},
 ) {
-  // register_external_app needs a production registration (what /settings/oauth
+  // register_external_app needs a production registration (what /dashboard/oauth
   // writes); a test that wants another tier has already made its own.
   if (registration) {
     await db.execute(sql`
@@ -866,7 +866,7 @@ describe("OAuth status", () => {
     await expect(registerApp("e3-dogpack", PROD_CLIENT)).resolves.toBeTruthy();
   });
 
-  it("will not register a deleted client or one /settings/oauth never made", async () => {
+  it("will not register a deleted client or one /dashboard/oauth never made", async () => {
     // No oauthRegistrations row: the dashboard made it, it has no tier.
     await db.execute(
       sql`delete from platform."oauthRegistrations" where "clientId" = ${PROD_CLIENT}::uuid`,
@@ -926,12 +926,12 @@ describe("OAuth status", () => {
 });
 
 /**
- * The `/settings/oauth` moderation controls under the OAuth tiers: a production
+ * The `/dashboard/oauth` moderation controls under the OAuth tiers: a production
  * client is managed by whoever holds `canManageOAuthApps`, not by its owner, so
  * a secret copied wrongly at the Gate can be rotated without a database edit;
  * and every change to one is audited.
  */
-describe("moderation controls on /settings/oauth", () => {
+describe("moderation controls on /dashboard/oauth", () => {
   const act = (fields: Record<string, string>) => {
     const data = new FormData();
     for (const [name, value] of Object.entries(fields)) data.set(name, value);
