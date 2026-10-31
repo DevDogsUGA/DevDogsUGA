@@ -63,6 +63,9 @@ export default async function ScheduleItemPage({
   const values = Object.fromEntries(
     fields.map((field) => [field.name, toFormText(field, current)]),
   );
+  const officialValues = Object.fromEntries(
+    fields.map((field) => [field.name, toFormText(field, base)]),
+  );
   const series = (official.series as { series: { id: string; name: string }[] })
     .series;
   const venues = official.venues.venues;
@@ -94,10 +97,12 @@ export default async function ScheduleItemPage({
         <ConfigItemForm
           collection={collection}
           itemKey={key}
+          singular={label.singular}
           isNew={isNew || Boolean(savedNew)}
           keyLocked={!isNew}
           fields={fields}
           values={values}
+          officialValues={officialValues}
           choices={choices}
           hasEdit={Boolean(saved)}
         />

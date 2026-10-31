@@ -1,47 +1,54 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import type { DragEndEvent } from "@dnd-kit/core";
+import type { ActionResult } from "~/lib/actionResult";
 import {
-  createRole,
   updateRole,
-  deleteRole,
   reorderRole,
   type CreateRoleInput,
 } from "~/server/actions/permissions";
 import type { ResolvedPermissions } from "~/server/auth/permissions";
 import type { RoleRow } from "~/server/loaders/permissions";
+import { useCommand } from "~/ui/use-command";
 
 export type { RoleRow };
 
+/**
+ * The role list: the server's roles, with the order held locally for the
+ * moment of a drag. Create and delete are Commands owned by the dialog and the
+ * card they belong to, and each refreshes the page, so the roles come back from
+ * the server rather than being guessed here. A role's edit mode saves through
+ * `saveRole` as a Draft on the save bar.
+ */
 export function useRoles(
   initialRoles: RoleRow[],
   callerMinRank: number,
   callerPermissions: ResolvedPermissions,
 ) {
+  const router = useRouter();
   const [roles, setRoles] = useState<RoleRow[]>(initialRoles);
+  // A refresh hands down new roles; adopt them rather than keep the old copy.
+  const [seenRoles, setSeenRoles] = useState(initialRoles);
+  if (seenRoles !== initialRoles) {
+    setSeenRoles(initialRoles);
+    setRoles(initialRoles);
+  }
 
   const canEdit = (role: RoleRow) => role.rank > callerMinRank;
 
   // ── Reorder ────────────────────────────────────────────────────────────────
 
-  const reorderMutation = useMutation({
-    mutationFn: ({ roleId, newRank }: { roleId: string; newRank: number }) =>
-      reorderRole(roleId, newRank),
-    onMutate: ({ roleId, newRank }) => {
-      const previous = roles;
-      setRoles((prev) =>
-        prev
-          .map((r) => (r.id === roleId ? { ...r, rank: newRank } : r))
-          .sort((a, b) => a.rank - b.rank),
-      );
-      return { previous };
+  // The row moves at the drop, ahead of the server. A refusal puts the list back
+  // and shows beside it; a success refreshes to the server's order.
+  const reorder = useCommand(
+    async (roleId: string, newRank: number, previous: RoleRow[]) => {
+      const result = await reorderRole(roleId, newRank);
+      if (!result.ok) setRoles(previous);
+      return result;
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) setRoles(ctx.previous);
-    },
-  });
+  );
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -64,125 +71,26 @@ export function useRoles(
           ? left.rank + 1
           : (left.rank + right.rank) / 2;
 
-    reorderMutation.mutate({ roleId: active.id as string, newRank });
+    const roleId = active.id as string;
+    const previous = roles;
+    setRoles((prev) =>
+      prev
+        .map((r) => (r.id === roleId ? { ...r, rank: newRank } : r))
+        .sort((a, b) => a.rank - b.rank),
+    );
+    reorder.run(roleId, newRank, previous);
   }
-
-  // ── Create ─────────────────────────────────────────────────────────────────
-
-  const createMutation = useMutation({
-    mutationFn: (data: CreateRoleInput) => createRole(data),
-    onSuccess: (_result, data) => {
-      // Reload by appending an optimistic row; page revalidation will fix the ID
-      setRoles((prev) =>
-        [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            title: data.title,
-            description: data.description ?? "",
-            rank: data.rank,
-            color: data.color ?? null,
-            showOnProfile: data.showOnProfile ?? true,
-            isLeadership: data.isLeadership ?? false,
-            canModerate: data.canModerate ?? null,
-            canManageRoles: data.canManageRoles ?? null,
-            canManageSuspensions: data.canManageSuspensions ?? null,
-            canViewAuditLog: data.canViewAuditLog ?? null,
-            canManageAttendance: data.canManageAttendance ?? null,
-            canPreviewDocs: data.canPreviewDocs ?? null,
-            canManageOAuthApps: data.canManageOAuthApps ?? null,
-            canDeleteAccounts: data.canDeleteAccounts ?? null,
-            canReviewProjectReports: data.canReviewProjectReports ?? null,
-            discordRoleId: null,
-            discordSyncedName: null,
-            discordRolePosition: null,
-            createdAt: new Date().toISOString(),
-          },
-        ].sort((a, b) => a.rank - b.rank),
-      );
-    },
-  });
 
   // ── Update ─────────────────────────────────────────────────────────────────
 
-  const updateMutation = useMutation({
-    mutationFn: ({
-      roleId,
-      data,
-    }: {
-      roleId: string;
-      data: Partial<CreateRoleInput>;
-    }) => updateRole(roleId, data),
-    onMutate: ({ roleId, data }) => {
-      const previous = roles;
-      setRoles((prev) =>
-        prev.map((r) =>
-          r.id === roleId
-            ? {
-                ...r,
-                ...(data.title !== undefined && { title: data.title }),
-                ...(data.description !== undefined && {
-                  description: data.description,
-                }),
-                ...(data.rank !== undefined && { rank: data.rank }),
-                ...(data.color !== undefined && { color: data.color }),
-                ...(data.showOnProfile !== undefined && {
-                  showOnProfile: data.showOnProfile,
-                }),
-                ...(data.isLeadership !== undefined && {
-                  isLeadership: data.isLeadership,
-                }),
-                ...(data.canModerate !== undefined && {
-                  canModerate: data.canModerate ?? null,
-                }),
-                ...(data.canManageRoles !== undefined && {
-                  canManageRoles: data.canManageRoles ?? null,
-                }),
-                ...(data.canManageSuspensions !== undefined && {
-                  canManageSuspensions: data.canManageSuspensions ?? null,
-                }),
-                ...(data.canViewAuditLog !== undefined && {
-                  canViewAuditLog: data.canViewAuditLog ?? null,
-                }),
-                ...(data.canManageAttendance !== undefined && {
-                  canManageAttendance: data.canManageAttendance ?? null,
-                }),
-                ...(data.canPreviewDocs !== undefined && {
-                  canPreviewDocs: data.canPreviewDocs ?? null,
-                }),
-                ...(data.canManageOAuthApps !== undefined && {
-                  canManageOAuthApps: data.canManageOAuthApps ?? null,
-                }),
-                ...(data.canDeleteAccounts !== undefined && {
-                  canDeleteAccounts: data.canDeleteAccounts ?? null,
-                }),
-                ...(data.canReviewProjectReports !== undefined && {
-                  canReviewProjectReports: data.canReviewProjectReports ?? null,
-                }),
-              }
-            : r,
-        ),
-      );
-      return { previous };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) setRoles(ctx.previous);
-    },
-  });
-
-  // ── Delete ─────────────────────────────────────────────────────────────────
-
-  const deleteMutation = useMutation({
-    mutationFn: (roleId: string) => deleteRole(roleId),
-    onMutate: (roleId) => {
-      const previous = roles;
-      setRoles((prev) => prev.filter((r) => r.id !== roleId));
-      return { previous };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) setRoles(ctx.previous);
-    },
-  });
+  async function saveRole(
+    roleId: string,
+    data: Partial<CreateRoleInput>,
+  ): Promise<ActionResult> {
+    const result = await updateRole(roleId, data);
+    if (result.ok) router.refresh();
+    return result;
+  }
 
   return {
     roles,
@@ -190,9 +98,7 @@ export function useRoles(
     callerPermissions,
     canEdit,
     handleDragEnd,
-    reorderMutation,
-    createMutation,
-    updateMutation,
-    deleteMutation,
+    reorder,
+    saveRole,
   };
 }

@@ -49,8 +49,9 @@ interface Props {
  * where it used to be a drawer. Redirect URIs, regenerate and delete are
  * immediate server actions, each of the destructive ones behind a named confirm.
  * A fresh secret is shown once, inline, until the member presses Done. The
- * homepage and privacy policy are a Draft held by the save bar. Deleting the
- * app leaves for the list, because this page has nothing left to show.
+ * homepage and privacy policy, and the moderation endpoint, are Draft fields
+ * held by the page's one save bar. Deleting the app leaves for the list,
+ * because this page has nothing left to show.
  */
 export default function OAuthClientDetails({
   client,
@@ -88,7 +89,7 @@ export default function OAuthClientDetails({
   const brandingLocked = published && !devDogsApp;
 
   return (
-    <>
+    <SettingsFormProvider>
       <Panel id="credentials" title="Credentials">
         <div className="field">
           <span className="label">Client name</span>
@@ -205,26 +206,23 @@ export default function OAuthClientDetails({
               label={client.label}
               logoUrl={client.logoUrl}
             />
-            <SettingsFormProvider>
-              <div className="fields">
-                <AppLinkField
-                  clientId={client.clientId}
-                  field="homepageUrl"
-                  label="Homepage"
-                  initial={client.homepageUrl ?? ""}
-                  placeholder="https://my-app.example.com"
-                />
-                <AppLinkField
-                  clientId={client.clientId}
-                  field="privacyPolicyUrl"
-                  label="Privacy policy"
-                  initial={client.privacyPolicyUrl ?? ""}
-                  placeholder="https://my-app.example.com/privacy"
-                  help="https addresses only."
-                />
-              </div>
-              <SettingsSaveBar />
-            </SettingsFormProvider>
+            <div className="fields">
+              <AppLinkField
+                clientId={client.clientId}
+                field="homepageUrl"
+                label="Homepage"
+                initial={client.homepageUrl ?? ""}
+                placeholder="https://my-app.example.com"
+              />
+              <AppLinkField
+                clientId={client.clientId}
+                field="privacyPolicyUrl"
+                label="Privacy policy"
+                initial={client.privacyPolicyUrl ?? ""}
+                placeholder="https://my-app.example.com/privacy"
+                help="https addresses only."
+              />
+            </div>
           </>
         )}
       </Panel>
@@ -292,7 +290,8 @@ export default function OAuthClientDetails({
           </ConfirmDestructiveAction>
         </div>
       </Panel>
-    </>
+      <SettingsSaveBar />
+    </SettingsFormProvider>
   );
 }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { authorizeSession, callerFor, rules } from "~/server/auth/access";
+import { failure, success, type ActionResult } from "~/lib/actionResult";
 
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
@@ -73,7 +74,56 @@ async function managedClient(clientId: string, userId: string) {
 }
 
 /**
- * The per-client moderation controls on `/dashboard/oauth`.
+ * Saves a client's moderation endpoint, the Draft field on the OAuth client
+ * page. A rejected URL comes back under `endpointUrl`; the field puts it under
+ * its own id. Clearing the URL stops deliveries without turning moderation off.
+ * A production client's change is audited in the same transaction.
+ */
+export async function saveModerationEndpoint(
+  clientId: string,
+  endpointUrl: string,
+): Promise<ActionResult> {
+  const access = await authorizeSession();
+  if (!access.ok) return access;
+
+  const userId = access.caller.userId;
+  const registration = await managedClient(clientId, userId);
+  if (!registration) return failure("OAuth client not found");
+
+  const [existing] = await db
+    .select()
+    .from(moderationClients)
+    .where(eq(moderationClients.clientId, clientId));
+  if (!existing) return failure("Turn moderation on first");
+
+  const url = endpointUrl.trim();
+  const problem = url ? endpointUrlProblem(url) : null;
+  if (problem) return failure(problem, { endpointUrl: problem });
+
+  await db.transaction(async (tx) => {
+    if (registration.status === "in_production") {
+      await tx.insert(auditEvents).values(
+        oauthAuditEvent({
+          actorUserId: userId,
+          action: "oauth_client.moderation_endpoint_changed",
+          clientId,
+          metadata: { label: registration.label, endpointUrl: url || null },
+        }),
+      );
+    }
+    await tx
+      .update(moderationClients)
+      .set({ endpointUrl: url || null, updatedAt: sql`now()` })
+      .where(eq(moderationClients.clientId, clientId));
+  });
+  revalidatePath("/dashboard/oauth");
+  return success(undefined, "Endpoint saved");
+}
+
+/**
+ * The per-client moderation controls on `/dashboard/oauth`: turn on, rotate
+ * the secret and send a test action. The endpoint URL is a Draft field and
+ * saves through `saveModerationEndpoint`.
  *
  * Every intent starts from management rights: a development client must be the
  * signed-in member's own, a production client needs `canManageOAuthApps`. A
@@ -138,34 +188,6 @@ export default async function oauthModerationAction(
         secret: await deriveClientSecret(signingKey, clientId, 1),
         message: "Moderation is on. Copy the secret now: it is shown once.",
       };
-    }
-
-    case "set-endpoint": {
-      if (!existing) return fail("Turn moderation on first");
-      const endpointUrl = field(formData, "endpointUrl");
-      const problem = endpointUrl ? endpointUrlProblem(endpointUrl) : null;
-      if (problem) return fail(problem);
-      await db.transaction(async (tx) => {
-        if (production) {
-          await tx.insert(auditEvents).values(
-            oauthAuditEvent({
-              actorUserId: userId,
-              action: "oauth_client.moderation_endpoint_changed",
-              clientId,
-              metadata: {
-                label: registration.label,
-                endpointUrl: endpointUrl || null,
-              },
-            }),
-          );
-        }
-        await tx
-          .update(moderationClients)
-          .set({ endpointUrl: endpointUrl || null, updatedAt: sql`now()` })
-          .where(eq(moderationClients.clientId, clientId));
-      });
-      revalidatePath("/dashboard/oauth");
-      return { ...EMPTY, message: "Endpoint saved" };
     }
 
     case "rotate-secret": {
