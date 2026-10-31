@@ -5,7 +5,6 @@ import { expectSession } from "~/server/auth";
 import { appLogoUrl } from "~/server/loaders/console";
 import { missingForPublishing } from "~/server/oauth/appStatus";
 import type { OAuthStatus } from "~/server/oauth/status";
-import { supabaseAdmin } from "~/supabase/admin";
 import { oauthConsentsInAuth } from "~/supabase/drizzle/schema";
 
 export interface ConnectedApp {
@@ -63,8 +62,6 @@ export interface ConsoleApp {
   logoUrl: string | null;
   homepageUrl: string | null;
   privacyPolicyUrl: string | null;
-  /** Live redirect URIs; read only for DevDogs apps, which holders edit here. */
-  redirectUris: string[];
   /** What publishing still needs ("a logo", ...); empty when it may go live. */
   missing: string[];
   /** Members holding an approval now: who a return to Testing signs out. */
@@ -109,19 +106,6 @@ export async function getConsoleApps(): Promise<ConsoleApp[]> {
     )
     .groupBy(oauthConsentsInAuth.clientId);
 
-  // Holders edit a DevDogs app's redirects here, so those are read live.
-  const redirects = new Map<string, string[]>();
-  await Promise.all(
-    registrations
-      .filter((r) => r.userId === null)
-      .map(async (r) => {
-        const { data } = await supabaseAdmin.auth.admin.oauth.getClient(
-          r.clientId,
-        );
-        redirects.set(r.clientId, data?.redirect_uris ?? []);
-      }),
-  );
-
   const rank = (r: (typeof registrations)[number]) =>
     r.userId === null ? 0 : r.status === "in_production" ? 1 : 2;
   const ordered = [...registrations].sort((a, b) => rank(a) - rank(b));
@@ -136,7 +120,6 @@ export async function getConsoleApps(): Promise<ConsoleApp[]> {
     logoUrl: appLogoUrl(r.logoPath),
     homepageUrl: r.homepageUrl,
     privacyPolicyUrl: r.privacyPolicyUrl,
-    redirectUris: redirects.get(r.clientId) ?? [],
     missing: missingForPublishing(r),
     approvedMembers: counts.find((c) => c.clientId === r.clientId)?.value ?? 0,
   }));

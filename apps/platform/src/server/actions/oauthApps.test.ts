@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
     userId: string | null;
     status: "testing" | "in_production";
     label: string;
+    homepageUrl?: string | null;
+    privacyPolicyUrl?: string | null;
   },
   objectExists: true,
   updates: [] as Record<string, unknown>[],
@@ -116,6 +118,23 @@ describe("saveAppDetails", () => {
     expect(mocks.audits).toEqual([]);
   });
 
+  it("saves one link and leaves the other as it is", async () => {
+    mocks.app = {
+      userId: OWNER,
+      status: "testing",
+      label: "Lab",
+      homepageUrl: "https://lab.example.com",
+      privacyPolicyUrl: null,
+    };
+    const result = await saveAppDetails(APP, {
+      privacyPolicyUrl: "https://lab.example.com/privacy",
+    });
+    expect(result).toEqual({ ok: true });
+    expect(mocks.updates).toEqual([
+      { privacyPolicyUrl: "https://lab.example.com/privacy" },
+    ]);
+  });
+
   it("accepts blank links in Testing and stores them as unset", async () => {
     await saveAppDetails(APP, { homepageUrl: "", privacyPolicyUrl: " " });
     expect(mocks.updates).toEqual([
@@ -128,8 +147,13 @@ describe("saveAppDetails", () => {
       homepageUrl: "http://lab.example.com",
       privacyPolicyUrl: "",
     });
-    expect(result).toMatchObject({ ok: false });
-    expect(result.ok === false && result.error).toMatch(/^Homepage must be/);
+    expect(result).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/^Homepage must be/) as unknown,
+      fieldErrors: {
+        homepageUrl: expect.stringMatching(/^Homepage must be/) as unknown,
+      },
+    });
     expect(mocks.updates).toEqual([]);
   });
 
@@ -143,10 +167,12 @@ describe("saveAppDetails", () => {
       },
     ]) {
       const result = await saveAppDetails(APP, input);
-      expect(result).toMatchObject({ ok: false });
-      expect(result.ok === false && result.error).toMatch(
-        /locked while an app is in production.*return it to Testing/,
-      );
+      expect(result).toMatchObject({
+        ok: false,
+        message: expect.stringMatching(
+          /locked while an app is in production.*return it to Testing/,
+        ) as unknown,
+      });
     }
     expect(mocks.updates).toEqual([]);
     expect(mocks.audits).toEqual([]);
@@ -159,7 +185,10 @@ describe("saveAppDetails", () => {
       homepageUrl: "",
       privacyPolicyUrl: "https://dogdays.dev/p",
     });
-    expect(result).toMatchObject({ ok: false });
+    expect(result).toMatchObject({
+      ok: false,
+      fieldErrors: { homepageUrl: expect.any(String) as unknown },
+    });
     expect(mocks.updates).toEqual([]);
   });
 

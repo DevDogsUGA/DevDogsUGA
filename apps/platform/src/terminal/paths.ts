@@ -103,6 +103,11 @@ export const TERMINAL_PATHS = [
     page: "(site)/dashboard/oauth/new/page.tsx",
   },
   {
+    pattern: "/dashboard/oauth/:clientId",
+    regex: new RegExp("^/dashboard/oauth/(?<clientId>[^/.]+)/?$"),
+    page: "(site)/dashboard/oauth/[clientId]/page.tsx",
+  },
+  {
     pattern: "/dashboard/oauth",
     regex: new RegExp("^/dashboard/oauth/?$"),
     page: "(site)/dashboard/oauth/page.tsx",

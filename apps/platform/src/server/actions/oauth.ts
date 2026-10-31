@@ -1,6 +1,6 @@
 "use server";
 
-import { authorizeSession, callerFor, rules } from "~/server/auth/access";
+import { authorizeSession, callerFor } from "~/server/auth/access";
 
 import { eq } from "drizzle-orm";
 import { authenticate, expectUserWith } from "../auth";
@@ -9,6 +9,7 @@ import { auditEvents, oauthRegistrations } from "../db/schema";
 import { supabaseAdmin } from "../../supabase/admin";
 import { revokeAppAccess } from "../oauth/appStatus";
 import { oauthAuditEvent } from "../oauth/audit";
+import { mayManageClient } from "../oauth/managedClient";
 import {
   cleanUpTestAccountsIfNoClientsRemain,
   deleteSupabaseClient,
@@ -50,11 +51,8 @@ async function requireManagedClient(userId: string, clientId: string) {
   });
   if (!registration) throw new Error(NOT_FOUND);
 
-  const allowed =
-    registration.userId === null
-      ? await callerFor(userId).then(rules.manageOAuthApps)
-      : registration.userId === userId;
-  if (!allowed) throw new Error(NOT_FOUND);
+  if (!mayManageClient(registration, await callerFor(userId)))
+    throw new Error(NOT_FOUND);
 
   return {
     ...registration,
