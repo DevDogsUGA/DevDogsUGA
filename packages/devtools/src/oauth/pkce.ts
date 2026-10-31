@@ -2,8 +2,7 @@
  * PKCE (RFC 7636) helpers for the one-click OAuth connect flow.
  *
  * `devtools oauth` is a public client with no way to hold a secret (it is a
- * CLI running on a contributor's machine), so the platform's `/tools/oauth/
- * connect` flow relies on PKCE instead: a random verifier stays local, only
+ * CLI running on a contributor's machine), so the platform's `/oauth/connect` flow relies on PKCE instead: a random verifier stays local, only
  * its SHA-256 challenge crosses the network in the authorization request,
  * and the verifier itself is sent once, at the very end, to the token
  * exchange — see `exchange.ts`. `state` is the separate, unrelated defense

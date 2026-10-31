@@ -15,7 +15,7 @@ export type VerifyDeviceUserCodeResult =
   | { outcome: "found"; row: DeviceCodeRow };
 
 /**
- * The verification page's lookup, split out of `~/app/(site)/tools/oauth/
+ * The verification page's lookup, split out of `~/app/(auth)/oauth/
  * device/page.tsx` so it is plain server code instead of render logic --
  * the page is a React Server Component, and this reads the clock
  * (`row.expiresAt.getTime() < Date.now()`) and writes to the rate-limit

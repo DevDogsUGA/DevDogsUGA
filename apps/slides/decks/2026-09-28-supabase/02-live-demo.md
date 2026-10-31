@@ -350,7 +350,7 @@ chip: DEVDOGS
 
 # Register Your App with DevDogs
 
-- Go to **devdogsuga.org/tools/oauth** and create a client
+- Go to **devdogsuga.org/settings/oauth** and create a client
 - Redirect URI: your **Project URL** + `/auth/v1/callback`
   - For example, `https://abcdefghij.supabase.co/auth/v1/callback`
 - Copy the **client ID** and **client secret**
@@ -370,7 +370,7 @@ chip: DASHBOARD
 
 - Authentication → **Sign In / Providers** → Add a Custom **OIDC** Provider
 - Fill it in, save, and check that it's enabled:
-  - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://crhqsbngqmwtsplabmhj.supabase.co/auth/v1</code></td></tr><tr><th>Client ID</th><td><a href="https://devdogsuga.org/tools/oauth#credentials">Copy from your OAuth page</a></td></tr><tr><th>Client Secret</th><td><a href="https://devdogsuga.org/tools/oauth#credentials">Copy from your OAuth page</a></td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
+  - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://crhqsbngqmwtsplabmhj.supabase.co/auth/v1</code></td></tr><tr><th>Client ID</th><td><a href="https://devdogsuga.org/settings/oauth#credentials">Copy from your OAuth page</a></td></tr><tr><th>Client Secret</th><td><a href="https://devdogsuga.org/settings/oauth#credentials">Copy from your OAuth page</a></td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
 
 <details>
 <summary>Why <code>custom:</code>, and why a <code>supabase.co</code> issuer?</summary>

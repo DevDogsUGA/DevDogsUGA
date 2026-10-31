@@ -1,5 +1,5 @@
 /**
- * Builds the platform's `/tools/oauth/connect` URL — the page a browser
+ * Builds the platform's `/oauth/connect` URL — the page a browser
  * opens to approve a `devtools oauth` connection. See this repo's launch
  * instructions for the fixed wire contract: `redirect_uri`, `code_challenge`
  * (base64url SHA-256 of the PKCE verifier, no padding — `pkce.ts`),
@@ -22,7 +22,7 @@ export function buildConnectUrl({
   label: string;
   callbackUri: string;
 }): string {
-  const url = new URL(`${platformUrl.replace(/\/+$/, "")}/tools/oauth/connect`);
+  const url = new URL(`${platformUrl.replace(/\/+$/, "")}/oauth/connect`);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("code_challenge", codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");

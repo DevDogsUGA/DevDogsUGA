@@ -63,7 +63,7 @@ export const KIT_GROUPS = [
   {
     title: "Code",
     note: "The terminal voice from the Changelog and the event graphics' link: $ and the command in the context's hue, then a block cursor.",
-    html: '<div data-kind="build"><div class="termbar"><x-icon name="TerminalWindow"></x-icon>bash</div><pre class="term"><span class="p">$</span> <span class="p">pnpm</span> dlx @devdogsuga/backstage login\n<span class="c"># opens devdogsuga.org/tools/oauth/device</span>\n<span class="s">✓</span> Signed in as <span class="k">@sloan</span>\n<span class="p">$</span> <span class="cur"></span></pre></div>',
+    html: '<div data-kind="build"><div class="termbar"><x-icon name="TerminalWindow"></x-icon>bash</div><pre class="term"><span class="p">$</span> <span class="p">pnpm</span> dlx @devdogsuga/backstage login\n<span class="c"># opens devdogsuga.org/oauth/device</span>\n<span class="s">✓</span> Signed in as <span class="k">@sloan</span>\n<span class="p">$</span> <span class="cur"></span></pre></div>',
   },
   {
     title: "Decor and identity",

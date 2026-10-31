@@ -5,8 +5,8 @@ import { oauthDeviceCodes } from "~/server/db/schema";
 
 /**
  * Crypto and lifecycle helpers for the `devtools oauth` device-code handoff
- * (`POST /tools/oauth/device/code` → `GET /tools/oauth/device` →
- * `POST /tools/oauth/device/token`, migration 33's `oauthDeviceCodes`
+ * (`POST /oauth/device/code` → `GET /oauth/device` →
+ * `POST /oauth/device/token`, migration 33's `oauthDeviceCodes`
  * table). RFC 8628 (OAuth 2.0 Device Authorization Grant), not the RFC 8252
  * loopback dance `~/server/oauth/connectCodes` implements -- kept in its own
  * module for the same reason that one is: both the issuing endpoint and the
@@ -84,8 +84,8 @@ export function formatUserCode(normalized: string): string {
  * until the CLI's next poll claims it, so an abandoned one (approved but
  * the CLI died or never came back, or never verified at all) would
  * otherwise sit here indefinitely. Called opportunistically from both
- * `POST /tools/oauth/device/code` (before it inserts a new row) and
- * `POST /tools/oauth/device/token` (on every poll) rather than on a
+ * `POST /oauth/device/code` (before it inserts a new row) and
+ * `POST /oauth/device/token` (on every poll) rather than on a
  * schedule, same reasoning as the connect flow's sweep.
  */
 export async function sweepExpiredDeviceCodes(): Promise<void> {

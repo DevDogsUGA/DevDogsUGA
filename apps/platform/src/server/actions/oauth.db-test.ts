@@ -14,7 +14,7 @@ import { createOauthClientAndRegister } from "~/server/oauth/registerClient";
 import { supabaseAdmin } from "~/supabase/admin";
 
 /**
- * `/tools/oauth`'s action and `createOauthClientAndRegister` against a real
+ * `/settings/oauth`'s action and `createOauthClientAndRegister` against a real
  * database and a real local GoTrue: ownership, the three-app cap, the redirect
  * rule, the audit entries an In production or DevDogs app writes, deletion,
  * and the orphan-client fix. Only the session is faked (the actions read it from

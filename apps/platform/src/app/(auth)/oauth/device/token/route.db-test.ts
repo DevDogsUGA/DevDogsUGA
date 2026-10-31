@@ -17,7 +17,7 @@ import { POST as postToken } from "./route";
 
 /**
  * The device-code flow (TASK-352) against a real database, same reasoning
- * as `~/app/(site)/tools/oauth/connect/exchange/route.db-test.ts`: the
+ * as `~/app/(auth)/oauth/connect/exchange/route.db-test.ts`: the
  * table's whole point is atomic claim-on-approval and the RFC 8628 polling
  * state machine (`authorization_pending` → `slow_down` → terminal), which a
  * mocked db would let slip past unnoticed.
@@ -76,7 +76,7 @@ async function errorBody(response: Response): Promise<string> {
 }
 
 function postTokenRequest(body: unknown, ip: string) {
-  return new NextRequest("http://localhost/tools/oauth/device/token", {
+  return new NextRequest("http://localhost/oauth/device/token", {
     method: "POST",
     body: JSON.stringify(body),
     headers: { "content-type": "application/json", "cf-connecting-ip": ip },
@@ -84,7 +84,7 @@ function postTokenRequest(body: unknown, ip: string) {
 }
 
 function postCodeRequest(body: unknown, ip: string) {
-  return new NextRequest("http://localhost/tools/oauth/device/code", {
+  return new NextRequest("http://localhost/oauth/device/code", {
     method: "POST",
     body: JSON.stringify(body),
     headers: { "content-type": "application/json", "cf-connecting-ip": ip },
@@ -113,7 +113,7 @@ afterAll(async () => {
   }
 });
 
-describe("POST /tools/oauth/device/token", () => {
+describe("POST /oauth/device/token", () => {
   it("issue -> approve -> token 200 -> second token call invalid_grant", async () => {
     const codeResponse = await postCode(
       postCodeRequest(
@@ -137,7 +137,7 @@ describe("POST /tools/oauth/device/token", () => {
     expect(issued.expires_in).toBe(600);
     expect(issued.interval).toBe(5);
 
-    // Simulate a human approving at `GET /tools/oauth/device`: mint a real
+    // Simulate a human approving at `GET /oauth/device`: mint a real
     // client the same way `createOauthClientAndRegister` would, and mark
     // the row approved -- see the module doc comment for why this test
     // doesn't call the Server Action itself.
@@ -284,7 +284,7 @@ describe("POST /tools/oauth/device/token", () => {
   });
 });
 
-describe("POST /tools/oauth/device/code", () => {
+describe("POST /oauth/device/code", () => {
   it("rejects an invalid body as invalid_request", async () => {
     const response = await postCode(
       postCodeRequest(

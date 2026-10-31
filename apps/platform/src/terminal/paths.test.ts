@@ -59,6 +59,8 @@ describe("terminalFormat", () => {
 describe("matchTerminalPath", () => {
   it.each([
     ["/", "/"],
+    ["/oauth/connect", "/oauth/connect"],
+    ["/oauth/device/", "/oauth/device"],
     ["/changelog/", "/changelog"],
     ["/changelog/3.0.2", "/changelog/:version"],
     ["/changelog/v3.0.2", "/changelog/:version"],
@@ -107,8 +109,8 @@ describe("matchTerminalPath", () => {
   it.each([
     "/events/calendar.ics",
     "/events/2026-10-05/calendar.ics",
-    "/tools/oauth/device/token",
-    "/tools/oauth/connect/exchange",
+    "/oauth/device/token",
+    "/oauth/connect/exchange",
     "/attendance/claim",
     "/join",
     "/robots.txt",
@@ -116,7 +118,6 @@ describe("matchTerminalPath", () => {
     "/console/attendance/abc/present",
     "/console/data/imports/preview",
     "/console/data/exports/prepare",
-    "/tools/oauth/device",
     "/teams",
   ])("passes %s through", (path) => {
     expect(matchTerminalPath(path)).toBeNull();

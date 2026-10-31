@@ -14,7 +14,7 @@
  * The platform's `API_URL` (the host it reads discovery from) is
  * `https://devdogsuga.supabase.co` in production after the vanity-subdomain
  * switch and the project ref host on staging, and everything that shows an
- * issuer (the `/tools/oauth` page, the `devtools oauth` handoffs) reads it
+ * issuer (the `/settings/oauth` page, the `devtools oauth` handoffs) reads it
  * from discovery rather than writing it down.
  *
  * Pure on purpose: `apps/platform/scripts/check-oauth-issuer.ts` runs it

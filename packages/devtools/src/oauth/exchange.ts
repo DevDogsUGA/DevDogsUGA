@@ -5,7 +5,7 @@
  * credentials the platform minted — see `commands.ts`'s `oauth` node and
  * this repo's launch instructions for the full wire contract this speaks:
  *
- *   POST <platform>/tools/oauth/connect/exchange
+ *   POST <platform>/oauth/connect/exchange
  *   { "code", "code_verifier" }
  *
  *   200 { "client_id", "client_secret", "issuer" }
@@ -38,7 +38,7 @@ export interface ExchangeResult {
 }
 
 function exchangeUrl(platformUrl: string): string {
-  return `${platformUrl.replace(/\/+$/, "")}/tools/oauth/connect/exchange`;
+  return `${platformUrl.replace(/\/+$/, "")}/oauth/connect/exchange`;
 }
 
 /**
