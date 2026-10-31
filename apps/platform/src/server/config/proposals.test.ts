@@ -23,7 +23,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("~/env", () => ({ env: mocks.env }));
-vi.mock("~/server/auth/permissions", () => ({ isOfficer: mocks.isOfficer }));
+vi.mock("~/server/auth/permissions", () => ({
+  getCallerContext: async () => ({
+    resolvedPermissions: {},
+    isLeader: Boolean(await mocks.isOfficer()),
+    minRank: 100,
+  }),
+}));
 vi.mock("./editsStore", () => ({ listEdits: mocks.listEdits }));
 vi.mock("~/server/rateLimit", () => ({ consumeRateLimit: mocks.consume }));
 vi.mock("~/server/db", () => ({
@@ -196,3 +202,7 @@ describe("buildPreview", () => {
     expect(preview.validation.ok).toBe(false);
   });
 });
+
+vi.mock("~/server/auth", () => ({
+  expectSession: async () => "11111111-1111-4111-8111-111111111111",
+}));

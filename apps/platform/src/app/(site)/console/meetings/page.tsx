@@ -1,3 +1,4 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import { getClubConfig, getVenues, getWorkshops } from "@devdogsuga/events";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -6,8 +7,7 @@ import OrphanReset from "~/components/ConfigEditor/OrphanReset";
 import ProposalActions from "~/components/ConfigEditor/ProposalActions";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import { formatEventDateTime } from "~/lib/eventTime";
-import { isOfficer } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import type { Collection } from "~/server/config/editFields";
 import {
   configPrsAvailable,
@@ -73,7 +73,7 @@ function List({
  * Officers need no repository access, and the merged config stays authoritative.
  */
 export default async function ScheduleEditorPage() {
-  const userId = await requirePermission(isOfficer);
+  const userId = (await requireAccess(rules.officer)).userId;
   const preview = await previewProposal(userId);
   const edited = new Set(
     preview.edits.map((edit) => `${edit.collection}:${edit.key}`),

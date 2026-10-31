@@ -7,7 +7,7 @@ import { auditEvents, reflectionSettings } from "~/server/db/schema";
 /**
  * `updateReflectionSettings` against a real database.
  *
- * `canUserManageAttendance` is mocked rather than seeded through a real role
+ * The Caller permission lookup is mocked rather than seeded through a real role
  * -- no other `.db-test.ts` file in this app exercises the permission system
  * through `roles`/`userRoles`/the `resolvedUserPermissions` matview, and doing
  * so here would test the permission system a second time instead of this
@@ -29,8 +29,13 @@ vi.mock("~/server/auth", () => ({
 
 const permissions = vi.hoisted(() => ({ canManageAttendance: false }));
 vi.mock("~/server/auth/permissions", () => ({
-  canUserManageAttendance: () =>
-    Promise.resolve(permissions.canManageAttendance),
+  getCallerContext: async () => ({
+    resolvedPermissions: {
+      canManageAttendance: permissions.canManageAttendance,
+    },
+    isLeader: false,
+    minRank: Infinity,
+  }),
 }));
 
 // `updateReflectionSettings` revalidates two paths on success, which needs a

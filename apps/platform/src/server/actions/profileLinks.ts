@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { count, eq, max } from "drizzle-orm";
 import ogs from "open-graph-scraper";
 import * as z from "zod";
@@ -31,6 +33,14 @@ const schema = zfd.formData({
 export default async function addProfileLink(
   formData: FormData,
 ): Promise<AddLinkResult> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await expectSession().catch(() =>
+      authenticate("google", "/settings/profile"),
+    );
+    throw new Error(access.message);
+  }
+
   const userId = await expectSession().catch(() =>
     authenticate("google", "/settings/profile"),
   );

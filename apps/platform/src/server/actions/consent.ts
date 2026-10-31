@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { redirect, unstable_rethrow } from "next/navigation";
 import * as z from "zod";
 import { zfd } from "zod-form-data";
@@ -56,6 +58,11 @@ export async function allowConsent(
   _prevState: string | null,
   formData: FormData,
 ): Promise<string | null> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    return "You are signed out. Sign in again and retry.";
+  }
+
   return decide(formData, approveAs);
 }
 
@@ -63,5 +70,10 @@ export async function cancelConsent(
   _prevState: string | null,
   formData: FormData,
 ): Promise<string | null> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    return "You are signed out. Sign in again and retry.";
+  }
+
   return decide(formData, denyAs);
 }

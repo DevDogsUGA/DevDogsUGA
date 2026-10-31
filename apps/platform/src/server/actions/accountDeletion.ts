@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession, authorize, rules } from "~/server/auth/access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { expectSession } from "~/server/auth";
@@ -51,7 +53,16 @@ export async function requestAccountDeletion(
   userId: string,
   reason?: string,
 ): Promise<DeletionActionResult> {
-  const actorUserId = await expectSession();
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+  if (access.caller.userId !== userId) {
+    const permission = await authorize(rules.deleteAccounts);
+    if (!permission.ok) return { ok: false, error: NOT_ALLOWED };
+  }
+
+  const actorUserId = access.caller.userId;
   // An empty reason is no reason.
   const sliced = reason?.trim().slice(0, MAX_REASON_LENGTH);
   const trimmedReason = sliced === undefined || sliced === "" ? null : sliced;
@@ -75,7 +86,16 @@ export async function requestAccountDeletion(
 export async function cancelMemberDeletion(
   userId: string,
 ): Promise<DeletionActionResult> {
-  const actorUserId = await expectSession();
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+  if (access.caller.userId !== userId) {
+    const permission = await authorize(rules.deleteAccounts);
+    if (!permission.ok) return { ok: false, error: NOT_ALLOWED };
+  }
+
+  const actorUserId = access.caller.userId;
   try {
     const cancelled = await cancelAccountDeletion(userId, actorUserId);
     if (!cancelled) {
@@ -97,6 +117,14 @@ export async function cancelMemberDeletion(
  * back to the pending page, which says which.
  */
 export async function keepMyAccount(): Promise<void> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await expectSession().catch(() =>
+      redirect("/auth?callbackPath=%2Faccount%2Fdeletion"),
+    );
+    throw new Error(access.message);
+  }
+
   const userId = await expectSession().catch(() =>
     redirect("/auth?callbackPath=%2Faccount%2Fdeletion"),
   );

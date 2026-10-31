@@ -1,3 +1,4 @@
+import { rules, requireAccess, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import {
   ImageIcon,
@@ -16,11 +17,10 @@ import {
 import { formatEventShortDate } from "~/lib/eventTime";
 import { formatAttendanceCount } from "~/lib/attendanceCount";
 import { meetingTitle } from "~/lib/meetingTitle";
-import { canUserManageAttendance } from "~/server/auth/permissions";
+
 import { getAttendanceCounts } from "~/server/attendance/counts";
 import { getOfficerAttendanceMeetings } from "~/server/attendance/getOfficerMeeting";
-import { canUserUseGraphics } from "~/server/graphics/access";
-import { requirePermission } from "~/server/auth/require";
+
 import { PageHeading } from "~/ui/app-shell";
 import Badge from "~/ui/badge";
 import { Card } from "~/ui/card";
@@ -124,11 +124,16 @@ export default async function AttendanceDisplaysPage({
 }) {
   // Any officer may open the list for the graphics; the attendance tools and
   // counts on it still need `canManageAttendance`.
-  const userId = await requirePermission(canUserUseGraphics);
+  const userId = (await requireAccess(rules.useGraphics)).userId;
   const [meetings, params, canManage] = await Promise.all([
     getOfficerAttendanceMeetings(),
     searchParams,
-    canUserManageAttendance(userId),
+    loadCaller().then(
+      (caller) =>
+        caller !== null &&
+        caller.userId === userId &&
+        rules.manageAttendance(caller),
+    ),
   ]);
   const counts = canManage ? await getAttendanceCounts() : undefined;
   const now = new Date();

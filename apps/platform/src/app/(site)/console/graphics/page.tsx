@@ -1,14 +1,15 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import GraphicTile from "~/components/Graphics/GraphicTile";
-import { canUserUseGraphics } from "~/server/graphics/access";
+
 import {
   brandGraphics,
   formatOf,
   outputSize,
   renderableOnWorker,
 } from "~/server/graphics/render";
-import { requirePermission } from "~/server/auth/require";
+
 import { PageHeading } from "~/ui/app-shell";
 import { buttonVariants } from "~/ui/button";
 import { Card } from "~/ui/card";
@@ -28,12 +29,12 @@ const PREVIEW_FORMATS = ["icon-512", "og"];
  * Meeting graphics live on each meeting's page; these do not depend on the
  * schedule.
  *
- * Open to any officer (`canUserUseGraphics`). Sizes under 64px (the small
+ * Open to any officer (`rules.useGraphics`). Sizes under 64px (the small
  * favicons, which need one large layout scaled down to stay crisp) are only in
  * `backstage graphics`.
  */
 export default async function BrandGraphicsPage() {
-  await requirePermission(canUserUseGraphics);
+  await requireAccess(rules.useGraphics);
   const graphics = brandGraphics();
   const skipped = graphics.some((graphic) =>
     graphic.formats.some((name) => !renderableOnWorker(formatOf(name)!)),

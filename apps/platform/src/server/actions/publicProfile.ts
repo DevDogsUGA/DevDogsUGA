@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { COMMUNITY_PATH, profilePath } from "~/lib/profilePath";
@@ -59,6 +61,12 @@ function revalidatePublicPages(handle: string | null | undefined) {
  * Null while public profiles are switched off, which hides the step.
  */
 export async function getPublicProfileSettings(): Promise<PublicProfileSettings | null> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await sessionUserId();
+    throw new Error(access.message);
+  }
+
   if (!publicProfilesEnabled()) return null;
   const userId = await sessionUserId();
   const [choices, { isVerified }, [row]] = await Promise.all([
@@ -92,6 +100,12 @@ export async function getPublicProfileSettings(): Promise<PublicProfileSettings 
 
 /** Just the handle options, for the picker to re-read after a lost race. */
 export async function getMyHandleChoices(): Promise<HandleChoices> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await sessionUserId();
+    throw new Error(access.message);
+  }
+
   if (!publicProfilesEnabled()) throw new Error("Public profiles are off");
   return getHandleOptions(await sessionUserId());
 }
@@ -109,6 +123,12 @@ export async function setPublicProfileField(
   field: PublicProfileField,
   value: boolean,
 ): Promise<SetPublicProfileOutcome> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await sessionUserId();
+    throw new Error(access.message);
+  }
+
   if (!PUBLIC_PROFILE_FIELDS.includes(field) || typeof value !== "boolean") {
     throw new Error(`Unknown public profile field: ${String(field)}`);
   }
@@ -147,6 +167,12 @@ export async function setPublicProfileField(
  * handle, so there is nothing for a caller to forge.
  */
 export async function revalidateMyPublicProfile(): Promise<void> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await sessionUserId();
+    throw new Error(access.message);
+  }
+
   const userId = await sessionUserId();
   const [row] = await db
     .select({ handle: profiles.handle })

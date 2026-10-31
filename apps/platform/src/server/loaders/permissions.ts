@@ -1,14 +1,11 @@
 import { asc, eq } from "drizzle-orm";
 import { cache } from "react";
-import { forbidden } from "next/navigation";
+
 import type { APIRole } from "discord-api-types/v10";
-import { requireSession } from "~/server/auth/require";
+import { requireAccess, rules } from "~/server/auth/access";
 import { db } from "~/server/db";
 import { roles } from "~/server/db/schema";
-import {
-  getCallerContext,
-  type ResolvedPermissions,
-} from "~/server/auth/permissions";
+import { type ResolvedPermissions } from "~/server/auth/permissions";
 import {
   getDiscordSyncCapability,
   type DiscordSyncCapability,
@@ -32,6 +29,7 @@ export type RoleRow = {
   canPreviewDocs: boolean | null;
   canManageOAuthApps: boolean | null;
   canDeleteAccounts: boolean | null;
+  canReviewProjectReports: boolean | null;
   discordRoleId: string | null;
   discordSyncedName: string | null;
   discordRolePosition: number | null;
@@ -48,12 +46,9 @@ export type PermissionsPageData = {
 
 export const getPermissionsPageData = cache(
   async (): Promise<PermissionsPageData> => {
-    // Not `requirePermission`: the caller context is needed in full further
-    // down, so re-deriving it behind a `canUser*` predicate would resolve the
-    // same roles twice. The denial is the shared one either way.
-    const userId = await requireSession();
-    const ctx = await getCallerContext(userId);
-    if (!ctx.resolvedPermissions.canManageRoles) forbidden();
+    const caller = await requireAccess(rules.manageRoles);
+    const userId = caller.userId;
+    const ctx = { resolvedPermissions: caller.flags, minRank: caller.minRank };
 
     const discordSyncErrors: string[] = [];
 
@@ -107,6 +102,7 @@ export const getPermissionsPageData = cache(
         canPreviewDocs: r.canPreviewDocs,
         canManageOAuthApps: r.canManageOAuthApps,
         canDeleteAccounts: r.canDeleteAccounts,
+        canReviewProjectReports: r.canReviewProjectReports,
         discordRoleId: r.discordRoleId,
         discordSyncedName: r.discordSyncedName,
         discordRolePosition:

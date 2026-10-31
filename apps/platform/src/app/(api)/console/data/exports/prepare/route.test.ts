@@ -7,7 +7,11 @@ const allowed = vi.fn<(id: string) => Promise<boolean>>();
 const prepare = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 vi.mock("~/server/auth", () => ({ expectSession: () => session() }));
 vi.mock("~/server/auth/permissions", () => ({
-  canUserManageAttendance: (id: string) => allowed(id),
+  getCallerContext: async (id: string) => ({
+    resolvedPermissions: { canManageAttendance: await allowed(id) },
+    isLeader: false,
+    minRank: Infinity,
+  }),
 }));
 vi.mock("~/server/exports/deps", () => ({ exportDeps: {} }));
 vi.mock("~/server/exports/run", () => ({

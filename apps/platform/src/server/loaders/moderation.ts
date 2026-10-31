@@ -1,12 +1,8 @@
+import { rules, requireAccess, loadCaller } from "~/server/auth/access";
 import { and, count, desc, eq, ne, sql } from "drizzle-orm";
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import {
-  canUserManageOAuthApps,
-  canUserManageSuspensions,
-  canUserModerate,
-} from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { db } from "~/server/db";
 import {
   apps,
@@ -44,7 +40,7 @@ export type ReportListEntry = {
  * with no business seeing one.
  */
 export const getModerationPageData = cache(async () => {
-  const userId = await requirePermission(canUserModerate);
+  const userId = (await requireAccess(rules.moderate)).userId;
 
   const corroborationSq = db
     .select({
@@ -148,12 +144,17 @@ export const getModerationPageData = cache(async () => {
         .filter((t) => t.appId === app.id)
         .map((t) => t.contentType),
     })),
-    canRegisterApps: await canUserManageOAuthApps(userId),
+    canRegisterApps: await loadCaller().then(
+      (caller) =>
+        caller !== null &&
+        caller.userId === userId &&
+        rules.manageOAuthApps(caller),
+    ),
   };
 });
 
 export const getReportDetailData = cache(async (reportId: string) => {
-  await requirePermission(canUserModerate);
+  await requireAccess(rules.moderate);
 
   const report = await db.query.reports.findFirst({
     where: { id: reportId },
@@ -283,7 +284,7 @@ async function isQuarantinable(
 }
 
 export const getUserModerationData = cache(async (targetUserId: string) => {
-  await requirePermission(canUserManageSuspensions);
+  await requireAccess(rules.manageSuspensions);
 
   const { data: userData } =
     await supabaseAdmin.auth.admin.getUserById(targetUserId);

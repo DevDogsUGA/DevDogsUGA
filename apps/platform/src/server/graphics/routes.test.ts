@@ -15,12 +15,13 @@ const drawn = vi.hoisted(() => ({ calls: 0 }));
 vi.mock("~/server/auth/permissions", () => ({
   getCallerContext: async () => caller.value,
 }));
-// The real gate (`requirePermission`) bounces to sign-in or 404s; what matters
-// here is that it runs the route's own predicate.
-vi.mock("~/server/auth/require", () => ({
-  requirePermission: async (check: (id: string) => Promise<boolean>) => {
-    if (!(await check("officer-1"))) throw new Error("NOT_FOUND");
-    return "officer-1";
+vi.mock("~/server/auth", () => ({ expectSession: async () => "officer-1" }));
+vi.mock("next/navigation", () => ({
+  notFound: () => {
+    throw new Error("NOT_FOUND");
+  },
+  forbidden: () => {
+    throw new Error("NOT_FOUND");
   },
 }));
 vi.mock("~/server/graphics/meeting", () => ({

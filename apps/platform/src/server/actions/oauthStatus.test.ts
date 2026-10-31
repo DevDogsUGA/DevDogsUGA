@@ -23,8 +23,11 @@ vi.mock("../auth", () => ({
   expectSession: () => Promise.resolve(mocks.session),
 }));
 vi.mock("~/server/auth/permissions", () => ({
-  canUserManageOAuthApps: (id: string) =>
-    Promise.resolve(mocks.holders.has(id)),
+  getCallerContext: async (id: string) => ({
+    resolvedPermissions: { canManageOAuthApps: mocks.holders.has(id) },
+    isLeader: false,
+    minRank: Infinity,
+  }),
 }));
 vi.mock("../db", () => ({
   db: {

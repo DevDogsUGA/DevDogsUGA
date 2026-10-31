@@ -1,3 +1,4 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import { getBadges } from "@devdogsuga/events";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -8,8 +9,7 @@ import {
 } from "~/components/Badges/BadgeAwardForm";
 import BadgeList from "~/components/Badges/BadgeList";
 import ConsoleShell from "~/components/Console/ConsoleShell";
-import { isOfficer } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { getBadgesForOfficer, getMemberName } from "~/server/loaders/badges";
 import { PageHeading, Panel } from "~/ui/app-shell";
 
@@ -23,7 +23,7 @@ export default async function MemberBadgesPage({
 }: {
   params: Promise<{ userId: string }>;
 }) {
-  await requirePermission(isOfficer);
+  await requireAccess(rules.officer);
   const { userId } = await params;
   if (!z.string().uuid().safeParse(userId).success) notFound();
   const name = await getMemberName(userId);

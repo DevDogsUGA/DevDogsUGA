@@ -1,9 +1,11 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { expectSession } from "~/server/auth";
+
 import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
 import {
@@ -41,11 +43,16 @@ export async function saveReflection(
   _previous: ReflectionActionState,
   formData: FormData,
 ): Promise<ReflectionActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const parsed = inputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success)
     return { ok: false, message: "That reflection is invalid." };
 
-  const userId = await expectSession();
+  const userId = access.caller.userId;
   const input = parsed.data;
   try {
     await writeReflection(userId, input);

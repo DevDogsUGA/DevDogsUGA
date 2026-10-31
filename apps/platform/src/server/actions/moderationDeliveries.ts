@@ -1,15 +1,13 @@
 "use server";
 
+import { authorize, rules, loadCaller } from "~/server/auth/access";
+
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { auditEvents, moderationClients } from "~/server/db/schema";
-import { expectSession } from "~/server/auth";
-import {
-  canUserManageOAuthApps,
-  canUserModerate,
-} from "~/server/auth/permissions";
+
 import { oauthAuditEvent } from "~/server/oauth/audit";
 import { parseContentTypes } from "~/server/moderation/contentTypes";
 import { endpointUrlProblem } from "~/server/moderation/endpoint";
@@ -25,8 +23,18 @@ import { deriveClientSecret } from "~/server/moderation/secrets";
  * so resending it would change nothing but the status the console shows.
  */
 export async function resendDelivery(deliveryId: string): Promise<void> {
-  const userId = await expectSession();
-  if (!(await canUserModerate(userId))) {
+  const access = await authorize(rules.moderate);
+  if (!access.ok) {
+    throw new Error("Not authorized to resend moderation deliveries");
+  }
+
+  const userId = access.caller.userId;
+  if (
+    !(await loadCaller().then(
+      (caller) =>
+        caller !== null && caller.userId === userId && rules.moderate(caller),
+    ))
+  ) {
     throw new Error("Not authorized to resend moderation deliveries");
   }
   if (await resetForResend(deliveryId)) {
@@ -66,8 +74,20 @@ export async function registerExternalApp(
   _previous: RegisterAppState,
   formData: FormData,
 ): Promise<RegisterAppState> {
-  const userId = await expectSession();
-  if (!(await canUserManageOAuthApps(userId))) {
+  const access = await authorize(rules.manageOAuthApps);
+  if (!access.ok) {
+    return { ok: false, message: "You cannot register apps" };
+  }
+
+  const userId = access.caller.userId;
+  if (
+    !(await loadCaller().then(
+      (caller) =>
+        caller !== null &&
+        caller.userId === userId &&
+        rules.manageOAuthApps(caller),
+    ))
+  ) {
     return { ok: false, message: "You cannot register apps" };
   }
 
