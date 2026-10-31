@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import VerificationDialog from "~/components/VerificationDialog";
-import type { ConsoleItem } from "~/config/nav";
+import type { DashboardSection } from "~/config/dashboard";
 import type { HighestRankingRole } from "~/server/auth/permissions";
 import type { profiles } from "~/server/db/schema";
 import { isSessionCookieName } from "~/supabase/sessionCookie";
@@ -49,7 +49,7 @@ export type MeResponse = {
   /** The viewer's linked GitHub login; docs pages fill it into commands. */
   githubLogin: string | null;
   /** Console pages this viewer may see. Already filtered server-side. */
-  consoleItems: ConsoleItem[];
+  consoleItems: DashboardSection[];
 } | null;
 
 /**

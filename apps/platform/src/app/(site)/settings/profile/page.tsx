@@ -19,7 +19,10 @@ import ProfileLinks from "~/components/ProfileLinks";
 import PronounsField from "~/components/PronounsField";
 import PublicProfileSection from "~/components/PublicProfileSection";
 import RoleDescriptionField from "~/components/RoleDescriptionField";
-import SettingsShell from "~/components/Settings/SettingsShell";
+import "~/components/Settings/settings.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
+import { requireSignedIn } from "~/server/dashboard/requireSignedIn";
 import { Skeleton } from "~/ui/skeleton";
 import { env } from "~/env";
 import { profilePath } from "~/lib/profilePath";
@@ -44,8 +47,6 @@ export const metadata: Metadata = {
   title: "Profile | Settings | DevDogs",
   robots: { index: false },
 };
-
-const PATH = "/settings/profile";
 
 async function ProfileContent() {
   const data = await getProfilePageData();
@@ -299,9 +300,10 @@ function ProfileSkeleton() {
   );
 }
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  await requireSignedIn("/settings/profile");
   return (
-    <SettingsShell current={PATH}>
+    <AppShell side={<AppSideNav />} className="settings-shell">
       {/* Every editable field on this page registers with the provider, and
           the bar at the bottom saves and resets all of them at once. It hides
           itself when nothing is dirty, so a quarantined profile never sees it:
@@ -313,6 +315,6 @@ export default function ProfilePage() {
         </Suspense>
         <SettingsSaveBar />
       </SettingsFormProvider>
-    </SettingsShell>
+    </AppShell>
   );
 }

@@ -5,7 +5,9 @@ import {
   FORMATS_BY_KIND,
   formatFor,
 } from "@devdogsuga/events/exports";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import ExportsWorkspace, {
   type FormatOptions,
 } from "~/components/Exports/ExportsWorkspace";
@@ -42,7 +44,7 @@ export default async function ExportsPage() {
   // newest 80 the import picker lists.
   const meetings = await listImportableMeetings(new Date(), 1000);
   return (
-    <ConsoleShell current="/console/data/exports">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Exports"
         description="Choose a dataset and format, check the counts and who was left out, then download. These files hold member details: keep them to the work that needs them."
@@ -58,6 +60,6 @@ export default async function ExportsPage() {
         }))}
         formats={formats}
       />
-    </ConsoleShell>
+    </AppShell>
   );
 }

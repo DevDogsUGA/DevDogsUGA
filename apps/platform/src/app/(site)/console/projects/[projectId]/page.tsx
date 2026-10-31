@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import ProjectActionForm from "~/components/Projects/ProjectActionForm";
 import ReportCard from "~/components/Projects/ReportCard";
 import "~/components/Projects/projects.css";
@@ -71,7 +73,7 @@ export default async function ProjectConsolePage({
   const active = project.status === "active";
 
   return (
-    <ConsoleShell current="/console/projects">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         crumbs={[
           { label: "Projects", href: "/console/projects" },
@@ -252,6 +254,6 @@ export default async function ProjectConsolePage({
           />
         </Panel>
       )}
-    </ConsoleShell>
+    </AppShell>
   );
 }

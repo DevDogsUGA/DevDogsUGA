@@ -2,7 +2,9 @@ import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ConsoleAppsField from "~/components/Console/ConsoleAppsField";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import { TableSkeleton } from "~/components/Skeletons";
 
 import { getConsoleApps } from "~/server/loaders/oauthApps";
@@ -30,7 +32,7 @@ export default async function ConsoleAppsPage() {
   await requireAccess(rules.manageOAuthApps);
 
   return (
-    <ConsoleShell current="/console/apps">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Apps"
         description="Publish OAuth apps, return them to Testing, transfer them to DevDogs and choose which skip the consent screen."
@@ -38,6 +40,6 @@ export default async function ConsoleAppsPage() {
       <Suspense fallback={<TableSkeleton />}>
         <AppsData />
       </Suspense>
-    </ConsoleShell>
+    </AppShell>
   );
 }

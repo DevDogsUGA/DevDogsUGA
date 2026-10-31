@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
-import SettingsShell from "~/components/Settings/SettingsShell";
+import "~/components/Settings/settings.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
+import { requireSignedIn } from "~/server/dashboard/requireSignedIn";
 import ReportForm from "~/components/Projects/ReportForm";
 import { formatEventDateTime } from "~/lib/eventTime";
 import { requireSession } from "~/server/auth/require";
@@ -52,8 +55,9 @@ export default async function ProjectReportPage({
     editing?.id ?? null,
   );
 
+  await requireSignedIn("/projects");
   return (
-    <SettingsShell current="/projects">
+    <AppShell side={<AppSideNav />} className="settings-shell">
       <PageHeading
         crumbs={[
           { label: "Projects", href: "/projects" },
@@ -93,6 +97,6 @@ export default async function ProjectReportPage({
           }))}
         />
       )}
-    </SettingsShell>
+    </AppShell>
   );
 }

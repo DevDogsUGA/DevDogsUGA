@@ -5,7 +5,9 @@ import Link from "next/link";
 import ChangeList from "~/components/ConfigEditor/ChangeList";
 import OrphanReset from "~/components/ConfigEditor/OrphanReset";
 import ProposalActions from "~/components/ConfigEditor/ProposalActions";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import { formatEventDateTime } from "~/lib/eventTime";
 
 import type { Collection } from "~/server/config/editFields";
@@ -114,7 +116,7 @@ export default async function ScheduleEditorPage() {
       }));
 
   return (
-    <ConsoleShell current="/console/meetings">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Schedule editor"
         description="Propose changes to meetings, and to the workshops and venues they use. Your edits are saved privately, with only the fields you changed. Open PR sends them to GitHub for review; the merged config is the official one."
@@ -224,6 +226,6 @@ export default async function ScheduleEditorPage() {
           empty="No venues"
         />
       </Panel>
-    </ConsoleShell>
+    </AppShell>
   );
 }

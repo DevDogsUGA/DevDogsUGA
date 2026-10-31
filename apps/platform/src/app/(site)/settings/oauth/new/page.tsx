@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import OAuthNewClient from "~/components/Settings/OAuthNewClient";
-import SettingsShell from "~/components/Settings/SettingsShell";
+import "~/components/Settings/settings.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
+import { requireSignedIn } from "~/server/dashboard/requireSignedIn";
 import { getOAuthPageData } from "~/server/loaders/console";
 import { resolveIssuer } from "~/server/oauth/issuer";
 import { PageHeading } from "~/ui/app-shell";
@@ -13,8 +16,6 @@ export const metadata: Metadata = {
   title: "New OAuth app | Settings | DevDogs",
   robots: { index: false },
 };
-
-const PATH = "/settings/oauth/new";
 
 /** What a new app starts with; the server's `DEFAULT_REDIRECT_URIS`. */
 const DEFAULT_REDIRECT_URIS = ["http://localhost:3000/auth"];
@@ -57,9 +58,10 @@ async function NewClient() {
   );
 }
 
-export default function NewOAuthClientPage() {
+export default async function NewOAuthClientPage() {
+  await requireSignedIn("/settings/oauth/new");
   return (
-    <SettingsShell current={PATH}>
+    <AppShell side={<AppSideNav />} className="settings-shell">
       <PageHeading
         crumbs={[
           { label: "OAuth apps", href: "/settings/oauth" },
@@ -71,6 +73,6 @@ export default function NewOAuthClientPage() {
       <Suspense fallback={<Skeleton className="h-64 w-full max-w-[720px]" />}>
         <NewClient />
       </Suspense>
-    </SettingsShell>
+    </AppShell>
   );
 }

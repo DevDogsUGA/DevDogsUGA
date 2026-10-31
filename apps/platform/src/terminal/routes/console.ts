@@ -212,3 +212,26 @@ export const meetingGraphics = terminal(PUBLIC, ({ path }) =>
     ],
   }),
 );
+
+/** A signed-in tool's terminal twin reveals no records and points to its browser. */
+export function browserNotice(label: string) {
+  return terminal(PUBLIC, ({ path }) =>
+    page({
+      banner: "DEVDOGS",
+      accent: "cyan",
+      aside: ["sign in required"],
+      command: path.slice(1).replaceAll("/", " "),
+      body: [
+        {
+          type: "notice",
+          notice: {
+            tone: "info",
+            title: `${label} lives in the browser`,
+            text: "Sign in with the required access to use this page in the browser.",
+            url: `${SITE}${path}`,
+          },
+        },
+      ],
+    }),
+  );
+}

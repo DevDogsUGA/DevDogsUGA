@@ -2,7 +2,6 @@
 
 import { GearIcon, ListIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
-import { ACCOUNT_ITEMS, PROFILE_ITEMS } from "~/config/nav";
 import MobileSheet from "./MobileSheet";
 import { useMe } from "./NavUserProvider";
 import ProfilePopover from "./ProfilePopover";
@@ -42,11 +41,7 @@ export function TopNavProfile() {
           Console
         </Link>
       )}
-      <ProfilePopover
-        user={me.user}
-        items={ACCOUNT_ITEMS}
-        consoleItems={me.consoleItems}
-      />
+      <ProfilePopover user={me.user} />
     </>
   );
 }
@@ -63,11 +58,5 @@ export function TopNavMobile() {
     );
   }
 
-  return (
-    <MobileSheet
-      consoleItems={me?.consoleItems ?? []}
-      profileItems={PROFILE_ITEMS}
-      signedIn={me !== null}
-    />
-  );
+  return <MobileSheet user={me?.user ?? null} />;
 }

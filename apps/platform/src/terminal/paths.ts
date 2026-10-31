@@ -32,6 +32,91 @@ export interface TerminalPathEntry {
 const SLUG = "[^/.]+";
 
 export const TERMINAL_PATHS = [
+  {
+    pattern: "/console/qr",
+    regex: new RegExp("^/console/qr/?$"),
+    page: "(site)/console/qr/page.tsx",
+  },
+  {
+    pattern: "/console/reflections",
+    regex: new RegExp("^/console/reflections/?$"),
+    page: "(site)/console/reflections/page.tsx",
+  },
+  {
+    pattern: "/console/permissions",
+    regex: new RegExp("^/console/permissions/?$"),
+    page: "(site)/console/permissions/page.tsx",
+  },
+  {
+    pattern: "/console/audit-log/:eventId",
+    regex: new RegExp("^/console/audit-log/(?<eventId>[^/.]+)/?$"),
+    page: "(site)/console/audit-log/[eventId]/page.tsx",
+  },
+  {
+    pattern: "/console/audit-log",
+    regex: new RegExp("^/console/audit-log/?$"),
+    page: "(site)/console/audit-log/page.tsx",
+  },
+  {
+    pattern: "/console/moderation/:reportId",
+    regex: new RegExp("^/console/moderation/(?<reportId>[^/.]+)/?$"),
+    page: "(site)/console/moderation/[reportId]/page.tsx",
+  },
+  {
+    pattern: "/console/moderation/users/:userId",
+    regex: new RegExp("^/console/moderation/users/(?<userId>[^/.]+)/?$"),
+    page: "(site)/console/moderation/users/[userId]/page.tsx",
+  },
+  {
+    pattern: "/console/moderation",
+    regex: new RegExp("^/console/moderation/?$"),
+    page: "(site)/console/moderation/page.tsx",
+  },
+  {
+    pattern: "/console/attendance",
+    regex: new RegExp("^/console/attendance/?$"),
+    page: "(site)/console/attendance/page.tsx",
+  },
+  {
+    pattern: "/preview/docs/:project/*",
+    regex: new RegExp("^/preview/docs/(?<project>[^/.]+)/.+/?$"),
+    page: "(site)/preview/docs/[project]/[...slug]/page.tsx",
+  },
+  {
+    pattern: "/preview/docs/:project",
+    regex: new RegExp("^/preview/docs/(?<project>[^/.]+)/?$"),
+    page: "(site)/preview/docs/[project]/page.tsx",
+  },
+  {
+    pattern: "/preview/docs",
+    regex: new RegExp("^/preview/docs/?$"),
+    page: "(site)/preview/docs/page.tsx",
+  },
+  {
+    pattern: "/attendance",
+    regex: new RegExp("^/attendance/?$"),
+    page: "(site)/attendance/page.tsx",
+  },
+  {
+    pattern: "/settings/oauth/new",
+    regex: new RegExp("^/settings/oauth/new/?$"),
+    page: "(site)/settings/oauth/new/page.tsx",
+  },
+  {
+    pattern: "/settings/oauth",
+    regex: new RegExp("^/settings/oauth/?$"),
+    page: "(site)/settings/oauth/page.tsx",
+  },
+  {
+    pattern: "/settings/accounts",
+    regex: new RegExp("^/settings/accounts/?$"),
+    page: "(site)/settings/accounts/page.tsx",
+  },
+  {
+    pattern: "/settings/profile",
+    regex: new RegExp("^/settings/profile/?$"),
+    page: "(site)/settings/profile/page.tsx",
+  },
   { pattern: "/", regex: /^\/$/, page: "(site)/page.tsx" },
 
   {
