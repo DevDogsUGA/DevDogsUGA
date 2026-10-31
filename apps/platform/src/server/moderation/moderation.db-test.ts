@@ -18,6 +18,16 @@ import {
   vi,
 } from "vitest";
 
+/** The console actions refuse by returning, so a test that expects the decision asserts it. */
+async function resolveReport(...args: Parameters<typeof resolveReportAction>) {
+  expect(await resolveReportAction(...args)).toMatchObject({ ok: true });
+}
+async function updateUserRole(
+  ...args: Parameters<typeof updateUserRoleAction>
+) {
+  expect(await updateUserRoleAction(...args)).toMatchObject({ ok: true });
+}
+
 // The Worker bindings the code under test reads: a queue that records what is
 // sent to it. Everything else (the database, the SQL, the signing) is real.
 const queued: { body: { deliveryId: string } }[] = [];
@@ -48,7 +58,10 @@ vi.mock("~/server/alerts", () => alerts);
 
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { resolveReport, updateUserRole } from "~/server/actions/moderation";
+import {
+  resolveReport as resolveReportAction,
+  updateUserRole as updateUserRoleAction,
+} from "~/server/actions/moderation";
 import { registerExternalApp } from "~/server/actions/moderationDeliveries";
 import oauthModerationAction, {
   saveModerationEndpoint,
@@ -760,24 +773,20 @@ describe("registering an external app", () => {
       data.set("contentTypes", "session | Study session");
       return data;
     };
-    const first = await registerExternalApp(
-      { ok: true, message: null },
-      form(PROD_CLIENT),
-    );
+    const first = await registerExternalApp(form(PROD_CLIENT));
     expect(first).toMatchObject({ ok: true });
-    expect(first.secret).toBe(await deriveClientSecret(KEY, PROD_CLIENT, 1));
+    expect(first.ok && first.data?.secret).toBe(
+      await deriveClientSecret(KEY, PROD_CLIENT, 1),
+    );
     // The app can now sign reports with what was shown.
     await expect(
       (await appClient(PROD_CLIENT)).fileReport(report()),
     ).resolves.toMatchObject({ sandbox: false });
 
     // A second registration of the same client shows nothing.
-    const again = await registerExternalApp(
-      { ok: true, message: null },
-      form(PROD_CLIENT),
-    );
+    const again = await registerExternalApp(form(PROD_CLIENT));
     expect(again.ok).toBe(true);
-    expect(again.secret).toBeUndefined();
+    expect(again.ok && again.data?.secret).toBeUndefined();
   });
 
   it("will not turn a platform app into an external one", async () => {
@@ -1018,11 +1027,8 @@ describe("moderation controls on /dashboard/oauth", () => {
     await tiered(PROD_CLIENT, "production");
     signedInAs = MODERATOR;
     // A production client is turned on by registering it, which shows v1.
-    const registered = await registerExternalApp(
-      { ok: true, message: null },
-      registerForm(PROD_CLIENT),
-    );
-    expect(registered.secret).toBe(
+    const registered = await registerExternalApp(registerForm(PROD_CLIENT));
+    expect(registered.ok && registered.data?.secret).toBe(
       await deriveClientSecret(KEY, PROD_CLIENT, 1),
     );
     expect(
@@ -1095,11 +1101,9 @@ describe("moderation controls on /dashboard/oauth", () => {
   it("will not register an app for a member with only canManageSuspensions", async () => {
     await tiered(PROD_CLIENT, "production");
     signedInAs = OTHER_REPORTER;
-    expect(
-      await registerExternalApp(
-        { ok: true, message: null },
-        registerForm(PROD_CLIENT),
-      ),
-    ).toMatchObject({ ok: false, message: "You cannot register apps" });
+    expect(await registerExternalApp(registerForm(PROD_CLIENT))).toMatchObject({
+      ok: false,
+      message: "You cannot register apps",
+    });
   });
 });

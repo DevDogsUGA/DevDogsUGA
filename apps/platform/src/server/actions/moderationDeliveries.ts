@@ -1,5 +1,6 @@
 "use server";
 
+import { failure, success, type ActionResult } from "~/lib/actionResult";
 import { authorize, callerFor, rules } from "~/server/auth/access";
 
 import { revalidatePath } from "next/cache";
@@ -11,9 +12,12 @@ import { auditEvents, moderationClients } from "~/server/db/schema";
 import { oauthAuditEvent } from "~/server/oauth/audit";
 import { parseContentTypes } from "~/server/moderation/contentTypes";
 import { endpointUrlProblem } from "~/server/moderation/endpoint";
+import { raisedMessage } from "~/server/moderation/errors";
 import { resetForResend } from "~/server/moderation/deliveryStore";
 import { queueDeliveriesQuietly } from "~/server/moderation/queue";
 import { deriveClientSecret } from "~/server/moderation/secrets";
+
+const RESEND_FORBIDDEN = "You cannot resend moderation deliveries.";
 
 /**
  * Puts an undelivered decision back on the queue.
@@ -22,27 +26,32 @@ import { deriveClientSecret } from "~/server/moderation/secrets";
  * the app's `moderation_events`, which ignores a replay of the same message id,
  * so resending it would change nothing but the status the console shows.
  */
-export async function resendDelivery(deliveryId: string): Promise<void> {
+export async function resendDelivery(
+  deliveryId: string,
+): Promise<ActionResult> {
   const access = await authorize(rules.moderate);
-  if (!access.ok) {
-    throw new Error("Not authorized to resend moderation deliveries");
-  }
+  if (!access.ok) return failure(RESEND_FORBIDDEN);
 
   const userId = access.caller.userId;
   if (!(await callerFor(userId).then(rules.moderate))) {
-    throw new Error("Not authorized to resend moderation deliveries");
+    return failure(RESEND_FORBIDDEN);
   }
-  if (await resetForResend(deliveryId)) {
+  const reset = await resetForResend(deliveryId);
+  if (reset) {
     await queueDeliveriesQuietly([deliveryId]);
   }
   revalidatePath("/dashboard/moderation", "layout");
+  return reset
+    ? success(undefined, "Queued to send again.")
+    : failure(
+        "That decision was already delivered, or no longer exists, so there is nothing to resend.",
+      );
 }
 
-export interface RegisterAppState {
-  ok: boolean;
-  message: string | null;
-  /** Shown once, when registering created the client's moderation record. */
-  secret?: string | null;
+/** What registering an app returns: the secret is shown once, inline. */
+export interface RegisteredApp {
+  /** Present when registering created the client's moderation record. */
+  secret?: string;
 }
 
 const SLUG = /^[a-z][a-z0-9-]{1,40}$/;
@@ -66,17 +75,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * in. The registration is audited like every other production client change.
  */
 export async function registerExternalApp(
-  _previous: RegisterAppState,
   formData: FormData,
-): Promise<RegisterAppState> {
+): Promise<ActionResult<RegisteredApp>> {
   const access = await authorize(rules.manageOAuthApps);
-  if (!access.ok) {
-    return { ok: false, message: "You cannot register apps" };
-  }
+  if (!access.ok) return failure("You cannot register apps");
 
   const userId = access.caller.userId;
   if (!(await callerFor(userId).then(rules.manageOAuthApps))) {
-    return { ok: false, message: "You cannot register apps" };
+    return failure("You cannot register apps");
   }
 
   const text = (name: string) => {
@@ -89,19 +95,14 @@ export async function registerExternalApp(
   const endpointUrl = text("endpointUrl");
 
   if (!SLUG.test(slug)) {
-    return {
-      ok: false,
-      message: "The slug is lowercase letters, digits and hyphens",
-    };
+    return failure("The slug is lowercase letters, digits and hyphens");
   }
-  if (!displayName) return { ok: false, message: "A name is required" };
-  if (!UUID.test(clientId)) {
-    return { ok: false, message: "The client id is a UUID" };
-  }
+  if (!displayName) return failure("A name is required");
+  if (!UUID.test(clientId)) return failure("The client id is a UUID");
   const problem = endpointUrlProblem(endpointUrl);
-  if (problem) return { ok: false, message: problem };
+  if (problem) return failure(problem);
   const parsed = parseContentTypes(text("contentTypes"));
-  if (!parsed.ok) return { ok: false, message: parsed.message };
+  if (!parsed.ok) return failure(parsed.message);
 
   const [before] = await db
     .select({ clientId: moderationClients.clientId })
@@ -128,52 +129,46 @@ export async function registerExternalApp(
       );
     });
   } catch (error) {
-    const cause =
-      error instanceof Error && error.cause instanceof Error
-        ? error.cause.message
-        : "";
+    const cause = raisedMessage(error);
     if (/moderationClients_clientId_fkey|violates foreign key/.test(cause)) {
-      return { ok: false, message: "No OAuth client has that id" };
+      return failure("No OAuth client has that id");
     }
     if (cause.includes("moderation:client_deleted")) {
-      return { ok: false, message: "That OAuth client has been deleted" };
+      return failure("That OAuth client has been deleted");
     }
     if (cause.includes("moderation:client_unregistered")) {
-      return {
-        ok: false,
-        message:
-          "No OAuth client registered through /dashboard/oauth has that id. Create the app there first",
-      };
+      return failure(
+        "No OAuth client registered through /dashboard/oauth has that id. Create the app there first",
+      );
     }
     if (cause.includes("moderation:development_client")) {
-      return {
-        ok: false,
-        message:
-          "That app is in Testing. Only an app In production can be registered",
-      };
+      return failure(
+        "That app is in Testing. Only an app In production can be registered",
+      );
     }
     if (cause.includes("is a platform app")) {
-      return { ok: false, message: "That slug belongs to a platform app" };
+      return failure("That slug belongs to a platform app");
     }
     throw error;
   }
 
   revalidatePath("/dashboard/moderation", "layout");
   if (!before && env.MODERATION_SIGNING_KEY) {
-    return {
-      ok: true,
-      message: `${displayName} is registered. Copy the secret into the app's environment now: it is shown once.`,
-      secret: await deriveClientSecret(
-        env.MODERATION_SIGNING_KEY,
-        clientId.toLowerCase(),
-        1,
-      ),
-    };
+    return success(
+      {
+        secret: await deriveClientSecret(
+          env.MODERATION_SIGNING_KEY,
+          clientId.toLowerCase(),
+          1,
+        ),
+      },
+      `${displayName} is registered. Copy the secret into the app's environment now: it is shown once.`,
+    );
   }
-  return {
-    ok: true,
-    message: before
+  return success(
+    undefined,
+    before
       ? `${displayName} is registered. Its secret was shown when moderation was first turned on; rotate it under Tools, OAuth if it is lost.`
       : `${displayName} is registered. Moderation has no signing key on this deployment yet, so there is no secret to show.`,
-  };
+  );
 }

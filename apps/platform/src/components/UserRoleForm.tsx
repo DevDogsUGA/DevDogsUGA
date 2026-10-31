@@ -1,11 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
 import { updateUserRole } from "~/server/actions/moderation";
 import FormButton from "~/components/FormButton";
 import Field from "~/ui/field";
 import { Input } from "~/ui/input";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 export default function UserRoleForm({
   targetUserId,
@@ -14,17 +13,12 @@ export default function UserRoleForm({
   targetUserId: string;
   currentRole: "member" | "suspended" | "banned";
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const { run, pending: isPending, result } = useCommand(updateUserRole);
 
   function handleSubmit(formData: FormData) {
     const role = formData.get("role") as "member" | "suspended" | "banned";
     const reason = (formData.get("reason") as string) || undefined;
-
-    startTransition(async () => {
-      await updateUserRole(targetUserId, role, reason);
-      router.refresh();
-    });
+    run(targetUserId, role, reason);
   }
 
   return (
@@ -62,6 +56,7 @@ export default function UserRoleForm({
       >
         Update role
       </FormButton>
+      <CommandFeedback result={result} />
     </form>
   );
 }

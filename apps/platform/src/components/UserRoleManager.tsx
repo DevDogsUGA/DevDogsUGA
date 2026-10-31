@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   MagnifyingGlassIcon,
   XIcon,
   CaretDownIcon,
   SpinnerGapIcon,
 } from "@phosphor-icons/react/ssr";
-import { useRouter } from "next/navigation";
 import {
   searchUsers,
   assignRoleToUser,
@@ -30,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "~/ui/alert-dialog";
 import { Button } from "~/ui/button";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 interface Props {
   roles: RoleRow[];
@@ -58,12 +58,10 @@ export default function UserRoleManager({
   callerMinRank,
   callerCapability,
 }: Props) {
-  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [inspectingId, setInspectingId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
   const delegatableRoles = roles.filter((r) => r.rank > callerMinRank);
 
@@ -90,10 +88,9 @@ export default function UserRoleManager({
     debouncedSearch(q);
   }
 
-  function handleAssign(userId: string, roleId: string) {
-    startTransition(async () => {
-      await assignRoleToUser(userId, roleId);
-      router.refresh();
+  const assign = useCommand(async (userId: string, roleId: string) => {
+    const result = await assignRoleToUser(userId, roleId);
+    if (result.ok) {
       // Optimistically update results
       setResults((prev) =>
         prev.map((u) => {
@@ -115,13 +112,13 @@ export default function UserRoleManager({
           };
         }),
       );
-    });
-  }
+    }
+    return result;
+  });
 
-  function handleRemove(userId: string, roleId: string) {
-    startTransition(async () => {
-      await removeRoleFromUser(userId, roleId);
-      router.refresh();
+  const remove = useCommand(async (userId: string, roleId: string) => {
+    const result = await removeRoleFromUser(userId, roleId);
+    if (result.ok) {
       setResults((prev) =>
         prev.map((u) =>
           u.id === userId
@@ -129,8 +126,10 @@ export default function UserRoleManager({
             : u,
         ),
       );
-    });
-  }
+    }
+    return result;
+  });
+  const isPending = assign.pending || remove.pending;
 
   const [removing, setRemoving] = useState<{
     userId: string;
@@ -152,6 +151,9 @@ export default function UserRoleManager({
         />
         {searching && <SpinnerGapIcon className="animate-spin" aria-hidden />}
       </div>
+
+      <CommandFeedback result={assign.result} />
+      <CommandFeedback result={remove.result} />
 
       {results.length > 0 && (
         <ul className="con-people">
@@ -242,7 +244,7 @@ export default function UserRoleManager({
                       roles={addableRoles}
                       disabledRoleReasons={disabledRoleReasons}
                       pendingLinkRoleIds={pendingLinkRoleIds}
-                      onSelect={(roleId) => handleAssign(user.id, roleId)}
+                      onSelect={(roleId) => assign.run(user.id, roleId)}
                       disabled={isPending}
                     />
                   </div>
@@ -278,7 +280,7 @@ export default function UserRoleManager({
               variant="danger-solid"
               type="button"
               onClick={() => {
-                if (removing) handleRemove(removing.userId, removing.roleId);
+                if (removing) remove.run(removing.userId, removing.roleId);
                 setRemoving(null);
               }}
             >

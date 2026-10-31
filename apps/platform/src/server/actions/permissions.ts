@@ -283,15 +283,16 @@ export async function reorderRole(
 
 // ── User role assignment ───────────────────────────────────────────────────────
 
+/**
+ * Gives a member a role. A synced role needs the caller to outrank it on
+ * Discord too; every refusal comes back as the message the Command shows.
+ */
 export async function assignRoleToUser(
   targetUserId: string,
   roleId: string,
-): Promise<void> {
+): Promise<ActionResult> {
   const access = await authorize(rules.manageRoles);
-  if (!access.ok) {
-    await expectSession();
-    throw new Error("Not authorized: canManageRoles required");
-  }
+  if (!access.ok) return access;
 
   const callerId = access.caller.userId;
   const ctx = {
@@ -299,72 +300,80 @@ export async function assignRoleToUser(
     minRank: access.caller.minRank,
   };
 
-  const [target] = await db
-    .select({
-      rank: roles.rank,
-      roleType: roles.roleType,
-      discordRoleId: roles.discordRoleId,
-    })
-    .from(roles)
-    .where(eq(roles.id, roleId))
-    .limit(1);
-  if (!target) throw new Error("Role not found");
+  return expected(async (): Promise<undefined> => {
+    const [target] = await db
+      .select({
+        rank: roles.rank,
+        roleType: roles.roleType,
+        discordRoleId: roles.discordRoleId,
+      })
+      .from(roles)
+      .where(eq(roles.id, roleId))
+      .limit(1);
+    if (!target) throw new ExpectedFailure("Role not found");
 
-  requireRankGuard(requireCustomRole(target), ctx.minRank);
+    requireRankGuard(requireCustomRole(target), ctx.minRank);
 
-  if (target.discordRoleId !== null) {
-    const guildRoles = await fetchGuildRoles();
-    const discordRole = guildRoles.find((r) => r.id === target.discordRoleId);
-    const targetPosition = discordRole?.position ?? Infinity;
-    const capability = await getDiscordSyncCapability(callerId, guildRoles);
-    if (!canManageDiscordRolePosition(capability, targetPosition)) {
-      throw new Error(
-        "Your Discord account doesn't have permission to manage this role.",
-      );
+    if (target.discordRoleId !== null) {
+      const guildRoles = await fetchGuildRoles();
+      const discordRole = guildRoles.find((r) => r.id === target.discordRoleId);
+      const targetPosition = discordRole?.position ?? Infinity;
+      const capability = await getDiscordSyncCapability(callerId, guildRoles);
+      if (!canManageDiscordRolePosition(capability, targetPosition)) {
+        throw new ExpectedFailure(
+          "Your Discord account doesn't have permission to manage this role.",
+        );
+      }
+
+      // The grant is recorded either way. With no known Discord account it is
+      // pending: the membership cron pushes it once the user links (or an
+      // officer's Discord id is stored). A failed push is retried the same way.
+      await db
+        .insert(userRoles)
+        .values({ userId: targetUserId, roleId })
+        .onConflictDoNothing();
+      const discordUserId = await getDiscordUserId(targetUserId);
+      if (discordUserId) {
+        try {
+          await pushMemberRoleChange(
+            discordUserId,
+            target.discordRoleId,
+            "add",
+          );
+          await db
+            .insert(discordRoleMemberships)
+            .values({ userId: targetUserId, roleId })
+            .onConflictDoNothing();
+        } catch (err) {
+          console.error(
+            `Failed to add Discord role ${target.discordRoleId} to member ${discordUserId}; the cron will retry:`,
+            err,
+          );
+        }
+      }
+      revalidateOfficers();
+      return;
     }
 
-    // The grant is recorded either way. With no known Discord account it is
-    // pending: the membership cron pushes it once the user links (or an
-    // officer's Discord id is stored). A failed push is retried the same way.
     await db
       .insert(userRoles)
       .values({ userId: targetUserId, roleId })
       .onConflictDoNothing();
-    const discordUserId = await getDiscordUserId(targetUserId);
-    if (discordUserId) {
-      try {
-        await pushMemberRoleChange(discordUserId, target.discordRoleId, "add");
-        await db
-          .insert(discordRoleMemberships)
-          .values({ userId: targetUserId, roleId })
-          .onConflictDoNothing();
-      } catch (err) {
-        console.error(
-          `Failed to add Discord role ${target.discordRoleId} to member ${discordUserId}; the cron will retry:`,
-          err,
-        );
-      }
-    }
     revalidateOfficers();
-    return;
-  }
-
-  await db
-    .insert(userRoles)
-    .values({ userId: targetUserId, roleId })
-    .onConflictDoNothing();
-  revalidateOfficers();
+  }, "Role added.");
 }
 
+/**
+ * Takes a role off a member. The database row goes first; when the Discord
+ * removal then fails the role is already gone and the message says so, and the
+ * cron retries the Discord side.
+ */
 export async function removeRoleFromUser(
   targetUserId: string,
   roleId: string,
-): Promise<void> {
+): Promise<ActionResult> {
   const access = await authorize(rules.manageRoles);
-  if (!access.ok) {
-    await expectSession();
-    throw new Error("Not authorized: canManageRoles required");
-  }
+  if (!access.ok) return access;
 
   const callerId = access.caller.userId;
   const ctx = {
@@ -372,64 +381,66 @@ export async function removeRoleFromUser(
     minRank: access.caller.minRank,
   };
 
-  const [target] = await db
-    .select({
-      rank: roles.rank,
-      roleType: roles.roleType,
-      discordRoleId: roles.discordRoleId,
-    })
-    .from(roles)
-    .where(eq(roles.id, roleId))
-    .limit(1);
-  if (!target) throw new Error("Role not found");
+  return expected(async (): Promise<undefined> => {
+    const [target] = await db
+      .select({
+        rank: roles.rank,
+        roleType: roles.roleType,
+        discordRoleId: roles.discordRoleId,
+      })
+      .from(roles)
+      .where(eq(roles.id, roleId))
+      .limit(1);
+    if (!target) throw new ExpectedFailure("Role not found");
 
-  requireRankGuard(requireCustomRole(target), ctx.minRank);
+    requireRankGuard(requireCustomRole(target), ctx.minRank);
 
-  if (target.discordRoleId !== null) {
-    const guildRoles = await fetchGuildRoles();
-    const discordRole = guildRoles.find((r) => r.id === target.discordRoleId);
-    const targetPosition = discordRole?.position ?? Infinity;
-    const capability = await getDiscordSyncCapability(callerId, guildRoles);
-    if (!canManageDiscordRolePosition(capability, targetPosition)) {
-      throw new Error(
-        "Your Discord account doesn't have permission to manage this role.",
-      );
-    }
-  }
-
-  await db
-    .delete(userRoles)
-    .where(
-      and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
-    );
-  revalidateOfficers();
-
-  if (target.discordRoleId !== null) {
-    const discordUserId = await getDiscordUserId(targetUserId);
-    if (discordUserId) {
-      try {
-        await pushMemberRoleChange(
-          discordUserId,
-          target.discordRoleId,
-          "remove",
-        );
-        await db
-          .delete(discordRoleMemberships)
-          .where(
-            and(
-              eq(discordRoleMemberships.userId, targetUserId),
-              eq(discordRoleMemberships.roleId, roleId),
-            ),
-          );
-      } catch (err) {
-        // The snapshot row stays, so the cron retries the Discord removal
-        // rather than pulling the role back onto the platform.
-        throw new Error(
-          `Role removed, but Discord sync failed: ${err instanceof Error ? err.message : String(err)}`,
+    if (target.discordRoleId !== null) {
+      const guildRoles = await fetchGuildRoles();
+      const discordRole = guildRoles.find((r) => r.id === target.discordRoleId);
+      const targetPosition = discordRole?.position ?? Infinity;
+      const capability = await getDiscordSyncCapability(callerId, guildRoles);
+      if (!canManageDiscordRolePosition(capability, targetPosition)) {
+        throw new ExpectedFailure(
+          "Your Discord account doesn't have permission to manage this role.",
         );
       }
     }
-  }
+
+    await db
+      .delete(userRoles)
+      .where(
+        and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
+      );
+    revalidateOfficers();
+
+    if (target.discordRoleId !== null) {
+      const discordUserId = await getDiscordUserId(targetUserId);
+      if (discordUserId) {
+        try {
+          await pushMemberRoleChange(
+            discordUserId,
+            target.discordRoleId,
+            "remove",
+          );
+          await db
+            .delete(discordRoleMemberships)
+            .where(
+              and(
+                eq(discordRoleMemberships.userId, targetUserId),
+                eq(discordRoleMemberships.roleId, roleId),
+              ),
+            );
+        } catch (err) {
+          // The snapshot row stays, so the cron retries the Discord removal
+          // rather than pulling the role back onto the platform.
+          throw new ExpectedFailure(
+            `Role removed, but Discord sync failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+    }
+  }, "Role removed.");
 }
 
 // ── User search ───────────────────────────────────────────────────────────────
