@@ -1,3 +1,4 @@
+import { ExpectedFailure } from "~/lib/actionResult";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -92,7 +93,10 @@ describe("setStatus, setAsksForConsent and transferToDevDogs are holder-only", (
     async (_name, call, step) => {
       for (const member of [USER, OWNER]) {
         mocks.session = member;
-        await expect(call()).rejects.toThrow(/canManageOAuthApps/);
+        await expect(call()).resolves.toEqual({
+          ok: false,
+          message: "Not authorized: canManageOAuthApps required",
+        });
       }
       expect(step()).not.toHaveBeenCalled();
     },
@@ -111,10 +115,14 @@ describe("setStatus, setAsksForConsent and transferToDevDogs are holder-only", (
 
   it("setStatus refuses an unknown status or a malformed id after the permission check", async () => {
     mocks.session = HOLDER;
-    await expect(setStatus(APP, "production" as never)).rejects.toThrow(
-      /not found/,
-    );
-    await expect(setStatus("nope", "testing")).rejects.toThrow(/not found/);
+    await expect(setStatus(APP, "production" as never)).resolves.toEqual({
+      ok: false,
+      message: "OAuth client not found",
+    });
+    await expect(setStatus("nope", "testing")).resolves.toEqual({
+      ok: false,
+      message: "OAuth client not found",
+    });
     expect(mocks.steps.setAppStatus).not.toHaveBeenCalled();
   });
 });
@@ -153,4 +161,28 @@ describe("forgetApproval", () => {
   it("refuses a malformed id", async () => {
     await expect(forgetApproval("nope", USER)).rejects.toThrow(/not found/);
   });
+});
+
+it("returns expected domain refusals and lets bugs throw", async () => {
+  mocks.session = HOLDER;
+  mocks.steps.setAppStatus.mockRejectedValueOnce(
+    new ExpectedFailure("Before publishing, add a logo"),
+  );
+  await expect(setStatus(APP, "in_production")).resolves.toEqual({
+    ok: false,
+    message: "Before publishing, add a logo",
+  });
+  mocks.steps.setAppStatus.mockRejectedValueOnce(
+    new Error("database unavailable"),
+  );
+  await expect(setStatus(APP, "testing")).rejects.toThrow(
+    "database unavailable",
+  );
+});
+
+it("does not convert a plain Error even when its message matches a refusal", async () => {
+  mocks.session = HOLDER;
+  const error = new Error("Before publishing, add a logo");
+  mocks.steps.setAppStatus.mockRejectedValueOnce(error);
+  await expect(setStatus(APP, "in_production")).rejects.toBe(error);
 });

@@ -1,3 +1,4 @@
+import { ExpectedFailure } from "~/lib/actionResult";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { auditEvents, oauthRegistrations } from "~/server/db/schema";
@@ -60,7 +61,7 @@ async function requireRegistration(clientId: string) {
     },
     where: { clientId },
   });
-  if (!registration) throw new Error(APP_NOT_FOUND);
+  if (!registration) throw new ExpectedFailure(APP_NOT_FOUND);
   return registration;
 }
 
@@ -99,7 +100,7 @@ export async function setAppStatus(input: {
   if (input.status === "in_production") {
     const missing = missingForPublishing(app);
     if (missing.length > 0) {
-      throw new Error(`Before publishing, add ${missing.join(", ")}`);
+      throw new ExpectedFailure(`Before publishing, add ${missing.join(", ")}`);
     }
   }
 
@@ -152,10 +153,12 @@ export async function setAsksForConsent(input: {
 
   if (!input.asksForConsent) {
     if (app.userId !== null) {
-      throw new Error("Only a DevDogs app can skip the consent screen");
+      throw new ExpectedFailure(
+        "Only a DevDogs app can skip the consent screen",
+      );
     }
     if (app.status !== "in_production") {
-      throw new Error(
+      throw new ExpectedFailure(
         "An app must be In production to skip the consent screen",
       );
     }

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  startTransition,
-  useActionState,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { MagnifyingGlassIcon, UserPlusIcon } from "@phosphor-icons/react/ssr";
 import {
   addAttendee,
@@ -15,10 +9,11 @@ import {
   inviteAttendee,
   removeAttendee,
   resendInvite,
-  type OfficerAttendanceState,
+  type AttendeeLookup,
 } from "~/server/actions/officerAttendance";
 import { Button } from "~/ui/button";
-import Callout from "~/ui/callout";
+import { useCommand, CommandFeedback } from "~/ui/use-command";
+import type { ActionResult } from "~/lib/actionResult";
 import {
   InputGroup,
   InputGroupAddon,
@@ -27,26 +22,6 @@ import {
 } from "~/ui/input-group";
 import { UGA_DOMAIN } from "~/lib/attendanceInvite";
 import "./meeting-detail.css";
-
-const IDLE: OfficerAttendanceState = { status: "idle" };
-
-function Result({ state }: { state: OfficerAttendanceState }) {
-  if (state.status === "error") {
-    return (
-      <Callout tone="critical" alert className="md-result">
-        {state.message}
-      </Callout>
-    );
-  }
-  if (state.status === "done") {
-    return (
-      <Callout tone="success" alert className="md-result">
-        {state.message}
-      </Callout>
-    );
-  }
-  return null;
-}
 
 /**
  * Officer check-in (Q8, Q51): a MyID with `@uga.edu` fixed after it, never a
@@ -72,12 +47,19 @@ function AddAttendee({
   meetingId: string;
   onAnother: () => void;
 }) {
-  const [found, find, finding] = useActionState(findAttendee, IDLE);
-  const [added, add, adding] = useActionState(addAttendee, IDLE);
-  const [invited, invite, inviting] = useActionState(inviteAttendee, IDLE);
-  const [dismissed, setDismissed] = useState<OfficerAttendanceState | null>(
-    null,
-  );
+  const {
+    result: found,
+    run: find,
+    pending: finding,
+  } = useCommand(findAttendee, { refresh: false });
+  const { result: added, run: add, pending: adding } = useCommand(addAttendee);
+  const {
+    result: invited,
+    run: invite,
+    pending: inviting,
+  } = useCommand(inviteAttendee);
+  const [dismissed, setDismissed] =
+    useState<ActionResult<AttendeeLookup> | null>(null);
 
   function submit(
     action: (formData: FormData) => void,
@@ -85,16 +67,13 @@ function AddAttendee({
     return (event) => {
       event.preventDefault();
       const formData = new FormData(event.currentTarget);
-      startTransition(() => action(formData));
+      action(formData);
     };
   }
 
   // A confirmation result replaces the pending question it answered.
-  const outcome = [added, invited].find(
-    (s) => s.status === "done" || s.status === "error",
-  );
-  const question =
-    found.status === "confirm" || found.status === "invite" ? found : null;
+  const outcome = added ?? invited;
+  const question = found?.ok ? (found.data ?? null) : null;
   const showQuestion = question !== null && dismissed !== found && !outcome;
 
   return (
@@ -131,7 +110,7 @@ function AddAttendee({
         </span>
       </form>
 
-      {found.status === "error" && <Result state={found} />}
+      <CommandFeedback result={found} />
 
       {showQuestion && question.status === "confirm" && (
         <form onSubmit={submit(add)} className="md-confirm" aria-live="polite">
@@ -170,7 +149,7 @@ function AddAttendee({
 
       {outcome && (
         <>
-          <Result state={outcome} />
+          <CommandFeedback result={outcome} />
           <Button type="button" variant="outline" size="sm" onClick={onAnother}>
             Add another
           </Button>
@@ -187,21 +166,18 @@ function ActionButton({
   variant,
   children,
 }: {
-  action: (
-    previous: OfficerAttendanceState,
-    formData: FormData,
-  ) => Promise<OfficerAttendanceState>;
+  action: (formData: FormData) => Promise<ActionResult>;
   fields: Record<string, string>;
   variant: "outline" | "destructive";
   children: ReactNode;
 }) {
-  const [state, run, pending] = useActionState(action, IDLE);
+  const { result, run, pending } = useCommand(action);
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        startTransition(() => run(formData));
+        run(formData);
       }}
       className="md-inline-form"
     >
@@ -211,16 +187,7 @@ function ActionButton({
       <Button type="submit" size="sm" variant={variant} loading={pending}>
         {children}
       </Button>
-      {state.status === "error" && (
-        <span className="md-inline-err" role="alert">
-          {state.message}
-        </span>
-      )}
-      {state.status === "done" && (
-        <span className="md-inline-ok" role="status">
-          {state.message}
-        </span>
-      )}
+      <CommandFeedback result={result} />
     </form>
   );
 }
@@ -260,7 +227,7 @@ export function RemoveAttendee({
   attendanceId: string;
   who: string;
 }) {
-  const [state, run, pending] = useActionState(removeAttendee, IDLE);
+  const { result, run, pending } = useCommand(removeAttendee);
   return (
     <details className="md-remove">
       <summary className="btn secondary sm">
@@ -270,7 +237,7 @@ export function RemoveAttendee({
         onSubmit={(event) => {
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
-          startTransition(() => run(formData));
+          run(formData);
         }}
         className="md-remove-form"
       >
@@ -298,11 +265,7 @@ export function RemoveAttendee({
         >
           Remove {who}
         </Button>
-        {state.status === "error" && (
-          <span className="md-inline-err" role="alert">
-            {state.message}
-          </span>
-        )}
+        <CommandFeedback result={result} />
       </form>
     </details>
   );
