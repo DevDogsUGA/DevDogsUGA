@@ -6,6 +6,7 @@ import { resendDelivery } from "~/server/actions/moderationDeliveries";
 import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
 import FormButton from "~/components/FormButton";
 import Badge from "~/ui/badge";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 export interface DeliveryListEntry {
   id: string;
@@ -77,20 +78,31 @@ export default function ModerationDeliveries({
             </p>
           </div>
           {delivery.status !== "delivered" && (
-            <ConfirmDestructiveAction
-              title={`Resend ${delivery.type}${delivery.appName ? ` to ${delivery.appName}` : ""}?`}
-              description={`It goes back to pending and is queued again.${delivery.appName ? ` ${delivery.appName} ignores` : " The app ignores"} a decision it has already applied.`}
-              action={resendDelivery.bind(null, delivery.id)}
-              submitLabel="Resend"
-            >
-              <FormButton theme="black" type="submit" size="sm">
-                <ArrowsClockwiseIcon weight="bold" aria-hidden />
-                Resend
-              </FormButton>
-            </ConfirmDestructiveAction>
+            <ResendDelivery delivery={delivery} />
           )}
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Each delivery owns its resend Command; the confirm dialog is composed around it. */
+function ResendDelivery({ delivery }: { delivery: DeliveryListEntry }) {
+  const { run, pending, result } = useCommand(resendDelivery);
+  return (
+    <>
+      <ConfirmDestructiveAction
+        title={`Resend ${delivery.type}${delivery.appName ? ` to ${delivery.appName}` : ""}?`}
+        description={`It goes back to pending and is queued again.${delivery.appName ? ` ${delivery.appName} ignores` : " The app ignores"} a decision it has already applied.`}
+        action={() => run(delivery.id)}
+        submitLabel="Resend"
+      >
+        <FormButton theme="black" type="submit" size="sm" disabled={pending}>
+          <ArrowsClockwiseIcon weight="bold" aria-hidden />
+          Resend
+        </FormButton>
+      </ConfirmDestructiveAction>
+      <CommandFeedback result={result} />
+    </>
   );
 }

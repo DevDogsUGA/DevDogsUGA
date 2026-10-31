@@ -61,3 +61,17 @@ export function failureFromError(error: unknown): ApiFailure | null {
   }
   return null;
 }
+
+/**
+ * The text of a database error and of every error it wraps. Drizzle wraps the
+ * driver error, so a function's `raise exception` text sits on the cause.
+ */
+export function raisedMessage(error: unknown): string {
+  const messages: string[] = [];
+  for (let cursor: unknown = error, depth = 0; cursor && depth < 4; depth++) {
+    if (!(cursor instanceof Error)) break;
+    messages.push(cursor.message);
+    cursor = cursor.cause;
+  }
+  return messages.join("\n");
+}
