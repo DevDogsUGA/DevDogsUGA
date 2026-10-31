@@ -1,0 +1,26 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
+/* The hackathon forms and their decision buttons. Every selector hangs off a `hk-` class. */
+@layer cosmic {
+  .cosmic .hk-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 560px;
+  }
+  .cosmic .hk-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .cosmic .hk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cosmic .hk-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}

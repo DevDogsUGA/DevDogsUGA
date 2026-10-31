@@ -72,6 +72,28 @@ describe("Section registry", () => {
     for (const caller of callers)
       expect(visibleSections(caller).map((s) => s.id)).toContain("overview");
   });
+  it("lists Hackathons for every signed-in member, in the Projects group", () => {
+    const section = DASHBOARD_SECTIONS.find((s) => s.id === "hackathons");
+    expect(section).toMatchObject({
+      href: "/dashboard/hackathons",
+      group: "Projects",
+      access: "member",
+      refusal: "forbidden",
+    });
+    for (const caller of callers)
+      expect(visibleSections(caller)).toContain(section);
+    expect(visibleSections(null)).not.toContain(section);
+    expect(sectionFor("/dashboard/hackathons#submit")).toBe(section);
+  });
+  it("answers the Hackathons terminal twin with the sign-in notice, never a list", () => {
+    const match = matchTerminalPath("/dashboard/hackathons");
+    expect(match).not.toBeNull();
+    expect(
+      TERMINAL_PATHS.some(
+        (entry) => entry.page === "(site)/dashboard/hackathons/page.tsx",
+      ),
+    ).toBe(true);
+  });
   it.each(DASHBOARD_SECTIONS)("has a terminal twin for $href", (section) =>
     expect(matchTerminalPath(section.href)).not.toBeNull(),
   );

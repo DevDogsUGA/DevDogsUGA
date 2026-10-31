@@ -19,7 +19,7 @@ import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
 import { communityDirectory, communityProfile } from "./routes/community";
 import { directions, eventDetail, eventsSchedule } from "./routes/events";
 import { home } from "./routes/home";
-import { projectReport, projects } from "./routes/projects";
+import { hackathons, projectReport, projects } from "./routes/projects";
 import { docs, help, helpThread, kitGallery } from "./routes/misc";
 
 /**
@@ -74,6 +74,7 @@ export const TERMINAL_ROUTES = {
   "/dashboard/reviews": consoleProjects,
   "/dashboard/reviews/:projectId": consoleProjects,
   "/dashboard/projects": projects,
+  "/dashboard/hackathons": hackathons,
   "/dashboard/projects/:projectId/report": projectReport,
   "/help": help,
   "/help/:threadId": helpThread,
