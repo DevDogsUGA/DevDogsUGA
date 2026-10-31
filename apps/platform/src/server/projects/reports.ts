@@ -125,9 +125,12 @@ export function fileReport(
 
     try {
       return await db.transaction(async (tx) => {
+        // validate_report_commit locks this project FOR UPDATE too. Take that
+        // lock before any report locks/writes: two FOR SHARE holders would
+        // deadlock when both citation triggers tried to upgrade their locks.
         const [project] = await tx.execute<{ status: string }>(sql`
           select status from platform.projects
-          where id = ${input.projectId}::uuid for share`);
+          where id = ${input.projectId}::uuid for update`);
         if (!project) refuse("That project was not found.");
         const legacy = legacyBlock(project.status);
         if (legacy) refuse(legacy);

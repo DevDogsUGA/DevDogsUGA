@@ -889,21 +889,47 @@ describe("a commit backs one report", () => {
   it("lets the table's UNIQUE decide two simultaneous reports on one commit", async () => {
     const mine = await project("D3 Concurrent");
     await commit(MEMBER, 1, "2026-10-10T16:00:00Z", 1, "Race the sha");
+    const actor = await as(MEMBER);
     const results = await Promise.all([
-      fileReport(await as(MEMBER), input(mine), TODAY),
-      fileReport(await as(MEMBER), input(mine), TODAY),
+      fileReport(actor, input(mine), TODAY),
+      fileReport(actor, input(mine), TODAY),
     ]);
     expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok)).toHaveLength(1);
     const loser = results.find((r) => !r.ok);
     expect(loser).toMatchObject({
       ok: false,
       message: expect.stringContaining('"Race the sha" is already cited'),
+      fieldErrors: { shas: expect.stringContaining(sha(1).slice(0, 7)) },
     });
+    // The failed filing rolls back its report as well as its citation.
+    expect(
+      await rows(
+        sql`select 1 from platform."projectReports" where "projectId" = ${mine}::uuid`,
+      ),
+    ).toHaveLength(1);
     expect(
       await rows(
         sql`select 1 from platform."projectReportCommits" where sha = ${sha(1)}`,
       ),
     ).toHaveLength(1);
+  });
+
+  it("files simultaneous reports on different commits in the same project", async () => {
+    const mine = await project("D3 Concurrent distinct");
+    await commit(MEMBER, 1, "2026-10-10T16:00:00Z", 1);
+    await commit(MEMBER, 1, "2026-10-11T16:00:00Z", 2);
+    const actor = await as(MEMBER);
+    const results = await Promise.all([
+      fileReport(actor, input(mine, { shas: [sha(1)] }), TODAY),
+      fileReport(actor, input(mine, { shas: [sha(2)] }), TODAY),
+    ]);
+    expect(results.map((r) => r.ok)).toEqual([true, true]);
+    expect(
+      await rows(
+        sql`select 1 from platform."projectReports" where "projectId" = ${mine}::uuid`,
+      ),
+    ).toHaveLength(2);
   });
 
   it("keeps a failed resubmission atomic: the old citations survive", async () => {

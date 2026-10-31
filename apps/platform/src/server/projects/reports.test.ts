@@ -76,7 +76,10 @@ const fileable = (
   } = {},
 ): [string, never[]][] => [
   ["projectReportContributions", []],
-  ["for share", (over.project ?? [{ status: "active" }]) as never[]],
+  [
+    "select status from platform.projects",
+    (over.project ?? [{ status: "active" }]) as never[],
+  ],
   [
     "distinct on (c.sha)",
     (over.eligible ?? [{ sha: SHA, repoId: "11" }]) as never[],
@@ -91,6 +94,21 @@ beforeEach(() => {
 });
 
 describe("who may file", () => {
+  it("takes the citation trigger's exclusive project lock before any report writes", async () => {
+    use({ execute: fileable() });
+    expect(await fileReport(caller(MEMBER), input(), NOW)).toMatchObject({
+      ok: true,
+    });
+    expect(fake.calls[0]).toMatchObject({
+      kind: "execute",
+      text: expect.stringContaining("for update"),
+      params: [PROJECT],
+    });
+    expect(fake.calls[0]!.text).toContain(
+      "select status from platform.projects",
+    );
+  });
+
   it("is a contributor to an active project", async () => {
     use({ execute: fileable() });
     expect(await fileReport(caller(MEMBER), input(), NOW)).toEqual({
