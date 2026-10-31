@@ -11,7 +11,10 @@ export function visibleSections(caller: Caller | null): DashboardSection[] {
   );
 }
 
-/** Longest path-prefix ownership, ignoring query strings and fragments. */
+/**
+ * Longest path-prefix ownership, ignoring query strings and fragments. The
+ * Overview owns only its own page: every other section sits beneath it.
+ */
 export function sectionFor(
   path: string | null | undefined,
 ): DashboardSection | null {
@@ -20,7 +23,9 @@ export function sectionFor(
   let best: DashboardSection | null = null;
   for (const section of DASHBOARD_SECTIONS) {
     if (
-      (pathname === section.href || pathname.startsWith(`${section.href}/`)) &&
+      (pathname === section.href ||
+        (section.group !== "Overview" &&
+          pathname.startsWith(`${section.href}/`))) &&
       (!best || section.href.length > best.href.length)
     )
       best = section;

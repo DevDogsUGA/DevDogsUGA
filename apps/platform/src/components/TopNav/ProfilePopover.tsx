@@ -19,10 +19,9 @@ import {
   type NavUserClientData,
 } from "./NavUserProvider";
 import { POPOVER_DIVIDER, POPOVER_ROW } from "./popoverRow";
-import VerificationAlert from "./VerificationAlert";
 import "./topnav.css";
 
-/** The member menu: identity, Dashboard and sign out, with setup until B3. */
+/** The member menu: identity, Dashboard and sign out. Setup lives on the Overview. */
 export default function ProfilePopover({ user }: { user: NavUserClientData }) {
   const verification = useVerification();
   const clearMe = useClearMe();
@@ -68,11 +67,6 @@ export default function ProfilePopover({ user }: { user: NavUserClientData }) {
                   )}
                 </span>
               </div>
-              {verification && !verification.isVerified && (
-                <div className="px-1.5 pb-1.5">
-                  <VerificationAlert />
-                </div>
-              )}
               <NavigationMenu.Link asChild>
                 <Link href={DASHBOARD_HOME} className={POPOVER_ROW}>
                   <HouseIcon weight="bold" />

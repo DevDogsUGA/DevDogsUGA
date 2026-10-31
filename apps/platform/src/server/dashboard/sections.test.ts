@@ -43,14 +43,29 @@ describe("Section registry", () => {
       }
     },
   );
-  it.each(DASHBOARD_SECTIONS)("owns $href and its descendants", (section) => {
-    expect(sectionFor(section.href)).toBe(section);
-    expect(sectionFor(`${section.href}/child?x=1#anchor`)).toBe(section);
-    expect(sectionFor(`${section.href}-unknown`)).not.toBe(section);
+  it.each(DASHBOARD_SECTIONS.filter((section) => section.group !== "Overview"))(
+    "owns $href and its descendants",
+    (section) => {
+      expect(sectionFor(section.href)).toBe(section);
+      expect(sectionFor(`${section.href}/child?x=1#anchor`)).toBe(section);
+      expect(sectionFor(`${section.href}-unknown`)).not.toBe(section);
+    },
+  );
+  it("gives the Overview only its own page, since every section sits beneath it", () => {
+    const overview = DASHBOARD_SECTIONS.find((s) => s.id === "overview");
+    expect(overview?.href).toBe("/dashboard");
+    expect(sectionFor("/dashboard")).toBe(overview);
+    expect(sectionFor("/dashboard?tab=1#top")).toBe(overview);
+    expect(sectionFor("/dashboard/unknown")).toBeNull();
+    expect(sectionFor("/dashboard/deletion")).toBeNull();
   });
   it("rejects unowned paths", () => {
     expect(sectionFor(null)).toBeNull();
-    expect(sectionFor("/dashboard")).toBeNull();
+    expect(sectionFor("/dashboard/unknown")).toBeNull();
+  });
+  it("shows the Overview to every signed-in caller", () => {
+    for (const caller of callers)
+      expect(visibleSections(caller).map((s) => s.id)).toContain("overview");
   });
   it.each(DASHBOARD_SECTIONS)("has a terminal twin for $href", (section) =>
     expect(matchTerminalPath(section.href)).not.toBeNull(),
