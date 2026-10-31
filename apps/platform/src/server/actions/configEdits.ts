@@ -1,5 +1,12 @@
 "use server";
 
+import {
+  expected,
+  ExpectedFailure,
+  failure,
+  success,
+  type ActionResult,
+} from "~/lib/actionResult";
 import { authorize, rules } from "~/server/auth/access";
 
 import {
@@ -39,10 +46,9 @@ export interface ConfigActionState {
   errors?: string[];
 }
 
-const FORBIDDEN: ConfigActionState = {
-  ok: false,
-  message: "Only officers can propose schedule changes.",
-};
+const FORBIDDEN_MESSAGE = "Only officers can propose schedule changes.";
+
+const FORBIDDEN: ConfigActionState = { ok: false, message: FORBIDDEN_MESSAGE };
 
 const collectionSchema = z.string().refine(isCollection);
 
@@ -65,112 +71,121 @@ function keyProblem(collection: Collection, key: string): string | null {
     : "The id must be lowercase words joined by hyphens.";
 }
 
-export async function saveConfigEditAction(
-  _previous: ConfigActionState,
-  formData: FormData,
-): Promise<ConfigActionState> {
-  const access = await authorize(rules.officer);
-  if (!access.ok) {
-    return FORBIDDEN;
-  }
-
-  const collection = collectionSchema.safeParse(formData.get("collection"));
-  if (!collection.success) return { ok: false, message: "Unknown item type." };
-  const kind = collection.data;
-  const userId = access.caller.userId;
-  if (!userId) return FORBIDDEN;
-
-  const isNew = formData.get("isNew") === "1";
-  const submitted: Record<string, string> = {};
-  for (const field of FIELDS[kind]) {
-    const value = formData.get(`f_${field.name}`);
-    if (typeof value === "string") submitted[field.name] = value.slice(0, 5000);
-  }
-  const keyName = keyField(kind);
-  const key = isNew
-    ? (submitted[keyName] ?? "").trim()
-    : typeof formData.get("key") === "string"
-      ? (formData.get("key") as string)
-      : "";
-  const problem = keyProblem(kind, key);
-  if (problem) return { ok: false, message: problem };
-  submitted[keyName] = key;
-
-  const official = getAuthoredFiles() as unknown as AuthoredConfig;
-  const existing = findItem(official, kind, key);
-  if (isNew && existing) {
-    return {
-      ok: false,
-      message: `A ${kind} with that ${keyName} already exists.`,
-    };
-  }
-  if (!isNew && !existing) {
-    return {
-      ok: false,
-      message: `That ${kind} is not in the official config any more. Reset it.`,
-    };
-  }
-
-  const parsed = parseItem(kind, submitted);
-  if (parsed.errors.length > 0) {
-    return { ok: false, message: parsed.errors[0]!, errors: parsed.errors };
-  }
-  // A venue's `verified` details are not editable here; carry them over.
-  if (existing && "verified" in existing) {
-    parsed.item.verified = existing.verified;
-  }
-  const fields = changedFields(kind, existing, parsed.item);
-  delete fields[keyName];
-
-  // The table refuses more than 16 KB of saved fields; say so rather than
-  // letting the check violation surface as a server error.
-  if (new TextEncoder().encode(JSON.stringify(fields)).length > 15_000) {
-    return {
-      ok: false,
-      message: "This edit is too long to save. Shorten the longer fields.",
-    };
-  }
-  const result = await saveEdit(userId, {
-    collection: kind,
-    key,
-    isNew,
-    fields,
-  });
-  refresh(kind, key);
-  if (result === "too_many") {
-    return {
-      ok: false,
-      message: "You have too many saved edits. Reset some first.",
-    };
-  }
-  return {
-    ok: true,
-    message:
-      result === "cleared"
-        ? "No differences from the official config, so nothing is saved."
-        : "Saved. Only you see this until you open a pull request.",
-  };
+/** What the item form sends: the collection, the item's key and each field's text. */
+export interface ConfigEditInput {
+  collection: string;
+  key: string;
+  isNew: boolean;
+  /** Field name to the text in its control. */
+  values: Record<string, string>;
 }
 
-export async function resetConfigEditAction(
-  _previous: ConfigActionState,
-  formData: FormData,
-): Promise<ConfigActionState> {
+/**
+ * Saves the item form's Draft. Only the fields that differ from the official
+ * config are stored. Every shape problem comes back at once, keyed by field
+ * name, so the form can put each under its own control. `data.cleared` is true
+ * when nothing differs any more, and the saved edit is gone.
+ */
+export async function saveConfigEditAction(
+  input: ConfigEditInput,
+): Promise<ActionResult<{ cleared: boolean }>> {
   const access = await authorize(rules.officer);
-  if (!access.ok) {
-    return FORBIDDEN;
-  }
-
-  const collection = collectionSchema.safeParse(formData.get("collection"));
-  const key = z.string().min(1).max(120).safeParse(formData.get("key"));
-  if (!collection.success || !key.success) {
-    return { ok: false, message: "That request is invalid." };
-  }
+  if (!access.ok) return failure(FORBIDDEN_MESSAGE);
   const userId = access.caller.userId;
-  if (!userId) return FORBIDDEN;
-  await resetEdit(userId, collection.data, key.data);
-  refresh(collection.data, key.data);
-  return { ok: true, message: "Reset to official." };
+  if (!userId) return failure(FORBIDDEN_MESSAGE);
+
+  const collection = collectionSchema.safeParse(input.collection);
+  if (!collection.success) return failure("Unknown item type.");
+  const kind = collection.data;
+
+  const outcome = await expected(async () => {
+    const isNew = input.isNew === true;
+    const submitted: Record<string, string> = {};
+    for (const field of FIELDS[kind]) {
+      const value = input.values?.[field.name];
+      if (typeof value === "string")
+        submitted[field.name] = value.slice(0, 5000);
+    }
+    const keyName = keyField(kind);
+    const key = isNew
+      ? (submitted[keyName] ?? "").trim()
+      : typeof input.key === "string"
+        ? input.key
+        : "";
+    const problem = keyProblem(kind, key);
+    if (problem) throw new ExpectedFailure(problem, { [keyName]: problem });
+    submitted[keyName] = key;
+
+    const official = getAuthoredFiles() as unknown as AuthoredConfig;
+    const existing = findItem(official, kind, key);
+    if (isNew && existing) {
+      const message = `A ${kind} with that ${keyName} already exists.`;
+      throw new ExpectedFailure(message, { [keyName]: message });
+    }
+    if (!isNew && !existing) {
+      throw new ExpectedFailure(
+        `That ${kind} is not in the official config any more. Reset it.`,
+      );
+    }
+
+    const parsed = parseItem(kind, submitted);
+    if (parsed.errors.length > 0) {
+      throw new ExpectedFailure(parsed.errors[0]!, parsed.fieldErrors);
+    }
+    // A venue's `verified` details are not editable here; carry them over.
+    if (existing && "verified" in existing) {
+      parsed.item.verified = existing.verified;
+    }
+    const fields = changedFields(kind, existing, parsed.item);
+    delete fields[keyName];
+
+    // The table refuses more than 16 KB of saved fields; say so rather than
+    // letting the check violation surface as a server error.
+    if (new TextEncoder().encode(JSON.stringify(fields)).length > 15_000) {
+      throw new ExpectedFailure(
+        "This edit is too long to save. Shorten the longer fields.",
+      );
+    }
+    const result = await saveEdit(userId, {
+      collection: kind,
+      key,
+      isNew,
+      fields,
+    });
+    refresh(kind, key);
+    if (result === "too_many") {
+      throw new ExpectedFailure(
+        "You have too many saved edits. Reset some first.",
+      );
+    }
+    return { cleared: result === "cleared" };
+  });
+  if (!outcome.ok) return outcome;
+  return success(
+    outcome.data,
+    outcome.data?.cleared
+      ? "No differences from the official config, so nothing is saved."
+      : "Saved. Only you see this until you open a pull request.",
+  );
+}
+
+/** Resets one saved edit to the official config. A Command on the item page and the orphan list. */
+export async function resetConfigEditAction(
+  collection: string,
+  key: string,
+): Promise<ActionResult> {
+  const access = await authorize(rules.officer);
+  if (!access.ok) return failure(FORBIDDEN_MESSAGE);
+
+  const kind = collectionSchema.safeParse(collection);
+  const name = z.string().min(1).max(120).safeParse(key);
+  if (!kind.success || !name.success)
+    return failure("That request is invalid.");
+  const userId = access.caller.userId;
+  if (!userId) return failure(FORBIDDEN_MESSAGE);
+  await resetEdit(userId, kind.data, name.data);
+  refresh(kind.data, name.data);
+  return success(undefined, "Reset to official.");
 }
 
 export async function resetAllConfigEditsAction(): Promise<ConfigActionState> {

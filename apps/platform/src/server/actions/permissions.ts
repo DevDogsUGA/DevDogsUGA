@@ -2,6 +2,11 @@
 
 import { expectSession } from "~/server/auth";
 import { authorize, rules } from "~/server/auth/access";
+import {
+  expected,
+  ExpectedFailure,
+  type ActionResult,
+} from "~/lib/actionResult";
 
 import { and, asc, eq, ilike, inArray, or } from "drizzle-orm";
 import { db } from "~/server/db";
@@ -77,166 +82,171 @@ export type CreateRoleInput = {
 
 export async function createRole(
   data: CreateRoleInput,
-): Promise<{ id: string }> {
+): Promise<ActionResult<{ id: string }>> {
   const access = await authorize(rules.manageRoles);
-  if (!access.ok) {
-    await expectSession();
-    throw new Error("Not authorized: canManageRoles required");
-  }
+  if (!access.ok) return access;
 
   const ctx = {
     resolvedPermissions: access.caller.flags,
     minRank: access.caller.minRank,
   };
-  requireRankGuard(data.rank, ctx.minRank);
-  await requirePermissionGuard(data, ctx.resolvedPermissions);
+  return expected(async () => {
+    requireRankGuard(data.rank, ctx.minRank);
+    await requirePermissionGuard(data, ctx.resolvedPermissions);
 
-  const [row] = await db
-    .insert(roles)
-    .values({
-      title: data.title.trim(),
-      description: data.description?.trim() ?? "",
-      rank: data.rank,
-      color: data.color ?? null,
-      ...(data.showOnProfile !== undefined && {
-        showOnProfile: data.showOnProfile,
-      }),
-      ...(data.isLeadership !== undefined && {
-        isLeadership: data.isLeadership,
-      }),
-      canModerate: data.canModerate ?? null,
-      canManageRoles: data.canManageRoles ?? null,
-      canManageSuspensions: data.canManageSuspensions ?? null,
-      canViewAuditLog: data.canViewAuditLog ?? null,
-      canManageAttendance: data.canManageAttendance ?? null,
-      canPreviewDocs: data.canPreviewDocs ?? null,
-      canManageOAuthApps: data.canManageOAuthApps ?? null,
-      canDeleteAccounts: data.canDeleteAccounts ?? null,
-      canReviewProjectReports: data.canReviewProjectReports ?? null,
-    })
-    .returning({ id: roles.id });
+    const [row] = await db
+      .insert(roles)
+      .values({
+        title: data.title.trim(),
+        description: data.description?.trim() ?? "",
+        rank: data.rank,
+        color: data.color ?? null,
+        ...(data.showOnProfile !== undefined && {
+          showOnProfile: data.showOnProfile,
+        }),
+        ...(data.isLeadership !== undefined && {
+          isLeadership: data.isLeadership,
+        }),
+        canModerate: data.canModerate ?? null,
+        canManageRoles: data.canManageRoles ?? null,
+        canManageSuspensions: data.canManageSuspensions ?? null,
+        canViewAuditLog: data.canViewAuditLog ?? null,
+        canManageAttendance: data.canManageAttendance ?? null,
+        canPreviewDocs: data.canPreviewDocs ?? null,
+        canManageOAuthApps: data.canManageOAuthApps ?? null,
+        canDeleteAccounts: data.canDeleteAccounts ?? null,
+        canReviewProjectReports: data.canReviewProjectReports ?? null,
+      })
+      .returning({ id: roles.id });
 
-  if (!row) throw new Error("Failed to create role");
-  return { id: row.id };
+    if (!row) throw new Error("Failed to create role");
+    return { id: row.id };
+  });
 }
 
+/**
+ * Saves one role's edit-mode Draft. The rank and permission guards refuse by
+ * ExpectedFailure, so their messages come back for the save bar to show. The
+ * Discord push runs after the database write: when it fails the role is
+ * already updated, and the message says so.
+ */
 export async function updateRole(
   roleId: string,
   data: Partial<CreateRoleInput>,
-): Promise<void> {
+): Promise<ActionResult> {
   const access = await authorize(rules.manageRoles);
-  if (!access.ok) {
-    await expectSession();
-    throw new Error("Not authorized: canManageRoles required");
-  }
+  if (!access.ok) return access;
 
   const ctx = {
     resolvedPermissions: access.caller.flags,
     minRank: access.caller.minRank,
   };
 
-  const [target] = await db
-    .select({
-      rank: roles.rank,
-      roleType: roles.roleType,
-      title: roles.title,
-      color: roles.color,
-      discordRoleId: roles.discordRoleId,
-    })
-    .from(roles)
-    .where(eq(roles.id, roleId))
-    .limit(1);
-  if (!target) throw new Error("Role not found");
+  return expected(async (): Promise<undefined> => {
+    const [target] = await db
+      .select({
+        rank: roles.rank,
+        roleType: roles.roleType,
+        title: roles.title,
+        color: roles.color,
+        discordRoleId: roles.discordRoleId,
+      })
+      .from(roles)
+      .where(eq(roles.id, roleId))
+      .limit(1);
+    if (!target) throw new ExpectedFailure("Role not found");
 
-  requireRankGuard(requireCustomRole(target), ctx.minRank);
-  if (data.rank !== undefined) requireRankGuard(data.rank, ctx.minRank);
-  await requirePermissionGuard(data, ctx.resolvedPermissions);
+    requireRankGuard(requireCustomRole(target), ctx.minRank);
+    if (data.rank !== undefined) requireRankGuard(data.rank, ctx.minRank);
+    await requirePermissionGuard(data, ctx.resolvedPermissions);
 
-  await db
-    .update(roles)
-    .set({
-      ...(data.title !== undefined && { title: data.title.trim() }),
-      ...(data.description !== undefined && {
-        description: data.description.trim(),
-      }),
-      ...(data.rank !== undefined && { rank: data.rank }),
-      ...(data.color !== undefined && { color: data.color }),
-      ...(data.showOnProfile !== undefined && {
-        showOnProfile: data.showOnProfile,
-      }),
-      ...(data.isLeadership !== undefined && {
-        isLeadership: data.isLeadership,
-      }),
-      ...(data.canModerate !== undefined && { canModerate: data.canModerate }),
-      ...(data.canManageRoles !== undefined && {
-        canManageRoles: data.canManageRoles,
-      }),
-      ...(data.canManageSuspensions !== undefined && {
-        canManageSuspensions: data.canManageSuspensions,
-      }),
-      ...(data.canViewAuditLog !== undefined && {
-        canViewAuditLog: data.canViewAuditLog,
-      }),
-      ...(data.canManageAttendance !== undefined && {
-        canManageAttendance: data.canManageAttendance,
-      }),
-      ...(data.canPreviewDocs !== undefined && {
-        canPreviewDocs: data.canPreviewDocs,
-      }),
-      ...(data.canManageOAuthApps !== undefined && {
-        canManageOAuthApps: data.canManageOAuthApps,
-      }),
-      ...(data.canDeleteAccounts !== undefined && {
-        canDeleteAccounts: data.canDeleteAccounts,
-      }),
-      ...(data.canReviewProjectReports !== undefined && {
-        canReviewProjectReports: data.canReviewProjectReports,
-      }),
-    })
-    .where(eq(roles.id, roleId));
-  revalidateOfficers();
+    await db
+      .update(roles)
+      .set({
+        ...(data.title !== undefined && { title: data.title.trim() }),
+        ...(data.description !== undefined && {
+          description: data.description.trim(),
+        }),
+        ...(data.rank !== undefined && { rank: data.rank }),
+        ...(data.color !== undefined && { color: data.color }),
+        ...(data.showOnProfile !== undefined && {
+          showOnProfile: data.showOnProfile,
+        }),
+        ...(data.isLeadership !== undefined && {
+          isLeadership: data.isLeadership,
+        }),
+        ...(data.canModerate !== undefined && {
+          canModerate: data.canModerate,
+        }),
+        ...(data.canManageRoles !== undefined && {
+          canManageRoles: data.canManageRoles,
+        }),
+        ...(data.canManageSuspensions !== undefined && {
+          canManageSuspensions: data.canManageSuspensions,
+        }),
+        ...(data.canViewAuditLog !== undefined && {
+          canViewAuditLog: data.canViewAuditLog,
+        }),
+        ...(data.canManageAttendance !== undefined && {
+          canManageAttendance: data.canManageAttendance,
+        }),
+        ...(data.canPreviewDocs !== undefined && {
+          canPreviewDocs: data.canPreviewDocs,
+        }),
+        ...(data.canManageOAuthApps !== undefined && {
+          canManageOAuthApps: data.canManageOAuthApps,
+        }),
+        ...(data.canDeleteAccounts !== undefined && {
+          canDeleteAccounts: data.canDeleteAccounts,
+        }),
+        ...(data.canReviewProjectReports !== undefined && {
+          canReviewProjectReports: data.canReviewProjectReports,
+        }),
+      })
+      .where(eq(roles.id, roleId));
+    revalidateOfficers();
 
-  if (
-    target.discordRoleId !== null &&
-    (data.title !== undefined || data.color !== undefined)
-  ) {
-    try {
-      await pushRoleToDiscord({
-        id: roleId,
-        title: data.title !== undefined ? data.title.trim() : target.title,
-        color: data.color ?? target.color,
-        discordRoleId: target.discordRoleId,
-      });
-    } catch (err) {
-      throw new Error(
-        `Role updated, but Discord sync failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
+    if (
+      target.discordRoleId !== null &&
+      (data.title !== undefined || data.color !== undefined)
+    ) {
+      try {
+        await pushRoleToDiscord({
+          id: roleId,
+          title: data.title !== undefined ? data.title.trim() : target.title,
+          color: data.color ?? target.color,
+          discordRoleId: target.discordRoleId,
+        });
+      } catch (err) {
+        throw new ExpectedFailure(
+          `Role updated, but Discord sync failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
-  }
+  });
 }
 
-export async function deleteRole(roleId: string): Promise<void> {
+export async function deleteRole(roleId: string): Promise<ActionResult> {
   const access = await authorize(rules.manageRoles);
-  if (!access.ok) {
-    await expectSession();
-    throw new Error("Not authorized: canManageRoles required");
-  }
+  if (!access.ok) return access;
 
   const ctx = {
     resolvedPermissions: access.caller.flags,
     minRank: access.caller.minRank,
   };
 
-  const [target] = await db
-    .select({ rank: roles.rank, roleType: roles.roleType })
-    .from(roles)
-    .where(eq(roles.id, roleId))
-    .limit(1);
-  if (!target) throw new Error("Role not found");
+  return expected(async (): Promise<undefined> => {
+    const [target] = await db
+      .select({ rank: roles.rank, roleType: roles.roleType })
+      .from(roles)
+      .where(eq(roles.id, roleId))
+      .limit(1);
+    if (!target) throw new ExpectedFailure("Role not found");
 
-  requireRankGuard(requireCustomRole(target), ctx.minRank);
-  await db.delete(roles).where(eq(roles.id, roleId));
-  revalidateOfficers();
+    requireRankGuard(requireCustomRole(target), ctx.minRank);
+    await db.delete(roles).where(eq(roles.id, roleId));
+    revalidateOfficers();
+  });
 }
 
 /**
@@ -246,30 +256,29 @@ export async function deleteRole(roleId: string): Promise<void> {
 export async function reorderRole(
   roleId: string,
   newRank: number,
-): Promise<void> {
+): Promise<ActionResult> {
   const access = await authorize(rules.manageRoles);
-  if (!access.ok) {
-    await expectSession();
-    throw new Error("Not authorized: canManageRoles required");
-  }
+  if (!access.ok) return access;
 
   const ctx = {
     resolvedPermissions: access.caller.flags,
     minRank: access.caller.minRank,
   };
 
-  const [target] = await db
-    .select({ rank: roles.rank, roleType: roles.roleType })
-    .from(roles)
-    .where(eq(roles.id, roleId))
-    .limit(1);
-  if (!target) throw new Error("Role not found");
+  return expected(async (): Promise<undefined> => {
+    const [target] = await db
+      .select({ rank: roles.rank, roleType: roles.roleType })
+      .from(roles)
+      .where(eq(roles.id, roleId))
+      .limit(1);
+    if (!target) throw new ExpectedFailure("Role not found");
 
-  requireRankGuard(requireCustomRole(target), ctx.minRank);
-  requireRankGuard(newRank, ctx.minRank);
+    requireRankGuard(requireCustomRole(target), ctx.minRank);
+    requireRankGuard(newRank, ctx.minRank);
 
-  await db.update(roles).set({ rank: newRank }).where(eq(roles.id, roleId));
-  revalidateOfficers();
+    await db.update(roles).set({ rank: newRank }).where(eq(roles.id, roleId));
+    revalidateOfficers();
+  });
 }
 
 // ── User role assignment ───────────────────────────────────────────────────────

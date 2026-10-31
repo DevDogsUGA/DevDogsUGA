@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { failure } from "~/lib/actionResult";
 import oauthModerationAction, {
+  saveModerationEndpoint,
   type OAuthModerationState,
 } from "~/server/actions/oauthModeration";
 import type { ClientModeration } from "~/server/loaders/oauthModeration";
@@ -11,6 +13,7 @@ import Input from "~/components/Input";
 import Select from "~/components/Select";
 import Badge from "~/ui/badge";
 import Callout from "~/ui/callout";
+import SettingsField from "~/ui/settings-field";
 
 const INITIAL: OAuthModerationState = {
   clientId: null,
@@ -34,6 +37,11 @@ const ACTIONS = [
  * production client for a holder of `canManageOAuthApps`): the signing secret, where
  * decisions are delivered, the sandbox reports their app has filed, and a
  * button that sends a real signed delivery to their endpoint.
+ *
+ * The endpoint URL is a Draft field on the page's save bar, so the page needs a
+ * `SettingsFormProvider` and a `SettingsSaveBar`. Turning moderation on,
+ * rotating the secret and sending a test action stay Commands that act at once;
+ * the one-time secret reveal is theirs.
  *
  * A development client's reports never reach the moderators; they land here.
  */
@@ -121,33 +129,7 @@ export default function OAuthModerationField({
                   </div>
                 )}
 
-                <form action={dispatch} className="flex flex-col gap-2">
-                  <input type="hidden" name="intent" value="set-endpoint" />
-                  <input
-                    type="hidden"
-                    name="clientId"
-                    value={client.clientId}
-                  />
-                  <label className="field">
-                    <span className="label">Endpoint URL</span>
-                    <Input
-                      mono
-                      name="endpointUrl"
-                      type="url"
-                      defaultValue={client.endpointUrl ?? ""}
-                      placeholder="https://your-project.supabase.co/functions/v1/platform-moderation"
-                    />
-                  </label>
-                  <div className="flex flex-wrap gap-3">
-                    <FormButton
-                      theme="black"
-                      type="submit"
-                      disabled={isPending}
-                    >
-                      Save endpoint
-                    </FormButton>
-                  </div>
-                </form>
+                <EndpointField client={client} />
 
                 <form action={dispatch}>
                   <input type="hidden" name="intent" value="rotate-secret" />
@@ -279,5 +261,51 @@ export default function OAuthModerationField({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Where a client's decisions are delivered, as a Draft field `moderationEndpoint:<clientId>`.
+ * The server's `endpointUrl` error is remapped to this field's id so it lands
+ * under the input.
+ */
+function EndpointField({ client }: { client: ClientModeration }) {
+  const router = useRouter();
+  const id = `moderationEndpoint:${client.clientId}`;
+  const [saved, setSaved] = useState(client.endpointUrl ?? "");
+  const [draft, setDraft] = useState(saved);
+
+  return (
+    <SettingsField
+      id={id}
+      label={`${client.label} endpoint`}
+      draft={draft}
+      isDirty={draft !== saved}
+      error={null}
+      reset={() => setDraft(saved)}
+      save={async () => {
+        const result = await saveModerationEndpoint(client.clientId, draft);
+        if (result.ok) {
+          const url = draft.trim();
+          setSaved(url);
+          setDraft(url);
+          router.refresh();
+          return result;
+        }
+        const message = result.fieldErrors?.endpointUrl;
+        return message ? failure(result.message, { [id]: message }) : result;
+      }}
+    >
+      <label className="field">
+        <span className="label">Endpoint URL</span>
+        <Input
+          mono
+          type="url"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="https://your-project.supabase.co/functions/v1/platform-moderation"
+        />
+      </label>
+    </SettingsField>
   );
 }

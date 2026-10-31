@@ -82,3 +82,21 @@ describe("toFormText", () => {
     expect(parseItem("meeting", text).item).toEqual(item);
   });
 });
+
+describe("parseItem fieldErrors", () => {
+  it("keys every error by its field, not only the first", () => {
+    const { errors, fieldErrors } = parseItem(
+      "meeting",
+      meeting({ startsAt: "later", endsAt: "" }),
+    );
+    expect(errors).toHaveLength(2);
+    expect(fieldErrors).toEqual({
+      startsAt: "Starts is not a valid date and time.",
+      endsAt: "Ends is required.",
+    });
+  });
+
+  it("is empty for a clean item", () => {
+    expect(parseItem("meeting", meeting()).fieldErrors).toEqual({});
+  });
+});
