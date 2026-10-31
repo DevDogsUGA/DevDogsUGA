@@ -1,7 +1,9 @@
 import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import ScheduleDeletionPanel from "~/components/AccountDeletion/ScheduleDeletionPanel";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import ReportListItem from "~/components/ReportListItem";
 import { StandingBadge, standingOf } from "~/components/StatusBadges";
 import UserRoleForm from "~/components/UserRoleForm";
@@ -40,7 +42,7 @@ export default async function UserModerationPage({
     : null;
 
   return (
-    <ConsoleShell current="/console/moderation">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         crumbs={[
           { label: "Moderation", href: "/console/moderation" },
@@ -113,6 +115,6 @@ export default async function UserModerationPage({
           </ul>
         )}
       </Panel>
-    </ConsoleShell>
+    </AppShell>
   );
 }

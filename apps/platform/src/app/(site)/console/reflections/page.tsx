@@ -1,6 +1,8 @@
 import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import ReflectionSettingsCard from "~/components/ReflectionSettingsCard";
 
 import { getReflectionSettings } from "~/server/reflections/settings";
@@ -16,12 +18,12 @@ export default async function ReflectionsPage() {
   const settings = await getReflectionSettings();
 
   return (
-    <ConsoleShell current="/console/reflections">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Reflections"
         description="Rules for every Experiential Learning (EL) reflection, club-wide. Members see them on their attendance page."
       />
       <ReflectionSettingsCard settings={settings} />
-    </ConsoleShell>
+    </AppShell>
   );
 }

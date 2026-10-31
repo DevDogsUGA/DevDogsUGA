@@ -2,7 +2,9 @@ import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import ReportCard from "~/components/Projects/ReportCard";
 import ReviewForm from "~/components/Projects/ReviewForm";
 import "~/components/Projects/projects.css";
@@ -47,7 +49,7 @@ export default async function ProjectsConsolePage() {
   ]);
 
   return (
-    <ConsoleShell current="/console/projects">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Projects"
         description="Approve project proposals and assign advisors, and review members' project reports: approve them, adjusting the hours if needed, or return them with a note. Every decision is written to the audit log."
@@ -109,6 +111,6 @@ export default async function ProjectsConsolePage() {
           )}
         </Panel>
       )}
-    </ConsoleShell>
+    </AppShell>
   );
 }

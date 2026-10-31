@@ -2,6 +2,7 @@ import type { TerminalRoute } from "./define";
 import type { TerminalPattern } from "./paths";
 import { accountDeletion, consoleApps } from "./routes/account";
 import {
+  browserNotice,
   brandGraphics,
   consoleBadges,
   consoleData,
@@ -28,6 +29,24 @@ import { docs, help, helpThread, kitGallery } from "./routes/misc";
  * here gets the generic response; see `cloudflare/terminal.ts`.
  */
 export const TERMINAL_ROUTES = {
+  "/settings/profile": browserNotice("Profile"),
+  "/settings/accounts": browserNotice("Connected accounts"),
+  "/settings/oauth": browserNotice("OAuth apps"),
+  "/settings/oauth/new": browserNotice("New OAuth app"),
+  "/attendance": browserNotice("Attendance passport"),
+  "/preview/docs": browserNotice("Docs preview"),
+  "/preview/docs/:project": browserNotice("Docs preview"),
+  "/preview/docs/:project/*": browserNotice("Docs preview"),
+  "/console/attendance": browserNotice("Meetings"),
+  "/console/moderation": browserNotice("Moderation"),
+  "/console/moderation/users/:userId": browserNotice("Member standing"),
+  "/console/moderation/:reportId": browserNotice("Report review"),
+  "/console/audit-log": browserNotice("Audit log"),
+  "/console/audit-log/:eventId": browserNotice("Audit event"),
+  "/console/permissions": browserNotice("Permissions"),
+  "/console/reflections": browserNotice("Reflections"),
+  "/console/qr": browserNotice("QR codes"),
+
   "/": home,
   "/auth/failed": signInProblem,
   "/oauth/connect": cliApproval,

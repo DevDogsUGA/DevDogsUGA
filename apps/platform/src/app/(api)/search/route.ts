@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCallerContext } from "~/server/auth/permissions";
-import { expectSession } from "~/server/auth";
+import { loadCaller } from "~/server/auth/access";
 import { buildAppSearchEntries } from "~/server/search/appEntries";
 import { searchDocs } from "~/server/search/docsSearch";
 import { searchPublishedDocs } from "~/server/search/publishedDocsSearch";
@@ -29,16 +28,8 @@ export async function GET(request: Request) {
   const query = (new URL(request.url).searchParams.get("query") ?? "").trim();
   if (!query) return NextResponse.json([]);
 
-  const userId = await expectSession().catch(() => null);
-  const caller = userId
-    ? await getCallerContext(userId).catch(() => null)
-    : null;
-
-  const appEntries = buildAppSearchEntries(
-    caller?.resolvedPermissions ?? null,
-    userId !== null,
-    caller?.isLeader ?? false,
-  );
+  const caller = await loadCaller();
+  const appEntries = buildAppSearchEntries(caller);
 
   const pages = matchEntries(appEntries, query, 8);
   const [docs, publishedDocs, forum] = await Promise.all([

@@ -1,7 +1,9 @@
 import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import Link from "next/link";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 
 import { searchMembersForBadges } from "~/server/loaders/badges";
 import { PageHeading, Panel } from "~/ui/app-shell";
@@ -29,7 +31,7 @@ export default async function BadgesConsolePage({
   const results = q ? await searchMembersForBadges(q) : [];
 
   return (
-    <ConsoleShell current="/console/badges">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Badges"
         description="Award Workshop Host, Guide Author, Mentor and Event Organizer badges with a public citation, and withdraw any badge with a reason. Workshop completed and First Merge are awarded automatically."
@@ -61,6 +63,6 @@ export default async function BadgesConsolePage({
             </ul>
           ))}
       </Panel>
-    </ConsoleShell>
+    </AppShell>
   );
 }

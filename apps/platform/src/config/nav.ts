@@ -2,8 +2,6 @@ import type { StaticImageData } from "next/image";
 import gdgFavicon from "~/assets/favicons/gdg.png";
 import googleFormsFavicon from "~/assets/favicons/google-forms.png";
 import involvementFavicon from "~/assets/favicons/involvement-network.png";
-import { mayUseGraphics } from "~/lib/graphicsAccess";
-import type { ResolvedPermissions } from "~/server/auth/permissions";
 import type * as icons from "./icons";
 import { SOCIALS } from "./socials";
 
@@ -35,15 +33,6 @@ export interface NavItem {
   href: string;
   icon: NavIcon;
   description?: string;
-}
-
-export interface ConsoleItem extends NavItem {
-  /**
-   * The permission flag that reveals this item, `isLeader` for pages any
-   * officer (holder of a leadership role) may open, or `graphics` for the
-   * graphics pages (see `mayUseGraphics`).
-   */
-  permission: keyof ResolvedPermissions | "isLeader" | "graphics";
 }
 
 export interface SwitcherEntry {
@@ -126,177 +115,6 @@ export const SEARCH_ONLY_PAGES: NavItem[] = [
   },
 ];
 
-/**
- * Items in the Console dropdown. Each is gated by the permission that the page
- * itself enforces server-side. Keep these in sync with the page loaders.
- */
-export const CONSOLE_ITEMS: ConsoleItem[] = [
-  {
-    label: "Attendance",
-    href: "/console/attendance",
-    icon: "QrCodeIcon",
-    permission: "canManageAttendance",
-    description:
-      "Present live meeting QR codes, numeric codes, and attendance totals.",
-  },
-  {
-    label: "Graphics",
-    href: "/console/graphics",
-    icon: "ImageIcon",
-    permission: "graphics",
-    description:
-      "Club logos, banners and app icons to download. Each meeting's page has its own graphics.",
-  },
-  {
-    label: "Reflections",
-    href: "/console/reflections",
-    icon: "NotePencilIcon",
-    permission: "canManageAttendance",
-    description: "Set the word minimum and submission window for reflections.",
-  },
-  {
-    label: "Schedule editor",
-    href: "/console/meetings",
-    icon: "CalendarDotsIcon",
-    permission: "isLeader",
-    description:
-      "Propose changes to meetings, workshops and venues. Edits are saved privately; Open PR sends them to GitHub for review.",
-  },
-  {
-    label: "Badges",
-    href: "/console/badges",
-    icon: "SealCheckIcon",
-    permission: "isLeader",
-    description:
-      "Award Workshop Host, Guide Author, Mentor and Event Organizer badges with a public citation, or withdraw one.",
-  },
-  {
-    label: "Data tools",
-    href: "/console/data",
-    icon: "UploadSimpleIcon",
-    permission: "canManageAttendance",
-    description:
-      "Import attendance sheets and the Involvement roster from CSV, with a preview before anything changes.",
-  },
-  {
-    label: "QR Codes",
-    href: "/console/qr",
-    icon: "QrCodeIcon",
-    permission: "canManageAttendance",
-    description:
-      "Deprecated: use `backstage qr`. Generate branded QR codes for attendance, posters, and other club materials.",
-  },
-  {
-    label: "Moderation",
-    href: "/console/moderation",
-    icon: "ShieldIcon",
-    permission: "canModerate",
-    description:
-      "Review content reports filed against community profiles and resolve them with the appropriate action.",
-  },
-  {
-    label: "Audit Log",
-    href: "/console/audit-log",
-    icon: "FileTextIcon",
-    permission: "canViewAuditLog",
-    description:
-      "A record of moderation actions and content reports filed across all production OAuth clients.",
-  },
-  {
-    label: "Apps",
-    href: "/console/apps",
-    icon: "AppWindowIcon",
-    permission: "canManageOAuthApps",
-    description:
-      "Publish OAuth apps, return them to Testing, transfer them to DevDogs and choose which skip the consent screen.",
-  },
-  {
-    label: "Docs preview",
-    href: "/preview/docs",
-    icon: "BookOpenIcon",
-    permission: "canPreviewDocs",
-    description:
-      "Read docs pages scheduled for later, marked with when they go live. Anyone without access gets a 404.",
-  },
-  {
-    label: "Permissions",
-    href: "/console/permissions",
-    icon: "LockIcon",
-    permission: "canManageRoles",
-    description:
-      "Every member starts with no permissions; President holds all of them and is assigned on Discord.",
-  },
-];
-
-/** Signed-in-only pages listed at the top level of the profile popover. */
-export const ACCOUNT_ITEMS: NavItem[] = [
-  {
-    label: "Attendance",
-    href: "/attendance",
-    icon: "StarIcon",
-    description:
-      "Check in with the meeting code and track your participation passport.",
-  },
-  {
-    label: "Profile",
-    href: "/settings/profile",
-    icon: "UserIcon",
-    description:
-      "Manage your details, what your public profile shows, and your handle.",
-  },
-  {
-    label: "Connected accounts",
-    href: "/settings/accounts",
-    icon: "SealCheckIcon",
-    description:
-      "Link GitHub, Discord and LinkedIn, and see what verification needs.",
-  },
-  {
-    label: "OAuth apps",
-    href: "/settings/oauth",
-    icon: "KeyIcon",
-    description:
-      "Set up a local OAuth client to test DevDogs sign-in from your own project.",
-  },
-];
-
-/**
- * Every signed-in-only page, in menu order. The profile popover splits these
- * back apart. Search and the mobile sheet want one flat list and read this, so
- * a page added to either half above is picked up by both without a second edit.
- */
-export const PROFILE_ITEMS: NavItem[] = [...ACCOUNT_ITEMS];
-
-/**
- * A named sub-menu inside the profile popover.
- *
- * `iconBg` is the fill behind every row's mark, so a sub-menu's rows read as
- * one set. Per group rather than per item, since these pages have no identity
- * of their own to carry a colour for.
- */
-export interface NavGroup {
-  label: string;
-  iconBg: string;
-  items: NavItem[];
-  /**
-   * Split the panel into two columns where the viewport is wide enough to
-   * take it. For a group long enough to want it, like the Console's six, one
-   * 20rem column of described rows is a scroll masquerading as a menu.
-   */
-  twoColumn?: boolean;
-}
-
-/**
- * The Console sub-menu's label and fill. Its items are missing because they are
- * permission-filtered per request: `visibleConsoleItems` resolves them
- * server-side and they reach the popover as props.
- */
-export const CONSOLE_GROUP: Omit<NavGroup, "items"> = {
-  label: "Console",
-  iconBg: "bg-[var(--brand-kind-info-6)]",
-  twoColumn: true,
-};
-
 /** Primary call-to-action in the app switcher. */
 export const SWITCHER_PRIMARY: SwitcherEntry = {
   label: "Join DevDogs",
@@ -359,21 +177,3 @@ export const SOCIAL_LINKS: SwitcherEntry[] = [
     external: true,
   },
 ];
-
-/** Filters CONSOLE_ITEMS down to what the caller may see. */
-export function visibleConsoleItems(
-  permissions: ResolvedPermissions | null,
-  isLeader = false,
-): ConsoleItem[] {
-  if (!permissions) return [];
-  return CONSOLE_ITEMS.filter((item) =>
-    item.permission === "isLeader"
-      ? isLeader
-      : item.permission === "graphics"
-        ? mayUseGraphics({
-            isLeader,
-            canManageAttendance: permissions.canManageAttendance,
-          })
-        : permissions[item.permission],
-  );
-}

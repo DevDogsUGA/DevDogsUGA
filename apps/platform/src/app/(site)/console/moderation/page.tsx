@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import ExternalAppsField from "~/components/ExternalAppsField";
 import ModerationDeliveries from "~/components/ModerationDeliveries";
 import ReportListItem from "~/components/ReportListItem";
@@ -25,7 +27,7 @@ export default async function ModerationDashboard() {
   } = await getModerationPageData();
 
   return (
-    <ConsoleShell current="/console/moderation">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Moderation"
         description="Review content reports filed against community profiles and resolve them with the appropriate action."
@@ -100,6 +102,6 @@ export default async function ModerationDashboard() {
       >
         <ExternalAppsField apps={externalApps} canRegister={canRegisterApps} />
       </Panel>
-    </ConsoleShell>
+    </AppShell>
   );
 }

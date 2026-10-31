@@ -4,7 +4,9 @@ import { PresentationIcon, UploadSimpleIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import OpenDisplayLink from "~/components/AttendanceDisplay/OpenDisplayLink";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import {
   AddAttendeeForm,
   InviteActions,
@@ -102,7 +104,7 @@ export default async function MeetingDetailPage({
   const editable = isMeetingEditable(meeting, now);
 
   return (
-    <ConsoleShell current="/console/attendance">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         crumbs={[
           { label: "Meetings", href: "/console/attendance" },
@@ -330,6 +332,6 @@ export default async function MeetingDetailPage({
           ))}
         </ul>
       )}
-    </ConsoleShell>
+    </AppShell>
   );
 }

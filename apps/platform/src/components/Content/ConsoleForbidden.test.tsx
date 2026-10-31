@@ -55,7 +55,7 @@ describe("ConsoleForbidden", () => {
     const el = await ConsoleForbidden();
     expect(el.type).toBe(AccessDenied);
     expect(el.props).toEqual({
-      section: "Audit Log",
+      section: "Audit log",
       consoleHref: "/console/attendance",
     });
   });

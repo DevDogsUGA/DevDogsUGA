@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DotsNineIcon, ListIcon } from "@phosphor-icons/react/ssr";
+import {
+  DotsNineIcon,
+  HouseIcon,
+  ListIcon,
+  SignOutIcon,
+} from "@phosphor-icons/react/ssr";
 import { AppSwitcherTrigger } from "~/components/AppSwitcher/provider";
 import * as icons from "~/config/icons";
-import {
-  PUBLIC_LINKS,
-  SOCIAL_LINKS,
-  type ConsoleItem,
-  type NavItem,
-} from "~/config/nav";
+import { PUBLIC_LINKS, SOCIAL_LINKS } from "~/config/nav";
 import {
   Sheet,
   SheetContent,
@@ -19,57 +19,24 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "~/ui/sheet";
-import { SideNav, SideNavGroup, SideNavLink } from "~/ui/side-nav";
+import { DASHBOARD_HOME } from "~/config/dashboard";
+import { Button } from "~/ui/button";
+import signOut from "~/server/actions/signOut";
+import { useClearMe, type NavUserClientData } from "./NavUserProvider";
 import "./topnav.css";
-
-interface Props {
-  consoleItems: ConsoleItem[];
-  profileItems: NavItem[];
-  signedIn: boolean;
-}
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-/** A captioned run of icon links, in the kit's side-nav look. */
-function SheetSection({
-  title,
-  items,
-  pathname,
-  onNavigate,
-}: {
-  title: string;
-  items: NavItem[];
-  pathname: string;
-  onNavigate: () => void;
-}) {
-  return (
-    <SideNav aria-label={title}>
-      <SideNavGroup>{title}</SideNavGroup>
-      {items.map((item) => {
-        const Icon = icons[item.icon];
-        return (
-          <SideNavLink
-            key={item.href}
-            href={item.href}
-            icon={<Icon weight="bold" />}
-            active={isActive(pathname, item.href)}
-            onClick={onNavigate}
-          >
-            {item.label}
-          </SideNavLink>
-        );
-      })}
-    </SideNav>
-  );
-}
-
+/** Public navigation and the same member menu as the popover. */
 export default function MobileSheet({
-  consoleItems,
-  profileItems,
-  signedIn,
-}: Props) {
+  user,
+}: {
+  user: NavUserClientData | null;
+}) {
+  const signedIn = user !== null;
+  const clearMe = useClearMe();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -120,22 +87,43 @@ export default function MobileSheet({
             })}
           </nav>
 
-          {consoleItems.length > 0 && (
-            <SheetSection
-              title="Console"
-              items={consoleItems}
-              pathname={pathname}
-              onNavigate={close}
-            />
-          )}
-
-          {signedIn && (
-            <SheetSection
-              title="You"
-              items={profileItems}
-              pathname={pathname}
-              onNavigate={close}
-            />
+          {user && (
+            <>
+              <div className="tn-who">
+                <b>{user.profile.preferredName}</b>
+                <span>{user.highestRole.title}</span>
+              </div>
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+              >
+                <Link href={DASHBOARD_HOME} onClick={close}>
+                  <HouseIcon weight="bold" />
+                  Dashboard
+                </Link>
+              </Button>
+              <form
+                action={(data) => {
+                  const signingOut = signOut(data);
+                  clearMe();
+                  close();
+                  return signingOut;
+                }}
+              >
+                <input name="callbackPath" value="/" type="hidden" />
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                >
+                  <SignOutIcon weight="bold" />
+                  Sign out
+                </Button>
+              </form>
+            </>
           )}
 
           {!signedIn && (

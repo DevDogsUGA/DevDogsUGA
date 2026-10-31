@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import ModerationDeliveries from "~/components/ModerationDeliveries";
 import ReportActionForm from "~/components/ReportActionForm";
 import { StandingBadge, standingOf } from "~/components/StatusBadges";
@@ -47,7 +49,7 @@ export default async function ReportDetail({
   } = await getReportDetailData(reportId);
 
   return (
-    <ConsoleShell current="/console/moderation">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         crumbs={[
           { label: "Moderation", href: "/console/moderation" },
@@ -192,6 +194,6 @@ export default async function ReportDetail({
           <ModerationDeliveries deliveries={deliveries} />
         </Panel>
       )}
-    </ConsoleShell>
+    </AppShell>
   );
 }

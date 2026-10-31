@@ -5,7 +5,10 @@ import EmailField from "~/components/EmailField";
 import GithubField from "~/components/ConnectedAccountField/GithubField";
 import LinkedinField from "~/components/ConnectedAccountField/LinkedinField";
 import SettingsAnchor from "~/components/Settings/SettingsAnchor";
-import SettingsShell from "~/components/Settings/SettingsShell";
+import "~/components/Settings/settings.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
+import { requireSignedIn } from "~/server/dashboard/requireSignedIn";
 import VerificationStatusField from "~/components/VerificationStatusField";
 import ConnectedAppsField from "~/components/Settings/ConnectedAppsField";
 import { getProfilePageData } from "~/server/loaders/console";
@@ -19,8 +22,6 @@ export const metadata: Metadata = {
   title: "Connected accounts | Settings | DevDogs",
   robots: { index: false },
 };
-
-const PATH = "/settings/accounts";
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -119,9 +120,10 @@ export default async function AccountsPage({
 }: {
   searchParams: Promise<Params>;
 }) {
+  await requireSignedIn("/settings/accounts");
   const params = await searchParams;
   return (
-    <SettingsShell current={PATH}>
+    <AppShell side={<AppSideNav />} className="settings-shell">
       <PageHeading
         title="Connected accounts"
         description={
@@ -140,6 +142,6 @@ export default async function AccountsPage({
       <Suspense fallback={<Skeleton className="h-64 w-full max-w-[720px]" />}>
         <AccountsContent />
       </Suspense>
-    </SettingsShell>
+    </AppShell>
   );
 }
