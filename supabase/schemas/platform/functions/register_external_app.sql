@@ -23,7 +23,7 @@ begin
   end if;
 
   -- A client GoTrue has soft-deleted (`deleted_at`) is gone for good, and one
-  -- with no registration row was made outside /tools/oauth and has no tier. Both
+  -- with no registration row was made outside /settings/oauth and has no tier. Both
   -- would be registered as a production app they can never prove they are.
   if exists (
     select 1 from "auth"."oauth_clients" c

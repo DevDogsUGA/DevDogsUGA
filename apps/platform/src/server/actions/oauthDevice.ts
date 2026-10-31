@@ -17,7 +17,7 @@ import { supabaseAdmin } from "~/supabase/admin";
 
 /**
  * The consent step of the `devtools oauth` device-code handoff. Both
- * actions take the same `userCode` hidden field `~/app/(site)/tools/oauth/
+ * actions take the same `userCode` hidden field `~/app/(auth)/oauth/
  * device/page.tsx`'s consent card posts back -- the page has already looked
  * the row up once to render the label/callback, but a form POST is a
  * separate request, so this re-validates and re-looks-up rather than
@@ -28,7 +28,7 @@ const deviceActionSchema = zfd.formData({
 });
 
 function devicePath(userCode: string): string {
-  return `/tools/oauth/device?${new URLSearchParams({ user_code: formatUserCode(userCode) }).toString()}`;
+  return `/oauth/device?${new URLSearchParams({ user_code: formatUserCode(userCode) }).toString()}`;
 }
 
 export async function denyDevice(formData: FormData): Promise<void> {

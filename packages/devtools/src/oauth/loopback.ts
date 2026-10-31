@@ -1,7 +1,7 @@
 /**
  * The loopback HTTP listener the one-click connect flow waits on.
  *
- * `devtools oauth`'s connect flow opens the platform's `/tools/oauth/connect`
+ * `devtools oauth`'s connect flow opens the platform's `/oauth/connect`
  * page in the contributor's browser, and the platform redirects back to a
  * `redirect_uri` of `http://127.0.0.1:<port>/callback` this process itself
  * is listening on — a random, ephemeral port, requested by passing `0` to

@@ -47,7 +47,7 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/01-rea
 
 ## Register Your App with DevDogs
 
-1. Go to **devdogsuga.org/tools/oauth** and create a client
+1. Go to **devdogsuga.org/settings/oauth** and create a client
 1. Redirect URI: your **Project URL** + `/auth/v1/callback`
    - For example, `https://abcdefghij.supabase.co/auth/v1/callback`
 1. Copy the **client ID** and **client secret**
@@ -67,8 +67,8 @@ git switch --discard-changes -C <github-username>/02-supabase 02-supabase/01-rea
    | Identifier    | `custom:devdogsuga`                                                         |
    | Name          | `DevDogs`                                                                   |
    | Issuer URL    | `https://crhqsbngqmwtsplabmhj.supabase.co/auth/v1`                          |
-   | Client ID     | [Copy from your OAuth page](https://devdogsuga.org/tools/oauth#credentials) |
-   | Client Secret | [Copy from your OAuth page](https://devdogsuga.org/tools/oauth#credentials) |
+   | Client ID     | [Copy from your OAuth page](https://devdogsuga.org/settings/oauth#credentials) |
+   | Client Secret | [Copy from your OAuth page](https://devdogsuga.org/settings/oauth#credentials) |
    | Scopes        | `openid email profile`                                                      |
 
    :::

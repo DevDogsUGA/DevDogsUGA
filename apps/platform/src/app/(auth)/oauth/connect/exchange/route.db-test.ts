@@ -13,7 +13,7 @@ import { supabaseAdmin } from "~/supabase/admin";
 import { POST } from "./route";
 
 /**
- * `POST /tools/oauth/connect/exchange` against a real database and a real
+ * `POST /oauth/connect/exchange` against a real database and a real
  * local GoTrue -- the code table's whole point is the race-free
  * delete-then-validate in `route.ts`, which is exactly the kind of thing a
  * mocked db would let slip past unnoticed.
@@ -61,14 +61,11 @@ async function errorBody(response: Response): Promise<string> {
 }
 
 async function postExchange(body: unknown) {
-  const request = new NextRequest(
-    "http://localhost/tools/oauth/connect/exchange",
-    {
-      method: "POST",
-      body: JSON.stringify(body),
-      headers: { "content-type": "application/json" },
-    },
-  );
+  const request = new NextRequest("http://localhost/oauth/connect/exchange", {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { "content-type": "application/json" },
+  });
   return POST(request);
 }
 
@@ -119,7 +116,7 @@ afterAll(async () => {
   await cleanupClientsFor(USER_ID);
 });
 
-describe("POST /tools/oauth/connect/exchange", () => {
+describe("POST /oauth/connect/exchange", () => {
   it("succeeds for a valid code and verifier, and consumes the code", async () => {
     const { verifier, challenge } = freshVerifier();
     const code = await insertCode({ codeChallenge: challenge });

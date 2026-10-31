@@ -39,7 +39,7 @@ export interface ModerationClientOptions {
   baseUrl: string;
   /** The app's OAuth client id. */
   clientId: string;
-  /** The client's `whsec_` signing secret from `/tools/oauth`. */
+  /** The client's `whsec_` signing secret from `/settings/oauth`. */
   secret: string;
   fetch?: typeof fetch;
 }

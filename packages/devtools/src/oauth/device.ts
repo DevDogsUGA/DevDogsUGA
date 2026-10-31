@@ -6,10 +6,10 @@
  * `transport.ts`) — this trades a short user code, approved in a browser
  * running anywhere, for the same OAuth client credentials `exchange.ts`
  * hands back. The server side of this (TASK-352) lives in the DevDogsUGA
- * repo, at `apps/platform/src/app/(site)/tools/oauth/device/` — this is the
+ * repo, at `apps/platform/src/app/(auth)/oauth/device/` — this is the
  * fixed wire contract the two sides agreed on:
  *
- *   POST <platform>/tools/oauth/device/code
+ *   POST <platform>/oauth/device/code
  *   { "label", "callback_uri" }
  *
  *   200 { "device_code", "user_code", "verification_uri",
@@ -17,7 +17,7 @@
  *   400 { "error": "invalid_request", "error_description" }
  *   429 { "error": "rate_limited" }  (+ Retry-After header)
  *
- *   POST <platform>/tools/oauth/device/token
+ *   POST <platform>/oauth/device/token
  *   { "device_code" }
  *
  *   200 { "client_id", "client_secret", "issuer" }
@@ -77,11 +77,11 @@ export class PollError extends Error {
 }
 
 function deviceCodeUrl(platformUrl: string): string {
-  return `${platformUrl.replace(/\/+$/, "")}/tools/oauth/device/code`;
+  return `${platformUrl.replace(/\/+$/, "")}/oauth/device/code`;
 }
 
 function deviceTokenUrl(platformUrl: string): string {
-  return `${platformUrl.replace(/\/+$/, "")}/tools/oauth/device/token`;
+  return `${platformUrl.replace(/\/+$/, "")}/oauth/device/token`;
 }
 
 function retryAfterSecondsFrom(response: Response): number | undefined {
@@ -206,7 +206,7 @@ function networkBackoffSeconds(attempt: number): number {
 }
 
 /**
- * Polls `.../tools/oauth/device/token` on the server's cadence until the
+ * Polls `.../oauth/device/token` on the server's cadence until the
  * user approves (or denies) the request in their browser, the device code
  * expires, or the server rejects it outright.
  *

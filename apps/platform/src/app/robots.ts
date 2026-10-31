@@ -28,8 +28,7 @@ export default function robots(): MetadataRoute.Robots {
         "/console", // officer tools; every page checks a permission flag
         "/account", // the viewer's own profile
         "/settings", // the viewer's own settings
-        "/oauth", // /oauth/consent, mid-authorization-flow only
-        "/tools", // /tools/oauth, a member's own test client
+        "/oauth", // consent and CLI approval flows
         "/preview", // /preview/docs: scheduled docs, 404 without canPreviewDocs
 
         // (api) route handlers. None render HTML, and several are guarded by

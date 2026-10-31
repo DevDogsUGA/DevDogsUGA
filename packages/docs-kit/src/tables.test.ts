@@ -29,7 +29,7 @@ describe("copyable table cells", () => {
   it("leaves prose, links and several code spans alone", async () => {
     for (const value of [
       "From your client",
-      "[Your OAuth page](https://devdogsuga.org/tools/oauth)",
+      "[Your OAuth page](https://devdogsuga.org/settings/oauth)",
       "`openid` and `email`",
     ]) {
       expect(await renderBody(table(value), ctx)).not.toContain(

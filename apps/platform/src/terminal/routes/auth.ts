@@ -40,3 +40,24 @@ export const signInProblem = terminal(PUBLIC, ({ search }) => {
     body,
   });
 });
+
+/** CLI approvals need a signed-in browser; the terminal exposes no request details. */
+export const cliApproval = terminal(PUBLIC, ({ path, search }) =>
+  page({
+    banner: "DEVDOGS",
+    accent: "cyan",
+    aside: ["sign in required"],
+    command: "oauth --connect",
+    body: [
+      {
+        type: "notice",
+        notice: {
+          tone: "info",
+          title: "Approve the CLI in your browser",
+          text: "Sign in to review and approve the connection requested by your CLI.",
+          url: `${SITE}${path}${search.size ? `?${search.toString()}` : ""}`,
+        },
+      },
+    ],
+  }),
+);
