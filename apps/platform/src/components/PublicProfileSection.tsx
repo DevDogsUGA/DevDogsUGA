@@ -13,17 +13,25 @@ import {
 import setHandle from "~/server/actions/profileHandle";
 import {
   getMyHandleChoices,
-  revalidateMyPublicProfile,
   setPublicProfileField,
+  updateAccountVisibility,
+  type AccountVisibilityInput,
   type PublicProfileSettings,
 } from "~/server/actions/publicProfile";
-import { createClient } from "~/supabase/client";
+import { ExpectedFailure } from "~/lib/actionResult";
 import type { HandleChoices } from "~/server/loaders/publicProfiles";
 import Callout from "~/ui/callout";
 import { FieldError, useSettingsField } from "~/ui/settings-form";
 import Toggle from "~/ui/switch";
 
 type Provider = "github" | "discord" | "linkedin";
+
+/** The `platform.profile` switch behind each connected account's row. */
+const SHOW_COLUMN = {
+  github: "showGithub",
+  discord: "showDiscord",
+  linkedin: "showLinkedin",
+} as const satisfies Record<Provider, keyof AccountVisibilityInput>;
 
 /** One connected account's row of the "on your profile" group. */
 export interface AccountSwitch {
@@ -85,11 +93,9 @@ function Row({
 export default function PublicProfileSection({
   settings,
   accounts,
-  userId,
 }: {
   settings: PublicProfileSettings;
   accounts: AccountSwitch[];
-  userId: string;
 }) {
   const [saved, setSaved] = useState({
     switches: settings.switches,
@@ -148,27 +154,32 @@ export default function PublicProfileSection({
           };
         }
 
-        for (const account of accounts) {
-          const provider = account.provider;
-          if (shown[provider] === next.accounts[provider]) continue;
-          const column =
-            provider === "github"
-              ? { showGithub: shown[provider] }
-              : provider === "discord"
-                ? { showDiscord: shown[provider] }
-                : { showLinkedin: shown[provider] };
-          const { error } = await createClient()
-            .from("profile")
-            .update(column)
-            .eq("userId", userId);
-          if (error) throw error;
+        const changedAccounts = accounts.filter(
+          ({ provider }) => shown[provider] !== next.accounts[provider],
+        );
+        if (changedAccounts.length > 0) {
+          const result = await updateAccountVisibility(
+            Object.fromEntries(
+              changedAccounts.map(({ provider }) => [
+                SHOW_COLUMN[provider],
+                shown[provider],
+              ]),
+            ),
+          );
+          if (!result.ok)
+            throw new ExpectedFailure(result.message, result.fieldErrors);
           next = {
             ...next,
-            accounts: { ...next.accounts, [provider]: shown[provider] },
+            accounts: {
+              ...next.accounts,
+              ...Object.fromEntries(
+                changedAccounts.map(({ provider }) => [
+                  provider,
+                  shown[provider],
+                ]),
+              ),
+            },
           };
-        }
-        if (next.accounts !== saved.accounts) {
-          await revalidateMyPublicProfile().catch(() => undefined);
         }
 
         if (handle !== null && handle !== next.handle) {

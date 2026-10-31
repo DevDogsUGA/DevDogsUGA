@@ -84,7 +84,6 @@ export default async function OverviewPage() {
         >
           <div className="set-rows">
             <VerificationChecklist
-              userId={verification.userId}
               verificationStatus={verification.verificationStatus}
               isVerified={verification.isVerified}
               involvementFullName={verification.involvementFullName}

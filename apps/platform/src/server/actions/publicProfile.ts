@@ -4,6 +4,12 @@ import { authorizeSession } from "~/server/auth/access";
 
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import * as z from "zod";
+import {
+  expected,
+  ExpectedFailure,
+  type ActionResult,
+} from "~/lib/actionResult";
 import { COMMUNITY_PATH, profilePath } from "~/lib/profilePath";
 import {
   PUBLIC_PROFILE_FIELDS,
@@ -160,23 +166,54 @@ export async function setPublicProfileField(
   return { status: "set" };
 }
 
-/**
- * Revalidates the member's public pages after a change made elsewhere (the
- * connected-account "show on profile" toggles write straight from the
- * browser). Takes no arguments: it only ever acts on the session's own
- * handle, so there is nothing for a caller to forge.
- */
-export async function revalidateMyPublicProfile(): Promise<void> {
-  const access = await authorizeSession();
-  if (!access.ok) {
-    await sessionUserId();
-    throw new Error(access.message);
-  }
+/** The connected accounts a member can show on their public profile. */
+export interface AccountVisibilityInput {
+  showGithub?: boolean;
+  showDiscord?: boolean;
+  showLinkedin?: boolean;
+}
 
-  const userId = await sessionUserId();
-  const [row] = await db
-    .select({ handle: profiles.handle })
-    .from(profiles)
-    .where(eq(profiles.userId, userId));
-  revalidatePublicPages(row?.handle);
+const accountVisibilitySchema = z.strictObject({
+  showGithub: z.boolean().optional(),
+  showDiscord: z.boolean().optional(),
+  showLinkedin: z.boolean().optional(),
+});
+
+/**
+ * Saves which connected accounts the signed-in member shows on their public
+ * profile, in one write, and revalidates the pages they appear on. Only ever
+ * acts on the session's own row, so there is nothing for a caller to forge.
+ * Refused for a quarantined or suspended member, as RLS refuses it from the
+ * browser.
+ */
+export async function updateAccountVisibility(
+  input: AccountVisibilityInput,
+): Promise<ActionResult> {
+  return expected(async () => {
+    const access = await authorizeSession();
+    if (!access.ok) throw new ExpectedFailure(access.message);
+
+    const parsed = accountVisibilitySchema.safeParse(input);
+    if (!parsed.success) throw new ExpectedFailure("Unknown account.");
+    if (Object.keys(parsed.data).length === 0) return undefined;
+
+    const [row] = await db
+      .update(profiles)
+      .set(parsed.data)
+      .where(
+        and(
+          eq(profiles.userId, access.caller.userId),
+          isNull(profiles.quarantinedBy),
+          sql`not platform.is_suspended(${profiles.userId})`,
+        ),
+      )
+      .returning({ handle: profiles.handle });
+    if (!row)
+      throw new ExpectedFailure(
+        "Your profile is locked, so it cannot be changed.",
+      );
+
+    revalidatePublicPages(row.handle);
+    return undefined;
+  });
 }

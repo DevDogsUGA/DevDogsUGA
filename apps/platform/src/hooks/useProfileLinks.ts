@@ -2,9 +2,8 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import addProfileLink from "~/server/actions/profileLinks";
-import revalidateOfficerBoard from "~/server/actions/revalidateOfficerBoard";
-import { createClient } from "~/supabase/client";
+import type { ActionResult } from "~/lib/actionResult";
+import { updateProfileLinks } from "~/server/actions/profile";
 import type { profileLinks } from "~/server/db/schema";
 
 type ProfileLink = typeof profileLinks.$inferSelect;
@@ -39,7 +38,8 @@ export interface UseProfileLinksReturn {
   removeLink: (id: string) => void;
   updateLink: (id: string, url: string, title: string | null) => void;
   reorderLink: (id: string, newSortOrder: number) => void;
-  save: (links: DraftLink[]) => Promise<unknown>;
+  /** One transaction on the server: the saved list on success, nothing written on failure. */
+  save: (links: DraftLink[]) => Promise<ActionResult<ProfileLink[]>>;
   reset: () => void;
   isSaving: boolean;
 }
@@ -93,117 +93,40 @@ export function useProfileLinks(
   );
 
   const mutation = useMutation({
-    mutationFn: async (draftNow: DraftLink[]) => {
-      const supabase = createClient();
-
+    mutationFn: (draftNow: DraftLink[]) => {
       const survivors = new Map(committed.map((c) => [c.id, c]));
-      const created: ProfileLink[] = [];
-      /** Temp ids whose rows now exist, so a retry does not insert them twice. */
-      const promoted = new Map<string, ProfileLink>();
-
-      const deletions = committed.filter(
-        (c) => !draftNow.some((d) => d.id === c.id),
-      );
-      const updates = draftNow.filter((d) => {
-        if (d.isNew) return false;
-        const c = survivors.get(d.id);
-        return (
-          c &&
-          (c.url !== d.url ||
-            c.title !== d.title ||
-            (c.sortOrder ?? 0) !== d.sortOrder)
-        );
-      });
-      const insertions = draftNow.filter((d) => d.isNew);
-
-      const settled = () =>
-        [...survivors.values(), ...created].sort(
-          (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
-        );
-
-      try {
-        // Strictly ordered, and sequential rather than parallel. Deletes have
-        // to land before inserts, because the add action refuses a sixth link
-        // by counting rows, and a swap of one link for another would otherwise
-        // be refused on a full list. Sequencing also keeps concurrent writes
-        // from tripping the unique (userId, sortOrder) index mid-flight. At
-        // five links maximum this is a handful of round trips.
-        for (const link of deletions) {
-          const { error: deleteError } = await supabase
-            .from("profileLinks")
-            .delete()
-            .eq("id", link.id);
-          if (deleteError) throw deleteError;
-          survivors.delete(link.id);
-        }
-
-        for (const link of updates) {
-          const title = link.title ?? new URL(link.url).hostname;
-          const { error: updateError } = await supabase
-            .from("profileLinks")
-            .update({
-              url: link.url,
-              title,
-              sortOrder: link.sortOrder,
-            })
-            .eq("id", link.id);
-          if (updateError) throw updateError;
-          const previous = survivors.get(link.id)!;
-          survivors.set(link.id, {
-            ...previous,
-            url: link.url,
+      return updateProfileLinks({
+        remove: committed
+          .filter((c) => !draftNow.some((d) => d.id === c.id))
+          .map((c) => c.id),
+        update: draftNow
+          .filter((d) => {
+            const c = survivors.get(d.id);
+            return (
+              !d.isNew &&
+              c &&
+              (c.url !== d.url ||
+                c.title !== d.title ||
+                (c.sortOrder ?? 0) !== d.sortOrder)
+            );
+          })
+          .map(({ id, url, title, sortOrder }) => ({
+            id,
+            url,
             title,
-            sortOrder: link.sortOrder,
-          });
-        }
-
-        for (const link of insertions) {
-          const formData = new FormData();
-          formData.append("url", link.url);
-          if (link.title) formData.append("title", link.title);
-          formData.append("sortOrder", String(link.sortOrder));
-          const result = await addProfileLink(formData);
-          if (result.error || !result.link) {
-            throw new Error(result.error ?? "Failed to save link.");
-          }
-          created.push(result.link);
-          promoted.set(link.id, result.link);
-        }
-      } catch (failure) {
-        // Publish whatever landed before rethrowing. Without this the next
-        // attempt would re-insert links that already exist, since the draft
-        // would still be carrying them as new.
-        const applied = settled();
-        setCommitted(applied);
-        setDraft(
-          draftNow
-            .filter((d) => !deletions.some((x) => x.id === d.id))
-            .map((d) => {
-              const real = promoted.get(d.id);
-              return real
-                ? {
-                    id: real.id,
-                    url: real.url,
-                    title: real.title,
-                    sortOrder: real.sortOrder ?? d.sortOrder,
-                    isNew: false,
-                  }
-                : d;
-            }),
-        );
-        throw failure;
-      }
-
-      return settled();
+            sortOrder,
+          })),
+        add: draftNow
+          .filter((d) => d.isNew)
+          .map(({ url, title, sortOrder }) => ({ url, title, sortOrder })),
+      });
     },
-    onSuccess: (next) => {
-      setCommitted(next);
-      setDraft(toDraft(next));
-    },
-    // Settled, not success: a save that fails partway has still written
-    // whatever landed before the failure.
-    onSettled: () => {
-      void revalidateOfficerBoard().catch(() => undefined);
+    // The save is one transaction, so a refusal wrote nothing and the draft
+    // stays as it was, for a retry.
+    onSuccess: (result) => {
+      if (!result.ok || !result.data) return;
+      setCommitted(result.data);
+      setDraft(toDraft(result.data));
     },
   });
 

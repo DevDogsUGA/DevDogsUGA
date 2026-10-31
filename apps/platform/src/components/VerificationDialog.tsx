@@ -45,7 +45,6 @@ export default function VerificationDialog({ open, onOpenChange }: Props) {
       }
     >
       <VerificationChecklist
-        userId={ctx.userId}
         verificationStatus={ctx.verificationStatus}
         isVerified={ctx.isVerified}
         involvementFullName={ctx.involvementFullName}

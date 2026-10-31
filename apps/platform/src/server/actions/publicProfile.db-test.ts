@@ -28,8 +28,8 @@ vi.mock("next/cache", () => ({
 const {
   getMyHandleChoices,
   getPublicProfileSettings,
-  revalidateMyPublicProfile,
   setPublicProfileField,
+  updateAccountVisibility,
 } = await import("~/server/actions/publicProfile");
 
 const A = "fb000000-0000-4000-a000-000000000001";
@@ -176,12 +176,56 @@ describe("getMyHandleChoices", () => {
   });
 });
 
-describe("revalidateMyPublicProfile", () => {
-  it("revalidates the directory and the member's page", async () => {
-    await insertMember({ id: A, handle: "ppact-rv" });
-    await revalidateMyPublicProfile();
-    expect(revalidated).toEqual(
-      expect.arrayContaining(["/community", "/community/@ppact-rv"]),
+describe("updateAccountVisibility", () => {
+  const shown = async (id: string) => {
+    const [row] = await db.execute<{
+      showGithub: boolean;
+      showDiscord: boolean;
+      showLinkedin: boolean;
+    }>(
+      sql`select "showGithub", "showDiscord", "showLinkedin" from platform.profile where "userId" = ${id}::uuid`,
     );
+    return row;
+  };
+
+  it("writes the switches that were sent in one go and revalidates the member's pages", async () => {
+    await insertMember({ id: A, handle: "ppact-av" });
+    expect(
+      await updateAccountVisibility({ showGithub: true, showLinkedin: true }),
+    ).toEqual({ ok: true });
+    expect(await shown(A)).toEqual({
+      showGithub: true,
+      showDiscord: false,
+      showLinkedin: true,
+    });
+    expect(revalidated).toEqual(
+      expect.arrayContaining(["/community", "/community/@ppact-av"]),
+    );
+  });
+
+  it("only touches the session's own profile", async () => {
+    await insertMember({ id: A, handle: "ppact-av-own" });
+    await insertMember({ id: B, handle: "ppact-av-other" });
+    await updateAccountVisibility({ showDiscord: true });
+    expect((await shown(B))?.showDiscord).toBe(false);
+  });
+
+  it("refuses a suspended member and changes nothing", async () => {
+    await insertMember({ id: A, handle: "ppact-av-susp" });
+    await db.execute(
+      sql`insert into platform."userSuspensions" ("userId", service) values (${A}::uuid, 'global')`,
+    );
+    expect(await updateAccountVisibility({ showGithub: true })).toMatchObject({
+      ok: false,
+    });
+    expect((await shown(A))?.showGithub).toBe(false);
+    expect(revalidated).toEqual([]);
+  });
+
+  it("refuses a switch that is not a connected account", async () => {
+    await insertMember({ id: A, handle: "ppact-av-bad" });
+    expect(
+      await updateAccountVisibility({ showEmail: true } as never),
+    ).toMatchObject({ ok: false });
   });
 });

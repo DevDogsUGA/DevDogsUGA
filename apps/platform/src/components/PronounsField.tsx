@@ -6,8 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react/ssr";
 import SettingsField from "~/ui/settings-field";
 import type { getProfilePageData } from "~/server/loaders/console";
-import { createClient } from "~/supabase/client";
-import revalidateOfficerBoard from "~/server/actions/revalidateOfficerBoard";
+import { updateIdentity } from "~/server/actions/profile";
 import { PROFILE_LIMITS, validatePronouns } from "~/lib/validation/profile";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
@@ -28,7 +27,7 @@ const SEPARATOR_KEYS = [" ", "/", "-", ","];
 const MAX_PRONOUNS = PROFILE_LIMITS.pronounCount;
 const MAX_PRONOUN_CHARS = PROFILE_LIMITS.pronounChars;
 
-export default function PronounsField({ id, profile }: ProfileData) {
+export default function PronounsField({ profile }: ProfileData) {
   const [pronouns, setPronouns] = useState<string[]>(profile.pronouns ?? []);
   const [saved, setSaved] = useState<string[]>(profile.pronouns ?? []);
   const [input, setInput] = useState("");
@@ -41,18 +40,9 @@ export default function PronounsField({ id, profile }: ProfileData) {
   const listboxId = `${uid}-listbox`;
 
   const mutation = useMutation({
-    mutationFn: async (values: string[]) => {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("profile")
-        .update({ pronouns: values })
-        .eq("userId", id);
-      if (error) throw error;
-      return values;
-    },
-    onSuccess: (values) => {
-      setSaved([...values]);
-      void revalidateOfficerBoard().catch(() => undefined);
+    mutationFn: (values: string[]) => updateIdentity({ pronouns: values }),
+    onSuccess: (result, values) => {
+      if (result.ok) setSaved([...(result.data?.pronouns ?? values)]);
     },
   });
 
@@ -96,9 +86,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
       draft={pronouns}
       isDirty={dirty}
       error={error}
-      save={async () => {
-        await mutation.mutateAsync(pronouns);
-      }}
+      save={() => mutation.mutateAsync(pronouns)}
       reset={() => setPronouns([...saved])}
     >
       <div className="set-tags empty:hidden">
