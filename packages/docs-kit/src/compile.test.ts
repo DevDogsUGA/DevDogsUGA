@@ -312,7 +312,6 @@ describe("compileDocs folder settings", () => {
         description: null,
         order: 3,
         steps: false,
-        publishAt: null,
       },
       {
         project: "workshops",
@@ -321,7 +320,6 @@ describe("compileDocs folder settings", () => {
         description: null,
         order: null,
         steps: true,
-        publishAt: null,
       },
       {
         project: "workshops",
@@ -330,7 +328,6 @@ describe("compileDocs folder settings", () => {
         description: null,
         order: 1,
         steps: false,
-        publishAt: null,
       },
     ]);
   });
@@ -355,61 +352,27 @@ describe("compileDocs folder settings", () => {
   });
 });
 
-describe("scheduled pages", () => {
-  it("emits publishAt on folders and pages, inheriting the folder's time", () => {
-    root = freshRoot("docs-build-scheduled");
-    write("w/index.md", "# W\n");
-    write("w/a/index.md", "---\nscheduled: 2026-10-05T18:00:00-04:00\n---\n");
-    write("w/a/one.md", "# One\n");
-    write("w/a/two.md", "---\nscheduled: 2026-10-06T00:00:00Z\n---\n\n# Two\n");
-    write("w/a/deep/index.md", "---\nname: Deep\n---\n");
-    write("w/a/deep/three.md", "# Three\n");
-    write("w/open.md", "# Open\n");
-    const { pages, folders } = compileDocs(root);
-    const at = (p: string) => pages.find((page) => page.path === p)?.publishAt;
-    expect(at("w/a/one")).toBe("2026-10-05T22:00:00.000Z");
-    expect(at("w/a/two")).toBe("2026-10-06T00:00:00.000Z");
-    expect(at("w/a/deep/three")).toBe("2026-10-05T22:00:00.000Z");
-    expect(at("w/open")).toBeNull();
-    expect(folders.map((f) => [f.path, f.publishAt])).toEqual([
-      ["w/a", "2026-10-05T22:00:00.000Z"],
-      ["w/a/deep", "2026-10-05T22:00:00.000Z"],
-    ]);
-  });
-
-  it("accepts an unquoted YAML timestamp", () => {
-    root = freshRoot("docs-build-scheduled-yaml");
+describe("the removed `scheduled` key", () => {
+  it("is refused on a page, so a page meant to wait is never published by accident", () => {
+    root = freshRoot("docs-build-scheduled-gone");
     write("w/p.md", "---\nscheduled: 2026-10-05T18:00:00Z\n---\n\n# P\n");
-    expect(compileDocs(root).pages[0]!.publishAt).toBe(
-      "2026-10-05T18:00:00.000Z",
+    expect(() => compileDocs(root)).toThrow(/w\/p\.md: "scheduled" is gone/);
+  });
+
+  it("is refused in a folder's settings and in a shared page", () => {
+    root = freshRoot("docs-build-scheduled-gone-folder");
+    write("w/a/index.md", "---\nscheduled: 2026-10-05T18:00:00Z\n---\n");
+    expect(() => compileDocs(root)).toThrow(/"scheduled" is gone/);
+
+    root = freshRoot("docs-build-scheduled-gone-shared");
+    write("w/index.md", "# W\n");
+    write(
+      "_shared/s.md",
+      "---\nmount: [w]\nscheduled: 2026-10-05T18:00:00Z\n---\n\n# S\n",
     );
-  });
-
-  it("refuses an invalid time", () => {
-    for (const bad of [
-      "tomorrow",
-      '"2026-10-05T18:00:00"',
-      "12",
-      "'2026-13-45T00:00:00Z'",
-    ]) {
-      root = freshRoot("docs-build-scheduled-bad");
-      write("w/p.md", `---\nscheduled: ${bad}\n---\n\n# P\n`);
-      expect(() => compileDocs(root)).toThrow(/invalid "scheduled/);
-    }
-  });
-
-  it("refuses a page earlier than its folder", () => {
-    root = freshRoot("docs-build-scheduled-early");
-    write("w/a/index.md", "---\nscheduled: 2026-10-05T18:00:00Z\n---\n");
-    write("w/a/p.md", "---\nscheduled: 2026-10-05T17:59:59Z\n---\n\n# P\n");
-    expect(() => compileDocs(root)).toThrow(/earlier than its folder w\/a/);
-  });
-
-  it("refuses a folder earlier than its parent folder", () => {
-    root = freshRoot("docs-build-scheduled-early-folder");
-    write("w/a/index.md", "---\nscheduled: 2026-10-05T18:00:00Z\n---\n");
-    write("w/a/b/index.md", "---\nscheduled: 2026-10-01T00:00:00Z\n---\n");
-    expect(() => compileDocs(root)).toThrow(/earlier than its folder w\/a/);
+    expect(() => compileDocs(root)).toThrow(
+      /_shared\/s\.md: "scheduled" is gone/,
+    );
   });
 });
 

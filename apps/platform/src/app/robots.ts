@@ -30,7 +30,7 @@ export default function robots(): MetadataRoute.Robots {
         "/account", // the viewer's own profile
         "/settings", // the viewer's own settings
         "/oauth", // consent and CLI approval flows
-        "/preview", // /preview/docs: scheduled docs, 404 without canPreviewDocs
+        "/preview", // the kit gallery, and the old /preview/docs address
 
         // (api) route handlers. None render HTML, and several are guarded by
         // a shared secret rather than a session, so a crawler reaching them

@@ -364,7 +364,7 @@ function checkShape(rel: string, text: string): void {
   }
 }
 
-/** Frontmatter keys outside the allowlist: `mount`, `scheduled`, anything that steers the build. */
+/** Frontmatter keys outside the allowlist: `mount`, anything that steers the build. */
 function checkFrontmatter(rel: string, source: string): void {
   const parsed = parseDocFile(source, rel);
   for (const key of Object.keys(parsed.frontmatter)) {

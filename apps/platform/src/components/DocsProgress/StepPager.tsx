@@ -10,7 +10,6 @@ import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import { Button } from "~/ui/button";
 import ProgressBar from "~/ui/progress-bar";
 import "~/components/Docs/docs.css";
-import DocsScheduled from "~/components/DocsScheduled";
 import DocsHandoff from "~/components/DocsVscode/DocsHandoff";
 import { setStepDone, stepKey, useDoneSteps } from "./store";
 
@@ -22,7 +21,6 @@ interface Props {
   steps: {
     path: string;
     title: string;
-    publishAt?: string;
     checkpoint?: string;
   }[];
   /** This page's position in `steps`, from 0. */
@@ -93,13 +91,11 @@ export default function StepPager({
             <Link
               href={docsHref(project, previous.path.split("/"), base)}
               className="card quiet"
-              data-sched={previous.publishAt ? "" : undefined}
             >
               <div className="docs-pager-dir">
                 <ArrowLeftIcon weight="bold" /> Previous
               </div>
               <div className="docs-pager-t">{previous.title}</div>
-              {previous.publishAt && <DocsScheduled at={previous.publishAt} />}
             </Link>
           ) : (
             <span />
@@ -109,13 +105,11 @@ export default function StepPager({
               href={docsHref(project, next.path.split("/"), base)}
               onClick={() => setStepDone(key, true)}
               className="card quiet docs-pager-nx"
-              data-sched={next.publishAt ? "" : undefined}
             >
               <div className="docs-pager-dir">
                 Next <ArrowRightIcon weight="bold" />
               </div>
               <div className="docs-pager-t">{next.title}</div>
-              {next.publishAt && <DocsScheduled at={next.publishAt} />}
             </Link>
           )}
         </div>

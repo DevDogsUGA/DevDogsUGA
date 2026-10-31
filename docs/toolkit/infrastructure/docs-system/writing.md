@@ -152,20 +152,9 @@ A folder takes its directory's name unless it has settings: a nested `index.md` 
 
 `steps: true` makes the folder a course: its pages are steps, each ending in a pager with a "Mark as done" button, and the sidebar ticks off finished ones. `steps` anywhere else is a build error.
 
-## Scheduling a page
+## Publishing
 
-`scheduled: 2026-10-05T18:00:00-04:00` in a page's front matter, or in a folder's settings, hides it until that time, with no deploy needed. A page inherits its folder's time and may only set a later one.
-
-<details>
-<summary>What "hidden" covers, and the rules</summary>
-
-The time needs a timezone (`Z` or an offset). A bad one, or a page earlier than its folder, fails the build.
-
-Until the time passes, everything about the page is hidden and its URL returns 404: the sidebar, the course pager, folder listings, the top-nav menu, search, the sitemap and the link card. The one exception is the docs landing page, which lists what is coming ("Workshop: Supabase: Oct 5") without a link. Search picks the time up from `devtools docs index`, so re-index after changing one.
-
-Anyone with the **Preview docs** permission can read scheduled pages early at `/dashboard/docs-preview/<project>/…`, where they are marked with the time they go live. It is linked from the console, is never cached, and returns 404 to everyone else.
-
-</details>
+A page is public once it merges. There is no way to hold one back for a later time, and a front matter `scheduled:` key fails the build.
 
 ## Supported syntax
 

@@ -12,7 +12,7 @@ import { getMeetingSlugs } from "~/server/loaders/meetings";
  *
  *   - Everything derivable WITHOUT a database: the authored routes, both
  *     newsletter archives and their issues (`@devdogsuga/newsletter`), plus
- *     every LIVE docs page (scheduled ones are left out until their time), which `@devdogsuga/docs` compiles into the bundle at
+ *     every docs page, which `@devdogsuga/docs` compiles into the bundle at
  *     build time (see `server/docs/queries.ts`). In-memory walks over
  *     constants that cannot throw and cannot be slow.
  *   - Everything that needs a query: meetings.
@@ -102,10 +102,6 @@ async function docsRoutes(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = [];
 
   for (const project of getDocsProjects()) {
-    // Only pages that are live when this renders: a page still ahead of its
-    // scheduled time is not to be named anywhere, and 404s if a crawler
-    // guesses it. The sitemap revalidates hourly (below), so a page appears
-    // within the hour after it goes live.
     for (const path of await getDocsPagePaths(project.slug)) {
       routes.push({
         url: url(docsHref(project.slug, path.split("/"))),

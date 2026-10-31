@@ -3,21 +3,11 @@ import { DocsPageRoute, docsPageMetadata } from "~/components/DocsRoute";
 import { allFolders, type DocsTreeNode } from "~/lib/docsTree";
 import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
 
-// Every docs page AND every folder that is live at build time is enumerated
-// below and prerendered. Anything else, a page that goes live later or a path
-// that does not exist, renders on demand and 404s via notFound(), which is safe
-// on Workers because the lookup reads a bundled constant, not the filesystem.
-/**
- * Built from `docs/` at build time, so it can't change until the next
- * deploy, with one exception: a page or folder can be scheduled, and appears
- * when its time passes. Every lookup in `~/server/docs/queries` goes through
- * `visibleView`, a `"use cache"` function that reports the time of the
- * project's next reveal as its `cacheLife`, and vinext gives the rendered page
- * (HTML and in-site navigation alike) the shortest lifetime it saw. So a
- * project with a reveal coming is cached until then, and every other project
- * until the next deploy. `false` here is the ceiling those lifetimes fall
- * under, not the whole policy.
- */
+// Every docs page AND every folder is enumerated below and prerendered.
+// Anything else, a path that does not exist, renders on demand and 404s via
+// notFound(), which is safe on Workers because the lookup reads a bundled
+// constant, not the filesystem.
+/** Built from `docs/` at build time, so it can't change until the next deploy. */
 export const revalidate = false;
 
 export async function generateStaticParams() {
@@ -53,7 +43,6 @@ export async function generateMetadata({
   return docsPageMetadata({
     project: decodeURIComponent(project),
     slug: slug.map(decodeURIComponent),
-    mode: "public",
   });
 }
 
@@ -65,7 +54,6 @@ export default async function DocsPage({
     <DocsPageRoute
       project={decodeURIComponent(project)}
       slug={slug.map(decodeURIComponent)}
-      mode="public"
     />
   );
 }
