@@ -2,18 +2,12 @@
 
 import "./badges.css";
 
-import { useActionState } from "react";
-import {
-  awardBadge,
-  withdrawBadgeAward,
-  type BadgeActionState,
-} from "~/server/actions/badges";
+import { useCommand, CommandFeedback } from "~/ui/use-command";
+import { awardBadge, withdrawBadgeAward } from "~/server/actions/badges";
 import { Button } from "~/ui/button";
 import Field from "~/ui/field";
 import { Input } from "~/ui/input";
 import { Textarea } from "~/ui/textarea";
-
-const initialState: BadgeActionState = { ok: false, message: "" };
 
 export interface AwardableBadge {
   id: string;
@@ -28,7 +22,7 @@ export function BadgeAwardForm({
   userId: string;
   badges: readonly AwardableBadge[];
 }) {
-  const [state, action, pending] = useActionState(awardBadge, initialState);
+  const { result, run: action, pending } = useCommand(awardBadge);
   return (
     <form action={action} className="bdg-form">
       <input type="hidden" name="userId" value={userId} />
@@ -65,21 +59,14 @@ export function BadgeAwardForm({
           Award badge
         </Button>
       </div>
-      {state.message && (
-        <p className="bdg-status" role="status">
-          {state.message}
-        </p>
-      )}
+      <CommandFeedback result={result} />
     </form>
   );
 }
 
 /** An officer withdraws one award, saying why. The record stays. */
 export function BadgeWithdrawForm({ awardId }: { awardId: string }) {
-  const [state, action, pending] = useActionState(
-    withdrawBadgeAward,
-    initialState,
-  );
+  const { result, run: action, pending } = useCommand(withdrawBadgeAward);
   return (
     <form action={action} className="bdg-inline">
       <input type="hidden" name="awardId" value={awardId} />
@@ -94,11 +81,7 @@ export function BadgeWithdrawForm({ awardId }: { awardId: string }) {
       <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         Withdraw
       </Button>
-      {state.message && (
-        <p className="bdg-status" role="status">
-          {state.message}
-        </p>
-      )}
+      <CommandFeedback result={result} />
     </form>
   );
 }

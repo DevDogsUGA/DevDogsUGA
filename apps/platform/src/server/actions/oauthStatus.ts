@@ -2,6 +2,7 @@
 
 import { authorize, rules, authorizeSession } from "~/server/auth/access";
 
+import { failure, expected, type ActionResult } from "~/lib/actionResult";
 import * as z from "zod";
 
 import { db } from "../db";
@@ -18,7 +19,6 @@ import { parseStatus } from "../oauth/status";
 
 /**
  * The status and consent actions for OAuth apps (oauth-consent Q155–Q164).
- * No UI yet: E3 builds Console → Apps and the settings panel on top of these.
  *
  * Status, the consent switch and Transfer to DevDogs are holder-only: a member
  * who owns an app cannot publish it. Every one is audited, and a status change
@@ -33,49 +33,53 @@ const uuid = z.uuid();
 export async function setStatus(
   clientId: string,
   status: OAuthStatus,
-): Promise<{ changed: boolean; counts: RevokeCounts | null }> {
+): Promise<ActionResult<{ changed: boolean; counts: RevokeCounts | null }>> {
   const access = await authorize(rules.manageOAuthApps);
   if (!access.ok) {
-    throw new Error(NOT_AUTHORIZED);
+    return failure(NOT_AUTHORIZED);
   }
 
   const actorUserId = access.caller.userId;
   const parsedStatus = parseStatus(status);
   if (!parsedStatus || !uuid.safeParse(clientId).success) {
-    throw new Error(APP_NOT_FOUND);
+    return failure(APP_NOT_FOUND);
   }
-  return setAppStatus({ actorUserId, clientId, status: parsedStatus });
+  return expected(() =>
+    setAppStatus({ actorUserId, clientId, status: parsedStatus }),
+  );
 }
 
 export async function setAsksForConsent(
   clientId: string,
   asksForConsent: boolean,
-): Promise<{ changed: boolean }> {
+): Promise<ActionResult<{ changed: boolean }>> {
   const access = await authorize(rules.manageOAuthApps);
   if (!access.ok) {
-    throw new Error(NOT_AUTHORIZED);
+    return failure(NOT_AUTHORIZED);
   }
 
   const actorUserId = access.caller.userId;
-  if (!uuid.safeParse(clientId).success) throw new Error(APP_NOT_FOUND);
-  return setAsksForConsentStep({
-    actorUserId,
-    clientId,
-    asksForConsent: asksForConsent === true,
-  });
+  if (!uuid.safeParse(clientId).success) return failure(APP_NOT_FOUND);
+  return expected(() =>
+    setAsksForConsentStep({
+      actorUserId,
+      clientId,
+      asksForConsent: asksForConsent === true,
+    }),
+  );
 }
 
 export async function transferToDevDogs(
   clientId: string,
-): Promise<{ changed: boolean }> {
+): Promise<ActionResult<{ changed: boolean }>> {
   const access = await authorize(rules.manageOAuthApps);
   if (!access.ok) {
-    throw new Error(NOT_AUTHORIZED);
+    return failure(NOT_AUTHORIZED);
   }
 
   const actorUserId = access.caller.userId;
-  if (!uuid.safeParse(clientId).success) throw new Error(APP_NOT_FOUND);
-  return transferToDevDogsStep({ actorUserId, clientId });
+  if (!uuid.safeParse(clientId).success) return failure(APP_NOT_FOUND);
+  return expected(() => transferToDevDogsStep({ actorUserId, clientId }));
 }
 
 /**

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { failure, type ActionResult } from "~/lib/actionResult";
 import { cache } from "react";
 import { forbidden, notFound } from "next/navigation";
 import { expectSession } from "~/server/auth";
@@ -71,15 +72,13 @@ export async function requireAccess(rule: Rule): Promise<Caller> {
 }
 
 type Authorization =
-  { ok: true; caller: Caller } | { ok: false; message: string };
+  { ok: true; caller: Caller } | Extract<ActionResult, { ok: false }>;
 
 /** Authorize an action without imposing its existing return or error shape. */
 export async function authorize(rule: Rule): Promise<Authorization> {
   const result = await authorizeSession();
   if (!result.ok) return result;
-  return rule(result.caller)
-    ? result
-    : { ok: false, message: "Not authorized." };
+  return rule(result.caller) ? result : failure("Not authorized.");
 }
 
 /** Actions on a member's own records still apply their domain Record rules. */
@@ -87,7 +86,7 @@ export async function authorizeSession(): Promise<Authorization> {
   const caller = await loadCaller();
   return caller
     ? { ok: true, caller }
-    : { ok: false, message: "Session expected but not found." };
+    : failure("Session expected but not found.");
 }
 
 /** Explicit marker for a public action. Each call documents why no session is needed. */
