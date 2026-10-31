@@ -65,10 +65,7 @@ interface VerificationContextValue {
   isVerified: boolean;
   involvementFullName: string | null;
   publicProfiles: boolean;
-  completed: number;
-  total: number;
   dialogOpen: boolean;
-  openDialog: () => void;
   setDialogOpen: (open: boolean) => void;
 }
 
@@ -134,7 +131,6 @@ function VerificationRoot({
   children: ReactNode;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const openDialog = useCallback(() => setDialogOpen(true), []);
 
   // Auto-open the checklist once per session for unverified users. The data
   // arrives via the hydrator after mount, so react to it becoming available.
@@ -156,10 +152,6 @@ function VerificationRoot({
 
   if (!data) return <>{children}</>;
 
-  const completed = Object.values(data.verificationStatus).filter(
-    Boolean,
-  ).length;
-
   return (
     <VerificationContext.Provider
       value={{
@@ -168,10 +160,7 @@ function VerificationRoot({
         isVerified: data.isVerified,
         involvementFullName: data.involvementFullName,
         publicProfiles: data.publicProfiles,
-        completed,
-        total: 5,
         dialogOpen,
-        openDialog,
         setDialogOpen,
       }}
     >

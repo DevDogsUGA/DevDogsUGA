@@ -1,7 +1,7 @@
 import type { rules } from "~/server/auth/access";
 import type { NavIcon } from "./nav";
 
-/** Display order, including the Overview group reserved for B3. */
+/** Display order. The Overview group is the dashboard landing page alone. */
 export const DASHBOARD_GROUPS = [
   "Overview",
   "Account",
@@ -24,6 +24,16 @@ export interface DashboardSection {
 
 /** The signed-in sections and their canonical dashboard URLs. */
 export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    icon: "HouseIcon",
+    description: "Your account status and a way into every dashboard section.",
+    group: "Overview",
+    href: "/dashboard",
+    access: "member",
+    refusal: "forbidden",
+  },
   {
     id: "profile",
     label: "Profile",
@@ -218,7 +228,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
   },
 ];
 
-/** The user menu opens the member profile until B3 adds the overview. */
+/** Where the user menu and the mobile sheet open the dashboard. */
 export const DASHBOARD_HOME = DASHBOARD_SECTIONS.find(
-  (section) => section.id === "profile",
+  (section) => section.id === "overview",
 )!.href;
