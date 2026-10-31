@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   describeVerdict,
@@ -38,7 +38,7 @@ describe("which folder is checked", () => {
         { kind: "backstage", root: "/r" },
         "/work/here",
       ),
-    ).toEqual({ dir: "/work/other/docs" });
+    ).toEqual({ dir: resolve("/work/here", "../other/docs") });
   });
 
   it("is docs/ at the root of the repository being run from", () => {
@@ -48,7 +48,7 @@ describe("which folder is checked", () => {
         { kind: "backstage", root: "/projects/dogdays" },
         "/x",
       ),
-    ).toEqual({ dir: "/projects/dogdays/docs" });
+    ).toEqual({ dir: join("/projects/dogdays", "docs") });
   });
 
   it("is never DevDogsUGA's own docs/ unless it is named, which are the club's and not a project's", () => {
@@ -64,7 +64,7 @@ describe("which folder is checked", () => {
     expect(
       docsFolder("docs/mine", { kind: "devdogsuga", root: "/r" }, "/r"),
     ).toEqual({
-      dir: "/r/docs/mine",
+      dir: resolve("/r", "docs/mine"),
     });
   });
 });
