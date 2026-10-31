@@ -13,7 +13,7 @@ const CLIENT = "22222222-2222-4222-8222-222222222222";
 
 const mocks = vi.hoisted(() => ({
   signedIn: true,
-  githubIdentity: { id: 1 } as { id: number } | null,
+  githubIdentity: null as { id: number } | null,
   registration: null as null | {
     clientId: string;
     userId: string | null;

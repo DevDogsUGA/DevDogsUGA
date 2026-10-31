@@ -12,12 +12,12 @@ const ACCOUNT = "22222222-2222-4222-8222-222222222222";
 const mocks = vi.hoisted(() => ({
   signedIn: true,
   testAccounts: [] as unknown[],
-  email: "owner@uga.edu" as string | null,
+  email: null as string | null,
   owned: true,
   createUser: vi.fn(),
   updateUser: vi.fn(),
   deleteUser: vi.fn(),
-  insertError: null as unknown,
+  insertError: null as Error | null,
   deletedRows: 0,
 }));
 
@@ -48,7 +48,7 @@ vi.mock("../db", () => ({
     },
     insert: () => ({
       values: async () => {
-        if (mocks.insertError) throw mocks.insertError as Error;
+        if (mocks.insertError) throw mocks.insertError;
       },
     }),
     delete: () => ({

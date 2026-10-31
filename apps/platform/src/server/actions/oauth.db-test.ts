@@ -69,8 +69,8 @@ function form(fields: Record<string, string>): FormData {
  * Refusals come back as failures; only an upstream (GoTrue) failure throws.
  */
 async function act(fields: Record<string, string>) {
-  const { clientId = "", uri = "" } = fields;
-  switch (fields.intent) {
+  const { intent = "", clientId = "", uri = "" } = fields;
+  switch (intent) {
     case "create-client":
       return createOAuthClient(form(fields));
     case "revoke-client":
@@ -82,7 +82,7 @@ async function act(fields: Record<string, string>) {
     case "remove-uri":
       return removeRedirectUri(clientId, uri);
     default:
-      throw new Error(`Unknown intent: ${fields.intent}`);
+      throw new Error(`Unknown intent: ${intent}`);
   }
 }
 

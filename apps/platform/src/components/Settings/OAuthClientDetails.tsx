@@ -168,9 +168,10 @@ export default function OAuthClientDetails({
           </ul>
           {client.redirectUris.length < MAX_REDIRECT_URIS && (
             <form
-              action={(formData) =>
-                addUri.run(client.clientId, String(formData.get("uri") ?? ""))
-              }
+              action={(formData) => {
+                const uri = formData.get("uri");
+                addUri.run(client.clientId, typeof uri === "string" ? uri : "");
+              }}
               className="set-uri"
             >
               <Input

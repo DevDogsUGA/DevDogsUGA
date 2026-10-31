@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { UploadSimpleIcon } from "@phosphor-icons/react/ssr";
 import CropDialog from "~/components/AvatarField/CropDialog";
@@ -33,7 +32,6 @@ export default function AppLogoField({
   label: string;
   logoUrl: string | null;
 }) {
-  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pendingSrc, setPendingSrc] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
