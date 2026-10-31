@@ -32,6 +32,10 @@ export const JOB_HEARTBEATS = {
   // retired; its `platform-nightly-repair` row stays in the table, ignored)
   // until it moved with the scrape; migration 62 seeds this row.
   "catalog-academic-programs": { maxAgeHours: 26 },
+  // The platform's own commit sync (`/cron/project-commits`, 05:10 UTC). Its
+  // cycle can span several continuation runs, so it writes this row when the
+  // cycle completes cleanly, not when a request returns; migration 79 seeds it.
+  "platform-commit-sync": { maxAgeHours: 26 },
 } as const satisfies Record<string, { maxAgeHours: number }>;
 
 export type HeartbeatJob = keyof typeof JOB_HEARTBEATS;
