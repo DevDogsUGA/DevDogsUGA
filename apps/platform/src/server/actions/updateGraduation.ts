@@ -1,5 +1,11 @@
 "use server";
 
+import {
+  expected,
+  ExpectedFailure,
+  type ActionResult,
+} from "~/lib/actionResult";
+
 import { authorizeSession } from "~/server/auth/access";
 
 import { eq } from "drizzle-orm";
@@ -18,27 +24,29 @@ import { revalidateOfficers } from "~/server/loaders/officers";
 export default async function updateGraduation(
   semester: Semester | null,
   year: number | null,
-): Promise<{ error?: string }> {
-  const access = await authorizeSession();
-  if (!access.ok) {
-    await expectSession().catch(() =>
+): Promise<ActionResult> {
+  return expected(async () => {
+    const access = await authorizeSession();
+    if (!access.ok) {
+      // A signed-out caller is sent to sign in; a signed-in one is refused.
+      await expectSession().catch(() =>
+        authenticate("google", "/dashboard/profile"),
+      );
+      throw new ExpectedFailure(access.message);
+    }
+    const userId = await expectSession().catch(() =>
       authenticate("google", "/dashboard/profile"),
     );
-    throw new Error(access.message);
-  }
 
-  const userId = await expectSession().catch(() =>
-    authenticate("google", "/dashboard/profile"),
-  );
+    const error = validateGraduation(semester, year);
+    if (error) throw new ExpectedFailure(error, { graduation: error });
 
-  const error = validateGraduation(semester, year);
-  if (error) return { error };
+    await db
+      .update(profiles)
+      .set({ graduationSemester: semester, graduationYear: year })
+      .where(eq(profiles.userId, userId));
+    revalidateOfficers();
 
-  await db
-    .update(profiles)
-    .set({ graduationSemester: semester, graduationYear: year })
-    .where(eq(profiles.userId, userId));
-  revalidateOfficers();
-
-  return {};
+    return undefined;
+  });
 }

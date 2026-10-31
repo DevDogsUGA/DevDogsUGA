@@ -23,9 +23,12 @@ export default function BioField({ id, profile }: ProfileData) {
       id="bio"
       label="Bio"
       className="max-w-[720px]"
+      draft={bio}
       isDirty={bioDirty}
       error={bioError}
-      save={saveBio}
+      save={async () => {
+        await saveBio();
+      }}
       reset={resetBio}
       meta={`${bio.length} / ${PROFILE_LIMITS.shortText} characters`}
       secondaryMeta={lineCount > 1 ? `${lineCount} / 3 lines` : undefined}

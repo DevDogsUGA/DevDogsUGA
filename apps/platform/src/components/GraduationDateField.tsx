@@ -38,17 +38,10 @@ export default function GraduationDateField({ profile }: ProfileData) {
   );
 
   const mutation = useMutation({
-    mutationFn: async ({ sem, yr }: { sem: Semester | ""; yr: string }) => {
-      const result = await updateGraduation(
-        sem || null,
-        yr ? parseInt(yr, 10) : null,
-      );
-      // Rejecting rather than returning the error is what lets the page's save
-      // bar tell this field apart from the ones that succeeded.
-      if (result.error) throw new Error(result.error);
-      return { sem, yr };
-    },
-    onSuccess: ({ sem, yr }) => {
+    mutationFn: ({ sem, yr }: { sem: Semester | ""; yr: string }) =>
+      updateGraduation(sem || null, yr ? parseInt(yr, 10) : null),
+    onSuccess: (result, { sem, yr }) => {
+      if (!result.ok) return;
       setSavedSemester(sem);
       setSavedYear(yr);
     },
@@ -70,6 +63,7 @@ export default function GraduationDateField({ profile }: ProfileData) {
     <SettingsField
       id="graduation"
       label="Graduation"
+      draft={[semester, year]}
       isDirty={dirty}
       error={error}
       save={() => mutation.mutateAsync({ sem: semester, yr: year })}

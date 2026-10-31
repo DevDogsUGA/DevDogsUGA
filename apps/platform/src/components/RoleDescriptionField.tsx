@@ -25,9 +25,12 @@ export default function RoleDescriptionField({ id, profile }: ProfileData) {
       id="roleDescription"
       label="Role Description"
       className="max-w-[560px]"
+      draft={roleDescription}
       isDirty={roleDescriptionDirty}
       error={roleDescriptionError}
-      save={saveRoleDescription}
+      save={async () => {
+        await saveRoleDescription();
+      }}
       reset={resetRoleDescription}
       meta={`${roleDescription.length} / ${PROFILE_LIMITS.roleDescription} characters`}
     >
