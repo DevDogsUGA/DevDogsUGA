@@ -37,7 +37,7 @@ week), the First Commit badge, and the commit citations of project reports.
 
 The sync stores a commit only when its author already matches a linked member.
 Nothing about anyone else is kept. When a member signs up with GitHub or links
-it under Settings, Accounts, a database trigger queues a backfill
+it under Dashboard, Connected accounts, a database trigger queues a backfill
 (`platform."commitBackfillRequests"`), and the next sync run lists that
 member's commits on every in-scope repository and stores them. Linking GitHub
 therefore brings the member's earlier commits with it; unlinking does not
@@ -47,7 +47,7 @@ remove commits already stored.
 
 - A public profile (`/community/@handle`, behind `publicProfilesEnabled`) shows
   a Contributions section while the member's "show contributions" switch is on
-  (Settings, Profile). It lists commits newest first, each linked to its commit
+  (Dashboard, Profile). It lists commits newest first, each linked to its commit
   on GitHub, and **only commits in repositories that are still available**. A
   repository that turned private or went away is unavailable, and a public
   profile never names it. The streak is the same: a week lit by such a commit

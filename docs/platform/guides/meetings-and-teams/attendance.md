@@ -9,7 +9,7 @@ section: guides
 
 The DevDogs Platform is authoritative for attendance. There is no downstream
 CMS receiving a projection of it any more — officers read it straight from the
-console, or a CSV export from the officer CLI (see [Exports](#exports) below).
+dashboard, or a CSV export from the officer CLI (see [Exports](#exports) below).
 
 ## Member check-in
 

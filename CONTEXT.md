@@ -5,7 +5,7 @@ decisions behind them are in `devdogs-plan/dashboard-redesign-plan.md`, which is
 
 ## Signed-in area
 
-- **Dashboard.** Every signed-in page lives under `/dashboard`: Account, Projects, Developer, and the officer tools.
+- **Dashboard.** The signed-in workspace under `/dashboard`: Account, Projects, Developer, and the officer tools.
   - Signed out, any `/dashboard/*` path redirects to sign-in and returns to the same path.
   - Signed in without access, a page renders the access-denied card.
   - An unknown path is a 404.
@@ -24,6 +24,8 @@ decisions behind them are in `devdogs-plan/dashboard-redesign-plan.md`, which is
   `reviewProjectReports`). Page gates, actions and the registry all name the same rule.
 - **Record rule.** A check that needs the record itself: project owner, report advisor, OAuth client owner. It lives in that
   record's domain module, never in the access module.
+- **callerFor.** `callerFor(userId)` loads an explicitly supplied actor. Domain code handed an actor checks that actor,
+  not the session.
 - **Officer.** A member who holds a leadership role (`isLeader`).
 
 ## Actions
@@ -32,11 +34,12 @@ decisions behind them are in `devdogs-plan/dashboard-redesign-plan.md`, which is
   - success: `{ ok: true, data?, message? }`
   - failure: `{ ok: false, message, fieldErrors? }`
 
-  Expected failures are returned, and only bugs throw.
+  `lib/actionResult.ts` defines `ActionResult`. Domain code throws `ExpectedFailure` for a refusal a user can cause;
+  actions use `expected()` to return it as a failure. Unexpected errors still throw. Authorize before domain work.
 
-- **Draft.** A form that edits saved values. It uses the save bar: the changes are held until **Save** or **Discard**, and
+- **Draft.** A form that edits saved values. It uses `ui/settings-form.tsx` and the save bar: the changes are held until **Save** or **Discard**, and
   navigation is guarded while changes are unsaved.
-- **Command.** One action that does one thing: award, resend, publish, check in. It uses the Command module, with its error
+- **Command.** One action that does one thing: award, resend, publish, check in. It uses `ui/use-command.tsx`, with its error
   shown inline and its success shown as a toast. Multi-step flows are built from several Commands.
 
 ## Projects
@@ -45,13 +48,13 @@ decisions behind them are in `devdogs-plan/dashboard-redesign-plan.md`, which is
   entries, club apps and the platform itself are all Projects.
 - **Owner.** A member who can edit a Project: its name, tags, repos, showcase fields and Submissions. The creator is the first
   Owner.
-- **Contributor.** Anyone with a Counted commit in one of a Project's repos. This is derived from commits; nobody keeps it as a
+- **Contributor.** A member with a Counted commit in one of a Project's repos. This is derived from commits; nobody keeps it as a
   list.
 - **Project repo.** A GitHub repo linked to a Project. It is identified by its numeric GitHub id, not its name.
   - It is **available** or **unavailable**: private or deleted.
   - Linking one needs proof of control.
-- **Counted commit.** A commit that has landed on a Project repo's default branch, authored by a member's linked GitHub
-  account. It is stored by SHA and stays valid even after its repo becomes unavailable.
+- **Counted commit.** A commit that has landed on a Project repo's default branch, matched to a member’s linked GitHub
+  identity by numeric GitHub user id. Only members’ commits are stored, by SHA. They stay valid even after the repo becomes unavailable.
 - **EL report.** A member's Experiential Learning claim: a Project, a date range, hours, Counted commits and a reflection of at
   least 100 words.
   - Each commit backs at most one report.
@@ -66,4 +69,9 @@ decisions behind them are in `devdogs-plan/dashboard-redesign-plan.md`, which is
 
 - **Docs.** Platform-authored documentation: Workshops, Shared tooling, Ops, and the guides for building on DevDogs.
 - **Contribute.** Project-authored documentation: each opted-in Project's `docs/` folder from its default branch.
-- **Docs preview.** A live, signed-in render of Contribute docs that haven't been published yet.
+- **Docs preview.** A live, signed-in render of a Project’s default-branch `docs/`, published or not, through the hardened
+  compiler, with no code highlighting. Owners, contributors and docs reviewers can read it.
+- **Docs map v2.** `.github/docs-projects.json` keys Projects by permanent slug and records their numeric repo id and
+  confirmed owner. The dashboard Docs toggle proposes map changes through a reviewed PR; snapshots still need publishing approval.
+- **Transfer pause.** A repo owner change pauses docs publishing until an officer confirms the new owner. Renames update the
+  cached name; stored commits stay valid.

@@ -11,7 +11,7 @@ The platform's tables live in the `platform` schema of the shared Supabase Postg
 
 ## SQL is the source of truth
 
-`supabase/migrations/*.sql` owns the schema, and every migration, platform ones included, is authored in this repository. `apps/platform/src/server/db/schema/generated/schema.ts`, in [Backstage](https://github.com/DevDogsUGA/Backstage), is introspected **from the live database** by `drizzle-kit pull` and is never edited by hand. The only file written by hand beside it is `src/server/db/relations.ts`, a `defineRelations` call over those generated tables.
+`supabase/migrations/*.sql` owns the schema, and every migration, platform ones included, is authored in this repository. `apps/platform/src/server/db/schema/generated/schema.ts`, in [DevDogsUGA](https://github.com/DevDogsUGA/DevDogsUGA), is introspected **from the live database** by `drizzle-kit pull` and is never edited by hand. The only file written by hand beside it is `src/server/db/relations.ts`, a `defineRelations` call over those generated tables.
 
 So a schema change is a SQL change, and the TypeScript follows it. RLS policies, triggers, functions, and storage policies all sit in the migration file next to the table DDL — there is no workaround layer to route around, because Drizzle does not own any of it.
 
@@ -34,13 +34,13 @@ pnpm devtools supabase db reset                       # drop, replay every migra
 pnpm --filter @devdogsuga/supabase run codegen        # the Database types (gitignored)
 ```
 
-`codegen` writes `packages/supabase/src/database.types.ts`, the `Database` types `supabase-js` uses, from the running local stack. Nothing to commit: the file is generated and gitignored. It does not touch the Drizzle schema, which belongs to the platform app. From a [Backstage](https://github.com/DevDogsUGA/Backstage) clone next to this one, with the same stack running:
+`codegen` writes `packages/supabase/src/database.types.ts`, the `Database` types `supabase-js` uses, from the running local stack. Nothing to commit: the file is generated and gitignored. It does not touch the Drizzle schema, which belongs to the platform app. From a [DevDogsUGA](https://github.com/DevDogsUGA/DevDogsUGA) checkout, with the same stack running:
 
 ```bash
 pnpm -F platform types:drizzle        # re-introspect the Drizzle schema
 ```
 
-`types:drizzle` runs both `drizzle-kit` configs and then the fixups in `scripts/drizzle-pull.ts`. If you added tables or foreign keys, add the matching relations to `src/server/db/relations.ts` by hand. Commit the migration in a DevDogsUGA pull request and the Drizzle schema and relations in a Backstage one, and merge the DevDogsUGA one first: Backstage's `devdogsuga.lock` moves to it when the deploy pull request lands.
+`types:drizzle` runs both `drizzle-kit` configs and then the fixups in `scripts/drizzle-pull.ts`. If you added tables or foreign keys, add the matching relations to `src/server/db/relations.ts` by hand. Commit the migration, Drizzle schema and relations together. Destructive drops wait until the last reader has been deployed.
 
 <details>
 <summary>What does a table with its policies look like in one migration?</summary>
@@ -66,7 +66,7 @@ Row-Level Security is the whole isolation boundary between app schemas — every
 
 Seeds live in one flat folder, listed in `config.toml`'s `[db.seed] sql_paths`: `supabase/seed/roles/<role>.sql` (one file per role). Files run alphabetically, and `**` does not search subfolders, so keep the folder flat. Officers are not seeded: an officer signs in and is granted a role like any member. `pnpm devtools supabase db reset` runs them against whichever tier the session points at, and `db push` applies migrations without them.
 
-Every seed statement is insert-only (`on conflict do nothing`), so a file is safe to run again and never overwrites an edit made in the console or in /dashboard/profile. Fix existing data through the console, the CLI or a one-off migration, not by editing a seed. Seeds also never write a role's `discordRoleId` after the role exists: linking a role to Discord goes through the console's link flow. The rule that Member and President exist, and that President holds every permission, is a migration (`20261001130000_42_platform_core_roles.sql`); a new permission column is granted to President by the migration that adds it. To store an officer's Discord user id before they link, insert into `platform."officerDiscordIds"`.
+Every seed statement is insert-only (`on conflict do nothing`), so a file is safe to run again and never overwrites an edit made in the dashboard or in /dashboard/profile. Fix existing data through the dashboard, the CLI or a one-off migration, not by editing a seed. Seeds also never write a role's `discordRoleId` after the role exists: linking a role to Discord goes through the dashboard's link flow. The rule that Member and President exist, and that President holds every permission, is a migration (`20261001130000_42_platform_core_roles.sql`); a new permission column is granted to President by the migration that adds it. To store an officer's Discord user id before they link, insert into `platform."officerDiscordIds"`.
 
 A staging or production target never runs `db reset` — that erases everything else on it. The deploy pipeline seeds both instead: `backstage deploy migrate --include-seed` runs the seed files a tier has not recorded, right after its migrations, and production's plan lists those files before you approve the deploy. Supabase records each file's hash in `supabase_migrations.seed_files`: a new file runs once, and an edited file only gets its hash updated, which matches insert-only. So a new role file goes live on the next deploy, and editing an existing one changes nothing on a hosted tier.
 
@@ -91,13 +91,13 @@ If `main` grew a newer migration while yours was open, recreate yours with a fre
 
 ## Applying a migration
 
-| Target                 | How                                                              |
-| ---------------------- | ---------------------------------------------------------------- |
-| your own stack         | `pnpm devtools supabase db reset`                                |
-| the shared dev project | `pnpm devtools --tier development:remote apply-migrations`       |
-| staging, production    | Backstage's deploy workflow, after the deploy pull request lands |
+| Target                 | How                                                               |
+| ---------------------- | ----------------------------------------------------------------- |
+| your own stack         | `pnpm devtools supabase db reset`                                 |
+| the shared dev project | `pnpm devtools --tier development:remote apply-migrations`        |
+| staging, production    | DevDogsUGA's deploy workflow, after the deploy pull request lands |
 
-`pnpm devtools --tier development:remote apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded. Staging and production work the same way, with the officer-only mechanics — the dry runs, the preflight and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](../../toolkit/infrastructure/hosted-databases.md). This repository never applies a migration to either.
+`pnpm devtools --tier development:remote apply-migrations` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded. Staging and production work the same way, with the officer-only mechanics — the dry runs, the preflight and the `backstage deploy` steps that operate on a hosted project — covered in [Hosted databases](../../toolkit/infrastructure/hosted-databases.md). Only the approved deploy workflow applies hosted migrations.
 
 > [!WARNING]
 > Never run `drizzle-kit push` against a hosted database: it writes the schema with no migration record and no rollback path. No script in either repo runs it, and none should.

@@ -82,7 +82,7 @@ They already have one dependency edge: platform tables have foreign keys to `aut
 
 Any other app's schema matches `"*"` and lands in the second module — but a table with a quarantine column points at `platform."reportResolutions"`, in the first. Drizzle emits a reference it has no import for, so the generated file does not compile and the build breaks. Adding the reverse import would make two machine-generated modules mutually importing.
 
-Excluding costs nothing anyway: `src/supabase/drizzle` exists so the console can reach the **Supabase-managed** schemas, and every consumer imports only `auth` tables.
+Excluding costs nothing anyway: `src/supabase/drizzle` exists so the dashboard can reach the **Supabase-managed** schemas, and every consumer imports only `auth` tables.
 
 ## Trap 3: a sign-in-able account seeded from SQL needs four empty strings
 

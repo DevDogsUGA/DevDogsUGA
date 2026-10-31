@@ -1,15 +1,15 @@
 ---
 name: Platform
-description: The site, console, docs, and OAuth server.
+description: The site, dashboard, docs, and OAuth server.
 order: 10
 ---
 
 # Platform
 
-The platform is the Next.js app behind the DevDogs site: the public pages, the officer console, these docs, and the OAuth server sibling projects sign in against. Its source (`apps/platform`) lives in the officers' [Backstage](https://github.com/DevDogsUGA/Backstage) repository, which also holds every deploy. Its database (migrations, seeds, `config.toml`), tests for that database, and these docs live here in DevDogsUGA. Read a guide here when you are working on one of its subsystems.
+The platform is the Next.js app behind the DevDogs site: the public pages, the officer dashboard, these docs, and the OAuth server sibling projects sign in against. Its source (`apps/platform`), database migrations and docs live in [DevDogsUGA](https://github.com/DevDogsUGA/DevDogsUGA). Read a guide here when you are working on one of its subsystems.
 
 > [!TIP]
-> New here? Start at [Getting started](../_shared/getting-started/prerequisites.md) — installing the toolchain, a database, and running the app. Platform code changes are pull requests against Backstage; [Your first contribution](./getting-started/first-contribution.md) sets up both repos side by side.
+> New here? Start at [Getting started](../_shared/getting-started/prerequisites.md) — installing the toolchain, a database, and running the app. See [Your first contribution](./getting-started/first-contribution.md) for the contribution workflow.
 
 ## Architecture, briefly
 
@@ -21,7 +21,7 @@ account through the OAuth server this app also runs — see
 
 ## Glossary
 
-- **Meeting** — a general body meeting or workshop, authored as config in Backstage and reconciled here. See [Events](./infrastructure/events.md).
+- **Meeting** — a general body meeting or workshop, authored in `packages/events` and reconciled into the database. See [Events](./infrastructure/events.md).
 - **Attendance** — a member's authoritative meeting check-in, the input every star and streak derives from. See [Attendance](./guides/meetings-and-teams/attendance.md).
 - **Star / streak** — a derived participation passport, not a stored score: one per credit-eligible meeting attended. See [Stars & Streaks](./guides/meetings-and-teams/stars-and-awards.md).
 - **Moderation report** — a complaint against member-written content, resolved into a quarantine or a sanction. See [Reporting](./guides/reporting/index.md) and [Moderation](./guides/moderation/index.md).
