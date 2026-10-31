@@ -94,8 +94,11 @@ beforeEach(async () => {
     devdogsOwned: boolean,
     owners: string[],
   ) => {
+    // Archived: an active project needs an approved repository link, which
+    // submissions never look at.
     const [row] = await db.execute<{ id: string }>(sql`
-      insert into platform.projects (name, status, "devdogsOwned") values (${name}, 'active', ${devdogsOwned}) returning id`);
+      insert into platform.projects (name, slug, status, "devdogsOwned")
+      values (${name}, ${name.toLowerCase().replace(/\s+/gu, "-")}, 'archived', ${devdogsOwned}) returning id`);
     for (const owner of owners)
       await db.execute(
         sql`insert into platform."projectOwners" ("projectId", "userId") values (${row!.id}::uuid, ${owner}::uuid)`,

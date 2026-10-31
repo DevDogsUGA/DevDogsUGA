@@ -64,9 +64,8 @@ const SYNCED = new Intl.DateTimeFormat("en-US", {
 });
 
 /**
- * One project, by slug or by UUID (legacy rows have no slug). Any signed-in
- * member sees an active or archived project; a legacy row only an officer
- * does, and everyone else gets a 404. What the page offers follows the Record
+ * One project, by slug or by UUID (old links use the UUID). Any signed-in
+ * member sees it, active or archived. What the page offers follows the Record
  * rules in `server/projects/records.ts`: an Owner edits, a Contributor files a
  * report, an Officer gets the officer-only controls, and the advisor or a
  * report reviewer sees the reports waiting on them.
@@ -85,7 +84,7 @@ export default async function ProjectPage({
   if (!projectId) notFound();
   const project = await getProjectDetail(projectId);
   const officer = rules.officer(caller);
-  if (!project || (project.legacy && !officer)) notFound();
+  if (!project) notFound();
 
   const reviewer = rules.reviewProjectReports(caller);
   const find = ((await searchParams).find ?? "").trim().slice(0, 80);
@@ -97,16 +96,16 @@ export default async function ProjectPage({
     ownerIds: project.owners.map((owner) => owner.userId),
   };
   const actor = { userId: caller.userId, isOfficer: officer };
-  const canEdit = !project.legacy && mayEdit(facts, actor);
-  const canManageOwners = !project.legacy && mayManageOwners(facts, actor);
-  const canUnarchive = !project.legacy && mayUnarchive(facts, actor);
+  const canEdit = mayEdit(facts, actor);
+  const canManageOwners = mayManageOwners(facts, actor);
+  const canUnarchive = mayUnarchive(facts, actor);
   const canFile =
     fileVerdict({
       isOfficer: officer,
       isContributor: relation.isContributor,
       projectStatus: project.status,
     }) === "yes";
-  const reviewsHere = !project.legacy && (relation.isAdvisor || reviewer);
+  const reviewsHere = relation.isAdvisor || reviewer;
   const canRefresh = relation.isOwner || relation.isContributor || officer;
   const [reviewQueue, myReports, matches] = await Promise.all([
     reviewsHere
@@ -118,8 +117,7 @@ export default async function ProjectPage({
     canManageOwners || officer ? searchMembers(find) : Promise.resolve([]),
   ]);
   const path = projectPath(project);
-  const orphan =
-    !project.legacy && project.owners.length === 0 && !project.devdogsOwned;
+  const orphan = project.owners.length === 0 && !project.devdogsOwned;
 
   return (
     <div className="settings-shell">
@@ -145,14 +143,7 @@ export default async function ProjectPage({
         }
       />
 
-      {project.legacy && (
-        <Callout tone="warning" title="A project from before the redesign">
-          This record has no repositories or owners yet, so nobody can edit it
-          or file a new report on it until it is converted. Reports already
-          filed stay as they were.
-        </Callout>
-      )}
-      {project.status === "archived" && !project.legacy && (
+      {project.status === "archived" && (
         <Callout tone="info" title="This project is archived">
           It takes no new reports. An owner or an officer can restore it once at
           least one repository is approved.
@@ -176,7 +167,7 @@ export default async function ProjectPage({
             ? `Advisor ${project.advisorName}`
             : "No advisor assigned"}
         </p>
-        {officer && !project.legacy && (
+        {officer && (
           <>
             {project.advisorId && (
               <ProjectCommand
@@ -328,7 +319,7 @@ export default async function ProjectPage({
             ))}
           </ul>
         )}
-        {(canManageOwners || officer) && !project.legacy && (
+        {(canManageOwners || officer) && (
           <>
             <form method="get" className="prj-inline">
               <Field
@@ -477,7 +468,7 @@ export default async function ProjectPage({
         </Panel>
       )}
 
-      {!project.legacy && (canEdit || canUnarchive || officer) && (
+      {(canEdit || canUnarchive || officer) && (
         <Panel id="lifecycle" title="Lifecycle">
           <div className="prj-acts">
             {canEdit && project.status === "active" && (

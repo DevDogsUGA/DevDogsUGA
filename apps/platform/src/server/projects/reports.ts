@@ -23,7 +23,6 @@ import {
   editVerdict,
   FILE_REFUSAL,
   fileVerdict,
-  legacyBlock,
   REVIEW_REFUSAL,
   reviewVerdict,
 } from "./records";
@@ -129,8 +128,6 @@ export function fileReport(
           select status from platform.projects
           where id = ${input.projectId}::uuid for share`);
         if (!project) refuse("That project was not found.");
-        const legacy = legacyBlock(project.status);
-        if (legacy) refuse(legacy);
         const verdict = fileVerdict({
           isOfficer: rules.officer(actor),
           isContributor: await isContributor(tx, actor.userId, input.projectId),

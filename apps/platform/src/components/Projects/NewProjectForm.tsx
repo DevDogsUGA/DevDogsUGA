@@ -95,11 +95,7 @@ export default function NewProjectForm() {
           {created.status === "active"
             ? "Your project is active. "
             : "Every repository is waiting for an officer to approve it, so the project is archived until then. "}
-          <TextLink
-            href={projectPath({ slug: created.slug, id: created.projectId })}
-          >
-            Open the project
-          </TextLink>
+          <TextLink href={projectPath(created)}>Open the project</TextLink>
         </Callout>
       )}
     </form>
