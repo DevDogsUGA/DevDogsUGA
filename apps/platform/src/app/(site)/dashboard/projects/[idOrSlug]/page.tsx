@@ -12,6 +12,11 @@ import {
 import { StatusBadge } from "~/components/Projects/ProjectBadges";
 import ReportCard from "~/components/Projects/ReportCard";
 import ReviewForm from "~/components/Projects/ReviewForm";
+import ShowcaseDraft from "~/components/Projects/ShowcaseDraft";
+import {
+  RecordSubmissionForm,
+  SubmissionControls,
+} from "~/components/Projects/SubmissionForms";
 import "~/components/Projects/projects.css";
 import {
   addOwnerAction,
@@ -26,12 +31,15 @@ import {
   unlinkRepoAction,
 } from "~/server/actions/projects";
 import { requireDashboard, rules } from "~/server/auth/access";
+import { getSubmittableHackathons } from "~/server/hackathons/load";
 import {
   findProjectId,
   getMyReports,
   getProjectDetail,
   getRelation,
   getReviewQueue,
+  getShowcaseFields,
+  getTeamCandidates,
   searchMembers,
 } from "~/server/projects/load";
 import { PROJECT_MAX_REPOS } from "~/server/projects/policy";
@@ -107,7 +115,14 @@ export default async function ProjectPage({
     }) === "yes";
   const reviewsHere = relation.isAdvisor || reviewer;
   const canRefresh = relation.isOwner || relation.isContributor || officer;
-  const [reviewQueue, myReports, matches] = await Promise.all([
+  const [
+    reviewQueue,
+    myReports,
+    matches,
+    hackathons,
+    teamCandidates,
+    showcase,
+  ] = await Promise.all([
     reviewsHere
       ? getReviewQueue(caller.userId, { all: reviewer, projectId })
       : Promise.resolve([]),
@@ -115,6 +130,9 @@ export default async function ProjectPage({
       reports.filter((report) => report.projectId === projectId),
     ),
     canManageOwners || officer ? searchMembers(find) : Promise.resolve([]),
+    canEdit ? getSubmittableHackathons() : Promise.resolve([]),
+    canEdit ? getTeamCandidates(projectId) : Promise.resolve([]),
+    officer ? getShowcaseFields(projectId) : Promise.resolve(null),
   ]);
   const path = projectPath(project);
   const orphan = project.owners.length === 0 && !project.devdogsOwned;
@@ -402,11 +420,23 @@ export default async function ProjectPage({
                 {submission.team.length > 0 && (
                   <p className="prj-meta">{submission.team.join(", ")}</p>
                 )}
+                {canEdit && (
+                  <SubmissionControls
+                    submission={submission}
+                    members={teamCandidates}
+                  />
+                )}
               </li>
             ))}
           </ul>
         )}
-        {/* TODO(D4): the record-a-submission form for owners lands with the hackathons stage. */}
+        {canEdit && (
+          <RecordSubmissionForm
+            projectId={project.id}
+            hackathons={hackathons}
+            members={teamCandidates}
+          />
+        )}
       </Panel>
 
       {myReports.length > 0 && (
@@ -467,6 +497,14 @@ export default async function ProjectPage({
           )}
         </Panel>
       )}
+
+      {officer && showcase && (
+        <ShowcaseDraft projectId={project.id} values={showcase} />
+      )}
+
+      {/* TODO(E1): the officer docs panel goes here, once `setProjectDocs` and
+          `confirmDocsOwner` land: the docs toggle and the owner-change
+          confirmation (Q47). */}
 
       {(canEdit || canUnarchive || officer) && (
         <Panel id="lifecycle" title="Lifecycle">
