@@ -32,7 +32,7 @@
  * requests meet that 503. Measured by switching staging-platform between two
  * versions under a request loop: about one request in ten, on both versions;
  * none seen on schedule-builder. The version-pinned preview is NOT immune:
- * the staging run for d76c007d had `/console/permissions` answer 503 on the
+ * the staging run for d76c007d had `/dashboard/permissions` answer 503 on the
  * pinned version while the deployment was still propagating. The wait ends
  * after `stable` (20) good answers in a row, 250 ms apart, and is itself a
  * reported check, so a switch that needed it says so, and a version that never

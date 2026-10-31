@@ -144,7 +144,7 @@ export default function ImportsWorkspace({
     }
     setBusy(true);
     try {
-      const res = await fetch(`/console/data/imports/${step}`, {
+      const res = await fetch(`/dashboard/data/imports/${step}`, {
         method: "POST",
         body,
       });

@@ -1,6 +1,6 @@
 /**
  * The sections and fields inside the settings and console pages, so search can
- * land on `/settings/profile#graduation` instead of just `/settings/profile`.
+ * land on `/dashboard/profile#graduation` instead of just `/dashboard/profile`.
  *
  * Every `id` here is the anchor the page already renders, `Panel`'s (or
  * `ConsoleCard.Root`'s) `id` for a section and `Field`'s (or `SettingsAnchor`'s)
@@ -33,7 +33,7 @@ export interface PageSection {
 
 /** Keyed by the page's href, which must be a `href` from `./nav`. */
 export const PAGE_SECTIONS: Record<string, PageSection[]> = {
-  "/settings/profile": [
+  "/dashboard/profile": [
     {
       id: "details",
       label: "Your details",
@@ -107,7 +107,7 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
     { id: "delete-account", label: "Delete account" },
   ],
 
-  "/settings/accounts": [
+  "/dashboard/accounts": [
     {
       id: "accounts",
       label: "Accounts",
@@ -142,7 +142,7 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
     { id: "verification", label: "Verification" },
   ],
 
-  "/settings/oauth": [
+  "/dashboard/oauth": [
     { id: "issuer", label: "Issuer URL" },
     { id: "apps", label: "Your apps" },
     { id: "test-accounts", label: "Test accounts" },
@@ -160,12 +160,12 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
     },
   ],
 
-  "/console/permissions": [
+  "/dashboard/permissions": [
     { id: "assign-roles", label: "Assign roles" },
     { id: "role-definitions", label: "Role definitions" },
   ],
 
-  "/console/reflections": [
+  "/dashboard/reflections": [
     { id: "reflection-settings", label: "Reflection settings" },
   ],
 };

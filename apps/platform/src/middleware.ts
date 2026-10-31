@@ -10,9 +10,10 @@ export async function middleware(request: NextRequest) {
   // Worker entry stamps a fresh one onto every response at the edge
   // (`cloudflare/nonce.ts`).
   //
-  // The console access-denied card receives no props, so it reads this
-  // header to identify the refused section. Console pages are never cached.
-  const wantsRequestPath = /^\/console(\/|$)/.test(request.nextUrl.pathname);
+  // Dashboard layouts read this carrier for the sign-in callback and the
+  // refused section. Dashboard pages are per-user, so the request header
+  // deliberately bypasses vinext's shared page cache.
+  const wantsRequestPath = /^\/dashboard(\/|$)/.test(request.nextUrl.pathname);
   if (wantsRequestPath) {
     request.headers.set(
       "x-request-path",

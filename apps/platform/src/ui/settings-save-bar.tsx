@@ -29,7 +29,7 @@ import { useSettingsForm, type SettingsSaveResult } from "~/ui/settings-form";
  * Cosmic `.savebar` (sticky bottom, a 2px rule above, an 8px shade over the
  * page), fixed to the viewport here. z-40 matches AnnouncementBanner, under the z-50 dialog and sheet overlays and
  * under sonner's toasts. The two never share a page (`showsAnnouncement` keeps
- * the notice off `/account` and every other signed-in page), and
+ * the notice off `/dashboard/profile` and every other signed-in page), and
  * `announcement.test.ts` pins that down so they cannot start to.
  *
  * Rendered through a portal to <body>, because z-40 alone was not enough to

@@ -18,12 +18,11 @@ export interface DashboardSection {
   description: string;
   group: (typeof DASHBOARD_GROUPS)[number];
   href: string;
-  dashboardHref: string;
   access: "member" | keyof typeof rules;
   refusal: "forbidden" | "notFound";
 }
 
-/** Today's URLs stay in use until B2 flips href to dashboardHref. */
+/** The signed-in sections and their canonical dashboard URLs. */
 export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
   {
     id: "profile",
@@ -31,8 +30,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     icon: "UserIcon",
     description: "Manage your details, public profile and handle.",
     group: "Account",
-    href: "/settings/profile",
-    dashboardHref: "/dashboard/profile",
+    href: "/dashboard/profile",
     access: "member",
     refusal: "forbidden",
   },
@@ -42,8 +40,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     icon: "LinkSimpleIcon",
     description: "Link GitHub, Discord and LinkedIn.",
     group: "Account",
-    href: "/settings/accounts",
-    dashboardHref: "/dashboard/accounts",
+    href: "/dashboard/accounts",
     access: "member",
     refusal: "forbidden",
   },
@@ -53,8 +50,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     icon: "StarIcon",
     description: "Check in and track your participation passport.",
     group: "Account",
-    href: "/attendance",
-    dashboardHref: "/dashboard/attendance",
+    href: "/dashboard/attendance",
     access: "member",
     refusal: "forbidden",
   },
@@ -64,8 +60,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     icon: "FolderSimpleIcon",
     description: "Your projects and reports.",
     group: "Projects",
-    href: "/projects",
-    dashboardHref: "/dashboard/projects",
+    href: "/dashboard/projects",
     access: "member",
     refusal: "forbidden",
   },
@@ -76,8 +71,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     icon: "FolderSimpleIcon",
     description: "Review project proposals and reports.",
     group: "Projects",
-    href: "/console/projects",
-    dashboardHref: "/dashboard/reviews",
+    href: "/dashboard/reviews",
     access: "officer",
     refusal: "forbidden",
   },
@@ -87,8 +81,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     icon: "KeyIcon",
     description: "Manage your OAuth clients.",
     group: "Developer",
-    href: "/settings/oauth",
-    dashboardHref: "/dashboard/oauth",
+    href: "/dashboard/oauth",
     access: "member",
     refusal: "forbidden",
   },
@@ -99,8 +92,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Present live meeting QR codes, numeric codes, and attendance totals.",
     group: "Console",
-    href: "/console/attendance",
-    dashboardHref: "/dashboard/meetings",
+    href: "/dashboard/meetings",
     access: "useGraphics",
     refusal: "forbidden",
   },
@@ -111,8 +103,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Club logos, banners and app icons to download. Each meeting's page has its own graphics.",
     group: "Console",
-    href: "/console/graphics",
-    dashboardHref: "/dashboard/graphics",
+    href: "/dashboard/graphics",
     access: "useGraphics",
     refusal: "forbidden",
   },
@@ -123,8 +114,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Import attendance sheets and the Involvement roster from CSV, with a preview before anything changes.",
     group: "Console",
-    href: "/console/data",
-    dashboardHref: "/dashboard/data",
+    href: "/dashboard/data",
     access: "manageAttendance",
     refusal: "forbidden",
   },
@@ -135,8 +125,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Deprecated: use `backstage qr`. Generate branded QR codes for attendance, posters, and other club materials.",
     group: "Console",
-    href: "/console/qr",
-    dashboardHref: "/dashboard/qr",
+    href: "/dashboard/qr",
     access: "manageAttendance",
     refusal: "forbidden",
   },
@@ -146,8 +135,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     icon: "NotePencilIcon",
     description: "Set the word minimum and submission window for reflections.",
     group: "Console",
-    href: "/console/reflections",
-    dashboardHref: "/dashboard/reflections",
+    href: "/dashboard/reflections",
     access: "manageAttendance",
     refusal: "forbidden",
   },
@@ -158,8 +146,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Propose changes to meetings, workshops and venues. Edits are saved privately; Open PR sends them to GitHub for review.",
     group: "Console",
-    href: "/console/meetings",
-    dashboardHref: "/dashboard/schedule",
+    href: "/dashboard/schedule",
     access: "officer",
     refusal: "forbidden",
   },
@@ -170,8 +157,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Award Workshop Host, Guide Author, Mentor and Event Organizer badges with a public citation, or withdraw one.",
     group: "Console",
-    href: "/console/badges",
-    dashboardHref: "/dashboard/badges",
+    href: "/dashboard/badges",
     access: "officer",
     refusal: "forbidden",
   },
@@ -182,8 +168,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Every member starts with no permissions; President holds all of them and is assigned on Discord.",
     group: "Console",
-    href: "/console/permissions",
-    dashboardHref: "/dashboard/permissions",
+    href: "/dashboard/permissions",
     access: "manageRoles",
     refusal: "forbidden",
   },
@@ -194,8 +179,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Review content reports filed against community profiles and resolve them with the appropriate action.",
     group: "Console",
-    href: "/console/moderation",
-    dashboardHref: "/dashboard/moderation",
+    href: "/dashboard/moderation",
     access: "moderate",
     refusal: "forbidden",
   },
@@ -206,8 +190,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "A record of moderation actions and content reports filed across all production OAuth clients.",
     group: "Console",
-    href: "/console/audit-log",
-    dashboardHref: "/dashboard/audit-log",
+    href: "/dashboard/audit-log",
     access: "viewAuditLog",
     refusal: "forbidden",
   },
@@ -218,8 +201,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Publish OAuth apps, return them to Testing, transfer them to DevDogs and choose which skip the consent screen.",
     group: "Console",
-    href: "/console/apps",
-    dashboardHref: "/dashboard/apps",
+    href: "/dashboard/apps",
     access: "manageOAuthApps",
     refusal: "forbidden",
   },
@@ -230,8 +212,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     description:
       "Read docs pages scheduled for later, marked with when they go live. Anyone without access gets a 404.",
     group: "Console",
-    href: "/preview/docs",
-    dashboardHref: "/dashboard/docs-preview",
+    href: "/dashboard/docs-preview",
     access: "previewDocs",
     refusal: "notFound",
   },

@@ -50,7 +50,7 @@ describe("Section registry", () => {
   });
   it("rejects unowned paths", () => {
     expect(sectionFor(null)).toBeNull();
-    expect(sectionFor("/console")).toBeNull();
+    expect(sectionFor("/dashboard")).toBeNull();
   });
   it.each(DASHBOARD_SECTIONS)("has a terminal twin for $href", (section) =>
     expect(matchTerminalPath(section.href)).not.toBeNull(),
@@ -58,7 +58,7 @@ describe("Section registry", () => {
 });
 
 const SRC = resolve(process.cwd(), "src");
-const CONSOLE = resolve(SRC, "app/(site)/console");
+const CONSOLE = resolve(SRC, "app/(site)/dashboard");
 function pages(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory()
@@ -72,30 +72,30 @@ function pages(dir: string): string[] {
 /** Deliberate sub-page exceptions; a new stricter or different rule needs an edit here. */
 const EXCEPTIONS: Record<string, keyof typeof rules> = {
   // Attendance records require attendance management; the list also serves graphics users.
-  "/console/attendance/[meetingId]": "manageAttendance",
+  "/dashboard/meetings/[meetingId]": "manageAttendance",
   // Different rule, not stricter: manageSuspensions is its own capability; a suspensions manager reaches this page by direct link or from a report.
-  "/console/moderation/users/[userId]": "manageSuspensions",
+  "/dashboard/moderation/users/[userId]": "manageSuspensions",
 };
 
 /** These pages delegate their primary gate to a loader; auxiliary grants are not page gates. */
 const LOADER_GATES: Record<string, [string, string]> = {
-  "/console/permissions": [
+  "/dashboard/permissions": [
     "server/loaders/permissions.ts",
     "getPermissionsPageData",
   ],
-  "/console/moderation": [
+  "/dashboard/moderation": [
     "server/loaders/moderation.ts",
     "getModerationPageData",
   ],
-  "/console/moderation/[reportId]": [
+  "/dashboard/moderation/[reportId]": [
     "server/loaders/moderation.ts",
     "getReportDetailData",
   ],
-  "/console/moderation/users/[userId]": [
+  "/dashboard/moderation/users/[userId]": [
     "server/loaders/moderation.ts",
     "getUserModerationData",
   ],
-  "/console/audit-log/[eventId]": [
+  "/dashboard/audit-log/[eventId]": [
     "server/loaders/auditLog.ts",
     "getAuditEventDetailData",
   ],
@@ -122,37 +122,54 @@ describe("console page access drift", () => {
       ),
     ).toBe(true);
   });
-  it.each(pages(CONSOLE))(
-    "matches its section or an explicit sub-page exception: %s",
-    (file) => {
-      const path =
-        "/console/" + relative(CONSOLE, file).replace(/\/page\.tsx$/, "");
-      const section = sectionFor(path);
-      expect(section, path).not.toBeNull();
-      const source = readFileSync(file, "utf8");
-      const expected = EXCEPTIONS[path] ?? section!.access;
-      // D3 owns advisor visibility. Both project pages already apply an officer-or-advisor record gate.
-      if (path.startsWith("/console/projects")) {
-        expect(source).toContain("rules.officer(caller)");
-        expect(source).toMatch(
-          /advisesAnyProject|project.advisorId === userId/,
-        );
-        expect(section!.access).toBe("officer");
-        return;
-      }
-      const delegated = LOADER_GATES[path];
-      const gateSource = delegated ? loaderSource(...delegated) : source;
-      if (delegated) expect(source).toContain(delegated[1]);
-      const gates = [
-        ...gateSource.matchAll(/requireAccess\(rules\.(\w+)\)/g),
-      ].map((match) => match[1]);
-      expect(gates).toEqual([expected]);
-    },
-  );
+  it.each(
+    pages(CONSOLE).filter(
+      (file) =>
+        sectionFor(
+          "/dashboard/" + relative(CONSOLE, file).replace(/\/page\.tsx$/, ""),
+        )?.group === "Console" || file.includes("/reviews/"),
+    ),
+  )("matches its section or an explicit sub-page exception: %s", (file) => {
+    const path =
+      "/dashboard/" + relative(CONSOLE, file).replace(/\/page\.tsx$/, "");
+    const section = sectionFor(path);
+    expect(section, path).not.toBeNull();
+    const source = readFileSync(file, "utf8");
+    const expected = EXCEPTIONS[path] ?? section!.access;
+    // D3 owns advisor visibility. Both project pages already apply an officer-or-advisor record gate.
+    if (path.startsWith("/dashboard/reviews")) {
+      expect(source).toContain("rules.officer(caller)");
+      expect(source).toMatch(/advisesAnyProject|project.advisorId === userId/);
+      expect(section!.access).toBe("officer");
+      return;
+    }
+    if (path.startsWith("/dashboard/docs-preview")) {
+      const layout = readFileSync(
+        resolve(CONSOLE, "docs-preview/layout.tsx"),
+        "utf8",
+      );
+      expect(layout).toContain("await requireDocsPreview()");
+      const gate = readFileSync(
+        resolve(SRC, "server/docs/previewAccess.ts"),
+        "utf8",
+      );
+      expect(gate).toContain("await requireDashboard()");
+      expect(gate).toContain("!rules.previewDocs(caller)");
+      expect(gate).toContain("notFound()");
+      return;
+    }
+    const delegated = LOADER_GATES[path];
+    const gateSource = delegated ? loaderSource(...delegated) : source;
+    if (delegated) expect(source).toContain(delegated[1]);
+    const gates = [
+      ...gateSource.matchAll(/requireAccess\(rules\.(\w+)\)/g),
+    ].map((match) => match[1]);
+    expect(gates).toEqual([expected]);
+  });
   it("keeps every exception tied to a real sub-page", () => {
     const paths = pages(CONSOLE).map(
       (file) =>
-        "/console/" + relative(CONSOLE, file).replace(/\/page\.tsx$/, ""),
+        "/dashboard/" + relative(CONSOLE, file).replace(/\/page\.tsx$/, ""),
     );
     for (const [path, access] of Object.entries(EXCEPTIONS)) {
       expect(paths).toContain(path);

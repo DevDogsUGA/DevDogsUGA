@@ -58,7 +58,7 @@ export async function saveSurvey(
   const userId = access.caller.userId;
   try {
     const changed = await writeSurvey(userId, parsed.data.meetingId, formData);
-    revalidatePath("/attendance");
+    revalidatePath("/dashboard/attendance");
     return {
       ok: true,
       message: changed === 0 ? "Nothing changed." : "Answers saved.",

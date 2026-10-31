@@ -36,7 +36,7 @@ import type { DocHeading } from "~/lib/toc";
 //
 // `mode: "preview"` is the other reading: everything, with what is still ahead
 // of its time carrying `publishAt` so the UI can mark it. It backs
-// `/preview/docs`, which is never cached and only served to a role that holds
+// `/dashboard/docs-preview`, which is never cached and only served to a role that holds
 // `canPreviewDocs`.
 
 export type { DocsProject };

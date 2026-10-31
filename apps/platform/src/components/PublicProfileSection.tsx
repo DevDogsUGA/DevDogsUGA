@@ -259,7 +259,7 @@ export default function PublicProfileSection({
             ) : (
               <>
                 Not connected.{" "}
-                <Link href="/settings/accounts" className="textlink">
+                <Link href="/dashboard/accounts" className="textlink">
                   Link it in Connected accounts
                 </Link>{" "}
                 to show it.

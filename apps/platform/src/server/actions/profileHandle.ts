@@ -42,14 +42,14 @@ export default async function setHandle(
   const access = await authorizeSession();
   if (!access.ok) {
     await expectSession().catch(() =>
-      authenticate("google", "/settings/profile"),
+      authenticate("google", "/dashboard/profile"),
     );
     throw new Error(access.message);
   }
 
   if (!publicProfilesEnabled()) throw new Error("Public profiles are off");
   const userId = await expectSession().catch(() =>
-    authenticate("google", "/settings/profile"),
+    authenticate("google", "/dashboard/profile"),
   );
 
   const allowed = await consumeRateLimit({
@@ -73,7 +73,7 @@ export default async function setHandle(
     revalidatePath(COMMUNITY_PATH);
     revalidatePath(profilePath(stored));
     if (before?.handle) revalidatePath(profilePath(before.handle));
-    revalidatePath("/settings/profile");
+    revalidatePath("/dashboard/profile");
     return { status: "set", handle: stored };
   }
   if (

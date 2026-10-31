@@ -19,7 +19,7 @@ const DISPLAY_WINDOW_FEATURES = "popup,width=1280,height=800";
  * new tab" / "copy link" still work exactly as they would for any other
  * link -- `onClick` only intercepts the ordinary left click, which is the
  * one case that would otherwise replace the console tab. `href` is the
- * meeting's console page (`/console/attendance/[meetingId]`); every path
+ * meeting's console page (`/dashboard/meetings/[meetingId]`); every path
  * this link offers is its chrome-free `/present` display, since that page
  * is now the meeting's detail page and no longer shows the QR -- see the
  * `(present)` route's layout doc comment.

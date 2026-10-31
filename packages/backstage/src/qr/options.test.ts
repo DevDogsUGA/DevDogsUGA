@@ -1,5 +1,5 @@
 /**
- * The guard against the two QR front ends drifting: `/console/qr` and
+ * The guard against the two QR front ends drifting: `/dashboard/qr` and
  * `backstage qr` both read `qrRequestSchema`, and this fails the moment the
  * schema gains a field this CLI has no flag for.
  */

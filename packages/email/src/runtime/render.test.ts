@@ -21,7 +21,7 @@ const deletion = {
   name: "Sam Rivera",
   requestedLine: "You asked to delete your account.",
   scheduledDate: "Friday, November 6, 2026",
-  keepUrl: "https://devdogsuga.org/account/deletion",
+  keepUrl: "https://devdogsuga.org/dashboard/deletion",
 };
 
 const attendanceInvite = {

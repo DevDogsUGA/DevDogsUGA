@@ -154,9 +154,9 @@ describe("GET /auth/callback, signing in", () => {
 describe("GET /auth/callback, linking an account", () => {
   it("keeps a provider rejection in the settings flow", async () => {
     cookieJar.set("auth_intent", "link:github");
-    cookieJar.set("auth_callback_path", "/settings/accounts");
+    cookieJar.set("auth_callback_path", "/dashboard/accounts");
     expect(await call("error=access_denied")).toBe(
-      "REDIRECT /settings/accounts?connectedAccountStatus=error&connectedAccountCode=access_denied&connectedAccountProvider=github",
+      "REDIRECT /dashboard/accounts?connectedAccountStatus=error&connectedAccountCode=access_denied&connectedAccountProvider=github",
     );
     expect(reportSignInIncident).not.toHaveBeenCalled();
   });

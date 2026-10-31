@@ -2,7 +2,8 @@ import "server-only";
 
 import { failure, type ActionResult } from "~/lib/actionResult";
 import { cache } from "react";
-import { forbidden, notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { forbidden, redirect } from "next/navigation";
 import { expectSession } from "~/server/auth";
 import { getCallerContext, type ResolvedPermissions } from "./permissions";
 import { mayUseGraphics } from "~/lib/graphicsAccess";
@@ -63,10 +64,19 @@ export const rules = {
   reviewProjectReports: (caller) => caller.flags.canReviewProjectReports,
 } satisfies Record<string, Rule>;
 
-/** Keep the existing signed-out 404 until the dashboard route migration. */
-export async function requireAccess(rule: Rule): Promise<Caller> {
+/** Preserve the full dashboard URL when a signed-out visitor signs in. */
+export async function requireDashboard(): Promise<Caller> {
   const caller = await loadCaller();
-  if (!caller) notFound();
+  if (!caller) {
+    const path = (await headers()).get("x-request-path") ?? "/dashboard";
+    redirect(`/auth?callbackPath=${encodeURIComponent(path)}`);
+  }
+  return caller;
+}
+
+/** Real dashboard pages show the access-denied card to members without a grant. */
+export async function requireAccess(rule: Rule): Promise<Caller> {
+  const caller = await requireDashboard();
   if (!rule(caller)) forbidden();
   return caller;
 }

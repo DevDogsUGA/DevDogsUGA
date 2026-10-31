@@ -82,7 +82,7 @@ export default async function OAuthConnectPage({ searchParams }: Props) {
           <Callout tone="warning">
             Connecting an OAuth client requires a linked GitHub account.
           </Callout>
-          <Link href="/settings/accounts#github" className="btn primary">
+          <Link href="/dashboard/accounts#github" className="btn primary">
             Link GitHub account
           </Link>
         </div>
@@ -98,7 +98,7 @@ export default async function OAuthConnectPage({ searchParams }: Props) {
           <p className="help" style={{ margin: 0 }}>
             This creates a new OAuth client and sends its secret back to the CLI
             running on your machine. You can revoke it any time from{" "}
-            <Link href="/settings/oauth" className="textlink">
+            <Link href="/dashboard/oauth" className="textlink">
               OAuth apps
             </Link>
             .

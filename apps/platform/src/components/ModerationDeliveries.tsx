@@ -68,7 +68,7 @@ export default function ModerationDeliveries({
               )}
               {linkReports && delivery.reportId && (
                 <Link
-                  href={`/console/moderation/${delivery.reportId}`}
+                  href={`/dashboard/moderation/${delivery.reportId}`}
                   className="textlink"
                 >
                   Open report

@@ -56,7 +56,7 @@ export async function saveReflection(
   const input = parsed.data;
   try {
     await writeReflection(userId, input);
-    revalidatePath("/attendance");
+    revalidatePath("/dashboard/attendance");
     return {
       ok: true,
       message:

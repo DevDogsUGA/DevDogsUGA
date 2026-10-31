@@ -22,7 +22,7 @@ export type PublicProfileField = (typeof PUBLIC_PROFILE_FIELDS)[number];
 
 export type PublicProfileSwitches = Record<PublicProfileField, boolean>;
 
-/** The per-field switches in the order /account shows them, with their copy. */
+/** The per-field switches in the order /dashboard/profile shows them, with their copy. */
 export const PUBLIC_PROFILE_FIELD_OPTIONS: ReadonlyArray<{
   field: Exclude<PublicProfileField, "publicProfile">;
   label: string;

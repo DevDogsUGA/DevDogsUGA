@@ -195,7 +195,7 @@ export async function scheduleAccountDeletion(
       ? "A DevDogs officer scheduled your account for deletion."
       : "You asked to delete your account.",
     scheduledDate: formatDeletionDate(scheduledFor),
-    keepUrl: `${env.BASE_URL}/account/deletion`,
+    keepUrl: `${env.BASE_URL}/dashboard/deletion`,
   });
   if (!result.ok) {
     console.error("account_deletion_email_failed", {

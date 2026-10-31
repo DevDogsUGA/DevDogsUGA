@@ -27,7 +27,7 @@ import { Textarea } from "~/ui/textarea";
 const initialState: SurveyActionState = { ok: false, message: "" };
 
 /**
- * The check-in survey, shown on /attendance after a check-in.
+ * The check-in survey, shown on /dashboard/attendance after a check-in.
  *
  * Unanswered member questions first, then this meeting's own, then the
  * member's saved answers folded away to edit. Every question shown posts an

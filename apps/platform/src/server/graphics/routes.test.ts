@@ -43,9 +43,9 @@ vi.mock("@devdogsuga/sdk/brand/next", () => ({
   },
 }));
 
-import { GET as brand } from "../../app/(api)/console/graphics/brand/route";
-import { GET as image } from "../../app/(api)/console/graphics/meetings/[meetingId]/image/route";
-import { GET as zip } from "../../app/(api)/console/graphics/meetings/[meetingId]/zip/route";
+import { GET as brand } from "../../app/(api)/dashboard/graphics/brand/route";
+import { GET as image } from "../../app/(api)/dashboard/graphics/meetings/[meetingId]/image/route";
+import { GET as zip } from "../../app/(api)/dashboard/graphics/meetings/[meetingId]/zip/route";
 
 const subjects = meetingSubjects({
   meeting: {
@@ -63,7 +63,8 @@ const subjects = meetingSubjects({
 });
 
 const ctx = { params: Promise.resolve({ meetingId: "m1" }) };
-const url = (path: string) => `https://devdogsuga.org/console/graphics${path}`;
+const url = (path: string) =>
+  `https://devdogsuga.org/dashboard/graphics${path}`;
 
 beforeEach(() => {
   caller.value = {

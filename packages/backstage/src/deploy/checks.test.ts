@@ -60,7 +60,7 @@ describe("checkPublicRoute", () => {
 describe("checkProtectedRedirect", () => {
   it("passes when the redirect Location matches the expected prefix", async () => {
     const result = await checkProtectedRedirect(
-      "https://devdogsuga.org/console/permissions",
+      "https://devdogsuga.org/dashboard/permissions",
       "/auth",
       stubFetch(() => ({
         status: 307,
@@ -72,7 +72,7 @@ describe("checkProtectedRedirect", () => {
 
   it("fails when the response is not a redirect", async () => {
     const result = await checkProtectedRedirect(
-      "https://devdogsuga.org/console/permissions",
+      "https://devdogsuga.org/dashboard/permissions",
       "/auth",
       stubFetch(() => ({ status: 200 })),
     );
@@ -82,7 +82,7 @@ describe("checkProtectedRedirect", () => {
 
   it("fails when the redirect Location does not match", async () => {
     const result = await checkProtectedRedirect(
-      "https://devdogsuga.org/console/permissions",
+      "https://devdogsuga.org/dashboard/permissions",
       "/auth",
       stubFetch(() => ({ status: 307, headers: { location: "/" } })),
     );

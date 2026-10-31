@@ -1139,7 +1139,7 @@ test("discoverIssuer refuses a discovery document without an issuer", async () =
 const SMOKE = {
   hosts: { staging: "staging.example.org" },
   publicPaths: ["/", "/docs"],
-  protectedPath: "/console",
+  protectedPath: "/dashboard",
   protectedRedirectPrefix: "/auth",
 };
 
@@ -1155,10 +1155,10 @@ test("smoke passes when public pages load and the protected page redirects", asy
   const fetchImpl = async (url, init) => {
     seen.push({ url: String(url), headers: init.headers });
     const path = new URL(url).pathname;
-    if (path === "/console")
+    if (path === "/dashboard")
       return new Response(null, {
         status: 307,
-        headers: { location: "/auth?next=/console" },
+        headers: { location: "/auth?callbackPath=%2Fdashboard" },
       });
     return new Response("ok", { status: 200 });
   };
@@ -1187,7 +1187,7 @@ test("smoke fails on a broken page and on an unprotected protected page", async 
   const fetchImpl = async (url) => {
     const path = new URL(url).pathname;
     if (path === "/docs") return new Response("boom", { status: 500 });
-    if (path === "/console") return new Response("secret", { status: 200 });
+    if (path === "/dashboard") return new Response("secret", { status: 200 });
     return new Response("ok", { status: 200 });
   };
   const checks = await runSmoke({
@@ -1213,7 +1213,7 @@ test("a 5xx is a failure with no retry, and the check says what answered", async
   const calls = { "/": 0, "/docs": 0 };
   const fetchImpl = async (url) => {
     const path = new URL(url).pathname;
-    if (path === "/console")
+    if (path === "/dashboard")
       return new Response(null, {
         status: 307,
         headers: { location: "/auth" },
@@ -1239,7 +1239,7 @@ test("settle waits out the 5xx window after a switch and reports it", async () =
   let n = 0;
   const fetchImpl = async (url) => {
     const path = new URL(url).pathname;
-    if (path === "/console")
+    if (path === "/dashboard")
       return new Response(null, {
         status: 307,
         headers: { location: "/auth" },
@@ -1271,7 +1271,7 @@ test("after settling, a page that answers 5xx is asked once more and the retry i
   const calls = { "/docs": 0 };
   const fetchImpl = async (url) => {
     const path = new URL(url).pathname;
-    if (path === "/console")
+    if (path === "/dashboard")
       return new Response(null, {
         status: 307,
         headers: { location: "/auth" },
@@ -1307,7 +1307,7 @@ test("after settling, a page that answers 5xx is asked once more and the retry i
     tier: "staging",
     fetchImpl: async (url) => {
       const path = new URL(url).pathname;
-      if (path === "/console")
+      if (path === "/dashboard")
         return new Response(null, {
           status: 307,
           headers: { location: "/auth" },

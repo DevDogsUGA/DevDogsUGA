@@ -76,7 +76,7 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 | `env pull\|push\|audit --target <t>`                  | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
 | `planner status\|create\|reset-password\|drop`        | The `migration_planner` role the preflight tier holds.                                 |
 | `graphics [graphic…]`                                 | Club images from `@devdogsuga/sdk/brand`: `brand/*`, `app/*`, `event/*`.               |
-| `qr <text>`                                           | QR codes with every option of `/console/qr`.                                           |
+| `qr <text>`                                           | QR codes with every option of `/dashboard/qr`.                                         |
 | `github rulesets\|settings`                           | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
 | `newsletter render\|draft\|send <series> <issue…>`    | Changelog or GDGC issues as files, mailbox drafts, or a send.                          |
 | `creds send\|add\|renew\|list\|report`                | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
@@ -100,7 +100,7 @@ DevDogsUGA, as a `smoke` field on each app's entry in `workers.json`:
         "production": "devdogsuga.org"
       },
       "publicPaths": ["/", "/events"],
-      "protectedPath": "/settings/profile",
+      "protectedPath": "/dashboard/profile",
       "protectedRedirectPrefix": "/auth"
     }
   }
@@ -121,14 +121,14 @@ entry for them (`envFree` in the command tree).
   `<name>-<format>.png`. There is no `page/*` group (the platform renders page
   cards per request) and no `--default-out`.
 - **`qr`** takes its options from `qrRequestSchema` in `@devdogsuga/sdk/brand/qr`,
-  the same schema `/console/qr` parses, so a new option reaches both. Every
+  the same schema `/dashboard/qr` parses, so a new option reaches both. Every
   schema field has a flag (`qr/options.ts` is typed over the schema, and a test
   checks it): content, `--size`, `--margin`, `--color`, `--background`,
   `--gradient`, `--shape`, `--error-level`, `--qr-version`, `--logo` (a preset,
   `none`, or an image file) with `--logo-size`, `--logo-padding` and
   `--logo-crop x,y,w,h`, and `--format` with any of svg, png, jpg, webp, avif
   and tiff at once. It prints the same scannability warning as the page.
-  `/console/qr` stays, deprecated; new options are CLI-only.
+  `/dashboard/qr` stays, deprecated; new options are CLI-only.
 - **`github rulesets|settings`** keep GitHub's rulesets and repository settings
   as code, through `gh` and your own login. They must keep matching what the
   platform assumes. The retired `team/**` ruleset is deleted by `github rulesets

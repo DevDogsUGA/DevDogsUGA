@@ -7,7 +7,7 @@ section: guides
 
 # Identity
 
-"The DevDogs identity" means one thing: **Sign in with DevDogs**, DevDogs Auth acting as an OAuth 2.1 / OIDC provider. It is **inbound**: another project signs a DevDogs member in. Whoever adds a sign-in button to a sibling project needs it; the credential is a client id and secret, per project, from `/settings/oauth`, and `pnpm devtools oauth` sets it up in the consuming project. See [Getting started: Running](../../../_shared/getting-started/running.md).
+"The DevDogs identity" means one thing: **Sign in with DevDogs**, DevDogs Auth acting as an OAuth 2.1 / OIDC provider. It is **inbound**: another project signs a DevDogs member in. Whoever adds a sign-in button to a sibling project needs it; the credential is a client id and secret, per project, from `/dashboard/oauth`, and `pnpm devtools oauth` sets it up in the consuming project. See [Getting started: Running](../../../_shared/getting-started/running.md).
 
 The platform used to hold a second identity, a GitHub App it authenticated as to administer the `DevDogsUGA` organization (teams, branch rulesets, invitations). That integration is deleted along with Teams and competitions, and its credentials (`GH_APP_ID`, `GH_APP_INSTALLATION_ID`, `GH_APP_PRIVATE_KEY`, `GH_WEBHOOK_SECRET`) are gone from the env contract. The platform no longer calls GitHub as an App, and linking a GitHub account does not add anyone to the organization.
 
@@ -22,22 +22,22 @@ administrator authority and must remain server-only.
 
 ## Two tiers of client
 
-Every OAuth client is registered at `/settings/oauth` with a tier, chosen once at creation; a database trigger refuses any later change.
+Every OAuth client is registered at `/dashboard/oauth` with a tier, chosen once at creation; a database trigger refuses any later change.
 
-|                | Development                                                                            | Production                                                                                                                        |
-| -------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| For            | a member's own local-stack testing                                                     | a DevDogs app (DogDays, DogPack) signing its members in                                                                           |
-| Created by     | any member with a linked GitHub account, or `devtools oauth`                           | only someone holding `canManageOAuthApps` (President and DevOps Director)                                                         |
-| Visible to     | its owner                                                                              | everyone holding `canManageOAuthApps`                                                                                             |
-| Consent        | only the owner sees the form, and approves as themselves or one of their test accounts | approved automatically for whoever is signed in                                                                                   |
-| Return address | any `http(s)` URI                                                                      | only `https://<project>.supabase.co/auth/v1/callback`: a product's own Supabase project                                           |
-| Audited        | no                                                                                     | creating, deleting, rolling the secret and changing a redirect URI each write an entry to `/console/audit-log` (`oauth_client.*`) |
+|                | Development                                                                            | Production                                                                                                                          |
+| -------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| For            | a member's own local-stack testing                                                     | a DevDogs app (DogDays, DogPack) signing its members in                                                                             |
+| Created by     | any member with a linked GitHub account, or `devtools oauth`                           | only someone holding `canManageOAuthApps` (President and DevOps Director)                                                           |
+| Visible to     | its owner                                                                              | everyone holding `canManageOAuthApps`                                                                                               |
+| Consent        | only the owner sees the form, and approves as themselves or one of their test accounts | approved automatically for whoever is signed in                                                                                     |
+| Return address | any `http(s)` URI                                                                      | only `https://<project>.supabase.co/auth/v1/callback`: a product's own Supabase project                                             |
+| Audited        | no                                                                                     | creating, deleting, rolling the secret and changing a redirect URI each write an entry to `/dashboard/audit-log` (`oauth_client.*`) |
 
 The consent page (`/oauth/consent`) decides on the server, before anything renders. A request with no `authorization_id`, a stale one, a client nobody registered, a production client whose authorization does not return to a Supabase callback, or a development client that is not yours, all get the same 404.
 
-A production client cannot be deleted until another live production client exists: the delete form names the replacement, and the audit entry records it. Roll a production secret from `/settings/oauth`; it is shown once. Each audited change and its GoTrue call share one transaction, so an entry never exists for a change that did not happen, and a secret is never rolled without its entry.
+A production client cannot be deleted until another live production client exists: the delete form names the replacement, and the audit entry records it. Roll a production secret from `/dashboard/oauth`; it is shown once. Each audited change and its GoTrue call share one transaction, so an entry never exists for a change that did not happen, and a secret is never rolled without its entry.
 
-Unlinking GitHub on `/account` deletes the member's development clients (they are gated on GitHub) and never touches a production client, whoever created it.
+Unlinking GitHub on `/dashboard/profile` deletes the member's development clients (they are gated on GitHub) and never touches a production client, whoever created it.
 
 ## What a Sign in with DevDogs token is good for
 
@@ -55,7 +55,7 @@ Who may sign in to which client is the consent page's job, not the hook's. One g
 
 ## The issuer
 
-The issuer a product registers is whatever the platform's discovery document returns (`<API_URL>/auth/v1/.well-known/openid-configuration`), shown with a copy button on `/settings/oauth`. It is Supabase's to choose, not ours: it is the project's `https://<project>.supabase.co/auth/v1`, GoTrue stamps it on every ID token, and a provider configured with any other string, a custom domain included, fails its check. After any change to the host in front of the platform project, run `pnpm --dir apps/platform exec tsx scripts/check-oauth-issuer.ts --api-url <url>` and register what it prints.
+The issuer a product registers is whatever the platform's discovery document returns (`<API_URL>/auth/v1/.well-known/openid-configuration`), shown with a copy button on `/dashboard/oauth`. It is Supabase's to choose, not ours: it is the project's `https://<project>.supabase.co/auth/v1`, GoTrue stamps it on every ID token, and a provider configured with any other string, a custom domain included, fails its check. After any change to the host in front of the platform project, run `pnpm --dir apps/platform exec tsx scripts/check-oauth-issuer.ts --api-url <url>` and register what it prints.
 
 ## How a member's GitHub profile is linked
 

@@ -73,7 +73,7 @@ async function managedClient(clientId: string, userId: string) {
 }
 
 /**
- * The per-client moderation controls on `/settings/oauth`.
+ * The per-client moderation controls on `/dashboard/oauth`.
  *
  * Every intent starts from management rights: a development client must be the
  * signed-in member's own, a production client needs `canManageOAuthApps`. A
@@ -131,7 +131,7 @@ export default async function oauthModerationAction(
         .insert(moderationClients)
         .values({ clientId, endpointUrl: endpointUrl || null })
         .onConflictDoNothing();
-      revalidatePath("/settings/oauth");
+      revalidatePath("/dashboard/oauth");
       return {
         ...EMPTY,
         clientId,
@@ -164,7 +164,7 @@ export default async function oauthModerationAction(
           .set({ endpointUrl: endpointUrl || null, updatedAt: sql`now()` })
           .where(eq(moderationClients.clientId, clientId));
       });
-      revalidatePath("/settings/oauth");
+      revalidatePath("/dashboard/oauth");
       return { ...EMPTY, message: "Endpoint saved" };
     }
 
@@ -195,7 +195,7 @@ export default async function oauthModerationAction(
           .where(eq(moderationClients.clientId, clientId))
           .returning({ secretVersion: moderationClients.secretVersion });
       });
-      revalidatePath("/settings/oauth");
+      revalidatePath("/dashboard/oauth");
       return {
         ...EMPTY,
         clientId,
@@ -255,7 +255,7 @@ export default async function oauthModerationAction(
         store: databaseDeliveryStore,
         signingKey,
       });
-      revalidatePath("/settings/oauth");
+      revalidatePath("/dashboard/oauth");
       if (outcome.ack && outcome.result === "delivered") {
         return {
           ...EMPTY,

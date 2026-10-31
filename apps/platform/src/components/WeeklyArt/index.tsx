@@ -111,7 +111,7 @@ function unit(count: number): string {
 
 /**
  * The streak numbers and every semester's picture, newest first with earlier
- * semesters folded away. Shown on /attendance (own) and on every public
+ * semesters folded away. Shown on /dashboard/attendance (own) and on every public
  * profile (always: it follows the streak's visibility, which has no toggle).
  */
 export default function WeeklyArt({

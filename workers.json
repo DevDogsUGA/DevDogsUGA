@@ -12,11 +12,10 @@
         "/docs",
         "/partners",
         "/changelog",
-        "/attendance",
         "/legal/privacy",
         "/legal/terms"
       ],
-      "protectedPath": "/settings/profile",
+      "protectedPath": "/dashboard",
       "protectedRedirectPrefix": "/auth"
     }
   },
