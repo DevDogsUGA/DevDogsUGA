@@ -444,31 +444,30 @@ export default async function ProjectPage({
           <ul className="prj-list">
             {myReports.map((report) => (
               <ReportCard key={report.id} report={report}>
-                {report.status !== "approved" &&
-                  report.legacyPullRequests.length === 0 && (
-                    <div className="prj-acts">
-                      <Link
-                        href={`${path}/report?report=${report.id}`}
-                        className={buttonVariants({
-                          variant: "secondary",
-                          size: "sm",
-                        })}
-                      >
-                        Edit
-                      </Link>
-                      <ProjectCommand
-                        action={deleteReportAction}
-                        args={[report.id]}
-                        label="Delete"
-                        variant="destructive"
-                        confirm={{
-                          title: "Delete this report?",
-                          description:
-                            "The report is removed and its commits can back another report.",
-                        }}
-                      />
-                    </div>
-                  )}
+                {report.status !== "approved" && (
+                  <div className="prj-acts">
+                    <Link
+                      href={`${path}/report?report=${report.id}`}
+                      className={buttonVariants({
+                        variant: "secondary",
+                        size: "sm",
+                      })}
+                    >
+                      Edit
+                    </Link>
+                    <ProjectCommand
+                      action={deleteReportAction}
+                      args={[report.id]}
+                      label="Delete"
+                      variant="destructive"
+                      confirm={{
+                        title: "Delete this report?",
+                        description:
+                          "The report is removed and its commits can back another report.",
+                      }}
+                    />
+                  </div>
+                )}
               </ReportCard>
             ))}
           </ul>

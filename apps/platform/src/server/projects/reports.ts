@@ -151,13 +151,6 @@ export function fileReport(
           if (edit === "not_author") refuse("That report was not found.");
           if (edit === "approved")
             refuse("An approved report cannot be changed.");
-          const [legacyEvidence] = await tx.execute(sql`
-            select 1 from platform."projectReportContributions"
-            where "reportId" = ${input.reportId}::uuid limit 1`);
-          if (legacyEvidence)
-            refuse(
-              "This report cites pull requests from before commit evidence, so it can no longer be edited.",
-            );
         }
 
         // Each cited commit: the member's own, from an approved repo of this

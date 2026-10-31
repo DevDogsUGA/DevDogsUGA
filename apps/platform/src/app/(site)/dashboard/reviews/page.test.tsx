@@ -73,7 +73,6 @@ const queued = {
       url: `https://github.com/DevDogsUGA/porchlight/commit/${sha}`,
     },
   ],
-  legacyPullRequests: [],
 };
 
 beforeEach(() => {

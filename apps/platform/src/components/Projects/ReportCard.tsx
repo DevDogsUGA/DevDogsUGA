@@ -90,21 +90,6 @@ export default function ReportCard({
           ))}
         </ul>
       )}
-      {report.legacyPullRequests.length > 0 && (
-        <div className="prj-legacy">
-          <Badge>Legacy evidence</Badge>
-          <ul className="prj-prs" aria-label="Pull requests cited">
-            {report.legacyPullRequests.map((pr) => (
-              <li key={pr.id} className="prj-pr">
-                <TextLink href={pr.url} target="_blank" rel="noreferrer">
-                  {pr.repo}#{pr.number}
-                </TextLink>
-                <span>{pr.title}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       {report.reviewNote && report.status === "returned" && (
         <p className="prj-note">
           <b>
