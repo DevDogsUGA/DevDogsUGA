@@ -10,6 +10,8 @@ import { getOAuthPageData } from "~/server/loaders/console";
 import { getOAuthModerationData } from "~/server/loaders/oauthModeration";
 import { resolveIssuer } from "~/server/oauth/issuer";
 import { PageHeading, Panel } from "~/ui/app-shell";
+import { SettingsFormProvider } from "~/ui/settings-form";
+import SettingsSaveBar from "~/ui/settings-save-bar";
 import { Skeleton } from "~/ui/skeleton";
 
 export const metadata: Metadata = {
@@ -96,7 +98,10 @@ async function OAuthData({ searchParams }: Props) {
             sandbox on its page, never in the moderators&rsquo; queue.
           </p>
           {unpaged.length > 0 ? (
-            <OAuthModerationField clients={unpaged} />
+            <SettingsFormProvider>
+              <OAuthModerationField clients={unpaged} />
+              <SettingsSaveBar />
+            </SettingsFormProvider>
           ) : (
             <p className="help">
               Moderation is set up per app. Open an app above to find it.

@@ -2,16 +2,11 @@
 
 import "./configEditor.css";
 
-import { useActionState } from "react";
-import {
-  resetConfigEditAction,
-  type ConfigActionState,
-} from "~/server/actions/configEdits";
+import { resetConfigEditAction } from "~/server/actions/configEdits";
 import { Button } from "~/ui/button";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
-const initialState: ConfigActionState = { ok: false, message: "" };
-
-/** Resets one saved edit that no longer fits the official config. */
+/** Resets one saved edit that no longer fits the official config. A refusal shows beside the button. */
 export default function OrphanReset({
   collection,
   editKey,
@@ -19,17 +14,13 @@ export default function OrphanReset({
   collection: string;
   editKey: string;
 }) {
-  const [, reset, resetting] = useActionState(
-    resetConfigEditAction,
-    initialState,
-  );
+  const { run, pending, result } = useCommand(resetConfigEditAction);
   return (
-    <form action={reset} className="cfg-inline">
-      <input type="hidden" name="collection" value={collection} />
-      <input type="hidden" name="key" value={editKey} />
-      <Button type="submit" size="sm" variant="secondary" disabled={resetting}>
+    <form action={() => run(collection, editKey)} className="cfg-inline">
+      <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         Reset
       </Button>
+      <CommandFeedback result={result} />
     </form>
   );
 }

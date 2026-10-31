@@ -50,7 +50,9 @@ import { env } from "~/env";
 import { db } from "~/server/db";
 import { resolveReport, updateUserRole } from "~/server/actions/moderation";
 import { registerExternalApp } from "~/server/actions/moderationDeliveries";
-import oauthModerationAction from "~/server/actions/oauthModeration";
+import oauthModerationAction, {
+  saveModerationEndpoint,
+} from "~/server/actions/oauthModeration";
 import { handleFileReport } from "./api";
 import { attemptDelivery } from "./delivery";
 import { databaseDeliveryStore, resetForResend } from "./deliveryStore";
@@ -1049,11 +1051,10 @@ describe("moderation controls on /dashboard/oauth", () => {
       PROD_CLIENT,
       "oauth_client.moderation_endpoint_changed",
     );
-    const result = await act({
-      intent: "set-endpoint",
-      clientId: PROD_CLIENT,
-      endpointUrl: "https://dogpack.example.com/functions/v1/other",
-    });
+    const result = await saveModerationEndpoint(
+      PROD_CLIENT,
+      "https://dogpack.example.com/functions/v1/other",
+    );
     expect(result.ok).toBe(true);
     expect(
       await auditCount(PROD_CLIENT, "oauth_client.moderation_endpoint_changed"),

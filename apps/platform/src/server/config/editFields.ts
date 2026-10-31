@@ -332,6 +332,8 @@ export function toFormText(field: FieldSpec, item: Item | undefined): string {
 export interface ParsedItem {
   item: Item;
   errors: string[];
+  /** The same errors keyed by field name, for the form to show under each field. */
+  fieldErrors: Record<string, string>;
 }
 
 function lines(text: string): string[] {
@@ -353,24 +355,29 @@ export function parseItem(
 ): ParsedItem {
   const item: Item = {};
   const errors: string[] = [];
+  const fieldErrors: Record<string, string> = {};
+  const refuse = (field: FieldSpec, message: string) => {
+    errors.push(message);
+    fieldErrors[field.name] = message;
+  };
   for (const field of FIELDS[collection]) {
     const raw = (submitted[field.name] ?? "").trim();
     if (raw === "" && field.kind !== "agenda") {
-      if (field.required) errors.push(`${field.label} is required.`);
+      if (field.required) refuse(field, `${field.label} is required.`);
       else if (field.nullable) item[field.name] = null;
       continue;
     }
     if (field.kind === "datetime") {
       const iso = clubLocalToIso(raw);
       if (iso === null) {
-        errors.push(`${field.label} is not a valid date and time.`);
+        refuse(field, `${field.label} is not a valid date and time.`);
       } else {
         item[field.name] = iso;
       }
     } else if (field.kind === "number") {
       const n = Number(raw);
       if (!Number.isFinite(n)) {
-        errors.push(`${field.label} must be a number.`);
+        refuse(field, `${field.label} must be a number.`);
       } else {
         item[field.name] = n;
       }
@@ -389,5 +396,5 @@ export function parseItem(
       item[field.name] = raw;
     }
   }
-  return { item, errors };
+  return { item, errors, fieldErrors };
 }
