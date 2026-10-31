@@ -1,6 +1,11 @@
 "use server";
 
-import { authorizeSession, callerFor, rules } from "~/server/auth/access";
+import { authorizeSession, callerFor } from "~/server/auth/access";
+import {
+  ExpectedFailure,
+  expected,
+  type ActionResult,
+} from "~/lib/actionResult";
 
 import { eq } from "drizzle-orm";
 import { env } from "~/env";
@@ -16,6 +21,7 @@ import {
 } from "../oauth/appDetails";
 import { APP_NOT_FOUND } from "../oauth/appStatus";
 import { oauthAuditEvent } from "../oauth/audit";
+import { mayManageClient } from "../oauth/managedClient";
 import { z } from "zod";
 
 /**
@@ -50,11 +56,8 @@ async function requireEditableApp(clientId: string) {
   });
   if (!app) throw new Error(APP_NOT_FOUND);
 
-  const allowed =
-    app.userId === null
-      ? await callerFor(userId).then(rules.manageOAuthApps)
-      : app.userId === userId;
-  if (!allowed) throw new Error(APP_NOT_FOUND);
+  if (!mayManageClient(app, await callerFor(userId)))
+    throw new Error(APP_NOT_FOUND);
   return { userId, app };
 }
 
@@ -62,6 +65,10 @@ async function requireEditableApp(clientId: string) {
 function isLive(app: { userId: string | null; status: string }) {
   return app.userId === null || app.status === "in_production";
 }
+
+/** Why a published app's link cannot be cleared. */
+const NEEDS_LINKS =
+  "A published app needs a homepage and a privacy policy. Return it to Testing first to clear one";
 
 /** Why an owner cannot touch a published app's logo, homepage or privacy policy. */
 const BRANDING_LOCKED =
@@ -76,58 +83,80 @@ function brandingLocked(app: { userId: string | null; status: string }) {
   return app.userId !== null && app.status === "in_production";
 }
 
-/** Saves the homepage and privacy policy. Refused while the app is published. */
+/**
+ * Saves the homepage and privacy policy, whichever the caller sends: the page's
+ * Draft saves each link as its own field, so an omitted link is left as it is.
+ * Refused while the app is published. A rejected link comes back under its
+ * field id (`homepageUrl`, `privacyPolicyUrl`).
+ */
 export async function saveAppDetails(
   clientId: string,
-  input: { homepageUrl: string; privacyPolicyUrl: string },
-): Promise<DetailsResult> {
+  input: { homepageUrl?: string; privacyPolicyUrl?: string },
+): Promise<ActionResult> {
   const access = await authorizeSession();
   if (!access.ok) {
     throw new Error(access.message);
   }
 
   const { userId, app } = await requireEditableApp(clientId);
-  if (brandingLocked(app)) return { ok: false, error: BRANDING_LOCKED };
+  return expected(async () => {
+    if (brandingLocked(app)) throw new ExpectedFailure(BRANDING_LOCKED);
 
-  const homepage = parseDetailUrl("Homepage", input.homepageUrl);
-  if (homepage.error) return { ok: false, error: homepage.error };
-  const privacy = parseDetailUrl("Privacy policy", input.privacyPolicyUrl);
-  if (privacy.error) return { ok: false, error: privacy.error };
-  // A DevDogs app stays editable in production, but never loses the details
-  // publishing requires (Q159).
-  if (app.status === "in_production" && (!homepage.value || !privacy.value)) {
-    return {
-      ok: false,
-      error:
-        "A published app needs a homepage and a privacy policy. Return it to Testing first to clear one",
-    };
-  }
+    const fieldErrors: Record<string, string> = {};
+    const homepage =
+      input.homepageUrl === undefined
+        ? undefined
+        : parseDetailUrl("Homepage", input.homepageUrl);
+    if (homepage?.error) fieldErrors.homepageUrl = homepage.error;
+    const privacy =
+      input.privacyPolicyUrl === undefined
+        ? undefined
+        : parseDetailUrl("Privacy policy", input.privacyPolicyUrl);
+    if (privacy?.error) fieldErrors.privacyPolicyUrl = privacy.error;
+    const firstError = Object.values(fieldErrors)[0];
+    if (firstError) throw new ExpectedFailure(firstError, fieldErrors);
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(oauthRegistrations)
-      .set({
-        homepageUrl: homepage.value,
-        privacyPolicyUrl: privacy.value,
-      })
-      .where(eq(oauthRegistrations.clientId, clientId));
-    if (isLive(app)) {
-      await tx.insert(auditEvents).values(
-        oauthAuditEvent({
-          actorUserId: userId,
-          action: "oauth_app.details_changed",
-          clientId,
-          metadata: {
-            label: app.label,
-            field: "links",
-            homepageUrl: homepage.value,
-            privacyPolicyUrl: privacy.value,
-          },
-        }),
-      );
+    const homepageUrl =
+      homepage === undefined ? app.homepageUrl : homepage.value;
+    const privacyPolicyUrl =
+      privacy === undefined ? app.privacyPolicyUrl : privacy.value;
+    // A DevDogs app stays editable in production, but never loses the details
+    // publishing requires (Q159).
+    if (app.status === "in_production") {
+      if (homepage !== undefined && !homepageUrl)
+        fieldErrors.homepageUrl = NEEDS_LINKS;
+      if (privacy !== undefined && !privacyPolicyUrl)
+        fieldErrors.privacyPolicyUrl = NEEDS_LINKS;
+      if (Object.keys(fieldErrors).length > 0)
+        throw new ExpectedFailure(NEEDS_LINKS, fieldErrors);
     }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(oauthRegistrations)
+        .set({
+          ...(homepage === undefined ? {} : { homepageUrl: homepage.value }),
+          ...(privacy === undefined ? {} : { privacyPolicyUrl: privacy.value }),
+        })
+        .where(eq(oauthRegistrations.clientId, clientId));
+      if (isLive(app)) {
+        await tx.insert(auditEvents).values(
+          oauthAuditEvent({
+            actorUserId: userId,
+            action: "oauth_app.details_changed",
+            clientId,
+            metadata: {
+              label: app.label,
+              field: "links",
+              homepageUrl,
+              privacyPolicyUrl,
+            },
+          }),
+        );
+      }
+    });
+    return undefined;
   });
-  return { ok: true };
 }
 
 /**

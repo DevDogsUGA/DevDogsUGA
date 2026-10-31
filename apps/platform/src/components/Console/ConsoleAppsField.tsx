@@ -1,10 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState } from "react";
 import FormButton from "~/components/FormButton";
-import OAuthClientSheet from "~/components/Settings/OAuthClientSheet";
-import oauthAction from "~/server/actions/oauth";
 import { useCommand, CommandFeedback } from "~/ui/use-command";
 import { success, type ActionResult } from "~/lib/actionResult";
 import {
@@ -17,6 +13,7 @@ import { logoLetter } from "~/server/oauth/consentScreen";
 import Badge from "~/ui/badge";
 import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
 import EmptyState from "~/ui/empty-state";
+import LinkButton from "~/ui/link-button";
 import Toggle from "~/ui/switch";
 
 /** The sentence after a return to Testing: who was signed out. */
@@ -32,22 +29,11 @@ export function countsMessage(counts: {
  * The apps a holder of `canManageOAuthApps` runs: DevDogs apps and members'
  * published ones. Publish is enabled only when the app has a logo, a homepage
  * and a privacy policy. Back to Testing and Transfer to DevDogs confirm first;
- * the consent switch appears only on DevDogs apps.
+ * the consent switch appears only on DevDogs apps. A DevDogs app has no owner,
+ * so its redirects, secret, details and deletion are edited on its own page,
+ * the same one a member uses for their own app.
  */
 export default function ConsoleAppsField({ apps }: { apps: ConsoleApp[] }) {
-  const router = useRouter();
-  // DevDogs apps have no owner, so their redirects, secret, details and
-  // deletion are edited here, in the same drawer a member uses for their own.
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [{ clientId: mintedClientId, clientSecret }, dispatch, isPending] =
-    useActionState(oauthAction, { clientId: null, clientSecret: null });
-  const prevPending = useRef(false);
-  useEffect(() => {
-    if (prevPending.current && !isPending) router.refresh();
-    prevPending.current = isPending;
-  }, [isPending, router]);
-  const openApp = apps.find((a) => a.clientId === openId && a.isDevDogs);
-  const revealed = mintedClientId === openApp?.clientId ? clientSecret : null;
   if (apps.length === 0) {
     return (
       <EmptyState
@@ -59,31 +45,16 @@ export default function ConsoleAppsField({ apps }: { apps: ConsoleApp[] }) {
   }
 
   return (
-    <>
-      <div className="set-rows" role="list">
-        {apps.map((app) => (
-          <AppRow
-            key={app.clientId}
-            app={app}
-            onEdit={() => setOpenId(app.clientId)}
-          />
-        ))}
-      </div>
-      <OAuthClientSheet
-        client={openApp ? { ...openApp, approvedTestAccountIds: [] } : null}
-        testAccounts={[]}
-        dispatch={dispatch}
-        isPending={isPending}
-        secret={revealed}
-        onClose={() => setOpenId(null)}
-        devDogsApp
-      />
-    </>
+    <div className="set-rows" role="list">
+      {apps.map((app) => (
+        <AppRow key={app.clientId} app={app} />
+      ))}
+    </div>
   );
 }
 
 /** Each app owns its command state; confirmation remains composed around it. */
-function AppRow({ app, onEdit }: { app: ConsoleApp; onEdit: () => void }) {
+function AppRow({ app }: { app: ConsoleApp }) {
   const {
     run,
     pending: working,
@@ -132,15 +103,14 @@ function AppRow({ app, onEdit }: { app: ConsoleApp; onEdit: () => void }) {
 
       <div className="end flex flex-wrap items-center gap-2">
         {app.isDevDogs && (
-          <FormButton
-            theme="black"
+          <LinkButton
+            href={`/dashboard/oauth/${app.clientId}`}
+            variant="outline"
             size="sm"
-            type="button"
-            onClick={onEdit}
             aria-label={`Edit ${app.label}`}
           >
             Edit
-          </FormButton>
+          </LinkButton>
         )}
         {app.isDevDogs && (
           <div className="row small" style={{ gap: 8 }}>

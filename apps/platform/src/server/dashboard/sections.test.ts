@@ -59,6 +59,11 @@ describe("Section registry", () => {
     expect(sectionFor("/dashboard/unknown")).toBeNull();
     expect(sectionFor("/dashboard/deletion")).toBeNull();
   });
+  it("lights up OAuth apps on a client's own page", () => {
+    expect(
+      sectionFor("/dashboard/oauth/11111111-1111-4111-8111-111111111111")?.id,
+    ).toBe("oauth");
+  });
   it("rejects unowned paths", () => {
     expect(sectionFor(null)).toBeNull();
     expect(sectionFor("/dashboard/unknown")).toBeNull();
