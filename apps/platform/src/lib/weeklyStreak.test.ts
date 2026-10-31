@@ -66,7 +66,7 @@ describe("weekly streak", () => {
     expect(s.current).toBe(7);
   });
 
-  it("counts a merged PR on its own as a lit week (PR-only)", () => {
+  it("counts a commit on its own as a lit week (commit-only)", () => {
     const s = run(
       ["2026-09-09", "2026-09-16"],
       ["2026-09-08"],
@@ -103,7 +103,7 @@ describe("weekly streak", () => {
       expect(s.longest).toBe(3);
     });
 
-    it("lights a no-meeting week that has a merged PR, and counts it", () => {
+    it("lights a no-meeting week that has a commit, and counts it", () => {
       const s = run(withGap, [...withGap, "2026-09-22"]);
       expect(s.stateOf("2026-09-21")).toBe("lit");
       expect(s.stateOf("2026-09-28")).toBe("no-meeting");
@@ -123,15 +123,15 @@ describe("weekly streak", () => {
     const meetings = ["2026-09-09", "2026-09-16"];
 
     it("rescues the previous week from Monday activity", () => {
-      // PR merged Mon Sep 14, 12:00 Athens, rescues Sep 7's week.
-      const merged = new Date("2026-09-14T16:00:00Z");
+      // A commit on Mon Sep 14, 12:00 Athens, rescues Sep 7's week.
+      const committed = new Date("2026-09-14T16:00:00Z");
       const s = computeWeeklyStreak({
         meetings: meetings.map(evening),
-        activity: [merged],
+        activity: [committed],
         now: evening("2026-10-30"),
       });
       expect(s.stateOf("2026-09-07")).toBe("lit");
-      // The same PR was spent on the rescue, so the new week is not lit by it.
+      // The same commit was spent on the rescue, so the new week is not lit by it.
       expect(s.stateOf("2026-09-14")).toBe("dark");
     });
 

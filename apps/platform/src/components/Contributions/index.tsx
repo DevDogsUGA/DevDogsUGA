@@ -1,21 +1,21 @@
 import "./contributions.css";
 
 import { formatEventDate } from "~/lib/eventTime";
-import type { ContributionItem } from "~/server/loaders/contributions";
+import type { CommitItem } from "~/server/loaders/commits";
 import { TextLink } from "~/ui/text-link";
 import { contributionRows } from "./view";
 
 /**
- * Merged pull requests, newest first, each linked to its pull request on
- * GitHub. Whoever renders it decides who may see the list: the public profile
- * passes only a public member's public-repository PRs, /dashboard/attendance passes the
+ * Commits, newest first, each linked to its commit on GitHub. Whoever renders
+ * it decides who may see the list: the public profile passes only a public
+ * member's commits in available repositories, /dashboard/attendance passes the
  * signed-in member's own.
  */
 export default function ContributionList({
   items,
-  empty = "No merged pull requests yet.",
+  empty = "No commits yet.",
 }: {
-  items: readonly ContributionItem[];
+  items: readonly CommitItem[];
   empty?: string;
 }) {
   const rows = contributionRows(items);
@@ -33,11 +33,11 @@ export default function ContributionList({
               row.label
             )}
             <span className="ct-repo">
-              {row.repo} #{row.number}
+              {row.repo}@{row.short}
             </span>
           </span>
-          <time className="ct-date" dateTime={row.mergedAt.toISOString()}>
-            {formatEventDate(row.mergedAt)}
+          <time className="ct-date" dateTime={row.committedAt.toISOString()}>
+            {formatEventDate(row.committedAt)}
           </time>
         </li>
       ))}

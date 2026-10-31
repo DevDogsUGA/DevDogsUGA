@@ -27,8 +27,8 @@ const SOLO_MEMBER = id(1); // null workshop, meeting ran exactly one
 const PICKED_MEMBER = id(2); // chose a workshop on a multi-workshop meeting
 const AMBIGUOUS_MEMBER = id(3); // null workshop, meeting ran two: skipped
 const MANUAL_MEMBER = id(4); // officer-awarded Workshop completed
-const MERGER = id(5); // matched contribution
-const WITHDRAWN_MERGER = id(6); // First Merge withdrawn by an officer
+const COMMITTER = id(5); // a stored default-branch commit
+const WITHDRAWN_COMMITTER = id(6); // First Commit withdrawn by an officer
 const NO_ATTENDANCE = id(7); // reflection, never checked in: skipped
 const WITHDRAWN_WORKSHOP = id(8); // officer withdrew an automatic Workshop completed
 const ALL = [
@@ -36,8 +36,8 @@ const ALL = [
   PICKED_MEMBER,
   AMBIGUOUS_MEMBER,
   MANUAL_MEMBER,
-  MERGER,
-  WITHDRAWN_MERGER,
+  COMMITTER,
+  WITHDRAWN_COMMITTER,
   NO_ATTENDANCE,
   WITHDRAWN_WORKSHOP,
 ] as const;
@@ -46,7 +46,8 @@ const MEETING_MULTI = id(12);
 const WS_SOLO = "d6-ws-solo";
 const WS_A = "d6-ws-a";
 const WS_B = "d6-ws-b";
-const REPO = "DevDogsUGA/badge-backfill-dbtest";
+const REPO_ID = "960000001";
+const SHA = (n: number) => `d6${String(n).padStart(2, "0")}${"0".repeat(36)}`;
 
 const ids = () =>
   sql.join(
@@ -57,9 +58,6 @@ const ids = () =>
 async function cleanup() {
   await db.transaction(async (tx) => {
     await tx.execute(sql`set local session_replication_role = replica`);
-    await tx.execute(
-      sql`delete from platform.contributions where repo = ${REPO}`,
-    );
     await tx.execute(
       sql`delete from platform.reflections where "userId" in (${ids()})`,
     );
@@ -77,6 +75,16 @@ async function cleanup() {
       delete from platform.meetings
       where id in (${MEETING_SOLO}::uuid, ${MEETING_MULTI}::uuid)
     `);
+    // The awards are gone, so the commits can go, and then their repository.
+    await tx.execute(
+      sql`delete from platform."repoCommits" where "githubRepoId" = ${REPO_ID}::bigint`,
+    );
+    await tx.execute(
+      sql`delete from platform.commits where "githubRepoId" = ${REPO_ID}::bigint`,
+    );
+    await tx.execute(
+      sql`delete from platform."githubRepos" where "githubRepoId" = ${REPO_ID}::bigint`,
+    );
   });
   await deleteMembers(ALL);
 }
@@ -136,15 +144,26 @@ async function seed() {
       values (${MANUAL_MEMBER}::uuid, 'workshop-completed', ${WS_SOLO}, 'manual', false, 'Led it', null)
     `);
     await tx.execute(sql`
-      insert into platform.contributions (repo, "prNumber", title, url, "mergedAt", "authorGithubId", "authorLogin", "userId")
-      values (${REPO}, 1, 'one', 'https://example.test/1', now() - interval '5 days', '9600000001', 'd6-a', ${MERGER}::uuid),
-             (${REPO}, 2, 'two', 'https://example.test/2', now() - interval '4 days', '9600000001', 'd6-a', ${MERGER}::uuid),
-             (${REPO}, 3, 'three', 'https://example.test/3', now() - interval '3 days', '9600000002', 'd6-b', ${WITHDRAWN_MERGER}::uuid)
+      insert into platform."githubRepos"
+        ("githubRepoId", "ownerId", owner, name, "ownerType", "defaultBranch")
+      values (${REPO_ID}::bigint, 960, 'DevDogsUGA', 'badge-backfill-dbtest', 'Organization', 'main')
+    `);
+    await tx.execute(sql`
+      insert into platform.commits (sha, "githubRepoId", "authorGithubId", "authorLogin", "userId", "committedAt", message)
+      values (${SHA(1)}, ${REPO_ID}::bigint, 9600000001, 'd6-a', ${COMMITTER}::uuid, now() - interval '5 days', 'one'),
+             (${SHA(2)}, ${REPO_ID}::bigint, 9600000001, 'd6-a', ${COMMITTER}::uuid, now() - interval '4 days', 'two'),
+             (${SHA(3)}, ${REPO_ID}::bigint, 9600000002, 'd6-b', ${WITHDRAWN_COMMITTER}::uuid, now() - interval '3 days', 'three')
+    `);
+    await tx.execute(sql`
+      insert into platform."repoCommits" ("githubRepoId", sha, "defaultBranch")
+      values (${REPO_ID}::bigint, ${SHA(1)}, 'main'),
+             (${REPO_ID}::bigint, ${SHA(2)}, 'main'),
+             (${REPO_ID}::bigint, ${SHA(3)}, 'main')
     `);
     await tx.execute(sql`
       insert into platform."badgeAwards"
         ("userId", "badgeId", "method", "repeatable", "withdrawnAt", "withdrawnReason")
-      values (${WITHDRAWN_MERGER}::uuid, 'first-merge', 'automatic', false, now(), 'recorded in error')
+      values (${WITHDRAWN_COMMITTER}::uuid, 'first-commit', 'automatic', false, now(), 'recorded in error')
     `);
   });
 }
@@ -207,8 +226,8 @@ describe("import badges (Q105, Q29)", () => {
         `${PICKED_MEMBER}|workshop-completed|${WS_A}|automatic|live`,
         `${MANUAL_MEMBER}|workshop-completed|${WS_SOLO}|manual|live`,
         `${WITHDRAWN_WORKSHOP}|workshop-completed|${WS_SOLO}|automatic|withdrawn`,
-        `${MERGER}|first-merge||automatic|live`,
-        `${WITHDRAWN_MERGER}|first-merge||automatic|withdrawn`,
+        `${COMMITTER}|first-commit||automatic|live`,
+        `${WITHDRAWN_COMMITTER}|first-commit||automatic|withdrawn`,
       ].sort(),
     );
     // The ambiguous and the never-checked-in members got nothing.
@@ -234,7 +253,7 @@ describe("import badges (Q105, Q29)", () => {
       ),
     ).toEqual([]);
     expect(
-      again.firstMerge.userIds.filter((u) =>
+      again.firstCommit.userIds.filter((u) =>
         (ALL as readonly string[]).includes(u),
       ),
     ).toEqual([]);

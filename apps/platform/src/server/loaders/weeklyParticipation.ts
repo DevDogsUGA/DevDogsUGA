@@ -1,9 +1,9 @@
 import { getSemesters } from "@devdogsuga/events";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, exists, isNull } from "drizzle-orm";
 import { cache } from "react";
 import { meetingHasWorkshop } from "~/server/attendance/meetingCredit";
 import { db } from "~/server/db";
-import { attendance, contributions, meetings } from "~/server/db/schema";
+import { attendance, commits, meetings, repoCommits } from "~/server/db/schema";
 import { buildSemesterViews, type SemesterView } from "~/lib/weeklyArt";
 import { computeWeeklyStreak } from "~/lib/weeklyStreak";
 
@@ -12,12 +12,15 @@ import { computeWeeklyStreak } from "~/lib/weeklyStreak";
  *
  * It reads three things and nothing else: the live meetings (which weeks have
  * any), the workshop meetings the member attended (Q165: a meeting counts when
- * it links a workshop definition), and the pull requests merged for them (any
- * repository, private included: Q97). It never reads `memberStars`, EL
- * evidence or reflections. The rules themselves are `~/lib/weeklyStreak`.
+ * it links a workshop definition), and the commits they authored on a synced
+ * repository's default branch (Q42: a commit counts once its `repoCommits`
+ * provenance exists, however its repository has since fared, so a repository
+ * that went unavailable never unlights a week). It never reads `memberStars`,
+ * EL evidence or reflections. The rules themselves are `~/lib/weeklyStreak`.
  *
  * The result discloses only which weeks lit, so a public profile can show it
- * to everyone without naming a meeting or a repository.
+ * to everyone without naming a meeting or a repository: a week lit by a commit
+ * in a repository that is no longer available looks the same as any other.
  */
 export interface WeeklyParticipation {
   current: number;
@@ -28,7 +31,7 @@ export interface WeeklyParticipation {
 
 export const getWeeklyParticipation = cache(
   async (userId: string): Promise<WeeklyParticipation> => {
-    const [live, attended, merged] = await Promise.all([
+    const [live, attended, committed] = await Promise.all([
       db
         .select({
           startsAt: meetings.startsAt,
@@ -49,9 +52,19 @@ export const getWeeklyParticipation = cache(
           ),
         ),
       db
-        .select({ mergedAt: contributions.mergedAt })
-        .from(contributions)
-        .where(eq(contributions.userId, userId)),
+        .select({ committedAt: commits.committedAt })
+        .from(commits)
+        .where(
+          and(
+            eq(commits.userId, userId),
+            exists(
+              db
+                .select({ sha: repoCommits.sha })
+                .from(repoCommits)
+                .where(eq(repoCommits.sha, commits.sha)),
+            ),
+          ),
+        ),
     ]);
 
     const now = new Date();
@@ -59,7 +72,7 @@ export const getWeeklyParticipation = cache(
       meetings: live.filter((m) => !m.cancelledAt).map((m) => m.startsAt),
       activity: [
         ...attended.map((row) => row.startsAt),
-        ...merged.map((row) => row.mergedAt),
+        ...committed.map((row) => row.committedAt),
       ],
       now,
     });

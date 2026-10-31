@@ -1,6 +1,6 @@
 /* Same order as globals.css: whichever sheet loads first fixes the layer order. */
 @layer theme, base, cosmic, components, utilities;
-/* The merged-pull-request list on a public profile and on /attendance. Every selector hangs off a `ct-` class. */
+/* The commit list on a public profile and on /attendance. Every selector hangs off a `ct-` class. */
 @layer cosmic {
   .cosmic .ct-list {
     list-style: none;

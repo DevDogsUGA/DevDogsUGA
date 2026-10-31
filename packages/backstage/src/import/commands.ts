@@ -1,5 +1,5 @@
 /**
- * `backstage import <involvement|attendance|contributions|badges>`: routes to the domain that owns
+ * `backstage import <involvement|attendance|badges>`: routes to the domain that owns
  * each import. They load on use, like every other command group.
  */
 import type { CommandHandler } from "@devdogsuga/cli-core/dispatch";
@@ -13,18 +13,13 @@ export const handleImport: CommandHandler = async (rest) => {
   if (what === "attendance") {
     return (await import("../attendance/commands.js")).handleAttendance(args);
   }
-  if (what === "contributions") {
-    return (await import("../contributions/commands.js")).handleContributions(
-      args,
-    );
-  }
   if (what === "badges") {
     return (await import("../badges/commands.js")).handleBadges(args);
   }
   explain(
     what
-      ? `Unknown import "${what}". Try involvement, attendance, contributions or badges.`
-      : "Name the import: involvement, attendance, contributions or badges.",
+      ? `Unknown import "${what}". Try involvement, attendance or badges.`
+      : "Name the import: involvement, attendance or badges.",
     "",
   );
   process.exitCode = 1;

@@ -78,7 +78,7 @@ describe("buildSemesterViews", () => {
     expect(view!.text).toBe("Fall 2026: 1 of 2 weeks");
   });
 
-  it("counts a frozen week that a merged PR lit", () => {
+  it("counts a frozen week that a commit lit", () => {
     const [view] = views(
       ["2026-09-09", "2026-09-15", "2026-09-23"],
       "2026-10-30",

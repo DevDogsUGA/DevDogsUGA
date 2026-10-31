@@ -3,12 +3,12 @@
  * `GH_CONFIG_APP_PRIVATE_KEY`; "DevDogs config PRs", Contents and Pull requests
  * write, installed on DevDogsUGA only).
  *
- * Same handshake as the read-only App's backfill in Backstage
- * (`contributions/github.ts`): sign a ten-minute RS256 JWT with the App's key,
- * find the installation, exchange the JWT for an installation token. Backstage
- * signs with `node:crypto`; the platform runs in a Worker, so this signs with
- * WebCrypto, which takes PKCS#8 only. GitHub issues PKCS#1 keys
- * ("BEGIN RSA PRIVATE KEY"), so a PKCS#1 key is wrapped into PKCS#8 first.
+ * The handshake is the same one the read-only App's commit sync reuses
+ * (`server/github/transport.ts`): sign a ten-minute RS256 JWT with the App's
+ * key, find the installation, exchange the JWT for an installation token. The
+ * platform runs in a Worker, so this signs with WebCrypto, which takes PKCS#8
+ * only. GitHub issues PKCS#1 keys ("BEGIN RSA PRIVATE KEY"), so a PKCS#1 key is
+ * wrapped into PKCS#8 first.
  *
  * `fetch` is injected: the tests never reach GitHub.
  */

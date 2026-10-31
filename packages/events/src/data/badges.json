@@ -10,9 +10,9 @@
       "perWorkshop": true
     },
     {
-      "id": "first-merge",
-      "name": "First Merge",
-      "description": "Had a first pull request merged into a DevDogs repository.",
+      "id": "first-commit",
+      "name": "First Commit",
+      "description": "Had a first commit land on the default branch of a public repository DevDogs syncs.",
       "kind": "automatic",
       "repeatable": false,
       "perWorkshop": false

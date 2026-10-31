@@ -1,7 +1,7 @@
 /**
  * The database half of `import badges`. Reads the evidence, then applies the
  * plan in one transaction by calling `platform.sync_workshop_badge` and
- * `platform.award_first_merge`, the functions the triggers call, so the rules
+ * `platform.award_first_commit`, the functions the triggers call, so the rules
  * live in one place. Writes one audit summary.
  */
 import { withConnection } from "../production/access.js";
@@ -11,10 +11,10 @@ export interface Evidence {
   reflections: ReflectionEvidence[];
   /** `pairKey`s of every Workshop completed row: live or withdrawn, any method. */
   heldWorkshopAwards: Set<string>;
-  /** Members with at least one matched contribution. */
-  contributors: string[];
-  /** Members with any First Merge row, withdrawn or not. */
-  firstMergeHolders: Set<string>;
+  /** Members with at least one stored commit that has default-branch provenance. */
+  committers: string[];
+  /** Members with any First Commit row, withdrawn or not. */
+  firstCommitHolders: Set<string>;
 }
 
 export type ReadEvidence = () => Promise<Evidence>;
@@ -22,7 +22,7 @@ export type ReadEvidence = () => Promise<Evidence>;
 export function readEvidenceFor(url: string): ReadEvidence {
   return () =>
     withConnection(url, "Could not read the badge evidence", async (sql) => {
-      const [reflections, awards, contributors, holders] = await Promise.all([
+      const [reflections, awards, committers, holders] = await Promise.all([
         sql`
           select r."id", r."userId", r."meetingId", r."workshopDefinitionId",
                  coalesce((select array_agg(distinct w."definitionId")
@@ -43,11 +43,12 @@ export function readEvidenceFor(url: string): ReadEvidence {
           select "userId", "workshopDefinitionId" from "platform"."badgeAwards"
            where "badgeId" = 'workshop-completed'`,
         sql`
-          select distinct "userId" from "platform"."contributions"
-           where "userId" is not null`,
+          select distinct c."userId" from "platform"."commits" c
+           where exists (select 1 from "platform"."repoCommits" rc
+                          where rc."sha" = c."sha")`,
         sql`
           select distinct "userId" from "platform"."badgeAwards"
-           where "badgeId" = 'first-merge'`,
+           where "badgeId" = 'first-commit'`,
       ]);
       return {
         reflections: reflections.map((r) => ({
@@ -65,15 +66,15 @@ export function readEvidenceFor(url: string): ReadEvidence {
             pairKey(String(a.userId), String(a.workshopDefinitionId)),
           ),
         ),
-        contributors: contributors.map((c) => String(c.userId)),
-        firstMergeHolders: new Set(holders.map((h) => String(h.userId))),
+        committers: committers.map((c) => String(c.userId)),
+        firstCommitHolders: new Set(holders.map((h) => String(h.userId))),
       };
     });
 }
 
 export interface Applied {
   workshopAwarded: number;
-  firstMergeAwarded: number;
+  firstCommitAwarded: number;
 }
 
 export type ApplyBadges = (plan: BadgesPlan) => Promise<Applied>;
@@ -82,13 +83,13 @@ export type ApplyBadges = (plan: BadgesPlan) => Promise<Applied>;
 export const COUNT_AWARDED = `
 select "badgeId", count(*)::int as "n" from "platform"."badgeAwards"
  where "awardedAt" = now() and "method" = 'automatic'
-   and "badgeId" in ('workshop-completed', 'first-merge')
+   and "badgeId" in ('workshop-completed', 'first-commit')
  group by "badgeId"`;
 
 export function applyBadgesFor(url: string): ApplyBadges {
   return (plan) =>
     withConnection(url, "The badge backfill was rolled back", async (sql) => {
-      let result: Applied = { workshopAwarded: 0, firstMergeAwarded: 0 };
+      let result: Applied = { workshopAwarded: 0, firstCommitAwarded: 0 };
       await sql.begin(async (tx) => {
         for (const award of plan.workshop.awards) {
           // Record the picker's default first; the reflection trigger then
@@ -103,15 +104,15 @@ export function applyBadgesFor(url: string): ApplyBadges {
           }
           await tx`select "platform"."sync_workshop_badge"(${award.userId}::uuid, ${award.definitionId})`;
         }
-        for (const userId of plan.firstMerge.userIds) {
-          await tx`select "platform"."award_first_merge"(${userId}::uuid)`;
+        for (const userId of plan.firstCommit.userIds) {
+          await tx`select "platform"."award_first_commit"(${userId}::uuid)`;
         }
         const counts = await tx.unsafe(COUNT_AWARDED);
         const n = (badge: string) =>
           Number(counts.find((c) => c.badgeId === badge)?.n ?? 0);
         result = {
           workshopAwarded: n("workshop-completed"),
-          firstMergeAwarded: n("first-merge"),
+          firstCommitAwarded: n("first-commit"),
         };
         await tx`
           insert into "platform"."auditEvents"
@@ -126,7 +127,7 @@ export function applyBadgesFor(url: string): ApplyBadges {
                       0,
                     ),
                     workshopAlreadyAwarded: plan.workshop.alreadyAwarded,
-                    firstMergeAlreadyHeld: plan.firstMerge.alreadyHeld,
+                    firstCommitAlreadyHeld: plan.firstCommit.alreadyHeld,
                   })})`;
       });
       return result;

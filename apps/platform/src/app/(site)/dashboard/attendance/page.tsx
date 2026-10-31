@@ -20,7 +20,7 @@ import { meetingTitle } from "~/lib/meetingTitle";
 import { getAttendanceMeetings } from "~/server/attendance/getMeetings";
 import { expectSession } from "~/server/auth";
 import ContributionList from "~/components/Contributions";
-import { getContributionsForUser } from "~/server/loaders/contributions";
+import { getCommitsForUser } from "~/server/loaders/commits";
 import {
   emptyWeekTreatment,
   getWeeklyParticipation,
@@ -139,7 +139,7 @@ export default async function AttendancePage({
         surveyMeetingId && isUuid(surveyMeetingId)
           ? getSurvey(userId, surveyMeetingId)
           : null,
-        getContributionsForUser(userId, { publicOnly: false }),
+        getCommitsForUser(userId, { publicOnly: false }),
         getElSummary(userId),
       ])
     : [null, null, null, null, null];
@@ -274,12 +274,13 @@ export default async function AttendancePage({
 
         {contributions && (
           <section className="att-sect" aria-labelledby="contributions-h">
-            <h2 id="contributions-h">Your merged pull requests</h2>
+            <h2 id="contributions-h">Your commits</h2>
             <p className="muted small">
-              Pull requests you authored that were merged into a DevDogs
-              repository. They are matched through the GitHub account linked
-              under Settings, Accounts. Private repositories are listed here but
-              never on your public profile.
+              Commits you authored on the default branch of a public repository
+              that DevDogs syncs. They are matched through the GitHub account
+              linked under Settings, Accounts. A repository that has since gone
+              private or missing is still listed here but never on your public
+              profile.
             </p>
             <ContributionList items={contributions} />
           </section>

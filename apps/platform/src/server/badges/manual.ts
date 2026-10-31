@@ -20,7 +20,7 @@ import { usersInAuth } from "~/supabase/drizzle/schema";
  *
  * Automatic awards and their withdrawal are not here: the database does those
  * in the same transaction as the evidence (`platform.sync_workshop_badge`,
- * `platform.award_first_merge`).
+ * `platform.award_first_commit`).
  */
 
 export type AwardResult =

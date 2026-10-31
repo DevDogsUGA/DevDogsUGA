@@ -37,7 +37,6 @@ describe("the tree", () => {
     expect(envFree).toEqual([
       "import involvement",
       "import attendance",
-      "import contributions",
       "import badges",
       "export evidence",
       "export attendance",
@@ -89,7 +88,6 @@ describe("the tree", () => {
     expect(subcommandNames(["import"])).toEqual([
       "involvement",
       "attendance",
-      "contributions",
       "badges",
     ]);
     expect(subcommandNames(["export"])).toEqual([
@@ -236,8 +234,6 @@ describe("prompts", () => {
       "--email-column",
       "--name-column",
       "--replace",
-      // `import contributions`: a start day, for a narrower backfill.
-      "--since",
       // `env --repo <product>`: where the product checkout is, when it is not
       // beside this clone.
       "--checkout",
