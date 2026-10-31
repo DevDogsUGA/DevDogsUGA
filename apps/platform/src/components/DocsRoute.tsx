@@ -4,12 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import DocPageContent from "~/components/DocPageContent";
 import DocsFolderContents from "~/components/DocsFolderContents";
 import StepPager from "~/components/DocsProgress/StepPager";
-import { docsProjectKind } from "~/components/DocsProjectMark";
 import DocsScheduled from "~/components/DocsScheduled";
 import DocsSidebar from "~/components/DocsSidebar";
 import DocsVariants from "~/components/DocsVariants";
 import "~/components/Docs/docs.css";
-import { DOCS_BRANCH, DOCS_REPO } from "~/config/docs";
+import { DOCS_BRANCH, DOCS_REPO, docsProjectHue } from "~/config/docs";
 import {
   loadPublishedFor,
   PublishedIndex,
@@ -18,6 +17,7 @@ import {
   publishedMetadata,
 } from "~/components/DocsPublishedRoute";
 import { env } from "~/env";
+import { getDocsSwitcher } from "~/server/docs/menu";
 import {
   DOCS_BASE,
   DOCS_PREVIEW_BASE,
@@ -82,14 +82,10 @@ export async function DocsProjectLayout({
     <DocsVariants
       offered={{ os: current.os, supabase: groups.supabase.values }}
       className="docs-layout"
-      kind={docsProjectKind(project)}
+      kind={docsProjectHue(project)}
     >
       <DocsSidebar
-        projects={projects.map(({ slug, name, description }) => ({
-          slug,
-          name,
-          description,
-        }))}
+        projects={await getDocsSwitcher(mode)}
         project={project}
         platforms={current.os.map((value) => ({
           value,

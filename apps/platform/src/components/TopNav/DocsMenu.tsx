@@ -4,51 +4,67 @@ import { CaretDownIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { NavigationMenu } from "radix-ui";
 import DocsProjectMark from "~/components/DocsProjectMark";
+import type { DocsMenuEntry } from "~/config/docs";
 import NavMenuTrigger from "./NavMenuTrigger";
-import { DOCS_MENU, useNavPanelRef } from "./NavShell";
+import { useNavPanelRef } from "./NavShell";
 import { NAV_CONTENT } from "./navPanel";
 import { POPOVER_ROW } from "./popoverRow";
 import "./topnav.css";
 
-/** One docs project, as listed in the navbar menu. */
-export interface DocsProjectLink {
-  slug: string;
-  name: string;
-  description: string | null;
-}
-
 interface Props {
+  /** The item's value in the navbar's list: `DOCS_MENU` or `CONTRIBUTE_MENU`. */
+  value: string;
   label: string;
   active: boolean;
-  /** Slug of the project being read right now, if any. */
+  /** Slug of the docs project being read right now, if any. */
   activeSlug: string | null;
-  projects: DocsProjectLink[];
+  /** The address being read, for a row that points into a project's folder. */
+  pathname: string | null;
+  entries: DocsMenuEntry[];
   className: string;
 }
 
+/** Whether the reader is inside what a row opens. */
+function isCurrent(
+  entry: DocsMenuEntry,
+  activeSlug: string | null,
+  pathname: string | null,
+) {
+  if (entry.project) return entry.project === activeSlug;
+  return (
+    pathname !== null &&
+    [entry.href, ...(entry.covers ?? [])].some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  );
+}
+
 /**
- * The Docs navbar entry: a plain link to /docs, with a menu of the individual
- * projects that opens on hover.
+ * A navbar entry that is a menu of docs: **Docs** (platform-authored
+ * documentation) and **Contribute** (the projects' own), which differ only in
+ * their rows.
  *
  * The hover intent, the focus handling and the Escape key all used to live
  * here, hand-written, because Radix's DropdownMenu trigger swallowed Enter and
  * would have taken /docs away from keyboard users. NavigationMenu is what was
  * wanted: its trigger is allowed to be a link, and it shares one viewport with
- * the profile menu, which lets the panel travel between the two rather than one
- * closing and another opening.
+ * the profile menu, which lets the panel travel between the menus rather than
+ * one closing and another opening.
  */
 export default function DocsMenu({
+  value,
   label,
   active,
   activeSlug,
-  projects,
+  pathname,
+  entries,
   className,
 }: Props) {
   const panelRef = useNavPanelRef();
 
   return (
     <NavigationMenu.Item
-      value={DOCS_MENU}
+      value={value}
       className="flex self-stretch max-[900px]:hidden"
     >
       <NavMenuTrigger active={active} className={className}>
@@ -65,12 +81,11 @@ export default function DocsMenu({
             measures this rather than the panel around it. The panel is
             stretched to whatever the viewport currently is.
 
-            One grid of every project, in the order their `order:`
-            frontmatter gives them. Two columns from `lg`, not from `md`: the
-            panel is anchored to its trigger, and at 768px a 36rem panel
-            opening from a trigger that sits well into the bar would be pushed
-            back off it by the viewport's clamp. Below `lg` it stays one 20rem
-            column.
+            One grid of every row, in the order the menu gives them. Two
+            columns from `lg`, not from `md`: the panel is anchored to its
+            trigger, and at 768px a 36rem panel opening from a trigger that sits
+            well into the bar would be pushed back off it by the viewport's
+            clamp. Below `lg` it stays one 20rem column.
 
             A plain list of links rather than a role="menu" tree. The tab order
             already walks them in order, and calling them menuitems would
@@ -80,20 +95,20 @@ export default function DocsMenu({
           data-nav-sizer
           className="grid w-80 gap-1 p-1 lg:w-[36rem] lg:grid-cols-2"
         >
-          {projects.map((project) => (
-            <li key={project.slug}>
+          {entries.map((entry) => (
+            <li key={entry.id}>
               <NavigationMenu.Link asChild>
                 <Link
-                  href={`/docs/${encodeURIComponent(project.slug)}`}
+                  href={entry.href}
                   aria-current={
-                    project.slug === activeSlug ? "page" : undefined
+                    isCurrent(entry, activeSlug, pathname) ? "page" : undefined
                   }
                   className={`${POPOVER_ROW} h-full items-start`}
                 >
-                  <DocsProjectMark slug={project.slug} />
+                  <DocsProjectMark mark={entry.mark} />
                   <span className="tn-row-copy">
-                    <span>{project.name}</span>
-                    {project.description && <span>{project.description}</span>}
+                    <span>{entry.name}</span>
+                    {entry.description && <span>{entry.description}</span>}
                   </span>
                 </Link>
               </NavigationMenu.Link>

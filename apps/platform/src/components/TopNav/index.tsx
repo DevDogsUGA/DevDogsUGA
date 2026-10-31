@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
-import { getVisibleDocsProjects } from "~/server/docs/queries";
+import { getContributeMenu, getDocsMenu } from "~/server/docs/menu";
 import AppSwitcherButton from "./AppSwitcherButton";
 import NavLinks, { NavLinksFallback } from "./NavLinks";
 import NavShell from "./NavShell";
@@ -11,12 +11,15 @@ import "./topnav.css";
 import { TopNavMobile, TopNavProfile } from "./TopNavUser";
 
 export default async function TopNav() {
-  // Parsed from `docs/` at build time, so this is an in-memory read; the whole
-  // docs module stays server-side and only the slugs reach the client. A
-  // project whose pages are all still scheduled is left out until one is live.
-  const docsProjects = (await getVisibleDocsProjects()).map(
-    ({ slug, name, description }) => ({ slug, name, description }),
-  );
+  // The Docs menu is read from `docs/` at build time and the Contribute menu
+  // from the Projects (cached, and tagged so an edit refreshes it); only plain
+  // rows reach the client. A project whose pages are all still scheduled is
+  // left out until one is live.
+  const [docs, contribute] = await Promise.all([
+    getDocsMenu(),
+    getContributeMenu(),
+  ]);
+  const menus = { docs, contribute };
 
   return (
     <header className="sticky top-0 z-50">
@@ -55,8 +58,8 @@ export default async function TopNav() {
           </Link>
         </li>
 
-        <Suspense fallback={<NavLinksFallback docsProjects={docsProjects} />}>
-          <NavLinks docsProjects={docsProjects} />
+        <Suspense fallback={<NavLinksFallback menus={menus} />}>
+          <NavLinks menus={menus} />
         </Suspense>
 
         {/* One item, several controls. The avatar is a menu and so has to be a

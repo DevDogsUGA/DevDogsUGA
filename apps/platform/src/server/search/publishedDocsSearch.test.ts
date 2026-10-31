@@ -48,7 +48,7 @@ describe("searchPublishedDocs", () => {
       group: "docs",
       title: "Demo",
       url: "/docs/demo/index",
-      breadcrumbs: ["Docs", "Demo"],
+      breadcrumbs: ["Contribute", "Demo"],
     });
     expect(hit.snippet).toContain("<mark>welcome</mark>");
   });
@@ -60,7 +60,7 @@ describe("searchPublishedDocs", () => {
     const hits = await searchPublishedDocs("start", { limit: 5 });
     expect(hits[0]?.title).toBe("Start here");
     expect(hits[0]?.url).toBe("/docs/demo/guide/start");
-    expect(hits[0]?.breadcrumbs).toEqual(["Docs", "Demo", "Guide"]);
+    expect(hits[0]?.breadcrumbs).toEqual(["Contribute", "Demo", "Guide"]);
     expect(hits.map((h) => h.url)).toEqual([
       "/docs/demo/guide/start",
       "/docs/other/guide/start",

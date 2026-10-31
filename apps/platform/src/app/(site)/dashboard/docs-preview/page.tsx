@@ -2,11 +2,11 @@ import PageShell from "~/components/PageShell";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import DocsTileGrid from "~/components/DocsTileGrid";
 import { DOCS_PREVIEW_BASE } from "~/lib/docsSlug";
-import { getVisibleDocsProjects } from "~/server/docs/queries";
+import { getDocsSwitcher } from "~/server/docs/menu";
 
 /** Every project, as the preview sees it: with what is not live yet included. */
 export default async function DocsPreviewLandingPage() {
-  const projects = await getVisibleDocsProjects("preview");
+  const projects = await getDocsSwitcher("preview");
 
   return (
     <PageShell
@@ -19,7 +19,7 @@ export default async function DocsPreviewLandingPage() {
           href: `${DOCS_PREVIEW_BASE}/${encodeURIComponent(project.slug)}`,
           title: project.name,
           description: project.description,
-          mark: <DocsProjectMark slug={project.slug} size="sm" />,
+          mark: <DocsProjectMark mark={project.mark} size="sm" />,
         }))}
       />
     </PageShell>

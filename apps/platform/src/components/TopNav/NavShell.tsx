@@ -26,6 +26,7 @@ const LIP = 8;
 
 /** The item values the navbar's top tier can hold. */
 export const DOCS_MENU = "docs";
+export const CONTRIBUTE_MENU = "contribute";
 export const PROFILE_MENU = "profile";
 
 interface NavShellContext {

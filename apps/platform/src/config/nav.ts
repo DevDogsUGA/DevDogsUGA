@@ -28,6 +28,12 @@ export const INVOLVEMENT_NETWORK_EVENTS_URL = `${INVOLVEMENT_NETWORK_URL}/events
  */
 export const INVOLVEMENT_NETWORK_ROSTER_URL = `${INVOLVEMENT_NETWORK_URL}/roster`;
 
+/**
+ * Where Contribute leads on a page rather than a menu (the mobile sheet and
+ * search): the docs landing page's Contribute group.
+ */
+export const CONTRIBUTE_HREF = "/docs#contribute";
+
 export interface NavItem {
   label: string;
   href: string;
@@ -75,7 +81,15 @@ export const PUBLIC_LINKS: NavItem[] = [
     label: "Docs",
     href: "/docs",
     icon: "BookOpenIcon",
-    description: "Documentation for DevDogs projects.",
+    description:
+      "Workshops, shared tooling, operations, and the guides for building on DevDogs.",
+  },
+  {
+    label: "Contribute",
+    href: CONTRIBUTE_HREF,
+    icon: "GithubLogoIcon",
+    description:
+      "How each DevDogs project works and how to contribute, written by the projects themselves.",
   },
 ];
 
