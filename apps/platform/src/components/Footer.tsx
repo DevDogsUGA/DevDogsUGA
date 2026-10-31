@@ -3,24 +3,30 @@ import Image from "next/image";
 import Link from "next/link";
 import * as icons from "~/config/icons";
 import { SOCIAL_LINKS } from "~/config/nav";
-import { PROJECTS } from "~/config/projects";
+import {
+  getFeaturedProjects,
+  type ShowcaseProject,
+} from "~/server/projects/showcase";
 
 /**
- * Every project the homepage lists, in the same order, each pointing at the
- * best destination it has: its live site, else wherever the fullscreen
- * switcher sends you, else its repository. The paused ones have none of the
- * three, so they fall back to the homepage section that describes them rather
- * than dropping out of the list. The footer says what DevDogs has built, not
- * only what is reachable today.
+ * Every featured project, in display order, each pointing at the best
+ * destination it has: its live site, else wherever the fullscreen switcher
+ * sends you, else its first repository. One with none of the three falls back to
+ * the homepage section that describes the open ones rather than dropping out of
+ * the list. The footer says what DevDogs has built, not only what is reachable
+ * today.
  */
-const PROJECT_LINKS = PROJECTS.map((project) => ({
-  title: project.title,
-  href:
-    project.liveUrl?.href ??
-    project.switcher?.url ??
-    project.githubUrl ??
-    "/#projects",
-}));
+function projectLink(project: ShowcaseProject) {
+  return {
+    id: project.id,
+    title: project.name,
+    href:
+      project.liveUrl ??
+      project.switcherUrl ??
+      project.githubUrls[0] ??
+      "/#projects",
+  };
+}
 
 /**
  * `"use cache"` is required, not an optimisation. This renders in the site
@@ -36,10 +42,18 @@ const PROJECT_LINKS = PROJECTS.map((project) => ({
  * default 15m profile pulled every route on the site down to 15m, including
  * the docs pages, whose own `cacheLife("max")` had earned them 30d. Nothing
  * here can go stale between deploys, so "max" is accurate as well as harmless.
+ *
+ * Except the project list, which an officer can change between deploys. Its
+ * loader (`getFeaturedProjects`) is tagged, so a toggle refreshes this scope,
+ * and it carries a day's TTL as the backstop, which is what this route's window
+ * now is. That is deliberately long: a shorter one would drag every route down
+ * to it, as the paragraph above describes.
  */
 export default async function Footer() {
   "use cache";
   cacheLife("max");
+
+  const projectLinks = (await getFeaturedProjects()).map(projectLink);
 
   return (
     <footer className="footer" id="footer">
@@ -113,9 +127,9 @@ export default async function Footer() {
               GitHub organization
             </Link>
             <h4 style={{ marginTop: 22 }}>Projects</h4>
-            {PROJECT_LINKS.map((project) => (
+            {projectLinks.map((project) => (
               <Link
-                key={project.title}
+                key={project.id}
                 href={project.href}
                 // Only the off-site destinations open a tab; "/" and the
                 // homepage anchor are this same site.

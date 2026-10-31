@@ -123,7 +123,8 @@ export const SWITCHER_PRIMARY: SwitcherEntry = {
 
 /**
  * External listings, shown in the app switcher. Projects are not listed here.
- * The switcher renders them as cards from `~/config/projects`.
+ * The switcher renders them as cards from `getSwitcherProjects`
+ * (`~/server/projects/showcase`).
  */
 export const SWITCHER_LINKS: SwitcherEntry[] = [
   {
