@@ -46,7 +46,7 @@ it("device actions keep the code through sign-in and never write while signed ou
     await expect(action(form)).rejects.toThrow("sign-in");
     expect(fake.authenticate).toHaveBeenLastCalledWith(
       "google",
-      "/tools/oauth/device?user_code=BCDF-GHJK",
+      "/oauth/device?user_code=BCDF-GHJK",
     );
   }
   expect(fake.update).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ it("connect approval keeps every handoff parameter through sign-in", async () =>
     String(fake.authenticate.mock.calls[0]?.[1]),
     "http://localhost",
   );
-  expect(callback.pathname).toBe("/tools/oauth/connect");
+  expect(callback.pathname).toBe("/oauth/connect");
   expect(callback.searchParams.get("state")).toBe("state");
   expect(callback.searchParams.get("code_challenge")).toBe("challenge");
   expect(callback.searchParams.get("callback_uri")).toBe(
