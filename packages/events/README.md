@@ -97,7 +97,7 @@ Categories are `build`, `workshop`, `social`, `info` (Info Session), `study` and
 
 ## Workshops and venues
 
-`src/data/badges.json` defines the badges (Workshop completed, one per workshop definition; First Merge; and the officer-awarded Workshop Host, Guide Author, Mentor and Event Organizer): `kind` (`automatic` or `manual`), `repeatable` and `perWorkshop`. Awards live in the database (`platform.badgeAwards`), never here; `pnpm --filter @devdogsuga/events check:events` validates the file.
+`src/data/badges.json` defines the badges (Workshop completed, one per workshop definition; First Commit; and the officer-awarded Workshop Host, Guide Author, Mentor and Event Organizer): `kind` (`automatic` or `manual`), `repeatable` and `perWorkshop`. Awards live in the database (`platform.badgeAwards`), never here; `pnpm --filter @devdogsuga/events check:events` validates the file.
 
 `src/data/workshops.json` holds each reusable workshop once: a stable kebab `id`, `title`, `description`, `project`, `elHours` (the EL allowance attending earns, independent of the meeting's times; one hour by default) and optional `topics`. A meeting's `agenda` lists the ids running that night, or `{ "workshop": id, "description": "…" }` to override the description for one night. Workshops in parallel share a meeting; sequential ones are separate meetings. A repeated session of one workshop reuses its id.
 

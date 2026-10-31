@@ -26,8 +26,8 @@ export const BADGE_WITHDRAWAL_REASON_MAX_LENGTH = 280;
 /** The id the automatic workshop badge is stored under. */
 export const WORKSHOP_COMPLETED_BADGE_ID = "workshop-completed";
 
-/** The id of the automatic first-merged-pull-request badge. */
-export const FIRST_MERGE_BADGE_ID = "first-merge";
+/** The id of the automatic first-default-branch-commit badge. */
+export const FIRST_COMMIT_BADGE_ID = "first-commit";
 
 export const badgeDefinitionSchema = z.strictObject({
   id: z.string().regex(SERIES_ID_PATTERN).meta({
@@ -86,7 +86,7 @@ export function validateBadges(config: BadgesConfig): BadgeIssue[] {
       });
     }
   }
-  for (const required of [WORKSHOP_COMPLETED_BADGE_ID, FIRST_MERGE_BADGE_ID]) {
+  for (const required of [WORKSHOP_COMPLETED_BADGE_ID, FIRST_COMMIT_BADGE_ID]) {
     const badge = config.badges.find((b) => b.id === required);
     if (!badge) {
       issues.push({
@@ -118,7 +118,7 @@ export interface ResolvedBadge {
   /** The definition's id. */
   badgeId: string;
   workshopDefinitionId: string | null;
-  /** "First Merge", or "Workshop completed: Next.js". */
+  /** "First Commit", or "Workshop completed: Next.js". */
   name: string;
   description: string;
   kind: "automatic" | "manual";

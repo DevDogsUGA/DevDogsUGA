@@ -15,13 +15,13 @@ section: infrastructure
 
 ## What it issues
 
-| Credential                                                                        | Used for                                                                                           | Lives in                        |
-| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------- |
-| The GitHub OAuth app (`GH_CLIENT_ID`, `GH_CLIENT_SECRET`)                         | Members signing in with GitHub                                                                     | Bitwarden, Supabase auth config |
-| `WORKSHOPS_READ_TOKEN`                                                            | A fine-grained token that reads the private workshop repositories, for the slides build            | A repository secret             |
-| The read-only GitHub App (`GH_APP_ID`, `GH_APP_PRIVATE_KEY`, `GH_WEBHOOK_SECRET`) | Merged pull requests for member profiles ([Contributions](../../platform/guides/contributions.md)) | Bitwarden, the platform Worker  |
-| The config-PR GitHub App (`GH_CONFIG_APP_ID`, `GH_CONFIG_APP_PRIVATE_KEY`)        | The console's schedule editor opens pull requests that edit `packages/events/src/data/*.json`      | Bitwarden, the platform Worker  |
-| Renovate                                                                          | A GitHub App (Mend's), installed by an owner                                                       | The App's own installation      |
+| Credential                                                                 | Used for                                                                                                | Lives in                        |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| The GitHub OAuth app (`GH_CLIENT_ID`, `GH_CLIENT_SECRET`)                  | Members signing in with GitHub                                                                          | Bitwarden, Supabase auth config |
+| `WORKSHOPS_READ_TOKEN`                                                     | A fine-grained token that reads the private workshop repositories, for the slides build                 | A repository secret             |
+| The read-only GitHub App (`GH_APP_ID`, `GH_APP_PRIVATE_KEY`)               | The scheduled commit sync for member profiles ([Contributions](../../platform/guides/contributions.md)) | Bitwarden, the platform Worker  |
+| The config-PR GitHub App (`GH_CONFIG_APP_ID`, `GH_CONFIG_APP_PRIVATE_KEY`) | The console's schedule editor opens pull requests that edit `packages/events/src/data/*.json`           | Bitwarden, the platform Worker  |
+| Renovate                                                                   | A GitHub App (Mend's), installed by an owner                                                            | The App's own installation      |
 
 The platform holds no GitHub App that administers the organization: teams and competitions left the platform, and with them that administration. The OAuth app signs members in. Two Apps do the rest, split by privilege because an App's write permission covers every repository it is installed on:
 

@@ -212,17 +212,17 @@ export const communityProfile = terminal(
       if (activity.contributions.length === 0) {
         body.push({
           type: "text",
-          text: "No merged pull requests yet.",
+          text: "No commits yet.",
           tone: "dim",
         });
       } else {
         body.push({
           type: "entries",
-          items: activity.contributions.map((pr) => ({
-            label: pr.title.trim() || `Pull request #${pr.number}`,
-            meta: `${pr.repo} #${pr.number}`,
-            headline: formatEventDate(pr.mergedAt),
-            text: pr.url,
+          items: activity.contributions.map((commit) => ({
+            label: commit.title.trim() || `Commit ${commit.sha.slice(0, 7)}`,
+            meta: `${commit.repo}@${commit.sha.slice(0, 7)}`,
+            headline: formatEventDate(commit.committedAt),
+            text: commit.url,
           })),
           empty: "",
         });

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { planBadges, runBadges } from "./commands.js";
 import {
   pairKey,
-  planFirstMerge,
+  planFirstCommit,
   planWorkshops,
   type ReflectionEvidence,
 } from "./plan.js";
@@ -92,9 +92,9 @@ describe("withdrawn workshop awards", () => {
   });
 });
 
-describe("planFirstMerge", () => {
+describe("planFirstCommit", () => {
   it("skips members who ever held the badge", () => {
-    expect(planFirstMerge(["a", "b", "b", "c"], new Set(["c"]))).toEqual({
+    expect(planFirstCommit(["a", "b", "b", "c"], new Set(["c"]))).toEqual({
       userIds: ["a", "b"],
       alreadyHeld: 1,
     });
@@ -126,11 +126,11 @@ describe("runBadges", () => {
       }),
     ],
     heldWorkshopAwards: new Set(),
-    contributors: ["u1"],
-    firstMergeHolders: new Set(),
+    committers: ["u1"],
+    firstCommitHolders: new Set(),
   };
   const base = () => ({ evidence: async () => data, interactive: false });
-  const applied = { workshopAwarded: 1, firstMergeAwarded: 1 };
+  const applied = { workshopAwarded: 1, firstCommitAwarded: 1 };
 
   it("prints per badge and writes nothing on a dry run", async () => {
     const apply = vi.fn();
@@ -138,7 +138,7 @@ describe("runBadges", () => {
     expect(apply).not.toHaveBeenCalled();
     expect(stderr).toContain("Workshop completed:");
     expect(stderr).toContain("1 skipped: meeting ran several workshops");
-    expect(stderr).toContain("First Merge:");
+    expect(stderr).toContain("First Commit:");
   });
 
   it("refuses to write without --yes and no terminal", async () => {
@@ -161,7 +161,7 @@ describe("runBadges", () => {
       evidence: async () => ({
         ...data,
         heldWorkshopAwards: new Set([pairKey("u1", "ws-a")]),
-        firstMergeHolders: new Set(["u1"]),
+        firstCommitHolders: new Set(["u1"]),
       }),
       apply,
       interactive: false,

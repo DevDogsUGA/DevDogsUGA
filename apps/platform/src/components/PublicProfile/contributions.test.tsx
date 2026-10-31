@@ -20,6 +20,9 @@ const profile: Profile = {
   visibility: { name: true, avatar: true, bio: true, links: true },
 };
 
+const NEWEST = "9".repeat(40);
+const OLDER = "2".repeat(40);
+
 const render = (activity: Partial<PublicProfileActivity>) =>
   renderToStaticMarkup(
     <PublicProfile
@@ -43,30 +46,32 @@ describe("the Contributions section", () => {
   it("says so when shown but empty", () => {
     const html = render({ contributions: [] });
     expect(html).toContain("Contributions");
-    expect(html).toContain("No merged pull requests yet.");
+    expect(html).toContain("No commits yet.");
   });
 
-  it("lists merged pull requests linked to GitHub, in the order given", () => {
+  it("lists commits linked to GitHub, in the order given", () => {
     const html = render({
       contributions: [
         {
           repo: "DevDogsUGA/site",
-          number: 9,
+          sha: NEWEST,
           title: "Newest",
-          url: "https://github.com/DevDogsUGA/site/pull/9",
-          mergedAt: new Date("2026-10-20T16:00:00Z"),
+          url: `https://github.com/DevDogsUGA/site/commit/${NEWEST}`,
+          committedAt: new Date("2026-10-20T16:00:00Z"),
         },
         {
           repo: "DevDogsUGA/site",
-          number: 2,
+          sha: OLDER,
           title: "Older",
-          url: "https://github.com/DevDogsUGA/site/pull/2",
-          mergedAt: new Date("2026-10-01T16:00:00Z"),
+          url: `https://github.com/DevDogsUGA/site/commit/${OLDER}`,
+          committedAt: new Date("2026-10-01T16:00:00Z"),
         },
       ],
     });
-    expect(html).toContain('href="https://github.com/DevDogsUGA/site/pull/9"');
+    expect(html).toContain(
+      `href="https://github.com/DevDogsUGA/site/commit/${NEWEST}"`,
+    );
     expect(html.indexOf("Newest")).toBeLessThan(html.indexOf("Older"));
-    expect(html).toContain("DevDogsUGA/site #9");
+    expect(html).toContain("DevDogsUGA/site@9999999");
   });
 });

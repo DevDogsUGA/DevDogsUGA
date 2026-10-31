@@ -3,16 +3,16 @@
  * would have, for evidence that existed before they did.
  *
  * 1. read submitted meeting reflections (with attendance and the workshops the
- *    meeting ran), matched contributions, and the awards that exist;
+ *    meeting ran), stored commits, and the awards that exist;
  * 2. plan (`plan.ts`): Workshop completed for a member who attended and
  *    submitted a reflection for a workshop the meeting ran; a reflection with
  *    no workshop chosen counts only when the meeting ran exactly one workshop
  *    (what the reflection picker defaults to), and is otherwise skipped and
- *    counted, never guessed; First Merge for a member with a matched
- *    contribution and no First Merge row;
+ *    counted, never guessed; First Commit for a member with a stored
+ *    commit and no First Commit row;
  * 3. print the plan per badge, then ask;
  * 4. apply it in one transaction through `platform.sync_workshop_badge` and
- *    `platform.award_first_merge` (the triggers' own functions) and write one
+ *    `platform.award_first_commit` (the triggers' own functions) and write one
  *    `badge.backfill` audit event.
  *
  * Idempotent: a second run finds everything held and changes nothing.
@@ -37,7 +37,7 @@ import {
 } from "../production/cli.js";
 import {
   describePlan,
-  planFirstMerge,
+  planFirstCommit,
   planWorkshops,
   type BadgesPlan,
 } from "./plan.js";
@@ -79,9 +79,9 @@ function parse(argv: readonly string[]): Values {
 export function planBadges(evidence: Evidence): BadgesPlan {
   return {
     workshop: planWorkshops(evidence.reflections, evidence.heldWorkshopAwards),
-    firstMerge: planFirstMerge(
-      evidence.contributors,
-      evidence.firstMergeHolders,
+    firstCommit: planFirstCommit(
+      evidence.committers,
+      evidence.firstCommitHolders,
     ),
   };
 }
@@ -105,7 +105,7 @@ export async function runBadges(
       say("Dry run: nothing written.");
       return;
     }
-    const total = plan.workshop.awards.length + plan.firstMerge.userIds.length;
+    const total = plan.workshop.awards.length + plan.firstCommit.userIds.length;
     if (total === 0) {
       say("Nothing to award.");
       return;
@@ -121,7 +121,7 @@ export async function runBadges(
     }
     const done = await (deps.apply ?? applyBadgesFor(dbUrl!))(plan);
     say(
-      `Awarded ${plural(done.workshopAwarded, "Workshop completed badge")} and ${plural(done.firstMergeAwarded, "First Merge badge")}.`,
+      `Awarded ${plural(done.workshopAwarded, "Workshop completed badge")} and ${plural(done.firstCommitAwarded, "First Commit badge")}.`,
       "success",
     );
   } catch (err) {

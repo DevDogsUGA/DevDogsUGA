@@ -31,7 +31,7 @@ The map is `.github/docs-projects.json`. It is reviewed in a DevDogsUGA pull req
 
 ## Ask for a candidate
 
-On a merge in a mapped repository the platform sends a `repository_dispatch` of type `docs-candidate` with `{ "project": "<slug>", "sha": "<merge commit>" }` (the webhook is stage D1). By hand:
+A `repository_dispatch` of type `docs-candidate` with `{ "project": "<slug>", "sha": "<merge commit>" }` starts a candidate; nothing sends it yet, because the platform no longer receives GitHub webhooks. By hand:
 
 ```bash
 gh workflow run docs-candidate.yaml -f project=example -f sha=<40-character commit>
@@ -89,7 +89,7 @@ The bucket must exist before a deploy that declares it: `wrangler r2 bucket crea
 3. **Bucket and publisher.** The bucket, the `docs-publishing` environment with its reviewers, and the publish credential and variables from the table below must exist. Set `DOCS_LIVE_BASE_URL` if the bucket is public, so the change summary can compare against the live version.
 4. **First candidate, by hand.** `gh workflow run docs-candidate.yaml -f project=<slug> -f sha=<merge commit>`. Read the summary and the preview, then approve in the `docs-publishing` environment.
 5. **Check it.** Open `/docs/<slug>` (allow up to a minute), try an image, search for a phrase from a page, and `curl devdogsuga.org/docs/<slug>`.
-6. **Automatic candidates (stage D1).** The platform's GitHub webhook (`/github/webhook`, verified with `GH_WEBHOOK_SECRET`) sees a merge to a mapped repository's branch, looks the repository up in the same map, and sends the `repository_dispatch` of type `docs-candidate` with `{ "project": "<slug>", "sha": "<merge commit>" }` described above. Until D1 ships, ask for candidates by hand. The project repository needs its webhook pointed at the platform once; the dispatch itself only names the project and the commit, never a repository, branch or directory.
+6. **Automatic candidates.** Not built. The platform's GitHub webhook that this step once relied on is retired (the commit sync reads GitHub on a schedule instead), so ask for candidates by hand. Whatever sends the `repository_dispatch` later only names the project and the commit, never a repository, branch or directory.
 
 ## Credentials
 

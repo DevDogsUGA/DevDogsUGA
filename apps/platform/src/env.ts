@@ -220,23 +220,22 @@ const server = {
       secrecy: "secret",
     },
   ),
-  // The read-only GitHub App (devdogs-platform, with a staging twin) that
-  // feeds merged pull requests into platform.contributions. All three are
-  // optional so a deploy or a local run without them boots: the webhook then
-  // answers 503 and the backfill refuses to run, both loudly and harmlessly.
+  // The read-only GitHub App (devdogs-platform, with a staging twin) the
+  // scheduled commit sync authenticates as. Both are optional so a deploy or a
+  // local run without them boots: the sync then reports itself unavailable,
+  // loudly and harmlessly.
   GH_APP_ID: define(z.string().optional(), {
     doc:
       "Id of the read-only GitHub App (devdogs-platform; a staging twin " +
-      "per environment) that feeds merged pull requests to " +
-      "platform.contributions. Used by the backfill to mint installation " +
-      "tokens.",
+      "per environment) the scheduled commit sync authenticates as. Used to " +
+      "mint installation tokens.",
     scope: "environment",
     secrecy: "public",
   }),
   GH_APP_PRIVATE_KEY: define(z.string().optional(), {
     doc:
       "The GitHub App's private key (PEM, PKCS#8 or PKCS#1; literal \\n " +
-      "sequences are accepted). Signs the short-lived JWT the backfill " +
+      "sequences are accepted). Signs the short-lived JWT the commit sync " +
       "exchanges for an installation token.",
     scope: "environment",
     secrecy: "secret",
@@ -261,13 +260,6 @@ const server = {
       "The config-PR GitHub App's private key (PEM, PKCS#8 or PKCS#1; " +
       "literal \\n sequences are accepted). Signs the short-lived JWT the " +
       "platform exchanges for an installation token scoped to DevDogsUGA.",
-    scope: "environment",
-    secrecy: "secret",
-  }),
-  GH_WEBHOOK_SECRET: define(z.string().min(16).optional(), {
-    doc:
-      "The GitHub App's webhook secret. Verifies X-Hub-Signature-256 on " +
-      "POST /github/webhook; without it that route answers 503.",
     scope: "environment",
     secrecy: "secret",
   }),
