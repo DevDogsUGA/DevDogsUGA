@@ -113,6 +113,31 @@ describe("cron dispatcher", () => {
     expect(isHeartbeatJob("platform-commit-sync")).toBe(true);
   });
 
+  it("registers the Devpost sync daily, with its own slot, and its continuation", () => {
+    expect(CRON_ROUTES["40 5 * * *"]?.routes).toEqual([
+      "/cron/hackathons-devpost",
+    ]);
+    expect(CRON_ROUTES["*/15 * * * *"]?.routes).toContain(
+      "/cron/hackathons-devpost?continue=1",
+    );
+    // Like the commit sync, it writes its heartbeat when a cycle completes.
+    expect(CRON_ROUTES["40 5 * * *"]?.heartbeat).toBeUndefined();
+    expect(isHeartbeatJob("platform-devpost-sync")).toBe(true);
+  });
+
+  it("keeps the Devpost sync out of the commit sweep's slot, so one cannot starve the other", () => {
+    const owners = Object.entries(CRON_ROUTES).filter(([, entry]) =>
+      entry.routes.some((path) => path.startsWith("/cron/hackathons-devpost")),
+    );
+    expect(owners.map(([cron]) => cron).sort()).toEqual([
+      "*/15 * * * *",
+      "40 5 * * *",
+    ]);
+    expect(CRON_ROUTES["10 5 * * *"]?.routes).not.toContain(
+      "/cron/hackathons-devpost",
+    );
+  });
+
   it("records the group's heartbeat once every route succeeded", async () => {
     // No group declares a heartbeat today (the daily jobs report from the
     // catalog Worker), so the mechanism is exercised with a temporary group.
