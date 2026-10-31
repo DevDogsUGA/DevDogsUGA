@@ -179,18 +179,36 @@ describe("console page access drift", () => {
     const source = readFileSync(file, "utf8");
     const expected = EXCEPTIONS[path] ?? section!.access;
     if (path.startsWith("/dashboard/docs-preview")) {
+      // Signed in for everything under it (the layout), then per page: the
+      // landing page is for docs reviewers alone, and a project's pages go
+      // through the project gate (owners, contributors and reviewers).
       const layout = readFileSync(
         resolve(CONSOLE, "docs-preview/layout.tsx"),
         "utf8",
       );
-      expect(layout).toContain("await requireDocsPreview()");
+      expect(layout).toContain("await requireDashboard()");
       const gate = readFileSync(
         resolve(SRC, "server/docs/previewAccess.ts"),
         "utf8",
       );
       expect(gate).toContain("await requireDashboard()");
-      expect(gate).toContain("!rules.previewDocs(caller)");
       expect(gate).toContain("notFound()");
+      if (path === "/dashboard/docs-preview") {
+        expect(source).toContain("await requireDocsPreview()");
+        expect(gate).toContain("!rules.previewDocs(caller)");
+      } else {
+        const projectLayout = readFileSync(
+          resolve(CONSOLE, "docs-preview/[slug]/layout.tsx"),
+          "utf8",
+        );
+        const route = readFileSync(
+          resolve(SRC, "components/DocsPreviewRoute.tsx"),
+          "utf8",
+        );
+        expect(projectLayout).toContain("PreviewLayout");
+        expect(route).toContain("await requirePreviewProject(slug)");
+        expect(gate).toContain("mayPreviewDocs(project.facts)");
+      }
       return;
     }
     const delegated = LOADER_GATES[path];

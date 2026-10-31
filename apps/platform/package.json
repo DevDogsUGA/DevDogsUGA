@@ -31,6 +31,7 @@
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
     "@devdogsuga/docs": "workspace:*",
+    "@devdogsuga/docs-kit": "workspace:*",
     "@devdogsuga/email": "workspace:*",
     "@devdogsuga/events": "workspace:*",
     "@devdogsuga/newsletter": "workspace:*",

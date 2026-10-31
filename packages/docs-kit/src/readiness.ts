@@ -30,6 +30,7 @@ import {
   analyzeUntrustedFiles,
   checkTreeEntries,
   type TreeEntry,
+  type UntrustedCompileResult,
   type UntrustedFile,
   type UntrustedLimits,
 } from "./untrusted-policy.js";
@@ -129,11 +130,27 @@ const asProblem = (message: string): ReadinessProblem => ({
   message,
 });
 
-/** Runs the whole check over a tree. Never throws for what a project wrote. */
-export async function checkDocsReadiness(
+/** A folder refused before anything compiled. */
+const refused = (problem: ReadinessProblem): Readiness => ({
+  ready: false,
+  problems: [problem],
+  pages: 0,
+  assets: 0,
+});
+
+/**
+ * Runs the whole check over a tree and keeps what it compiled, for a caller
+ * that wants to show the pages as well as the verdict (the live preview). The
+ * compiled project is there whenever the pages compiled, even if links or
+ * structure still fail readiness. Never throws for what a project wrote.
+ */
+export async function analyzeDocsReadiness(
   tree: DocsTree,
   options: ReadinessOptions,
-): Promise<Readiness> {
+): Promise<{
+  readiness: Readiness;
+  result: UntrustedCompileResult | null;
+}> {
   const entries: readonly TreeEntry[] =
     tree.entries ??
     [...tree.files].map(([path, bytes]) => ({
@@ -147,12 +164,7 @@ export async function checkDocsReadiness(
     kinds = checkTreeEntries(entries, options.limits);
   } catch (error) {
     if (!(error instanceof DocsBuildError)) throw error;
-    return {
-      ready: false,
-      problems: [asProblem(error.message)],
-      pages: 0,
-      assets: 0,
-    };
+    return { readiness: refused(asProblem(error.message)), result: null };
   }
 
   const files: UntrustedFile[] = [];
@@ -160,12 +172,10 @@ export async function checkDocsReadiness(
     const bytes = tree.files.get(rel);
     if (bytes === undefined) {
       return {
-        ready: false,
-        problems: [
+        readiness: refused(
           asProblem(`${rel}: was listed but its contents are missing`),
-        ],
-        pages: 0,
-        assets: 0,
+        ),
+        result: null,
       };
     }
     files.push({ rel, kind, bytes });
@@ -175,7 +185,7 @@ export async function checkDocsReadiness(
   const noOverview = overviewProblem(kinds.get(OVERVIEW_FILE) === "page");
   if (noOverview) problems.push(noOverview);
 
-  const { result, problems: refused } = await analyzeUntrustedFiles(
+  const { result, problems: compileProblems } = await analyzeUntrustedFiles(
     files,
     {
       project: options.project,
@@ -183,7 +193,7 @@ export async function checkDocsReadiness(
     },
     options.render,
   );
-  for (const p of refused) {
+  for (const p of compileProblems) {
     problems.push({
       kind: "compile",
       file: p.file === "docs" ? null : p.file,
@@ -204,9 +214,20 @@ export async function checkDocsReadiness(
     );
   }
   return {
-    ready: problems.length === 0,
-    problems,
-    pages: result?.pages.length ?? 0,
-    assets: result?.assets.length ?? 0,
+    readiness: {
+      ready: problems.length === 0,
+      problems,
+      pages: result?.pages.length ?? 0,
+      assets: result?.assets.length ?? 0,
+    },
+    result,
   };
+}
+
+/** Whether the tree is ready to publish. Never throws for what a project wrote. */
+export async function checkDocsReadiness(
+  tree: DocsTree,
+  options: ReadinessOptions,
+): Promise<Readiness> {
+  return (await analyzeDocsReadiness(tree, options)).readiness;
 }
