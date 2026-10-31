@@ -97,7 +97,7 @@ The bucket must exist before a deploy that declares it: `wrangler r2 bucket crea
 4. **First candidate, by hand.** `gh workflow run docs-candidate.yaml -f project=<slug> -f sha=<merge commit>`. Read the summary and the preview, then approve in the `docs-publishing` environment.
 5. **Check it.** Open `/docs/<slug>` (allow up to a minute), try an image, search for a phrase from a page, and `curl devdogsuga.org/docs/<slug>`.
 6. **Automatic candidates.** Not built. The platform's GitHub webhook that this step once relied on is retired (the commit sync reads GitHub on a schedule instead), so ask for candidates by hand. Whatever sends the `repository_dispatch` later only names the project and the commit, never a repository, branch or directory.
-7. **First publication.** The platform marks a project as having published (`docsFirstPublishedAt`, which also freezes its slug for good) only from evidence that a publish succeeded. That callback is not built: see [Transfers and the pause](./project-docs-transfers.md#what-is-not-built).
+7. **First publication.** The platform notices the project's pointer in the bucket and records its first publication (`docsFirstPublishedAt`, which freezes its slug and adds it to the Contribute menu) within about fifteen minutes: see [Transfers and the pause](./project-docs-transfers.md#what-is-not-built).
 
 ## Credentials
 

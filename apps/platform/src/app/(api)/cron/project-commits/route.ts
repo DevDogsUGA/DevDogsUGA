@@ -1,6 +1,7 @@
 import { connection, NextResponse } from "next/server";
 import { authorizeCron } from "~/server/moderation/cronAuth";
 import { runCommitSync } from "~/server/github/sync";
+import { runDocsReconcile } from "~/server/docs/docsReconcile";
 
 /**
  * GET /cron/project-commits
@@ -16,6 +17,11 @@ import { runCommitSync } from "~/server/github/sync";
  * cycle's completion writes the `platform-commit-sync` heartbeat, which
  * `/cron/heartbeats` checks.
  *
+ * After the sync, on every invocation, it also follows the docs pull requests
+ * officers have opened to their end and notices first publications
+ * (`~/server/docs/docsReconcile`). That step never changes the response or the
+ * heartbeat: it logs its own failures and tries again next time.
+ *
  * The response is a 500 only for an authentication or permission failure with
  * GitHub (the read App is misconfigured or uninstalled). A rate limit or a
  * transient failure answers 200 and is retried by the next continuation.
@@ -25,8 +31,13 @@ import { runCommitSync } from "~/server/github/sync";
 export async function GET(request: Request) {
   await connection();
   authorizeCron(request);
-  const run = await runCommitSync(
-    new URL(request.url).searchParams.get("continue") !== "1",
-  );
+  let run;
+  try {
+    run = await runCommitSync(
+      new URL(request.url).searchParams.get("continue") !== "1",
+    );
+  } finally {
+    await runDocsReconcile();
+  }
   return NextResponse.json(run, { status: run.success ? 200 : 500 });
 }

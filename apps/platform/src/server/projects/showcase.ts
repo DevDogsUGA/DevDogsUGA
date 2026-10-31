@@ -20,7 +20,7 @@ import { githubRepos, projectRepos, projects } from "~/server/db/schema";
  * the component that draws them, so a stored value is never CSS or HTML.
  */
 
-const SHOWCASE_TAG = "showcase";
+export const SHOWCASE_TAG = "showcase";
 
 /**
  * Marks the showcase stale after a write that changes it: a toggle, a display

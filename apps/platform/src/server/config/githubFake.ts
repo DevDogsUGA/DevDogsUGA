@@ -53,6 +53,12 @@ export function fakeGithub(
     texts?: Partial<Record<(typeof BASE_FILE_NAMES)[number], string>>;
     /** Answer this request (`METHOD /path`) with a 500. */
     failOn?: string;
+    /** Files on the base branch other than the events config, by repo path. */
+    files?: Record<string, string>;
+    /** Pull requests that already exist, as `GET /pulls?head=` lists them. */
+    pulls?: { html_url: string; number: number }[];
+    /** Branches that already exist, answering `GET /git/ref/heads/<branch>`. */
+    branches?: string[];
   } = {},
 ) {
   const calls: RecordedCall[] = [];
@@ -90,6 +96,17 @@ export function fakeGithub(
     }
     if (key === `GET ${prefix}/git/commits/basesha`) {
       return json({ tree: { sha: "basetree" } });
+    }
+    const extra = /\/contents\/(.+)$/.exec(url.pathname)?.[1];
+    if (method === "GET" && extra !== undefined && options.files?.[extra]) {
+      return new Response(options.files[extra], { status: 200 });
+    }
+    if (key === `GET ${prefix}/pulls`) return json(options.pulls ?? []);
+    const branchRef = /\/git\/ref\/heads\/(.+)$/.exec(url.pathname)?.[1];
+    if (method === "GET" && branchRef !== undefined && branchRef !== "main") {
+      return options.branches?.includes(branchRef)
+        ? json({ object: { sha: "existingbranch" } })
+        : json({ message: "Not Found" }, 404);
     }
     const file = /\/contents\/packages\/events\/src\/data\/(\w+)\.json$/.exec(
       url.pathname,
