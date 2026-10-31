@@ -132,7 +132,7 @@ describe("POST /oauth/device/token", () => {
     };
     expect(issued.device_code.length).toBeGreaterThanOrEqual(43);
     expect(issued.user_code).toMatch(/^[A-Z]{4}-[A-Z]{4}$/);
-    expect(issued.verification_uri).toMatch(/\/tools\/oauth\/device$/);
+    expect(issued.verification_uri).toMatch(/\/oauth\/device$/);
     expect(issued.verification_uri_complete).toContain(issued.user_code);
     expect(issued.expires_in).toBe(600);
     expect(issued.interval).toBe(5);
