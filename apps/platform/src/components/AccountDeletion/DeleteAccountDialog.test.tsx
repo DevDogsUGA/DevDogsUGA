@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const request = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("~/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("~/server/actions/accountDeletion", () => ({
   requestAccountDeletion: request,
 }));
@@ -89,7 +91,8 @@ describe("DeleteAccountDialog", () => {
   it("schedules the member's own deletion and goes to the pending page", async () => {
     request.mockResolvedValue({
       ok: true,
-      scheduledFor: "2026-11-06T00:00:00Z",
+      data: { scheduledFor: "2026-11-06T00:00:00Z" },
+      message: "Account scheduled for deletion.",
     });
     const { user, navigate } = await openDialog();
 
@@ -107,7 +110,7 @@ describe("DeleteAccountDialog", () => {
   it("shows the sole-President refusal and stays put", async () => {
     request.mockResolvedValue({
       ok: false,
-      error: "Grant President to someone else first",
+      message: "Grant President to someone else first",
     });
     const { user, navigate } = await openDialog();
 
@@ -120,5 +123,24 @@ describe("DeleteAccountDialog", () => {
       "Grant President to someone else first",
     );
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("starts a reopened dialog without the last refusal", async () => {
+    request.mockResolvedValue({
+      ok: false,
+      message: "Grant President to someone else first",
+    });
+    const { user } = await openDialog();
+    await user.type(screen.getByRole("textbox"), "delete my account");
+    await user.click(
+      screen.getAllByRole("button", { name: "Delete account" }).at(-1)!,
+    );
+    await screen.findByText("Grant President to someone else first");
+
+    await user.click(screen.getByRole("button", { name: "Keep my account" }));
+    await user.click(screen.getByRole("button", { name: /delete account/i }));
+    expect(
+      screen.queryByText("Grant President to someone else first"),
+    ).toBeNull();
   });
 });

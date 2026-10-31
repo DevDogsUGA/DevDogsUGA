@@ -1,3 +1,4 @@
+import { ExpectedFailure } from "~/lib/actionResult";
 import { rules } from "~/server/auth/access";
 import { getCallerContext } from "~/server/auth/permissions";
 import { and, eq, isNull, sql } from "drizzle-orm";
@@ -129,7 +130,7 @@ export async function scheduleAccountDeletion(
 ): Promise<ScheduledDeletion> {
   const byOfficer = actorUserId !== userId;
   if (byOfficer && !(await mayDeleteOtherAccounts(actorUserId))) {
-    throw new Error(NOT_ALLOWED);
+    throw new ExpectedFailure(NOT_ALLOWED);
   }
 
   const [member] = await db
@@ -138,9 +139,10 @@ export async function scheduleAccountDeletion(
     .leftJoin(profiles, eq(profiles.userId, usersInAuth.id))
     .where(eq(usersInAuth.id, userId))
     .limit(1);
-  if (!member?.email) throw new Error(NO_SUCH_MEMBER);
+  if (!member?.email) throw new ExpectedFailure(NO_SUCH_MEMBER);
 
-  if (await isSolePresident(userId)) throw new Error(SOLE_PRESIDENT_ERROR);
+  if (await isSolePresident(userId))
+    throw new ExpectedFailure(SOLE_PRESIDENT_ERROR);
 
   const now = options.now ?? new Date();
   const scheduledFor = deletionDueAt(now);
@@ -221,7 +223,7 @@ export async function cancelAccountDeletion(
 ): Promise<boolean> {
   const cancelledByOfficer = actorUserId !== userId;
   if (cancelledByOfficer && !(await mayDeleteOtherAccounts(actorUserId))) {
-    throw new Error(NOT_ALLOWED);
+    throw new ExpectedFailure(NOT_ALLOWED);
   }
   const cancelled = await db.transaction(async (tx) => {
     const [stillThere] = await tx

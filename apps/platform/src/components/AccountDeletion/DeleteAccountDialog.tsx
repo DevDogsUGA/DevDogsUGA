@@ -1,7 +1,7 @@
 "use client";
 
 import { DownloadSimpleIcon, TrashIcon } from "@phosphor-icons/react/ssr";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { requestAccountDeletion } from "~/server/actions/accountDeletion";
 import {
   AlertDialog,
@@ -13,9 +13,9 @@ import {
   AlertDialogTrigger,
 } from "~/ui/alert-dialog";
 import { Button } from "~/ui/button";
-import Callout from "~/ui/callout";
 import Field from "~/ui/field";
 import { Input } from "~/ui/input";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 import { confirmationMatches, DELETE_PHRASE } from "./confirm";
 import LeaveLinks from "./LeaveLinks";
 
@@ -45,8 +45,24 @@ export default function DeleteAccountDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  // No refresh: the request signs the member out, so there is no page to redraw.
+  const {
+    run,
+    pending,
+    result: lastResult,
+  } = useCommand(
+    async () => {
+      const result = await requestAccountDeletion(userId);
+      // The request signed the member out of every session; the pending
+      // page is where they land.
+      if (result.ok) navigate("/dashboard/deletion");
+      return result;
+    },
+    { refresh: false },
+  );
+  // A refusal belongs to the opening it happened in: reopening starts clean.
+  const [staleResult, setStaleResult] = useState(lastResult);
+  const result = lastResult === staleResult ? null : lastResult;
 
   const confirmed = confirmationMatches(typed, DELETE_PHRASE);
 
@@ -54,26 +70,12 @@ export default function DeleteAccountDialog({
     if (pending) return;
     setOpen(next);
     setTyped("");
-    setError(null);
+    setStaleResult(lastResult);
   }
 
   function confirm() {
     if (!confirmed) return;
-    setError(null);
-    startTransition(async () => {
-      try {
-        const result = await requestAccountDeletion(userId);
-        if (!result.ok) {
-          setError(result.error);
-          return;
-        }
-        // The request signed the member out of every session; the pending
-        // page is where they land.
-        navigate("/dashboard/deletion");
-      } catch {
-        setError("Something went wrong. Nothing was changed. Try again.");
-      }
-    });
+    run();
   }
 
   return (
@@ -150,11 +152,7 @@ export default function DeleteAccountDialog({
             />
           </Field>
 
-          {error && (
-            <Callout tone="critical" alert className="acctdel-error">
-              {error}
-            </Callout>
-          )}
+          <CommandFeedback result={result} />
         </div>
 
         <AlertDialogFooter>
