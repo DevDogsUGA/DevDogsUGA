@@ -1,4 +1,4 @@
--- Project Manager: insert-only, safe to run again.
+-- Projects Coordinator (was Project Manager): insert-only, safe to run again.
 --
 -- `on conflict do nothing` means a rerun never overwrites an edit made in the
 -- console, so a role that already exists is left exactly as it is. Corrections
@@ -22,16 +22,16 @@ insert into "platform"."roles" (
   "color", "discordRoleId", "discordSyncedName", "discordSyncedColor",
   "canModerate", "canManageRoles", "canManageSuspensions",
   "canViewAuditLog",
-  "canManageAttendance", "canPreviewDocs"
+  "canManageAttendance", "canPreviewDocs", "canReviewProjectReports"
 
 )
 values
   (
     '00000000-0000-4000-8000-000000000007',
-    'Project Manager',
-    'Leads delivery of a DevDogs project.',
+    'Projects Coordinator',
+    'Coordinates DevDogs projects and reviews project EL reports.',
     'custom', 700, true, true,
-    '#1abc9c', '1390065004287627264', 'Project Manager', 1752220,
-    null, null, null, null, true, true
+    '#1abc9c', '1390065004287627264', 'Projects Coordinator', 1752220,
+    null, null, null, null, true, true, true
   )
 on conflict do nothing;
