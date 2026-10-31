@@ -52,6 +52,7 @@ import { activeCatalog, isProductMode } from "./active.js";
 import { handleCheck } from "./check/commands.js";
 import { handleCompletions } from "./completions/commands.js";
 import { handleDoctor } from "./doctor/commands.js";
+import { handleDocs } from "./docs/commands.js";
 import { handleEnv } from "./env/commands.js";
 import { handleJobs } from "./jobs/commands.js";
 import { handleModeration } from "./moderation/commands.js";
@@ -81,6 +82,7 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   setup: handleSetup,
   completions: handleCompletions,
   check: handleCheck,
+  docs: handleDocs,
   oauth: handleOAuth,
   script: handleScript,
   jobs: handleJobs,

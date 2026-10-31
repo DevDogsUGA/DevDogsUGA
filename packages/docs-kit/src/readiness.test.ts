@@ -178,6 +178,17 @@ describe("docs readiness", () => {
     expect(links[0]!.message).toContain("missing.md");
   });
 
+  it("lists a broken link and a refused page in one run", async () => {
+    const result = await check({
+      "index.md": "# Demo\n\n[gone](./missing.md)\n",
+      "bad.md": "# Bad\n\n<script>x()</script>\n",
+    });
+    expect(result.problems.map((p) => [p.kind, p.file])).toEqual([
+      ["compile", "bad.md"],
+      ["link", "index.md:3"],
+    ]);
+  });
+
   it("is not fooled by a link written in a code block", async () => {
     const result = await check({
       ...GOOD,

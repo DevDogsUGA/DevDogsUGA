@@ -442,6 +442,12 @@ export interface UntrustedAnalysis {
   result: UntrustedCompileResult | null;
   /** Everything refused, in the order it was found. Empty when `result` is set. */
   problems: UntrustedProblem[];
+  /**
+   * Internal links that resolve to nothing. Found as soon as the pages are
+   * compiled, so they are here even when a page then failed to render; empty
+   * only if the pages never got that far.
+   */
+  linkErrors: LinkCheckError[];
 }
 
 /**
@@ -509,7 +515,7 @@ export async function analyzeUntrustedFiles(
       message: "docs: the directory contains no Markdown pages",
     });
   }
-  if (problems.length > 0) return { result: null, problems };
+  if (problems.length > 0) return { result: null, problems, linkErrors: [] };
 
   // Compile from the verified bytes, in memory: the source is not read again.
   const sources = new Map<string, string>();
@@ -529,12 +535,12 @@ export async function analyzeUntrustedFiles(
       );
     }
     refuse(error, "docs");
-    return { result: null, problems };
+    return { result: null, problems, linkErrors: [] };
   }
   const root = compiled.projects[0];
   if (!root) {
     problems.push({ file: "docs", message: "docs: no project was produced" });
-    return { result: null, problems };
+    return { result: null, problems, linkErrors: [] };
   }
 
   const assetPaths = new Set(assets.map((a) => a.path));
@@ -546,6 +552,11 @@ export async function analyzeUntrustedFiles(
       assets: assetPaths,
     },
   });
+
+  // Before rendering, and before the prefix below: the rendered pages share
+  // their heading objects with the compiled ones, and anchors are checked
+  // against the unprefixed ids.
+  const linkErrors = checkLinks(compiled.pages);
 
   const rendered: DocsPage[] = [];
   for (const page of compiled.pages) {
@@ -564,11 +575,7 @@ export async function analyzeUntrustedFiles(
       }
     }
   }
-  if (problems.length > 0) return { result: null, problems };
-
-  // Before the prefix below: the rendered pages share their heading objects
-  // with the compiled ones, and anchors are checked against the unprefixed ids.
-  const linkErrors = checkLinks(compiled.pages);
+  if (problems.length > 0) return { result: null, problems, linkErrors };
 
   // The pages' ids carry a per-project prefix (rehypePrefixIds); the
   // table of contents links to them, so it carries the same one.
@@ -589,6 +596,7 @@ export async function analyzeUntrustedFiles(
       linkErrors,
     },
     problems: [],
+    linkErrors,
   };
 }
 

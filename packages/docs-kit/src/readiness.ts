@@ -185,7 +185,11 @@ export async function analyzeDocsReadiness(
   const noOverview = overviewProblem(kinds.get(OVERVIEW_FILE) === "page");
   if (noOverview) problems.push(noOverview);
 
-  const { result, problems: compileProblems } = await analyzeUntrustedFiles(
+  const {
+    result,
+    problems: compileProblems,
+    linkErrors,
+  } = await analyzeUntrustedFiles(
     files,
     {
       project: options.project,
@@ -210,9 +214,11 @@ export async function analyzeDocsReadiness(
           plainText: p.plainText,
         })),
       ),
-      ...linkProblems(options.project, result.linkErrors),
     );
   }
+  // Links are judged whenever the pages compiled far enough to have them, even
+  // if a page then failed to render, so one run lists everything.
+  problems.push(...linkProblems(options.project, linkErrors));
   return {
     readiness: {
       ready: problems.length === 0,
