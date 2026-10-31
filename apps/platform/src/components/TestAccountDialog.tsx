@@ -1,14 +1,11 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
-import { useCallback } from "react";
 import {
   addTestAccount,
   updateTestAccount,
   type TestAccount,
 } from "~/server/actions/testAccounts";
 import FormButton from "./FormButton";
-import { toast } from "~/lib/toast";
 import Input from "~/components/Input";
 import { Button } from "~/ui/button";
 import {
@@ -20,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/ui/dialog";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 interface TestAccountDialogProps {
   account?: TestAccount;
@@ -28,6 +26,11 @@ interface TestAccountDialogProps {
   onSuccess: (account: TestAccount) => void;
 }
 
+/**
+ * Adds a test account, or renames the one passed in. The form is its own
+ * component so each opening starts with no stale refusal, and a refusal (the
+ * five-account cap, an unknown account) shows in the dialog it came from.
+ */
 export default function TestAccountDialog({
   account,
   open,
@@ -36,51 +39,9 @@ export default function TestAccountDialog({
 }: TestAccountDialogProps) {
   const isEdit = account !== undefined;
 
-  const mutation = useMutation({
-    mutationFn: async (formData: FormData): Promise<TestAccount> => {
-      if (isEdit) {
-        await updateTestAccount(undefined, formData);
-        return {
-          ...account,
-          displayName: formData.get("displayName") as string,
-        };
-      }
-      const { testUserId, displayName } = await addTestAccount(formData);
-      return {
-        userId: testUserId,
-        displayName,
-        createdAt: new Date().toISOString(),
-      };
-    },
-    onSuccess: (result) => {
-      toast.success(isEdit ? "Test account updated" : "Test account added");
-      onSuccess(result);
-      onOpenChange(false);
-    },
-    onError: (err) =>
-      toast.error(
-        err instanceof Error ? err.message : "Failed to save test account",
-      ),
-  });
-
-  const handleSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      mutation.mutate(new FormData(e.currentTarget));
-    },
-    [mutation],
-  );
-
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => !mutation.isPending && onOpenChange(o)}
-    >
-      <DialogContent
-        onInteractOutside={(e) => mutation.isPending && e.preventDefault()}
-        onEscapeKeyDown={(e) => mutation.isPending && e.preventDefault()}
-        showCloseButton={false}
-      >
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Edit test account" : "Add test account"}
@@ -90,45 +51,71 @@ export default function TestAccountDialog({
             client.
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          {isEdit && (
-            <input type="hidden" name="authUserId" value={account.userId} />
-          )}
-
-          <label className="field">
-            <span className="label">Display name</span>
-            <Input
-              name="displayName"
-              type="text"
-              defaultValue={account?.displayName}
-              placeholder="Jane Doe"
-              maxLength={255}
-              required
-              autoFocus
-            />
-          </label>
-
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button
-                variant="ghost"
-                type="button"
-                disabled={mutation.isPending}
-              >
-                Cancel
-              </Button>
-            </DialogClose>
-            <FormButton
-              theme="cyan"
-              type="submit"
-              disabled={mutation.isPending}
-            >
-              {isEdit ? "Save" : "Add"}
-            </FormButton>
-          </DialogFooter>
-        </form>
+        <TestAccountForm
+          account={account}
+          onDone={(saved) => {
+            onSuccess(saved);
+            onOpenChange(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
+  );
+}
+
+function TestAccountForm({
+  account,
+  onDone,
+}: {
+  account?: TestAccount;
+  onDone: (account: TestAccount) => void;
+}) {
+  const isEdit = account !== undefined;
+  const { run, pending, result } = useCommand(async (formData: FormData) => {
+    const outcome = isEdit
+      ? await updateTestAccount(formData)
+      : await addTestAccount(formData);
+    if (outcome.ok && outcome.data) {
+      onDone({
+        userId: outcome.data.testUserId,
+        displayName: outcome.data.displayName,
+        createdAt: account?.createdAt ?? new Date().toISOString(),
+      });
+    }
+    return outcome;
+  });
+
+  return (
+    <form action={run} className="grid gap-4">
+      {isEdit && (
+        <input type="hidden" name="testUserId" value={account.userId} />
+      )}
+
+      <label className="field">
+        <span className="label">Display name</span>
+        <Input
+          name="displayName"
+          type="text"
+          defaultValue={account?.displayName}
+          placeholder="Jane Doe"
+          maxLength={255}
+          required
+          autoFocus
+        />
+      </label>
+
+      <CommandFeedback result={result} />
+
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="ghost" type="button" disabled={pending}>
+            Cancel
+          </Button>
+        </DialogClose>
+        <FormButton theme="cyan" type="submit" disabled={pending}>
+          {isEdit ? "Save" : "Add"}
+        </FormButton>
+      </DialogFooter>
+    </form>
   );
 }
