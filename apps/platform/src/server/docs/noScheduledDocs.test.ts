@@ -51,7 +51,7 @@ describe("scheduled docs", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("keep only the compiler's refusal of the old key", () => {
+  it("keep only the compiler's refusal of the old key, and the tests of it", () => {
     const hits = SOURCES.flatMap(files).flatMap((path) => {
       const rel = relative(ROOT, path);
       if (ALLOWED.has(rel)) return [];
@@ -60,7 +60,10 @@ describe("scheduled docs", () => {
         ? [rel]
         : [];
     });
-    expect(hits.sort()).toEqual(["packages/docs-kit/src/compile.test.ts"]);
+    expect(hits.sort()).toEqual([
+      "packages/docs-kit/src/compile.test.ts",
+      "packages/docs-kit/src/readiness.test.ts",
+    ]);
   });
 
   it("is not set by any page in docs/", () => {

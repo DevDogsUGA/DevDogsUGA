@@ -232,7 +232,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     label: "Docs preview",
     icon: "BookOpenIcon",
     description:
-      "Read docs pages scheduled for later, marked with when they go live. Anyone without access gets a 404.",
+      "Read a project's docs as they are on its repository's default branch, before they publish. Anyone without access gets a 404.",
     group: "Console",
     href: "/dashboard/docs-preview",
     access: "previewDocs",

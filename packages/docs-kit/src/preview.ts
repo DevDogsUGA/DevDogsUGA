@@ -10,19 +10,13 @@
  * `preview-graph.test.ts` fails if an import ever drags either back in.
  */
 import {
+  analyzeDocsReadiness,
   checkDocsReadiness,
   type DocsTree,
   type Readiness,
 } from "./readiness.js";
 import { renderBodyPlain } from "./render-plain.js";
-import {
-  analyzeUntrustedFiles,
-  checkTreeEntries,
-  type TreeEntry,
-  type UntrustedAnalysis,
-  type UntrustedFile,
-  type UntrustedLimits,
-} from "./untrusted-policy.js";
+import { checkTreeEntries, type UntrustedLimits } from "./untrusted-policy.js";
 
 export type {
   DocsTree,
@@ -38,6 +32,7 @@ export {
 } from "./untrusted-policy.js";
 export type { DocsPage } from "./types.js";
 export { checkTreeEntries };
+export { DocsBuildError } from "./errors.js";
 
 export interface PreviewOptions {
   /** The slug the pages are compiled under. */
@@ -54,33 +49,14 @@ export function checkPreviewReadiness(
 }
 
 /**
- * Compiles `tree` for the live preview. `entries` must already have passed
- * `checkTreeEntries` (the caller needs its answer to know which files to
- * fetch). Returns what was refused, or the compiled project.
+ * Compiles `tree` for the live preview: the verdict, and the compiled project
+ * whenever its pages compiled (even if links or structure still fail it).
+ * Throws a `DocsBuildError` only if `tree.entries` break a tree rule, which a
+ * caller that fetches files has already learned from `checkTreeEntries`.
  */
-export async function compilePreview(
-  tree: {
-    entries: readonly TreeEntry[];
-    files: ReadonlyMap<string, Uint8Array>;
-  },
+export function compilePreview(
+  tree: DocsTree,
   options: PreviewOptions,
-): Promise<UntrustedAnalysis> {
-  const kinds = checkTreeEntries(tree.entries, options.limits);
-  const files: UntrustedFile[] = [];
-  for (const [rel, kind] of kinds) {
-    const bytes = tree.files.get(rel);
-    if (bytes === undefined) {
-      return {
-        result: null,
-        problems: [
-          {
-            file: rel,
-            message: `${rel}: was listed but its contents are missing`,
-          },
-        ],
-      };
-    }
-    files.push({ rel, kind, bytes });
-  }
-  return analyzeUntrustedFiles(files, options, renderBodyPlain);
+): ReturnType<typeof analyzeDocsReadiness> {
+  return analyzeDocsReadiness(tree, { ...options, render: renderBodyPlain });
 }

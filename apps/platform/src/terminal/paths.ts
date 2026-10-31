@@ -78,6 +78,21 @@ export const TERMINAL_PATHS = [
     page: "(site)/dashboard/meetings/page.tsx",
   },
   {
+    pattern: "/dashboard/docs-preview/:slug/*",
+    regex: new RegExp("^/dashboard/docs-preview/(?<slug>[^/.]+)/.+/?$"),
+    page: "(site)/dashboard/docs-preview/[slug]/[...path]/page.tsx",
+  },
+  {
+    pattern: "/dashboard/docs-preview/:slug",
+    regex: new RegExp("^/dashboard/docs-preview/(?<slug>[^/.]+)/?$"),
+    page: "(site)/dashboard/docs-preview/[slug]/page.tsx",
+  },
+  {
+    pattern: "/dashboard/docs-preview",
+    regex: new RegExp("^/dashboard/docs-preview/?$"),
+    page: "(site)/dashboard/docs-preview/page.tsx",
+  },
+  {
     pattern: "/dashboard/hackathons",
     regex: new RegExp("^/dashboard/hackathons/?$"),
     page: "(site)/dashboard/hackathons/page.tsx",

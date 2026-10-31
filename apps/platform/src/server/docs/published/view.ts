@@ -6,7 +6,7 @@ import {
   type DocsSidebarTree,
   type DocsTreeNode,
 } from "~/lib/docsTree";
-import { splitProjectPath } from "~/lib/docsSlug";
+import { DOCS_BASE, splitProjectPath } from "~/lib/docsSlug";
 import type { DocHeading } from "~/lib/toc";
 import type { PublishedContent, PublishedPointer } from "./schema";
 
@@ -26,6 +26,16 @@ export interface PublishedProject {
   folders: DocsFolderSettings[];
   /** Approved asset paths (relative to the docs directory). */
   assets: ReadonlySet<string>;
+  /** Where the project's pages are served: `/docs`, or the live preview's prefix. */
+  base: string;
+  /** Where an approved asset is served from. */
+  assetHref: (assetPath: string) => string;
+}
+
+/** Where a project's pages and images are served, when not the public docs. */
+export interface PublishedPlace {
+  base: string;
+  assetHref: (assetPath: string) => string;
 }
 
 export interface PublishedPage {
@@ -43,6 +53,7 @@ export interface PublishedPage {
 export function buildPublishedProject(
   pointer: PublishedPointer,
   content: PublishedContent,
+  place?: PublishedPlace,
 ): PublishedProject {
   const pages = new Map<string, PublishedPage>();
   for (const page of content.pages) {
@@ -71,6 +82,10 @@ export function buildPublishedProject(
       steps: folder.steps,
     })),
     assets: new Set(content.assets.map((asset) => asset.path)),
+    base: place?.base ?? DOCS_BASE,
+    assetHref:
+      place?.assetHref ??
+      ((assetPath) => assetUrl({ slug: pointer.project, pointer }, assetPath)),
   };
 }
 
@@ -170,7 +185,7 @@ export function pageHtml(project: PublishedProject, page: PublishedPage) {
         if (name === "a" && EXTERNAL.test(reference)) return whole;
         const resolved = resolveAsset(dir, reference);
         if (resolved === null || !project.assets.has(resolved)) return "";
-        return `${space}${attr}="${assetUrl(project, resolved)}"`;
+        return `${space}${attr}="${project.assetHref(resolved)}"`;
       },
     );
   });

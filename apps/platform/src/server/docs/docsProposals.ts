@@ -196,7 +196,7 @@ export const proposalBranch = (id: string) => `${BRANCH_PREFIX}${id}`;
  * Picks the repository the docs come from: the project's `docsRepoId`, or its
  * only linked repository.
  */
-function docsRepo(
+export function docsRepo(
   project: DocsProjectRow,
   repos: readonly DocsRepoRow[],
 ): DocsRepoRow | null {

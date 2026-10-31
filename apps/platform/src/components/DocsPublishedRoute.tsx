@@ -7,7 +7,7 @@ import StepPager from "~/components/DocsProgress/StepPager";
 import DocsSidebar from "~/components/DocsSidebar";
 import DocsVariants from "~/components/DocsVariants";
 import "~/components/Docs/docs.css";
-import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
+import { docsHref } from "~/lib/docsSlug";
 import { findFolder, firstPagePath, indexPageOf } from "~/lib/docsTree";
 import { toTitleCase } from "~/lib/toTitleCase";
 import {
@@ -75,7 +75,7 @@ export async function PublishedLayout({
           label: groups.os.labels[value] ?? value,
         }))}
         tree={publishedSidebar(project)}
-        base={DOCS_BASE}
+        base={project.base}
       />
       <div className="docs-pagecol">{children}</div>
     </DocsVariants>
@@ -84,7 +84,7 @@ export async function PublishedLayout({
 
 export function PublishedIndex({ project }: { project: PublishedProject }) {
   const first = firstPagePath(publishedTree(project));
-  if (first) redirect(docsHref(project.slug, first.split("/")));
+  if (first) redirect(docsHref(project.slug, first.split("/"), project.base));
   return (
     <div className="docs-main docs-prose">
       <h1>Nothing here yet</h1>
@@ -112,9 +112,12 @@ export function publishedMetadata(
 export function PublishedPageRoute({
   project,
   slug: path,
+  notice,
 }: {
   project: PublishedProject;
   slug: string[];
+  /** A note above the page, such as the live preview's. */
+  notice?: ReactNode;
 }) {
   const joined = path.join("/");
   const tree = publishedTree(project);
@@ -134,7 +137,8 @@ export function PublishedPageRoute({
     const folder = findFolder(tree, joined);
     if (!folder) notFound();
     const index = indexPageOf(folder);
-    if (index) redirect(docsHref(project.slug, index.path.split("/")));
+    if (index)
+      redirect(docsHref(project.slug, index.path.split("/"), project.base));
     const entries: DocsFolderEntry[] = folder.children.map((node) =>
       node.type === "folder"
         ? {
@@ -156,7 +160,7 @@ export function PublishedPageRoute({
         title={folder.name}
         breadcrumbs={breadcrumbs}
         entries={entries}
-        base={DOCS_BASE}
+        base={project.base}
       />
     );
   }
@@ -165,6 +169,7 @@ export function PublishedPageRoute({
   return (
     <DocPageContent
       external
+      notice={notice}
       html={pageHtml(project, page)}
       headings={page.headings}
       breadcrumbs={breadcrumbs}
@@ -174,7 +179,7 @@ export function PublishedPageRoute({
       }
       footer={
         stepNav && (
-          <StepPager project={project.slug} base={DOCS_BASE} {...stepNav} />
+          <StepPager project={project.slug} base={project.base} {...stepNav} />
         )
       }
     />
