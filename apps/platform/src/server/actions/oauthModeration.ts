@@ -1,7 +1,13 @@
 "use server";
 
 import { authorizeSession, callerFor, rules } from "~/server/auth/access";
-import { failure, success, type ActionResult } from "~/lib/actionResult";
+import {
+  expected,
+  ExpectedFailure,
+  failure,
+  success,
+  type ActionResult,
+} from "~/lib/actionResult";
 
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
@@ -25,27 +31,6 @@ import { endpointUrlProblem } from "~/server/moderation/endpoint";
 import { queueDeliveriesQuietly } from "~/server/moderation/queue";
 import { deriveClientSecret } from "~/server/moderation/secrets";
 import { consumeRateLimit } from "~/server/rateLimit";
-
-export type OAuthModerationState = {
-  clientId: string | null;
-  /** Shown once: only a version number is stored, but the page never re-derives it. */
-  secret: string | null;
-  message: string | null;
-  ok: boolean;
-};
-
-const EMPTY: OAuthModerationState = {
-  clientId: null,
-  secret: null,
-  message: null,
-  ok: true,
-};
-
-const fail = (message: string): OAuthModerationState => ({
-  ...EMPTY,
-  ok: false,
-  message,
-});
 
 const field = (formData: FormData, name: string): string => {
   const value = formData.get(name);
@@ -121,11 +106,37 @@ export async function saveModerationEndpoint(
 }
 
 /**
+ * What a moderation Command needs before it acts: the member's id, the client
+ * they may manage, whether it is In production, the deployment's signing key
+ * and the client's moderation row, if it has one. A client the member may not
+ * manage reads as not found.
+ */
+async function moderationContext(userId: string, clientId: string) {
+  const registration = await managedClient(clientId, userId);
+  if (!registration) throw new ExpectedFailure("OAuth client not found");
+  if (!env.MODERATION_SIGNING_KEY) {
+    throw new ExpectedFailure(
+      "Moderation is not configured on this deployment yet",
+    );
+  }
+  const [existing] = await db
+    .select()
+    .from(moderationClients)
+    .where(eq(moderationClients.clientId, clientId));
+  return {
+    registration,
+    production: registration.status === "in_production",
+    signingKey: env.MODERATION_SIGNING_KEY,
+    existing,
+  };
+}
+
+/**
  * The per-client moderation controls on `/dashboard/oauth`: turn on, rotate
- * the secret and send a test action. The endpoint URL is a Draft field and
- * saves through `saveModerationEndpoint`.
+ * the secret and send a test action, one Command each. The endpoint URL is a
+ * Draft field and saves through `saveModerationEndpoint`.
  *
- * Every intent starts from management rights: a development client must be the
+ * Every one starts from management rights: a development client must be the
  * signed-in member's own, a production client needs `canManageOAuthApps`. A
  * production client keeps its secret and endpoint controls, audited like the
  * rest of its credentials, so a secret copied wrongly at the Gate can be
@@ -133,167 +144,182 @@ export async function saveModerationEndpoint(
  * in the console does that, and shows the secret once) and cannot send test
  * actions: those would hit the live receiver.
  */
-export default async function oauthModerationAction(
-  _previous: OAuthModerationState,
+
+/** The signing secret, shown once: only a version number is stored. */
+export interface ModerationSecret {
+  secret: string;
+}
+
+/** Turns moderation on for a Testing client and shows its secret once. */
+export async function enableModeration(
+  clientId: string,
   formData: FormData,
-): Promise<OAuthModerationState> {
+): Promise<ActionResult<ModerationSecret>> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
-  const userId = access.caller.userId;
-  const intent = field(formData, "intent");
-  const clientId = field(formData, "clientId");
-
-  const registration = await managedClient(clientId, userId);
-  if (!registration) return fail("OAuth client not found");
-  const production = registration.status === "in_production";
-  if (!env.MODERATION_SIGNING_KEY) {
-    return fail("Moderation is not configured on this deployment yet");
-  }
-  const signingKey = env.MODERATION_SIGNING_KEY;
-
-  const [existing] = await db
-    .select()
-    .from(moderationClients)
-    .where(eq(moderationClients.clientId, clientId));
-
-  switch (intent) {
-    case "enable": {
-      if (production) {
-        return fail(
-          "An app In production is turned on by registering it under Apps Outside the Platform in the console",
-        );
-      }
-      const endpointUrl = field(formData, "endpointUrl");
-      const problem = endpointUrl ? endpointUrlProblem(endpointUrl) : null;
-      if (problem) return fail(problem);
-
-      // The secret is shown once, when moderation is first turned on. A second
-      // "enable" must not show it again: the owner rotates to get a new one.
-      if (existing) {
-        return fail(
-          "Moderation is already on for this client. Rotate the secret to get a new one",
-        );
-      }
-      await db
-        .insert(moderationClients)
-        .values({ clientId, endpointUrl: endpointUrl || null })
-        .onConflictDoNothing();
-      revalidatePath("/dashboard/oauth");
-      return {
-        ...EMPTY,
-        clientId,
-        secret: await deriveClientSecret(signingKey, clientId, 1),
-        message: "Moderation is on. Copy the secret now: it is shown once.",
-      };
-    }
-
-    case "rotate-secret": {
-      if (!existing) return fail("Turn moderation on first");
-      // The audit entry goes in first, in the same transaction: a rotation is
-      // never made without a record, and one that fails leaves none.
-      const [row] = await db.transaction(async (tx) => {
-        if (production) {
-          await tx.insert(auditEvents).values(
-            oauthAuditEvent({
-              actorUserId: userId,
-              action: "oauth_client.moderation_secret_rotated",
-              clientId,
-              metadata: {
-                label: registration.label,
-                secretVersion: existing.secretVersion + 1,
-              },
-            }),
-          );
-        }
-        return tx
-          .update(moderationClients)
-          .set({
-            secretVersion: sql`${moderationClients.secretVersion} + 1`,
-            updatedAt: sql`now()`,
-          })
-          .where(eq(moderationClients.clientId, clientId))
-          .returning({ secretVersion: moderationClients.secretVersion });
-      });
-      revalidatePath("/dashboard/oauth");
-      return {
-        ...EMPTY,
-        clientId,
-        secret: await deriveClientSecret(
-          signingKey,
-          clientId,
-          row?.secretVersion ?? 1,
-        ),
-        message:
-          "The secret was rotated. The old one stops working now; copy the new one: it is shown once.",
-      };
-    }
-
-    case "send-test": {
-      if (!existing) return fail("Turn moderation on first");
-      if (production || existing.appId) {
-        return fail(
-          "This client is a registered production app. Test actions only go to apps in Testing",
-        );
-      }
-      if (!existing.endpointUrl) return fail("Set an endpoint URL first");
-
-      const type = field(formData, "type");
-      if (!(MESSAGE_TYPES as readonly string[]).includes(type)) {
-        return fail("Choose an action");
-      }
-      const allowed = await consumeRateLimit({
-        scope: "moderation:test-action",
-        subjectId: userId,
-        limit: 30,
-        windowSeconds: 3600,
-      });
-      if (!allowed) return fail("Too many test actions. Try again later");
-
-      const message = buildMessage({
-        type: type as MessageType,
-        contentType: field(formData, "contentType") || undefined,
-        contentRef: field(formData, "contentRef") || undefined,
-        // A user action about the owner themselves, so it maps to an account
-        // they control in the app.
-        userId,
-      });
-      const [row] = await db
-        .insert(moderationDeliveries)
-        .values({
-          clientId,
-          type: message.type,
-          payload: message,
-          sandbox: true,
-        })
-        .returning({ id: moderationDeliveries.id });
-      if (!row) throw new Error("The test delivery was not recorded");
-
-      // One attempt now, so the owner sees the receiver's answer instead of a
-      // promise; if it did not land, the queue keeps trying.
-      const outcome = await attemptDelivery(row.id, {
-        store: databaseDeliveryStore,
-        signingKey,
-      });
-      revalidatePath("/dashboard/oauth");
-      if (outcome.ack && outcome.result === "delivered") {
-        return {
-          ...EMPTY,
-          message: `Delivered ${message.type} to your endpoint`,
-        };
-      }
-      if (outcome.ack) {
-        return fail("The delivery could not be sent. Check the endpoint URL");
-      }
-      await queueDeliveriesQuietly([row.id]);
-      return fail(
-        `Your endpoint did not accept it (${outcome.error}). It will be retried`,
+  return expected(async () => {
+    const { production, signingKey, existing } = await moderationContext(
+      access.caller.userId,
+      clientId,
+    );
+    if (production) {
+      throw new ExpectedFailure(
+        "An app In production is turned on by registering it under Apps Outside the Platform in the console",
       );
     }
+    const endpointUrl = field(formData, "endpointUrl");
+    const problem = endpointUrl ? endpointUrlProblem(endpointUrl) : null;
+    if (problem) throw new ExpectedFailure(problem);
 
-    default:
-      return fail("Unknown action");
-  }
+    // The secret is shown once, when moderation is first turned on. A second
+    // "enable" must not show it again: the owner rotates to get a new one.
+    if (existing) {
+      throw new ExpectedFailure(
+        "Moderation is already on for this client. Rotate the secret to get a new one",
+      );
+    }
+    await db
+      .insert(moderationClients)
+      .values({ clientId, endpointUrl: endpointUrl || null })
+      .onConflictDoNothing();
+    revalidatePath("/dashboard/oauth");
+    return { secret: await deriveClientSecret(signingKey, clientId, 1) };
+  }, "Moderation is on. Copy the secret now: it is shown once.");
+}
+
+/** Rolls a client's signing secret. The audit entry is written in the same transaction. */
+export async function rotateModerationSecret(
+  clientId: string,
+): Promise<ActionResult<ModerationSecret>> {
+  const access = await authorizeSession();
+  if (!access.ok) return access;
+  const userId = access.caller.userId;
+
+  return expected(async () => {
+    const { registration, production, signingKey, existing } =
+      await moderationContext(userId, clientId);
+    if (!existing) throw new ExpectedFailure("Turn moderation on first");
+    // The audit entry goes in first, in the same transaction: a rotation is
+    // never made without a record, and one that fails leaves none.
+    const [row] = await db.transaction(async (tx) => {
+      if (production) {
+        await tx.insert(auditEvents).values(
+          oauthAuditEvent({
+            actorUserId: userId,
+            action: "oauth_client.moderation_secret_rotated",
+            clientId,
+            metadata: {
+              label: registration.label,
+              secretVersion: existing.secretVersion + 1,
+            },
+          }),
+        );
+      }
+      return tx
+        .update(moderationClients)
+        .set({
+          secretVersion: sql`${moderationClients.secretVersion} + 1`,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(moderationClients.clientId, clientId))
+        .returning({ secretVersion: moderationClients.secretVersion });
+    });
+    revalidatePath("/dashboard/oauth");
+    return {
+      secret: await deriveClientSecret(
+        signingKey,
+        clientId,
+        row?.secretVersion ?? 1,
+      ),
+    };
+  }, "The secret was rotated. The old one stops working now; copy the new one: it is shown once.");
+}
+
+/**
+ * Sends one real signed delivery to a Testing client's endpoint, once now so
+ * the owner sees the receiver's answer. When it did not land the delivery is
+ * recorded and the queue keeps trying, and the failure says so.
+ */
+export async function sendModerationTest(
+  clientId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const access = await authorizeSession();
+  if (!access.ok) return access;
+  const userId = access.caller.userId;
+
+  const type = field(formData, "type");
+  let delivered = "";
+  const result = await expected(async (): Promise<undefined> => {
+    const { production, signingKey, existing } = await moderationContext(
+      userId,
+      clientId,
+    );
+    if (!existing) throw new ExpectedFailure("Turn moderation on first");
+    if (production || existing.appId) {
+      throw new ExpectedFailure(
+        "This client is a registered production app. Test actions only go to apps in Testing",
+      );
+    }
+    if (!existing.endpointUrl) {
+      throw new ExpectedFailure("Set an endpoint URL first");
+    }
+
+    if (!(MESSAGE_TYPES as readonly string[]).includes(type)) {
+      throw new ExpectedFailure("Choose an action");
+    }
+    const allowed = await consumeRateLimit({
+      scope: "moderation:test-action",
+      subjectId: userId,
+      limit: 30,
+      windowSeconds: 3600,
+    });
+    if (!allowed) {
+      throw new ExpectedFailure("Too many test actions. Try again later");
+    }
+
+    const message = buildMessage({
+      type: type as MessageType,
+      contentType: field(formData, "contentType") || undefined,
+      contentRef: field(formData, "contentRef") || undefined,
+      // A user action about the owner themselves, so it maps to an account
+      // they control in the app.
+      userId,
+    });
+    const [row] = await db
+      .insert(moderationDeliveries)
+      .values({
+        clientId,
+        type: message.type,
+        payload: message,
+        sandbox: true,
+      })
+      .returning({ id: moderationDeliveries.id });
+    if (!row) throw new Error("The test delivery was not recorded");
+
+    // One attempt now, so the owner sees the receiver's answer instead of a
+    // promise; if it did not land, the queue keeps trying.
+    const outcome = await attemptDelivery(row.id, {
+      store: databaseDeliveryStore,
+      signingKey,
+    });
+    revalidatePath("/dashboard/oauth");
+    if (outcome.ack && outcome.result === "delivered") {
+      delivered = message.type;
+      return;
+    }
+    if (outcome.ack) {
+      throw new ExpectedFailure(
+        "The delivery could not be sent. Check the endpoint URL",
+      );
+    }
+    await queueDeliveriesQuietly([row.id]);
+    throw new ExpectedFailure(
+      `Your endpoint did not accept it (${outcome.error}). It will be retried`,
+    );
+  });
+  return result.ok
+    ? success(undefined, `Delivered ${delivered} to your endpoint`)
+    : result;
 }

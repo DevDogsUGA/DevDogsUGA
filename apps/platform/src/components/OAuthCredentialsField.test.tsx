@@ -5,7 +5,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/dashboard/oauth",
 }));
-vi.mock("~/server/actions/oauth", () => ({ default: vi.fn() }));
+vi.mock("~/server/actions/oauth", () => ({ addRedirectUri: vi.fn() }));
 
 const { NewAppButton } = await import("./OAuthCredentialsField");
 

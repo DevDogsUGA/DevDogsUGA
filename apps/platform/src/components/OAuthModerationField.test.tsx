@@ -5,16 +5,24 @@ import { failure, success } from "~/lib/actionResult";
 import type { ClientModeration } from "~/server/loaders/oauthModeration";
 
 const mocks = vi.hoisted(() => ({
-  moderate: vi.fn(),
+  enable: vi.fn(),
+  rotate: vi.fn(),
+  sendTest: vi.fn(),
   saveEndpoint: vi.fn(),
   refresh: vi.fn(),
+  toast: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh }),
 }));
+vi.mock("~/lib/toast", () => ({
+  toast: { success: mocks.toast, error: vi.fn() },
+}));
 vi.mock("~/server/actions/oauthModeration", () => ({
-  default: mocks.moderate,
+  enableModeration: mocks.enable,
+  rotateModerationSecret: mocks.rotate,
+  sendModerationTest: mocks.sendTest,
   saveModerationEndpoint: mocks.saveEndpoint,
 }));
 
@@ -136,33 +144,40 @@ describe("OAuthModerationField endpoint Draft", () => {
   });
 });
 
-describe("OAuthModerationField Commands that stay as they were", () => {
-  it("rotates the secret and reveals the new one once, beside the client", async () => {
+describe("OAuthModerationField Commands", () => {
+  const ID = "11111111-1111-4111-8111-111111111111";
+
+  it("rotates the secret, toasts, and reveals the new one once beside the client", async () => {
     const user = userEvent.setup();
-    mocks.moderate.mockResolvedValue({
-      clientId: "11111111-1111-4111-8111-111111111111",
-      secret: "whsec_rotated",
-      message: "The secret was rotated.",
-      ok: true,
-    });
+    mocks.rotate.mockResolvedValue(
+      success({ secret: "whsec_rotated" }, "The secret was rotated."),
+    );
     renderField([client()]);
     await user.click(
       screen.getByRole("button", { name: "Rotate signing secret" }),
     );
     expect(await screen.findByDisplayValue("whsec_rotated")).toBeVisible();
-    const data = mocks.moderate.mock.calls[0]![1] as FormData;
-    expect(data.get("intent")).toBe("rotate-secret");
-    expect(data.get("clientId")).toBe("11111111-1111-4111-8111-111111111111");
+    expect(mocks.rotate).toHaveBeenCalledExactlyOnceWith(ID);
+    expect(mocks.toast).toHaveBeenCalledWith("The secret was rotated.");
+  });
+
+  it("shows a refused rotation inline and reveals nothing", async () => {
+    const user = userEvent.setup();
+    mocks.rotate.mockResolvedValue(failure("Turn moderation on first"));
+    renderField([client()]);
+    await user.click(
+      screen.getByRole("button", { name: "Rotate signing secret" }),
+    );
+    expect(await screen.findByText("Turn moderation on first")).toBeVisible();
+    expect(screen.queryByText("Signing secret")).toBeNull();
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   it("turns moderation on from the not-yet-enabled form, with its optional endpoint", async () => {
     const user = userEvent.setup();
-    mocks.moderate.mockResolvedValue({
-      clientId: "11111111-1111-4111-8111-111111111111",
-      secret: "whsec_first",
-      message: "Moderation is on.",
-      ok: true,
-    });
+    mocks.enable.mockResolvedValue(
+      success({ secret: "whsec_first" }, "Moderation is on."),
+    );
     renderField([client({ enabled: false, endpointUrl: null })]);
     await user.type(
       screen.getByLabelText(/Endpoint URL \(optional/),
@@ -171,9 +186,58 @@ describe("OAuthModerationField Commands that stay as they were", () => {
     await user.click(
       screen.getByRole("button", { name: "Turn on moderation" }),
     );
-    await waitFor(() => expect(mocks.moderate).toHaveBeenCalled());
-    const data = mocks.moderate.mock.calls[0]![1] as FormData;
-    expect(data.get("intent")).toBe("enable");
+    await waitFor(() => expect(mocks.enable).toHaveBeenCalled());
+    expect(mocks.enable.mock.calls[0]![0]).toBe(ID);
+    const data = mocks.enable.mock.calls[0]![1] as FormData;
     expect(data.get("endpointUrl")).toBe("https://lab.example/hook");
+    await waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith("Moderation is on."),
+    );
+  });
+
+  it("shows a refused turn-on inline", async () => {
+    const user = userEvent.setup();
+    mocks.enable.mockResolvedValue(failure("The endpoint must use https."));
+    renderField([client({ enabled: false, endpointUrl: null })]);
+    await user.click(
+      screen.getByRole("button", { name: "Turn on moderation" }),
+    );
+    expect(
+      await screen.findByText("The endpoint must use https."),
+    ).toBeVisible();
+  });
+
+  it("sends a test action with its type, and toasts the delivery", async () => {
+    const user = userEvent.setup();
+    mocks.sendTest.mockResolvedValue(
+      success(undefined, "Delivered content.hide to your endpoint"),
+    );
+    renderField([client()]);
+    await user.click(screen.getByRole("button", { name: "Send test action" }));
+    await waitFor(() => expect(mocks.sendTest).toHaveBeenCalled());
+    expect(mocks.sendTest.mock.calls[0]![0]).toBe(ID);
+    const data = mocks.sendTest.mock.calls[0]![1] as FormData;
+    expect(data.get("type")).toBe("content.hide");
+    await waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith(
+        "Delivered content.hide to your endpoint",
+      ),
+    );
+  });
+
+  it("shows the receiver's refusal inline and refreshes the recorded delivery", async () => {
+    const user = userEvent.setup();
+    mocks.sendTest.mockResolvedValue(
+      failure("Your endpoint did not accept it (500). It will be retried"),
+    );
+    renderField([client()]);
+    await user.click(screen.getByRole("button", { name: "Send test action" }));
+    expect(
+      await screen.findByText(
+        "Your endpoint did not accept it (500). It will be retried",
+      ),
+    ).toBeVisible();
+    expect(mocks.refresh).toHaveBeenCalled();
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 });
