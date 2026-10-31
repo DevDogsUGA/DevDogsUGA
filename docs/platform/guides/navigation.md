@@ -15,7 +15,7 @@ Two separate surfaces, not one system: a **top nav** (`src/components/TopNav/`) 
 
 **The compiled docs data** is the other one. `src/server/docs/queries.ts` reads the bundled `@devdogsuga/docs` module and `src/lib/docsTree.ts` folds its flat `(path, title, order)` rows into the sidebar tree. Both the navbar's Docs menu and the sidebar's project selector come from `getDocsProjects()`; the tree itself comes from `getDocsTree(project)`. Every read is in-memory — see [the docs system](../../toolkit/infrastructure/docs-system/index.md).
 
-Search draws on both: `src/server/search/appEntries.ts` builds entries from the nav config (plus `src/config/pageSections.ts`, so a query can land on `/account#graduation` rather than `/account`), and `docsSearch.ts` queries Postgres for the docs.
+Search draws on both: `src/server/search/appEntries.ts` builds entries from the nav config (plus `src/config/pageSections.ts`, so a query can land on `/dashboard/profile#graduation` rather than `/dashboard/profile`), and `docsSearch.ts` queries Postgres for the docs.
 
 ## Permission gating
 
@@ -25,7 +25,7 @@ The items are not the enforcement. Each console page enforces its own permission
 
 ## Why the user cluster loads on the client
 
-Pages under `(site)` are cached as HTML and shared by every visitor, so nothing in the navbar's server render may depend on who is asking. `TopNav` renders the chrome (logo, links, search, app switcher) plus the loading state of the per-viewer pieces, `TopNavProfile` and `TopNavMobile` in `TopNavUser.tsx`. After hydration, `NavUserProvider` fetches `GET /me` (`app/(api)/me/route.ts`) with TanStack Query and fills them in: the avatar, the role, the filtered console items, and the verification checklist data that `/account` also reads.
+Pages under `(site)` are cached as HTML and shared by every visitor, so nothing in the navbar's server render may depend on who is asking. `TopNav` renders the chrome (logo, links, search, app switcher) plus the loading state of the per-viewer pieces, `TopNavProfile` and `TopNavMobile` in `TopNavUser.tsx`. After hydration, `NavUserProvider` fetches `GET /me` (`app/(api)/me/route.ts`) with TanStack Query and fills them in: the avatar, the role, the filtered console items, and the verification checklist data that `/dashboard/profile` also reads.
 
 `/me` runs `getNavUser()` (`TopNav/data.ts`) and returns `private, no-store`. It 404s to a navigation and to a cross-site request, so it isn't a page anyone lands on, and robots.txt disallows it. A visitor with no Supabase session cookie never calls it at all.
 

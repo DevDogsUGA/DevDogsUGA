@@ -428,7 +428,7 @@ export async function removeRoleFromUser(
 /**
  * Finds members by preferred name for the role manager, with their email,
  * roles and Discord link state. Needs `canManageRoles`, the rule the
- * /console/permissions page applies: this is a server action, so the browser
+ * /dashboard/permissions page applies: this is a server action, so the browser
  * can call it directly and the page gate alone would not protect the emails.
  */
 export async function searchUsers(query: string): Promise<UserSearchResult[]> {

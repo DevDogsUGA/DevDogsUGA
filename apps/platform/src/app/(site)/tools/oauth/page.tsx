@@ -1,7 +1,7 @@
 import { permanentRedirect } from "next/navigation";
 
 /**
- * `/tools/oauth` became `/settings/oauth`. The query string rides along:
+ * `/tools/oauth` became `/dashboard/oauth`. The query string rides along:
  * `devtools oauth` prints `?add_redirect_uri=…` links that the new page reads.
  */
 export default async function OAuthRedirect({
@@ -16,5 +16,5 @@ export default async function OAuthRedirect({
     }
   }
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
-  permanentRedirect(`/settings/oauth${suffix}`);
+  permanentRedirect(`/dashboard/oauth${suffix}`);
 }

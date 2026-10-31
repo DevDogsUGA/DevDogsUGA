@@ -31,7 +31,7 @@ export default function AuditLogContent({
   function buildPageHref(nextPage: number) {
     const next = new URLSearchParams(params.toString());
     next.set("page", String(nextPage));
-    return `/console/audit-log?${next.toString()}`;
+    return `/dashboard/audit-log?${next.toString()}`;
   }
 
   return (
@@ -104,7 +104,7 @@ export default function AuditLogContent({
                 <Td strong>
                   <Link
                     className="textlink"
-                    href={`/console/audit-log/${entry.id}`}
+                    href={`/dashboard/audit-log/${entry.id}`}
                   >
                     {humanize(entry.action)}
                   </Link>

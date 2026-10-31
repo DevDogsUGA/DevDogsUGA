@@ -15,9 +15,9 @@ export const DOCS_BASE = "/docs";
 
 /**
  * Where the early-access copy lives: the same tree, with pages that are
- * scheduled but not live yet included and marked. See `/preview/docs`.
+ * scheduled but not live yet included and marked. See `/dashboard/docs-preview`.
  */
-export const DOCS_PREVIEW_BASE = "/preview/docs";
+export const DOCS_PREVIEW_BASE = "/dashboard/docs-preview";
 
 /**
  * Builds a docs URL. `path` is project-relative: the segments below the

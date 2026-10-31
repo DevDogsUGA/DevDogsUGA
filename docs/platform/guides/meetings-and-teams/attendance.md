@@ -15,7 +15,7 @@ console, or a CSV export from the officer CLI (see [Exports](#exports) below).
 
 Every meeting has a rotating QR challenge and six-digit code derived from the
 meeting UUID, a 30-second counter, and `ATTENDANCE_TOKEN_SECRET`. The QR opens
-`/attendance`; the same page accepts the numeric code. Challenges contain no
+`/dashboard/attendance`; the same page accepts the numeric code. Challenges contain no
 member data and have no event-time gate: a valid code records attendance
 whenever it is scanned or entered, including when an officer re-displays one
 for a member who checked in late. There is no other correction path — a late
@@ -72,7 +72,7 @@ not DevDogs, determines whether that evidence earns credit.
 
 ## Check-in survey
 
-After a check-in that stands, `/attendance` asks the meeting's survey: every
+After a check-in that stands, `/dashboard/attendance` asks the meeting's survey: every
 member question the person hasn't answered, then the meeting's own questions,
 with their saved member answers folded away underneath to edit. Questions
 are config, authored in `@devdogsuga/events` (see

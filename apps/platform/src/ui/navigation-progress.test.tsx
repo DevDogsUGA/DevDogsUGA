@@ -37,7 +37,7 @@ function renderWithLink(
 
 afterEach(() => cleanup());
 
-beforeEach(() => window.history.replaceState(null, "", "/account"));
+beforeEach(() => window.history.replaceState(null, "", "/dashboard/profile"));
 
 describe("NavigationProgress", () => {
   it("starts on a plain link click", () => {
@@ -75,17 +75,18 @@ describe("NavigationProgress", () => {
   });
 
   it("finishes when only the query string changes", () => {
-    const { view, link } = renderWithLink("/account?tab=links");
+    const destination = "/dashboard/profile?tab=links";
+    const { view, link } = renderWithLink(destination);
     fireEvent.click(link);
     expect(document.querySelector(PROGRESS)?.getAttribute("data-phase")).toBe(
       "loading",
     );
 
-    window.history.pushState(null, "", "/account?tab=links");
+    window.history.pushState(null, "", "/dashboard/profile?tab=links");
     view.rerender(
       <>
         <NavigationProgress />
-        <a href="/account?tab=links">Destination</a>
+        <a href={destination}>Destination</a>
       </>,
     );
 

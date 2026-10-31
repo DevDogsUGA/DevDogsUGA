@@ -10,13 +10,13 @@ export default async function unlinkDiscordProfile() {
   const access = await authorizeSession();
   if (!access.ok) {
     await expectSession().catch(() =>
-      authenticate("google", "/settings/accounts"),
+      authenticate("google", "/dashboard/accounts"),
     );
     throw new Error(access.message);
   }
 
   const userId = await expectSession().catch(() =>
-    authenticate("google", "/settings/accounts"),
+    authenticate("google", "/dashboard/accounts"),
   );
   await unlinkProfile(userId);
   // Unlinking takes away the Discord-synced roles, leadership ones included.

@@ -24,8 +24,69 @@ const config = {
     return [
       {
         source: "/settings",
-        destination: "/settings/profile",
-        permanent: false,
+        destination: "/dashboard/profile",
+        permanent: true,
+      },
+      {
+        source: "/settings/:path*",
+        destination: "/dashboard/:path*",
+        permanent: true,
+      },
+      { source: "/console", destination: "/dashboard", permanent: true },
+      {
+        source: "/console/attendance/:path*",
+        destination: "/dashboard/meetings/:path*",
+        permanent: true,
+      },
+      {
+        source: "/console/meetings/:path*",
+        destination: "/dashboard/schedule/:path*",
+        permanent: true,
+      },
+      {
+        source: "/console/projects/:path*",
+        destination: "/dashboard/reviews/:path*",
+        permanent: true,
+      },
+      {
+        source: "/console/:path*",
+        destination: "/dashboard/:path*",
+        permanent: true,
+      },
+      {
+        source: "/projects",
+        destination: "/dashboard/projects",
+        permanent: true,
+      },
+      {
+        source: "/projects/:id/report",
+        destination: "/dashboard/projects/:id/report",
+        permanent: true,
+      },
+      {
+        source: "/attendance",
+        destination: "/dashboard/attendance",
+        permanent: true,
+      },
+      {
+        source: "/account",
+        destination: "/dashboard/profile",
+        permanent: true,
+      },
+      {
+        source: "/account/deletion",
+        destination: "/dashboard/deletion",
+        permanent: true,
+      },
+      {
+        source: "/preview/docs/:path*",
+        destination: "/dashboard/docs-preview/:path*",
+        permanent: true,
+      },
+      {
+        source: "/tools/oauth",
+        destination: "/dashboard/oauth",
+        permanent: true,
       },
       {
         source: "/leadership",

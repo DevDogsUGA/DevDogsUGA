@@ -27,7 +27,7 @@ export async function markDeadLettered(deliveryId: string): Promise<void> {
   // Already delivered, already failed, or gone: nothing to raise.
   if (!row) return;
   // A development client's endpoint is a member's own work in progress. Its
-  // failure belongs to the member (the console and /settings/oauth show it), not
+  // failure belongs to the member (the console and /dashboard/oauth show it), not
   // to the officers' alert path.
   if (row.sandbox) return;
 

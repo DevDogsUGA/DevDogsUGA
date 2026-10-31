@@ -16,7 +16,7 @@ import VisibilityToggle from "~/ui/visibility-toggle";
  * The last step of the verification checklist: once a member is verified,
  * their profile is public by default, so the dialog says so and offers the
  * way out and the handle choice right there. The default comes with notice;
- * /account holds the rest of the controls and is linked from here.
+ * /dashboard/profile holds the rest of the controls and is linked from here.
  *
  * The dialog sits in the navbar and has no page to hand it data, so the
  * settings are read through a server action, and only when this step renders
@@ -32,7 +32,7 @@ export default function PublicProfileStep({
     queryKey: ["publicProfileSettings"],
     queryFn: getPublicProfileSettings,
     // Always re-read on open: the handle or switches may have changed on
-    // /account since the dialog last showed.
+    // /dashboard/profile since the dialog last showed.
     staleTime: 0,
   });
 
@@ -85,7 +85,7 @@ function StepBody({
       <p className="help">
         Choose what appears, and change any of this later, under{" "}
         <Link
-          href="/settings/profile#publicProfileSettings"
+          href="/dashboard/profile#publicProfileSettings"
           onClick={onNavigate}
           className="textlink"
         >

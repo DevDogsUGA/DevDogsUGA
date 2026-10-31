@@ -1,7 +1,7 @@
 /**
  * The QR command's flags, one per field of the shared request schema.
  *
- * `/console/qr` and `backstage qr` both read their options from
+ * `/dashboard/qr` and `backstage qr` both read their options from
  * `qrRequestSchema` in `@devdogsuga/sdk/brand/qr`. The table here is typed as a
  * record over the schema's own keys, so a field added to the schema fails to
  * compile until it has a flag, and `options.test.ts` checks the same thing at

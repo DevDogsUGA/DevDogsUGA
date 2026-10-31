@@ -40,7 +40,7 @@ describe("ConsoleForbidden", () => {
   it("shows the general card to a member with no console permission", async () => {
     expectSession.mockResolvedValue("u1");
     getCallerContext.mockResolvedValue({ resolvedPermissions: {} });
-    getHeader.mockReturnValue("/console");
+    getHeader.mockReturnValue("/dashboard");
     const el = await ConsoleForbidden();
     expect(el.type).toBe(AccessDenied);
     expect(el.props).toEqual({ section: null, consoleHref: null });
@@ -51,12 +51,12 @@ describe("ConsoleForbidden", () => {
     getCallerContext.mockResolvedValue({
       resolvedPermissions: { canManageAttendance: true },
     });
-    getHeader.mockReturnValue("/console/audit-log");
+    getHeader.mockReturnValue("/dashboard/audit-log");
     const el = await ConsoleForbidden();
     expect(el.type).toBe(AccessDenied);
     expect(el.props).toEqual({
       section: "Audit log",
-      consoleHref: "/console/attendance",
+      consoleHref: "/dashboard/meetings",
     });
   });
 });

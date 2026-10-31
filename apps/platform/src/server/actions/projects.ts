@@ -41,13 +41,13 @@ export interface ProjectActionState {
 const uuid = z.string().uuid();
 
 function refresh(projectId?: string) {
-  revalidatePath("/projects");
-  revalidatePath("/console/projects");
+  revalidatePath("/dashboard/projects");
+  revalidatePath("/dashboard/reviews");
   if (projectId) {
-    revalidatePath(`/console/projects/${projectId}`);
-    revalidatePath(`/projects/${projectId}/report`);
+    revalidatePath(`/dashboard/reviews/${projectId}`);
+    revalidatePath(`/dashboard/projects/${projectId}/report`);
   }
-  revalidatePath("/attendance");
+  revalidatePath("/dashboard/attendance");
 }
 
 const invalid: ProjectActionState = {

@@ -30,11 +30,11 @@ function check(value: string, min: number, max: number) {
  * Officer-only editor for the two knobs `reflectionSettings` exposes: how
  * many words an EL reflection needs to submit, and how many days after the
  * activity ends the submission window stays open. Both are read fresh from
- * the DB by `/attendance` on every load (see `reflections/load.ts`).
+ * the DB by `/dashboard/attendance` on every load (see `reflections/load.ts`).
  *
  * Same save model as Settings: nothing is written until the bar under the
  * window says Save, and Discard returns both fields to the saved values.
- * Lives on `/console/reflections`; it used to sit on the meetings page.
+ * Lives on `/dashboard/reflections`; it used to sit on the meetings page.
  */
 export default function ReflectionSettingsCard({
   settings,

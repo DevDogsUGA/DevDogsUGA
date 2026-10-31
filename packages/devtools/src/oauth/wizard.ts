@@ -480,7 +480,7 @@ async function connectByPasting(
 
   if (!clientId || !clientSecret) {
     note(
-      `1. Visit ${WEBSITE_URL}/settings/oauth\n` +
+      `1. Visit ${WEBSITE_URL}/dashboard/oauth\n` +
         `2. Sign in — link your GitHub account if prompted\n` +
         `3. Enable OAuth and copy your Client ID and Client Secret\n` +
         `   (the secret is shown once, immediately after you enable it)`,
@@ -703,7 +703,7 @@ export async function runOAuthSetup(
     );
 
     if (!alreadyRegistered) {
-      const keysUrl = `${WEBSITE_URL}/settings/oauth?add_redirect_uri=${encodeURIComponent(callbackUri)}`;
+      const keysUrl = `${WEBSITE_URL}/dashboard/oauth?add_redirect_uri=${encodeURIComponent(callbackUri)}`;
       log.info(`Opening ${keysUrl}`);
       openBrowser(keysUrl);
     }

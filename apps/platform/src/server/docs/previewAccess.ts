@@ -1,10 +1,10 @@
-import { rules, loadCaller } from "~/server/auth/access";
+import { rules, requireDashboard } from "~/server/auth/access";
 import { notFound } from "next/navigation";
 
 /**
- * The one gate on `/preview/docs`.
+ * The one gate on `/dashboard/docs-preview`.
  *
- * Everyone without `canPreviewDocs` gets a 404, signed in or not. Unlike the
+ * Signed-in members without `canPreviewDocs` get a 404. Unlike the
  * console (where a member without access sees a denied card), a card here
  * would confirm the route exists, and this route exists precisely so that
  * scheduled pages are invisible until they are live. The public docs cannot check who is asking, because the
@@ -12,7 +12,7 @@ import { notFound } from "next/navigation";
  * that can.
  */
 export async function requireDocsPreview(): Promise<string> {
-  const caller = await loadCaller();
-  if (!caller || !rules.previewDocs(caller)) notFound();
+  const caller = await requireDashboard();
+  if (!rules.previewDocs(caller)) notFound();
   return caller.userId;
 }

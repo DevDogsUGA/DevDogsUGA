@@ -38,7 +38,7 @@ const VISIBILITY_WINDOW_SECONDS = 10 * 60;
 
 async function sessionUserId(): Promise<string> {
   return expectSession().catch(() =>
-    authenticate("google", "/settings/profile"),
+    authenticate("google", "/dashboard/profile"),
   );
 }
 
@@ -50,13 +50,13 @@ async function sessionUserId(): Promise<string> {
 function revalidatePublicPages(handle: string | null | undefined) {
   revalidatePath(COMMUNITY_PATH);
   if (handle) revalidatePath(profilePath(handle));
-  revalidatePath("/settings/profile");
+  revalidatePath("/dashboard/profile");
 }
 
 /**
  * Everything the public-profile controls need for the signed-in member, for
  * the verification dialog, which lives in the navbar and so cannot take it as
- * a prop from a page. `/account` reads the same pieces directly.
+ * a prop from a page. `/dashboard/profile` reads the same pieces directly.
  *
  * Null while public profiles are switched off, which hides the step.
  */

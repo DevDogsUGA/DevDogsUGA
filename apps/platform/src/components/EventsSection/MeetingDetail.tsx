@@ -253,7 +253,7 @@ export default function MeetingDetail({
                     ` · ${meeting.attendanceCount} checked in so far`}
                 </p>
                 <span className="btn-shadow">
-                  <LinkButton href="/attendance" variant="default">
+                  <LinkButton href="/dashboard/attendance" variant="default">
                     <QrCodeIcon weight="bold" aria-hidden /> Check in
                   </LinkButton>
                 </span>

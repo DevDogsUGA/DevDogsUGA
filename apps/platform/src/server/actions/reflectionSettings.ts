@@ -37,7 +37,7 @@ const inputSchema = z.object({
  * Updates the global EL reflection policy: the minimum word count a
  * submission needs and how many days after an activity ends members may
  * still submit. Gated on `canManageAttendance`, the same flag that gates
- * `/console/attendance` -- reflections are earned through attendance
+ * `/dashboard/meetings` -- reflections are earned through attendance
  * eligibility and read from the same page, so there is no separate
  * "manage reflections" permission to hold.
  */
@@ -101,8 +101,8 @@ export async function updateReflectionSettings(
     });
   });
 
-  revalidatePath("/console/attendance");
-  revalidatePath("/attendance");
+  revalidatePath("/dashboard/meetings");
+  revalidatePath("/dashboard/attendance");
 
   return { ok: true, message: "Reflection settings updated." };
 }

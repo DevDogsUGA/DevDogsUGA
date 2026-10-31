@@ -242,13 +242,13 @@ export function NewAppButton({
   }
   if (!hasGithub) {
     return (
-      <Link href="/settings/accounts#github" className="btn secondary">
+      <Link href="/dashboard/accounts#github" className="btn secondary">
         Link GitHub account
       </Link>
     );
   }
   return (
-    <Link href="/settings/oauth/new" className="btn secondary">
+    <Link href="/dashboard/oauth/new" className="btn secondary">
       <PlusIcon aria-hidden />
       New OAuth app
     </Link>

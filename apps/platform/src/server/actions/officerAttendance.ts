@@ -38,8 +38,8 @@ const NOT_AUTHORIZED = failure("Not authorized: canManageAttendance required.");
 const meetingId = z.string().uuid();
 
 function refresh(id: string) {
-  revalidatePath(`/console/attendance/${id}`);
-  revalidatePath("/console/attendance");
+  revalidatePath(`/dashboard/meetings/${id}`);
+  revalidatePath("/dashboard/meetings");
 }
 
 function field(formData: FormData, name: string): string {

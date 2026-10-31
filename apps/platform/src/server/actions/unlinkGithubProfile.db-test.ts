@@ -8,7 +8,7 @@ import { createOauthClientAndRegister } from "~/server/oauth/registerClient";
  * Unlinking GitHub takes a member's DEVELOPMENT OAuth clients (they are gated
  * on GitHub) and nothing else. A production client belongs to a DevDogs app's
  * sign-in; it leaves only through the audited, replacement-checked delete in
- * `oauth.ts`, so an officer unlinking GitHub on /account must not break an
+ * `oauth.ts`, so an officer unlinking GitHub on /dashboard/profile must not break an
  * app's sign-in, or delete a client without an audit entry.
  *
  * Only the session and the GitHub provider call are faked; the registrations,

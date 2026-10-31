@@ -19,13 +19,13 @@ describe("connected-account callback status", () => {
   it("preserves the callback query and hash", () => {
     expect(
       withConnectedAccountStatus(
-        "/account?tab=profiles#discord",
+        "/dashboard/profile?tab=profiles#discord",
         "error",
         "identity_already_exists",
         "discord",
       ),
     ).toBe(
-      "/account?tab=profiles&connectedAccountStatus=error&connectedAccountCode=identity_already_exists&connectedAccountProvider=discord#discord",
+      "/dashboard/profile?tab=profiles&connectedAccountStatus=error&connectedAccountCode=identity_already_exists&connectedAccountProvider=discord#discord",
     );
   });
 });

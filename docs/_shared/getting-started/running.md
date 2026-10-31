@@ -145,7 +145,7 @@ falling back to whatever hosted project `.env` names otherwise.
 ## Sign-in
 
 Every DevDogs app authenticates through the same custom OAuth provider,
-`custom:devdogsuga`, issued by the platform. Its issuer is the platform project's own `https://<project>.supabase.co/auth/v1`, which `/settings/oauth` shows.
+`custom:devdogsuga`, issued by the platform. Its issuer is the platform project's own `https://<project>.supabase.co/auth/v1`, which `/dashboard/oauth` shows.
 Registering that provider against your Supabase project is one command,
 whether your project is local or hosted:
 

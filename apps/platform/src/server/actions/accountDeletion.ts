@@ -47,7 +47,7 @@ const MAX_REASON_LENGTH = 500;
  * Refuses the sole holder of President ("Grant President to someone else
  * first"), and an officer without `canDeleteAccounts`. A member who schedules
  * their own deletion is signed out by it, so the caller should send them to
- * `/account/deletion` afterwards.
+ * `/dashboard/deletion` afterwards.
  */
 export async function requestAccountDeletion(
   userId: string,
@@ -70,7 +70,7 @@ export async function requestAccountDeletion(
     const result = await scheduleAccountDeletion(userId, actorUserId, {
       reason: trimmedReason,
     });
-    revalidatePath("/console/moderation/users/[userId]", "page");
+    revalidatePath("/dashboard/moderation/users/[userId]", "page");
     return { ok: true, scheduledFor: result.scheduledFor.toISOString() };
   } catch (error) {
     return refusal(error);
@@ -104,7 +104,7 @@ export async function cancelMemberDeletion(
         error: "There is no pending deletion to cancel, or it has started.",
       };
     }
-    revalidatePath("/console/moderation/users/[userId]", "page");
+    revalidatePath("/dashboard/moderation/users/[userId]", "page");
     return { ok: true };
   } catch (error) {
     return refusal(error);
@@ -120,14 +120,14 @@ export async function keepMyAccount(): Promise<void> {
   const access = await authorizeSession();
   if (!access.ok) {
     await expectSession().catch(() =>
-      redirect("/auth?callbackPath=%2Faccount%2Fdeletion"),
+      redirect("/auth?callbackPath=%2Fdashboard%2Fdeletion"),
     );
     throw new Error(access.message);
   }
 
   const userId = await expectSession().catch(() =>
-    redirect("/auth?callbackPath=%2Faccount%2Fdeletion"),
+    redirect("/auth?callbackPath=%2Fdashboard%2Fdeletion"),
   );
   const kept = await cancelAccountDeletion(userId);
-  redirect(kept ? "/settings/profile" : "/account/deletion");
+  redirect(kept ? "/dashboard/profile" : "/dashboard/deletion");
 }

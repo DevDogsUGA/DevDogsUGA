@@ -1,6 +1,6 @@
 /**
  * Whether public member profiles are on: `/community/@<handle>`, the
- * `/community` directory, and the Public Profile settings on /account and in
+ * `/community` directory, and the Public Profile settings on /dashboard/profile and in
  * the verification dialog.
  *
  * Off in production while the feature is still being iterated on; local and

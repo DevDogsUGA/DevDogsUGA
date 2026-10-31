@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { db } from "~/server/db";
 
 /**
- * What /attendance says about a member's EL standing: the workshops they have
+ * What /dashboard/attendance says about a member's EL standing: the workshops they have
  * attended and the hours the club can vouch for. The hours come from
  * `platform."memberElEvidence"`, the same view the officers' evidence export
  * reads, so the page and the export cannot disagree about what is verified.

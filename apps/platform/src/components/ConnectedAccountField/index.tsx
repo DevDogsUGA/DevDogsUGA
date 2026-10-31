@@ -103,7 +103,7 @@ export default function ConnectedAccountField({
             <input
               type="hidden"
               name="callbackPath"
-              value="/settings/accounts"
+              value="/dashboard/accounts"
             />
             <FormButton theme="black" size="sm">
               <PlusIcon aria-hidden />

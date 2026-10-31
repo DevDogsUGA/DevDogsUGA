@@ -55,7 +55,7 @@ interface Props {
 export default function ReportActionForm({
   reportId,
   quarantinable,
-  returnTo = "/console/moderation",
+  returnTo = "/dashboard/moderation",
   onResolve,
   onDismiss,
   disabled = false,

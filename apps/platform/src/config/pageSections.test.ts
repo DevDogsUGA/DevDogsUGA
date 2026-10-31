@@ -16,11 +16,11 @@ import { DASHBOARD_SECTIONS } from "./dashboard";
  */
 
 const SOURCES: Record<string, string> = {
-  "/settings/profile": "app/(site)/settings/profile/page.tsx",
-  "/settings/accounts": "app/(site)/settings/accounts/page.tsx",
-  "/settings/oauth": "app/(site)/settings/oauth/page.tsx",
-  "/console/permissions": "app/(site)/console/permissions/page.tsx",
-  "/console/reflections": "components/ReflectionSettingsCard.tsx",
+  "/dashboard/profile": "app/(site)/dashboard/profile/page.tsx",
+  "/dashboard/accounts": "app/(site)/dashboard/accounts/page.tsx",
+  "/dashboard/oauth": "app/(site)/dashboard/oauth/page.tsx",
+  "/dashboard/permissions": "app/(site)/dashboard/permissions/page.tsx",
+  "/dashboard/reflections": "components/ReflectionSettingsCard.tsx",
 };
 
 /** vitest runs with the app package as its root. */

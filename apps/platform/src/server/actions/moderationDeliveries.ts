@@ -35,7 +35,7 @@ export async function resendDelivery(deliveryId: string): Promise<void> {
   if (await resetForResend(deliveryId)) {
     await queueDeliveriesQuietly([deliveryId]);
   }
-  revalidatePath("/console/moderation", "layout");
+  revalidatePath("/dashboard/moderation", "layout");
 }
 
 export interface RegisterAppState {
@@ -57,7 +57,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * gives the client a moderation record, the client's signing secret is shown
  * here, once: no other step reveals it, and the app needs it in its
  * environment. A client whose owner already turned moderation on from
- * `/settings/oauth` keeps the secret the owner saw; they rotate there to get a
+ * `/dashboard/oauth` keeps the secret the owner saw; they rotate there to get a
  * new one.
  *
  * Registering needs `canManageOAuthApps`, the permission that creates and
@@ -142,7 +142,7 @@ export async function registerExternalApp(
       return {
         ok: false,
         message:
-          "No OAuth client registered through /settings/oauth has that id. Create the app there first",
+          "No OAuth client registered through /dashboard/oauth has that id. Create the app there first",
       };
     }
     if (cause.includes("moderation:development_client")) {
@@ -158,7 +158,7 @@ export async function registerExternalApp(
     throw error;
   }
 
-  revalidatePath("/console/moderation", "layout");
+  revalidatePath("/dashboard/moderation", "layout");
   if (!before && env.MODERATION_SIGNING_KEY) {
     return {
       ok: true,
