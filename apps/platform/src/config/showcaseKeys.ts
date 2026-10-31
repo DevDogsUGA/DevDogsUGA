@@ -59,9 +59,8 @@ export type ShowcaseIconKey = keyof typeof SHOWCASE_ICONS;
 
 /**
  * Colors by key, as the Tailwind text classes a glyph is tinted with. Full
- * literals so the class scanner sees them; the same bare filled glyph the docs
- * draw for a project (`DOCS_PROJECT_MARKS` in `~/config/docs`), so keep the two
- * in step.
+ * literals so the class scanner sees them. The docs menus draw a project's
+ * mark with the same icon and color keys (`DocsProjectMark`).
  */
 export const SHOWCASE_COLORS = {
   foreground: "text-foreground",

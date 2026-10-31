@@ -95,7 +95,7 @@ export async function searchPublishedDocs(
             url: docsHref(pointer.project, segments),
             icon: "BookOpenIcon",
             breadcrumbs: [
-              "Docs",
+              "Contribute",
               toTitleCase(pointer.project),
               ...segments.slice(0, -1).map(toTitleCase),
             ],

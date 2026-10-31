@@ -9,6 +9,7 @@ import {
   publishedTree,
   type PublishedProject,
 } from "~/server/docs/published/view";
+import { getContributeMenu, getDocsMenu } from "~/server/docs/menu";
 import { getVisibleDocsProjects } from "~/server/docs/queries";
 import { getPublishedFaqPost } from "~/server/support/forumIndex";
 import type { Block } from "../blocks";
@@ -27,7 +28,8 @@ import {
  */
 
 /**
- * Every /docs path answers with the project list and a link to the site. The
+ * Every /docs path answers with the two docs menus (Docs, then Contribute) and
+ * a link to the site. The
  * docs lean on things a terminal can't do (tabs that follow your OS, step
  * courses that track progress, interactive embeds, search), so printing a
  * page's markdown would be a worse copy of it, not a terminal version.
@@ -39,6 +41,15 @@ export const docs = terminal(PUBLIC, async ({ params, path }) => {
     const published = await getPublishedProject(current);
     if (published) return publishedDocs(published, path);
   }
+  const [docsMenu, contribute] = await Promise.all([
+    getDocsMenu(),
+    getContributeMenu(),
+  ]);
+  const row = (entry: (typeof docsMenu)[number]) => ({
+    label: entry.name,
+    current: entry.project !== null && entry.project === current,
+    text: [entry.description, `${SITE}${entry.href}`].filter(Boolean).join(" "),
+  });
   const body: Block[] = [
     {
       type: "notice",
@@ -49,26 +60,23 @@ export const docs = terminal(PUBLIC, async ({ params, path }) => {
         url: `${SITE}${path}`,
       },
     },
-    { type: "heading", text: "projects" },
+    { type: "heading", text: "docs" },
     {
       type: "entries",
-      items: projects.map((project) => ({
-        label: project.name,
-        current: project.slug === current,
-        text: [
-          project.description,
-          `${SITE}/docs/${encodeURIComponent(project.slug)}`,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      })),
+      items: docsMenu.map(row),
       empty: "No documentation is published yet.",
+    },
+    { type: "heading", text: "contribute" },
+    {
+      type: "entries",
+      items: contribute.map(row),
+      empty: "No project has published docs yet.",
     },
   ];
   return page({
     banner: "DOCS",
     accent: "cyan",
-    aside: [`${projects.length} projects`],
+    aside: [`${docsMenu.length} docs`, `${contribute.length} projects`],
     command: "docs --list",
     body,
   });

@@ -7,27 +7,25 @@ import {
   type HubCourse,
 } from "~/components/DocsProgress/HubProgress";
 import DocsTileGrid, { type DocsTile } from "~/components/DocsTileGrid";
-import {
-  DOCS_LANDING_LARGE,
-  DOCS_LANDING_SMALL,
-  DOCS_LANDING_WORKSHOPS,
-} from "~/config/docs";
+import type { DocsMenuEntry } from "~/config/docs";
 import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import type { DocsTreeNode } from "~/lib/docsTree";
 import { formatEventShortDate } from "~/lib/eventTime";
 import "~/components/Docs/docs.css";
+import { getContributeMenu, getDocsMenu } from "~/server/docs/menu";
 import {
   getDocsUpcoming,
   getDocsTree,
   getVisibleDocsProjects,
-  type DocsProject,
 } from "~/server/docs/queries";
 
 /**
- * Built from `docs/` at build time, so it can't change until the next
- * deploy, apart from what is scheduled: `getDocsUpcoming` and
+ * The Docs half is built from `docs/` at build time, so it can't change until
+ * the next deploy, apart from what is scheduled: `getDocsUpcoming` and
  * `getVisibleDocsProjects` carry the next reveal into this page's cache
- * lifetime, so it refreshes when something goes live.
+ * lifetime, so it refreshes when something goes live. The Contribute half is
+ * read from the Projects (`getContributeMenu`), whose cache is tagged, so a
+ * project's first publication or an edit to its name refreshes the page.
  */
 export const revalidate = false;
 
@@ -36,25 +34,13 @@ export const metadata: Metadata = {
   description: "Documentation for DevDogs projects.",
 };
 
-function tile(project: DocsProject): DocsTile {
+function tile(entry: DocsMenuEntry): DocsTile {
   return {
-    href: `/docs/${encodeURIComponent(project.slug)}`,
-    title: project.name,
-    description: project.description,
-    mark: <DocsProjectMark slug={project.slug} size="lg" />,
+    href: entry.href,
+    title: entry.name,
+    description: entry.description,
+    mark: <DocsProjectMark mark={entry.mark} size="lg" />,
   };
-}
-
-/** `slugs` in listing order, keeping only the projects that actually exist —
- * a slug named here with no matching `docs/<slug>/index.md` drops silently
- * rather than throwing: documenting a project must never break this page. */
-function projectsFor(
-  projects: DocsProject[],
-  slugs: readonly string[],
-): DocsProject[] {
-  return slugs
-    .map((slug) => projects.find((project) => project.slug === slug))
-    .filter((project): project is DocsProject => project != null);
 }
 
 /** Every `steps: true` folder under a project, as a course. A course's steps are its direct pages. */
@@ -91,22 +77,22 @@ function coursesIn(
 }
 
 export default async function DocsLandingPage() {
-  const projects = await getVisibleDocsProjects();
+  const [projects, docs, contribute] = await Promise.all([
+    getVisibleDocsProjects(),
+    getDocsMenu(),
+    getContributeMenu(),
+  ]);
   const upcoming = [...(await getDocsUpcoming()).values()]
     .flat()
     .sort((a, b) => a.publishAt.localeCompare(b.publishAt));
-  const workshops = projectsFor(projects, DOCS_LANDING_WORKSHOPS);
-  const courses = (
-    await Promise.all(
-      workshops.map(async (project) =>
-        coursesIn(project.slug, await getDocsTree(project.slug)),
-      ),
-    )
-  ).flat();
-  const projectRows = [
-    ...projectsFor(projects, DOCS_LANDING_LARGE),
-    ...projectsFor(projects, DOCS_LANDING_SMALL),
-  ];
+  const workshops = docs.filter((entry) => entry.project === "workshops");
+  const courses =
+    workshops.length > 0
+      ? coursesIn("workshops", await getDocsTree("workshops"))
+      : [];
+  // Everything the Docs menu lists except the workshops, which have their own
+  // group of courses above.
+  const guides = docs.filter((entry) => entry.project !== "workshops");
 
   return (
     <div className="wrap">
@@ -133,22 +119,33 @@ export default async function DocsLandingPage() {
                   title: course.name,
                   description: `${course.steps.length} steps`,
                   status: <CourseStatus course={course} />,
-                  mark: <DocsProjectMark slug={course.project} size="lg" />,
+                  mark: <DocsProjectMark mark={workshops[0]!.mark} size="lg" />,
                 })),
-                ...workshops.map((project) => tile(project)),
+                ...workshops.map((entry) => tile(entry)),
               ]}
             />
           </section>
         )}
 
-        {projectRows.length > 0 && (
-          <section className="docs-group" aria-labelledby="docs-h-projects">
-            <h2 id="docs-h-projects">Projects</h2>
+        {guides.length > 0 && (
+          <section className="docs-group" aria-labelledby="docs-h-docs">
+            <h2 id="docs-h-docs">Tooling and guides</h2>
             <p>
-              How each club project runs, and how to contribute. The code is
-              public under BSD-3.
+              The shared tooling, how the club runs it, and the guides for
+              building on DevDogs.
             </p>
-            <DocsTileGrid tiles={projectRows.map((project) => tile(project))} />
+            <DocsTileGrid tiles={guides.map((entry) => tile(entry))} />
+          </section>
+        )}
+
+        {contribute.length > 0 && (
+          <section className="docs-group" aria-labelledby="contribute">
+            <h2 id="contribute">Contribute</h2>
+            <p>
+              How each club project runs, and how to contribute, written by the
+              projects themselves. The code is public under BSD-3.
+            </p>
+            <DocsTileGrid tiles={contribute.map((entry) => tile(entry))} />
           </section>
         )}
 
