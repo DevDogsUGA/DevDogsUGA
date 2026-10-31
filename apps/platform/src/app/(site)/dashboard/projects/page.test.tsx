@@ -109,7 +109,7 @@ describe("the projects page", () => {
       }),
       summary({
         id: "c",
-        slug: null,
+        slug: "advised",
         name: "Advised",
         isAdvisor: true,
         status: "archived",
@@ -129,10 +129,9 @@ describe("the projects page", () => {
       .getByRole("heading", { name: "Projects you contribute to or advise" })
       .closest("section")!;
     expect(within(other).getByText("DogDays")).toBeTruthy();
-    // A legacy row without a slug links by its UUID.
     expect(
       within(other).getByRole("link", { name: "Advised" }).getAttribute("href"),
-    ).toBe("/dashboard/projects/c");
+    ).toBe("/dashboard/projects/advised");
     expect(within(other).getByText("Archived")).toBeTruthy();
     expect(within(other).getByText("Advisor")).toBeTruthy();
   });

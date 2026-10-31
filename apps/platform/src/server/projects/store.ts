@@ -21,7 +21,6 @@ import {
 import {
   archiveBlock,
   deleteBlock,
-  legacyBlock,
   linkBlock,
   mayEdit,
   mayManageOwners,
@@ -65,7 +64,7 @@ function rethrowGuard(error: unknown): never {
   throw error;
 }
 
-type Locked = ProjectFacts & { id: string; name: string; slug: string | null };
+type Locked = ProjectFacts & { id: string; name: string; slug: string };
 
 /** The project row, locked for the transaction, with its owners; or a refusal. */
 async function lockProject(tx: Tx, projectId: string): Promise<Locked> {
@@ -87,14 +86,6 @@ async function lockProject(tx: Tx, projectId: string): Promise<Locked> {
     .from(projectOwners)
     .where(eq(projectOwners.projectId, projectId));
   return { ...row, ownerIds: owners.map((o) => o.userId) };
-}
-
-/** Lock the project and refuse a legacy row: nothing edits one before the cutover. */
-async function lockCurrent(tx: Tx, projectId: string): Promise<Locked> {
-  const project = await lockProject(tx, projectId);
-  const legacy = legacyBlock(project.status);
-  if (legacy) refuse(legacy);
-  return project;
 }
 
 async function linksOf(tx: Tx, projectId: string): Promise<LinkFacts[]> {
@@ -289,7 +280,7 @@ export function updateProject(
     if (!tags.ok) refuse(tags.message, { tags: tags.message });
     try {
       await db.transaction(async (tx) => {
-        const project = await lockCurrent(tx, projectId);
+        const project = await lockProject(tx, projectId);
         if (!mayEdit(project, actorOf(actor)))
           refuse("Only a project owner can edit it.");
         await tx
@@ -337,7 +328,7 @@ export function linkRepo(
     }
     // Check access first so a stranger cannot spend GitHub requests.
     await db.transaction(async (tx) => {
-      const project = await lockCurrent(tx, projectId);
+      const project = await lockProject(tx, projectId);
       if (!mayEdit(project, actorOf(actor)))
         refuse("Only a project owner can link repositories.");
     });
@@ -349,7 +340,7 @@ export function linkRepo(
     await saveRepo(link.repo);
     try {
       await db.transaction(async (tx) => {
-        const project = await lockCurrent(tx, projectId);
+        const project = await lockProject(tx, projectId);
         if (!mayEdit(project, actorOf(actor)))
           refuse("Only a project owner can link repositories.");
         const blocked = linkBlock(
@@ -389,7 +380,7 @@ export function unlinkRepo(
   return expected(async () => {
     try {
       await db.transaction(async (tx) => {
-        const project = await lockCurrent(tx, projectId);
+        const project = await lockProject(tx, projectId);
         if (!mayEdit(project, actorOf(actor)))
           refuse("Only a project owner can unlink repositories.");
         const cited = await tx.execute<{ id: string }>(sql`
@@ -438,7 +429,7 @@ export function addOwner(
 ): Promise<ActionResult<void>> {
   return expected(async () => {
     await db.transaction(async (tx) => {
-      const project = await lockCurrent(tx, projectId);
+      const project = await lockProject(tx, projectId);
       if (!mayManageOwners(project, actorOf(actor)))
         refuse("Only a project owner or an officer can add owners.");
       if (!(await memberExists(tx, userId)))
@@ -475,7 +466,7 @@ export function removeOwner(
 ): Promise<ActionResult<void>> {
   return expected(async () => {
     await db.transaction(async (tx) => {
-      const project = await lockCurrent(tx, projectId);
+      const project = await lockProject(tx, projectId);
       if (!mayManageOwners(project, actorOf(actor)))
         refuse("Only a project owner or an officer can remove owners.");
       if (!project.ownerIds.includes(userId))
@@ -513,7 +504,7 @@ export function archiveProject(
 ): Promise<ActionResult<void>> {
   return expected(async () => {
     await db.transaction(async (tx) => {
-      const project = await lockCurrent(tx, projectId);
+      const project = await lockProject(tx, projectId);
       const blocked = archiveBlock(project, actorOf(actor));
       if (blocked) refuse(blocked);
       await tx
@@ -539,7 +530,7 @@ export function unarchiveProject(
 ): Promise<ActionResult<void>> {
   return expected(async () => {
     await db.transaction(async (tx) => {
-      const project = await lockCurrent(tx, projectId);
+      const project = await lockProject(tx, projectId);
       const links = await linksOf(tx, projectId);
       const blocked = unarchiveBlock(
         project,
@@ -571,7 +562,7 @@ export function deleteProject(
   return expected(async () => {
     try {
       await db.transaction(async (tx) => {
-        const project = await lockCurrent(tx, projectId);
+        const project = await lockProject(tx, projectId);
         const [counts] = await tx.execute<{
           reports: string;
           submissions: string;
@@ -614,7 +605,7 @@ export function decideRepoLink(
       const officer = officerBlock(actorOf(actor));
       if (officer) refuse(officer);
       await db.transaction(async (tx) => {
-        await lockCurrent(tx, projectId);
+        await lockProject(tx, projectId);
         const [link] = await tx.execute<{ approval: string }>(sql`
         select approval from platform."projectRepos"
         where "projectId" = ${projectId}::uuid and "githubRepoId" = ${githubRepoId}::bigint
@@ -653,7 +644,7 @@ export function setAdvisor(
     const officer = officerBlock(actorOf(actor));
     if (officer) refuse(officer);
     await db.transaction(async (tx) => {
-      const project = await lockCurrent(tx, projectId);
+      const project = await lockProject(tx, projectId);
       if (advisorId !== null && !(await memberExists(tx, advisorId)))
         refuse("Choose a member as the advisor.");
       await tx
@@ -689,7 +680,7 @@ export function makeDevdogsOwned(
     if (officer) refuse(officer);
     try {
       await db.transaction(async (tx) => {
-        const project = await lockCurrent(tx, projectId);
+        const project = await lockProject(tx, projectId);
         if (project.devdogsOwned)
           refuse("That project is already DevDogs-owned.");
         await tx

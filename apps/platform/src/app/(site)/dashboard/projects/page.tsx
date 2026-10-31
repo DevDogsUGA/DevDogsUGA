@@ -113,7 +113,7 @@ export default async function ProjectsPage() {
                   report.legacyPullRequests.length === 0 && (
                     <div className="prj-acts">
                       <Link
-                        href={`${projectPath({ slug: report.projectSlug, id: report.projectId })}/report?report=${report.id}`}
+                        href={`${projectPath({ slug: report.projectSlug })}/report?report=${report.id}`}
                         className={buttonVariants({
                           variant: "secondary",
                           size: "sm",

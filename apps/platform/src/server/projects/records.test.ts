@@ -6,7 +6,6 @@ import {
   editVerdict,
   fileVerdict,
   isOwner,
-  legacyBlock,
   linkBlock,
   mayEdit,
   mayManageOwners,
@@ -97,12 +96,6 @@ describe("lifecycle guards", () => {
     expect(deleteBlock(owned, officer, { reports: 0, submissions: 0 })).toMatch(
       /DevDogs-owned/,
     );
-  });
-  it("turns a legacy row away", () => {
-    expect(legacyBlock("active")).toBeNull();
-    expect(legacyBlock("archived")).toBeNull();
-    expect(legacyBlock("proposed")).toMatch(/predates/);
-    expect(legacyBlock("declined")).toMatch(/predates/);
   });
   it("keeps officer-only actions to officers", () => {
     expect(officerBlock(officer)).toBeNull();

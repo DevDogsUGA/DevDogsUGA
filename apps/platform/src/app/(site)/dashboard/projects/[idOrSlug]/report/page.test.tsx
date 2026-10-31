@@ -47,7 +47,6 @@ const project = (over: Record<string, unknown> = {}) => ({
   slug: "porchlight",
   name: "Porchlight",
   status: "active",
-  legacy: false,
   ...over,
 });
 const commit = {
@@ -178,15 +177,13 @@ describe("the report page", () => {
     );
   });
 
-  it("is a 404 for an unknown or legacy project", async () => {
+  it("is a 404 for an unknown project", async () => {
     mocks.findProjectId.mockResolvedValue(null);
     await expect(renderPage()).rejects.toThrow("NEXT_NOT_FOUND");
     mocks.findProjectId.mockResolvedValue(
       "22222222-2222-4222-8222-222222222222",
     );
-    mocks.getProjectDetail.mockResolvedValue(
-      project({ legacy: true, status: "proposed" }),
-    );
+    mocks.getProjectDetail.mockResolvedValue(null);
     await expect(renderPage()).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });

@@ -3,15 +3,13 @@ import Badge from "~/ui/badge";
 
 const STATUS: Record<
   ProjectStatus,
-  { label: string; variant: "default" | "success" | "warning" }
+  { label: string; variant: "default" | "success" }
 > = {
   active: { label: "Active", variant: "success" },
   archived: { label: "Archived", variant: "default" },
-  proposed: { label: "Legacy: proposed", variant: "warning" },
-  declined: { label: "Legacy: declined", variant: "default" },
 };
 
-/** A project's lifecycle state. The two legacy states exist only on pre-redesign rows. */
+/** A project's lifecycle state. */
 export function StatusBadge({ status }: { status: ProjectStatus }) {
   const { label, variant } = STATUS[status];
   return <Badge variant={variant}>{label}</Badge>;

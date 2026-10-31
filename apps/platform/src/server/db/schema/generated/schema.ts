@@ -1074,7 +1074,7 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("workshops_definitionId_format", sql`(("definitionId" IS NULL) OR ("definitionId" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))`),check("workshops_description_length", sql`((description IS NULL) OR (char_length(description) <= 280))`),check("workshops_elHours_range", sql`(("elHours" > (0)::numeric) AND ("elHours" <= (8)::numeric))`),check("workshops_title_length", sql`((title IS NULL) OR (char_length(title) <= 80))`),]);
 export const projectsInPlatform = platform.table.withRLS("projects", {
-	slug: text(),
+	slug: text().notNull(),
 	tags: text().array().default(sql`'{}'::text[]`).notNull(),
 	featured: boolean().default(sql`false`).notNull(),
 	inSwitcher: boolean().default(sql`false`).notNull(),
@@ -1105,7 +1105,7 @@ export const projectsInPlatform = platform.table.withRLS("projects", {
 	name: text().notNull(),
 	description: text(),
 	repos: text().array().default([]).notNull(),
-	status: text().default('proposed').notNull(),
+	status: text().default('active').notNull(),
 	advisorId: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
 	proposedBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
 	approvedBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
@@ -1129,7 +1129,7 @@ check("projects_docsPauseReason_length", sql`char_length("docsPauseReason") <= 2
 check("projects_docsConfirmedOwnerId_positive", sql`"docsConfirmedOwnerId" > 0`),
 check("projects_lastDocsDispatchedSha_format", sql`"lastDocsDispatchedSha" ~ '^[0-9a-f]{40}$'`),
 check("projects_docs_pause_shape", sql`("docsPausedAt" IS NULL) = ("docsPauseReason" IS NULL)`),
-uniqueIndex("projects_slug_key").on(table.slug).where(sql`slug IS NOT NULL`),
+unique("projects_slug_key").on(table.slug),
 index("projects_featured_displayOrder_id_idx").on(table.displayOrder, table.id).where(sql`featured`),
 index("projects_inSwitcher_displayOrder_id_idx").on(table.displayOrder, table.id).where(sql`"inSwitcher"`),
 index("projects_advisorId_idx").using("btree", table.advisorId.asc().nullsLast()).where(sql`("advisorId" IS NOT NULL)`),
@@ -1142,7 +1142,7 @@ index("projects_advisorId_idx").using("btree", table.advisorId.asc().nullsLast()
 	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
 
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
-check("projects_description_length", sql`((description IS NULL) OR (char_length(description) <= 1000))`),check("projects_name_length", sql`(char_length(btrim(name)) BETWEEN 2 AND 80)`),check("projects_repos_count", sql`(cardinality(repos) <= 10)`),check("projects_status_choices", sql`(status = ANY (ARRAY['proposed'::text, 'active'::text, 'declined'::text, 'archived'::text]))`),]);
+check("projects_description_length", sql`((description IS NULL) OR (char_length(description) <= 1000))`),check("projects_name_length", sql`(char_length(btrim(name)) BETWEEN 2 AND 80)`),check("projects_repos_count", sql`(cardinality(repos) <= 10)`),check("projects_status_choices", sql`(status = ANY (ARRAY['active'::text, 'archived'::text]))`),]);
 
 export const projectMembersInPlatform = platform.table.withRLS("projectMembers", {
 	projectId: uuid().notNull().references(() => projectsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -1176,6 +1176,7 @@ export const projectReportsInPlatform = platform.table.withRLS("projectReports",
 	reviewNote: text(),
 	submittedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	legacyEvidence: boolean().default(sql`false`).notNull(),
 }, (table) => [
 	index("projectReports_projectId_status_idx").using("btree", table.projectId.asc().nullsLast(), table.status.asc().nullsLast()),
 	index("projectReports_userId_idx").using("btree", table.userId.asc().nullsLast(), table.submittedAt.desc().nullsFirst()),
@@ -1186,7 +1187,7 @@ export const projectReportsInPlatform = platform.table.withRLS("projectReports",
 	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
 
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
-check("projectReports_approved_shape", sql`(((status = 'approved') = ("approvedHours" IS NOT NULL)) AND ((status = 'submitted') = ("reviewedAt" IS NULL)))`),check("projectReports_approvedHours_range", sql`(("approvedHours" IS NULL) OR (("approvedHours" > (0)::numeric) AND ("approvedHours" <= (200)::numeric)))`),check("projectReports_content_words", sql`(platform.word_count(content) >= 100)`),check("projectReports_dates_order", sql`("endDate" >= "startDate")`),check("projectReports_hours_range", sql`(("hours" > (0)::numeric) AND ("hours" <= (200)::numeric))`),check("projectReports_returned_note", sql`((status <> 'returned') OR (char_length(btrim(COALESCE("reviewNote", ''::text))) > 0))`),check("projectReports_status_choices", sql`(status = ANY (ARRAY['submitted'::text, 'approved'::text, 'returned'::text]))`),]);
+check("projectReports_approved_shape", sql`(((status = 'approved') = ("approvedHours" IS NOT NULL)) AND ((status = 'submitted') = ("reviewedAt" IS NULL)))`),check("projectReports_approvedHours_range", sql`(("approvedHours" IS NULL) OR (("approvedHours" > (0)::numeric) AND ("approvedHours" <= (200)::numeric)))`),check("projectReports_content_words", sql`(platform.word_count(content) >= 100)`),check("projectReports_dates_order", sql`("endDate" >= "startDate")`),check("projectReports_hours_range", sql`(("hours" > (0)::numeric) AND ("hours" <= (200)::numeric))`),check("projectReports_reviewedBy_not_author", sql`(("reviewedBy" IS NULL) OR ("reviewedBy" <> "userId"))`),check("projectReports_returned_note", sql`((status <> 'returned') OR (char_length(btrim(COALESCE("reviewNote", ''::text))) > 0))`),check("projectReports_status_choices", sql`(status = ANY (ARRAY['submitted'::text, 'approved'::text, 'returned'::text]))`),]);
 
 export const configEditsInPlatform = platform.table.withRLS("configEdits", {
 	id: uuid().defaultRandom().primaryKey(),

@@ -130,16 +130,11 @@ describe("who may file", () => {
     });
   });
 
-  it("is not for an archived project, a legacy one or a missing one", async () => {
+  it("is not for an archived project or a missing one", async () => {
     use({ execute: fileable({ project: [{ status: "archived" }] }) });
     expect(await fileReport(caller(MEMBER), input(), NOW)).toMatchObject({
       ok: false,
       message: "Reports are taken only for active projects.",
-    });
-    use({ execute: fileable({ project: [{ status: "declined" }] }) });
-    expect(await fileReport(caller(MEMBER), input(), NOW)).toMatchObject({
-      ok: false,
-      message: expect.stringContaining("predates"),
     });
     use({ execute: fileable({ project: [] }) });
     expect(await fileReport(caller(MEMBER), input(), NOW)).toMatchObject({

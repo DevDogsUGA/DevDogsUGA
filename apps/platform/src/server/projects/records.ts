@@ -63,17 +63,6 @@ export function mayUnarchive(
 /** A refusal reads as a sentence the member can act on. */
 export type Refusal = string;
 
-/**
- * Rows from before the new projects system can be `proposed` or `declined`.
- * They have no owners and no repo links, so nothing edits one until the data
- * cutover converts it.
- */
-export function legacyBlock(status: string): Refusal | null {
-  return status === "active" || status === "archived"
-    ? null
-    : "This project predates the new projects system and cannot be changed until it is converted.";
-}
-
 /** Why a Project cannot be archived by this actor, or null. */
 export function archiveBlock(
   project: ProjectFacts,

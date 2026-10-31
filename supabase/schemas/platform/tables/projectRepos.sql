@@ -42,3 +42,8 @@ REVOKE ALL ON TABLE "platform"."projectRepos" FROM "anon", "authenticated";
 CREATE TRIGGER projectRepos_guard_structure
   BEFORE INSERT OR UPDATE OR DELETE ON platform."projectRepos"
   FOR EACH ROW EXECUTE FUNCTION platform.guard_project_structure();
+
+CREATE CONSTRAINT TRIGGER projectRepos_require_approved_repo
+  AFTER UPDATE OR DELETE ON platform."projectRepos"
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW EXECUTE FUNCTION platform.require_approved_repo();
