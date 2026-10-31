@@ -13,6 +13,7 @@ CREATE TABLE "platform"."badgeAwards" (
   "withdrawnAt"          timestamp with time zone,
   "withdrawnReason"      text,
   "hidden"               boolean                  NOT NULL DEFAULT false,
+  "commitSha" text REFERENCES platform.commits(sha) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT "badgeAwards_awardedBy_fkey" FOREIGN KEY ("awardedBy") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT "badgeAwards_badgeId_format" CHECK (("badgeId" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text)),
   CONSTRAINT "badgeAwards_citation_shape" CHECK (((method = 'automatic' AND citation IS NULL AND "awardedBy" IS NULL) OR (method = 'manual' AND citation IS NOT NULL AND char_length(btrim(citation)) BETWEEN 1 AND 280))),
@@ -78,3 +79,5 @@ COMMENT ON COLUMN "platform"."badgeAwards"."meetingId" IS 'Evidence for Workshop
 COMMENT ON COLUMN "platform"."badgeAwards"."contributionId" IS 'Evidence for First Merge: the member''s earliest matched merged pull request.';
 
 COMMENT ON COLUMN "platform"."badgeAwards"."citation" IS 'Manual badges only: the short public explanation of the achievement, shown beside the badge (and hidden with it).';
+
+CREATE INDEX "badgeAwards_commitSha_idx" ON platform."badgeAwards" ("commitSha") WHERE "commitSha" IS NOT NULL;
