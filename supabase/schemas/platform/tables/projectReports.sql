@@ -70,7 +70,7 @@ COMMENT ON COLUMN "platform"."projectReports"."hours" IS 'The hours the member c
 
 COMMENT ON COLUMN "platform"."projectReports"."approvedHours" IS 'Set exactly when status is approved: the hours the reviewer confirmed or adjusted. This, not "hours", is what the evidence export counts.';
 
-COMMENT ON COLUMN "platform"."projectReports"."legacyEvidence" IS 'True for a report filed before commit citations, which has none and is exempt from the citation minimum. Set once by migration 83 and never by server code; a report with it set has no commits, so it is not EL evidence either (platform."memberElEvidence" needs a citation). Dropped with the legacy pull-request tables.';
+COMMENT ON COLUMN "platform"."projectReports"."legacyEvidence" IS 'True for a report filed before commit citations, which has none and is exempt from the citation minimum. Set once by migration 83 and never by server code; a report with it set has no commits, so it is not EL evidence either (platform."memberElEvidence" needs a citation). The pull-request tables it stood for were dropped in migration 84.';
 
 CREATE CONSTRAINT TRIGGER projectReports_require_commits
   AFTER INSERT OR UPDATE ON platform."projectReports"
