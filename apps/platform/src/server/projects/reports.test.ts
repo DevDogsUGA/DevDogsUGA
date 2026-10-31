@@ -75,7 +75,6 @@ const fileable = (
     contributor?: unknown[];
   } = {},
 ): [string, never[]][] => [
-  ["projectReportContributions", []],
   [
     "select status from platform.projects",
     (over.project ?? [{ status: "active" }]) as never[],
@@ -341,18 +340,6 @@ describe("editing a report", () => {
     expect(
       await fileReport(caller(MEMBER), input({ reportId: REPORT }), NOW),
     ).toMatchObject({ ok: false, message: "That report was not found." });
-  });
-  it("leaves a legacy report with PR evidence as it is", async () => {
-    use({
-      report: existing("returned"),
-      execute: [["projectReportContributions", [{ x: 1 }]], ...fileable()],
-    });
-    expect(
-      await fileReport(caller(MEMBER), input({ reportId: REPORT }), NOW),
-    ).toMatchObject({
-      ok: false,
-      message: expect.stringContaining("pull requests"),
-    });
   });
 });
 

@@ -70,7 +70,6 @@ const existing = (over: Record<string, unknown> = {}) => ({
   endDate: "2026-10-14",
   hours: 6,
   content: "word ".repeat(100),
-  legacyPullRequests: [],
   ...over,
 });
 
@@ -156,14 +155,6 @@ describe("the report page", () => {
     expect(
       screen.queryByRole("button", { name: "Resubmit report" }),
     ).toBeNull();
-  });
-
-  it("leaves a report with pull-request evidence as it is", async () => {
-    mocks.getReport.mockResolvedValue(
-      existing({ legacyPullRequests: [{ id: "c1" }] }),
-    );
-    await renderPage(REPORT);
-    expect(screen.getByText("This report cites pull requests")).toBeTruthy();
   });
 
   it("ignores another member's report id and starts a new one", async () => {
