@@ -11,39 +11,46 @@ A project's own repository can hold its documentation. When a change to those do
 
 ## Add a project to the map
 
-The map is `.github/docs-projects.json`. It is reviewed in a DevDogsUGA pull request (CODEOWNERS: `.github/**`), and a project repository cannot change it. Add one entry:
+The map is `.github/docs-projects.json`, version 2, keyed by the project's slug. It is reviewed in a DevDogsUGA pull request (CODEOWNERS: `.github/**`), and a project repository cannot change it. An entry:
 
 ```json
 {
-  "slug": "example",
-  "repository": "DevDogsUGA/example",
-  "branch": "main",
-  "directory": "docs",
-  "destination": "/docs/example"
+  "version": 2,
+  "projects": {
+    "example": {
+      "githubRepoId": "123456789",
+      "ownerId": "987654321",
+      "ownerLogin": "DevDogsUGA"
+    }
+  }
 }
 ```
 
-- `slug`: lowercase letters, digits and hyphens. The club's own docs slugs (`platform`, `toolkit`, `workshops`, `schedule-builder`, `operations`) are reserved.
-- `directory`: a relative folder in the repository. It holds Markdown, images (png, jpg, gif, webp, avif, svg) and an optional `docs.manifest.json`. Nothing else is read.
-- `destination`: always `/docs/<slug>`.
+- The key is the project's slug: lowercase letters, digits and hyphens, permanent once docs have published. The club's own docs slugs (`platform`, `toolkit`, `workshops`, `schedule-builder`, `operations`) are reserved, because those docs are bundled with the site.
+- `githubRepoId` is the repository's numeric GitHub id, a decimal string. The workflow finds the repository by this id, so a rename never breaks it and a transfer can never point the slug at somebody else's repository. One repository serves one slug.
+- `ownerId` and `ownerLogin` are the repository owner an officer confirmed (see the transfer pause below).
+- There is no branch and no directory. Docs always come from the repository's **default branch**, from its `docs/` folder. The folder holds Markdown, images (png, jpg, gif, webp, avif, svg) and an optional `docs.manifest.json`. Nothing else is read.
+- The destination is always `/docs/<slug>`.
 
-`node --test .github/scripts/docs-projects.test.mjs` checks the file; CI runs it. Before the first candidate, give the read-only source token access to the new repository (below).
+Officers don't edit the file by hand. The **Docs** toggle on a project (`setProjectDocs`) opens the pull request that adds or removes the entry, and confirming a new owner (`confirmDocsOwner`) opens the one that updates `ownerId` and `ownerLogin`. A reviewer merges each; the platform notices when it is merged or closed. A project's slug is locked while one is open.
+
+`node --test .github/scripts/docs-projects.test.mjs` checks the file; CI runs it. Before the first candidate, give the read-only source token access to the new repository (below). A repository that changes owner is paused until an officer confirms the new owner: see [Transfers and the pause](./project-docs-transfers.md).
 
 ## Ask for a candidate
 
-A `repository_dispatch` of type `docs-candidate` with `{ "project": "<slug>", "sha": "<merge commit>" }` starts a candidate; nothing sends it yet, because the platform no longer receives GitHub webhooks. By hand:
+A `repository_dispatch` of type `docs-candidate` with `{ "project": "<slug>", "sha": "<commit on the default branch>" }` starts a candidate; nothing sends one yet, because the platform no longer receives GitHub webhooks. By hand:
 
 ```bash
 gh workflow run docs-candidate.yaml -f project=example -f sha=<40-character commit>
 ```
 
-The workflow refuses a project that is not in the map and a commit that is not on the mapped branch. The dispatch only names the project and the commit; the repository, branch and directory always come from the map.
+The workflow refuses a project that is not in the map, a repository whose owner no longer matches the map, a private repository, and a commit that is not on the repository's default branch. The dispatch only names the project and the commit; the repository, branch and directory always come from the map and from GitHub.
 
 ## What the candidate shows
 
 Open the run. The summary lists:
 
-- the source (repository, commit, branch, directory) and the candidate's digest;
+- the source (repository, commit, default branch, directory) and the candidate's digest;
 - the **checks**: it compiled under the untrusted policy, every page has a title and text, and there is an overview page;
 - the **changes against the live version**: pages and assets added, changed and removed. With no live version yet, every page is new.
 
@@ -84,12 +91,13 @@ The bucket must exist before a deploy that declares it: `wrangler r2 bucket crea
 
 ## Onboard the first project
 
-1. **Map entry.** Add the project to `.github/docs-projects.json` in a DevDogsUGA pull request (see above). Don't add a project whose docs directory doesn't exist yet.
-2. **Source token.** Give `DOCS_SOURCE_TOKEN` read access (Contents and Metadata) to the project's repository. A fine-grained token lists repositories explicitly, so edit the token's repository selection.
+1. **Map entry.** An officer turns on the project's **Docs** toggle in the dashboard, which opens the pull request that adds it to `.github/docs-projects.json` (see above), and a reviewer merges it. Don't turn it on for a project whose `docs/` folder doesn't exist yet.
+2. **Source token.** Give `DOCS_SOURCE_TOKEN` read access (Contents and Metadata) to the project's repository. A fine-grained token lists repositories explicitly, so edit the token's repository selection. Metadata read is also what lets the build look the repository up by id.
 3. **Bucket and publisher.** The bucket, the `docs-publishing` environment with its reviewers, and the publish credential and variables from the table below must exist. Set `DOCS_LIVE_BASE_URL` if the bucket is public, so the change summary can compare against the live version.
 4. **First candidate, by hand.** `gh workflow run docs-candidate.yaml -f project=<slug> -f sha=<merge commit>`. Read the summary and the preview, then approve in the `docs-publishing` environment.
 5. **Check it.** Open `/docs/<slug>` (allow up to a minute), try an image, search for a phrase from a page, and `curl devdogsuga.org/docs/<slug>`.
 6. **Automatic candidates.** Not built. The platform's GitHub webhook that this step once relied on is retired (the commit sync reads GitHub on a schedule instead), so ask for candidates by hand. Whatever sends the `repository_dispatch` later only names the project and the commit, never a repository, branch or directory.
+7. **First publication.** The platform marks a project as having published (`docsFirstPublishedAt`, which also freezes its slug for good) only from evidence that a publish succeeded. That callback is not built: see [Transfers and the pause](./project-docs-transfers.md#what-is-not-built).
 
 ## Credentials
 
