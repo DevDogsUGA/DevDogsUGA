@@ -4,7 +4,7 @@ export type AppKey = "platform" | "dogdays" | "dogpack";
 
 export interface AppBrand {
   name: string;
-  /** The four-word "what is it", as `config/projects.ts` writes it. */
+  /** The four-word "what is it", as the project's `tagline` writes it. */
   tagline: string;
   /** One sentence, for an Open Graph description. */
   blurb: string;
@@ -23,8 +23,9 @@ export interface AppBrand {
 /**
  * The three apps that get icons, keyed the way the CLI names them.
  *
- * Copy is kept in step with `apps/platform/src/config/projects.ts`, which is
- * the club's own description of these and the one a member reads. Duplicated
+ * Copy is kept in step with the apps' `projects` rows in the platform database
+ * (`platform.projects`), which are the club's own description of these and the
+ * one a member reads. Duplicated
  * rather than imported: this package cannot depend on the app it renders
  * images for, and inverting that (the app owning the copy, this package
  * importing it) would put a React component tree behind a CLI that only wants

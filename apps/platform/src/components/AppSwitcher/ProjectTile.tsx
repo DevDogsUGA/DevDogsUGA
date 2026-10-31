@@ -3,8 +3,8 @@
 import Image from "next/image";
 import { useState } from "react";
 import devdog from "~/assets/devdog.svg";
-import * as icons from "~/config/icons";
-import type { SwitcherProject } from "~/config/projects";
+import { showcaseColor, showcaseIcon } from "~/config/showcaseKeys";
+import type { SwitcherProject } from "~/server/projects/showcase";
 import OpenOrShareDialog from "./OpenOrShareDialog";
 import { Card } from "~/ui/card";
 import { Chip } from "~/ui/chip";
@@ -33,8 +33,9 @@ const TILE_SPACING = "gap-2 px-3 py-3.5 sm:gap-3 sm:px-4 sm:py-4";
  * stack, repo links, the year it ran. This is for opening one.
  */
 export default function ProjectTile({ project, onNavigate }: Props) {
-  const { icon, color, logo, blurb, url, badge } = project.switcher;
-  const Icon = icons[icon];
+  const { name, blurb, url, badge } = project;
+  const { Icon, logo } = showcaseIcon(project.iconKey);
+  const color = showcaseColor(project.colorKey);
   const [open, setOpen] = useState(false);
 
   const body = (
@@ -60,7 +61,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
           switcher's grid leaves the extra row gap this needs. */}
       {badge && (
         <Chip outline className="switcher-badge">
-          {badge.label}
+          {badge}
         </Chip>
       )}
 
@@ -75,13 +76,13 @@ export default function ProjectTile({ project, onNavigate }: Props) {
               onClick={() => setOpen(true)}
               className="switcher-hit text-[length:inherit]"
             >
-              {project.title}
+              {name}
             </button>
           ) : (
-            project.title
+            name
           )}
         </h3>
-        <p className="small muted">{blurb}</p>
+        {blurb && <p className="small muted">{blurb}</p>}
       </div>
     </>
   );
@@ -98,7 +99,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
     <>
       <Card className={`${ROW} ${LIFT} ${TILE_SPACING}`}>{body}</Card>
       <OpenOrShareDialog
-        title={project.title}
+        title={name}
         url={url}
         external={url.startsWith("http")}
         open={open}

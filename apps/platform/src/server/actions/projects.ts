@@ -25,6 +25,7 @@ import {
   fileReport,
   reviewReport,
 } from "~/server/projects/reports";
+import { revalidateShowcase } from "~/server/projects/showcase";
 
 /**
  * The project actions. Each authorizes through the Access module first, parses
@@ -38,9 +39,14 @@ const uuid = z.string().uuid();
 const repoId = z.string().regex(/^[1-9][0-9]{0,18}$/u);
 const invalid = () => failure("That request is invalid.");
 
-/** Every page a project change can show on. */
+/**
+ * Every page a project change can show on. A rename, an archive or a
+ * repository change also shows on the homepage, in the footer and in the
+ * switcher when the project is featured.
+ */
 function refresh<T extends ActionResult<unknown>>(result: T): T {
   if (result.ok) {
+    revalidateShowcase();
     revalidatePath("/dashboard/projects");
     revalidatePath("/dashboard/projects/[idOrSlug]", "page");
     revalidatePath("/dashboard/reviews");

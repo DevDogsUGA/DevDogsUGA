@@ -9,8 +9,11 @@ import {
   PROJECTS_BLURB,
 } from "~/components/homeCopy";
 import { nextMeetings } from "~/components/EventsSection/UpcomingMeetings";
-import { PROJECTS, type Project } from "~/config/projects";
 import { getCurrentOfficers } from "~/server/loaders/officers";
+import {
+  getFeaturedProjects,
+  type ShowcaseProject,
+} from "~/server/projects/showcase";
 import type { Block, Entry } from "../blocks";
 import { page, PUBLIC, terminal } from "../define";
 import { meetingItem } from "../meetings";
@@ -23,25 +26,29 @@ import { ACCENT, TONE } from "../theme";
  * It ends with the index of everything else a terminal can reach.
  */
 
-/** The badge fills `config/projects.ts` uses, as Cosmic category hues. */
-const BADGE_COLOR: Record<string, string> = {
-  "bg-cyan-400": KIND.build[3],
-  "bg-amber-400": KIND.info[3],
-  "bg-emerald-400": KIND.workshop[3],
+/**
+ * The Cosmic category hue of a status pill, by what it says. The pills are
+ * free text an officer wrote, so a label with no hue here draws muted.
+ */
+const LABEL_COLOR: Record<string, string> = {
+  active: KIND.build[3],
+  maintenance: KIND.info[3],
 };
 
-function projectEntry(project: Project): Entry {
+function projectEntry(project: ShowcaseProject): Entry {
   return {
-    label: project.title,
-    meta: project.tagline,
-    chip: {
-      label: project.badge.label,
-      color: BADGE_COLOR[project.badge.bg] ?? TONE.mute,
-    },
+    label: project.name,
+    meta: project.tagline ?? undefined,
+    chip: project.showcaseLabel
+      ? {
+          label: project.showcaseLabel,
+          color: LABEL_COLOR[project.showcaseLabel.toLowerCase()] ?? TONE.mute,
+        }
+      : undefined,
     text:
-      project.liveUrl?.href ??
-      project.githubUrl ??
-      (project.contributions === "closed"
+      project.liveUrl ??
+      project.githubUrls[0] ??
+      (project.contributionMode === "closed"
         ? "Built by the officer team."
         : undefined),
   };
@@ -50,11 +57,12 @@ function projectEntry(project: Project): Entry {
 const UPCOMING_COUNT = 3;
 
 export const home = terminal(PUBLIC, async () => {
-  const [meetings, officers] = await Promise.all([
+  const [meetings, officers, projects] = await Promise.all([
     nextMeetings(UPCOMING_COUNT),
     // The leadership section renders without its board rather than failing
-    // the page, and so does this.
+    // the page, and so does this. The project list is the same.
     getCurrentOfficers().catch(() => []),
+    getFeaturedProjects().catch((): ShowcaseProject[] => []),
   ]);
   const latest = ISSUES.at(-1);
 
@@ -65,7 +73,7 @@ export const home = terminal(PUBLIC, async () => {
     ...MISSION_PARAGRAPHS.map((text): Block => ({ type: "text", text })),
     { type: "heading", text: "projects", color: ACCENT.amber },
     { type: "text", text: PROJECTS_BLURB },
-    { type: "entries", items: PROJECTS.map(projectEntry), empty: "" },
+    { type: "entries", items: projects.map(projectEntry), empty: "" },
     { type: "heading", text: "events", color: ACCENT.cyan },
     { type: "text", text: EVENTS_BLURB },
     {

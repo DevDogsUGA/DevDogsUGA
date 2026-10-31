@@ -98,7 +98,7 @@ export const DOCS_INDEX_LABEL = "Overview";
 /**
  * How the sidebar's project switcher names each project: its brand, when it
  * has one, over a tagline that fits on one line. The brands and taglines are
- * the ones ~/config/projects.ts gives the apps (DogDays is the schedule
+ * the ones the apps' `projects` rows give them (DogDays is the schedule
  * builder), so a project renamed there wants the matching change here.
  *
  * A project absent from this map shows its docs name and its `description`,

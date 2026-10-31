@@ -3,7 +3,6 @@ import {
   DOGPACK_MARK,
   markBody,
 } from "@devdogsuga/sdk/brand/marks";
-import type { ProjectIconName } from "~/config/projects";
 
 /**
  * The DevDogs apps' marks, drawn by `@devdogsuga/sdk/brand/marks` (the one copy of
@@ -74,6 +73,9 @@ export function DogPackIcon({ className }: ProjectMarkProps) {
     />
   );
 }
+
+/** Keys into PROJECT_ICONS: the marks drawn for the apps that have one. */
+export type ProjectIconName = "dogdays" | "dogpack";
 
 /**
  * The marks by name, with the height each wants in a line of text: the box's
