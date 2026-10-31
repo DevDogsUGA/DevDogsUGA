@@ -99,10 +99,12 @@ function formText(formData: FormData, name: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-/** The signed-in member, or the sign-in redirect. Every action here needs one. */
-async function signedInMember() {
-  const access = await authorizeSession();
-  if (!access.ok) return authenticate("google", "/dashboard/oauth");
+/**
+ * The signed-in member, with the GitHub identity creating an app needs. Each
+ * action authorizes the session itself first and sends a signed-out visitor to
+ * sign in.
+ */
+function signedInMember() {
   return expectUserWith({
     githubIdentity: { columns: { id: true } },
   }).catch(() => authenticate("google", "/dashboard/oauth"));
@@ -132,6 +134,8 @@ export interface CreatedClient {
 export async function createOAuthClient(
   formData: FormData,
 ): Promise<ActionResult<CreatedClient>> {
+  const access = await authorizeSession();
+  if (!access.ok) return authenticate("google", "/dashboard/oauth");
   const user = await signedInMember();
   const label = formText(formData, "label");
 
@@ -172,6 +176,8 @@ export async function createOAuthClient(
 export async function deleteOAuthClient(
   clientId: string,
 ): Promise<ActionResult> {
+  const access = await authorizeSession();
+  if (!access.ok) return authenticate("google", "/dashboard/oauth");
   const user = await signedInMember();
 
   return expected(async (): Promise<undefined> => {
@@ -202,6 +208,8 @@ export async function deleteOAuthClient(
 export async function regenerateOAuthSecret(
   clientId: string,
 ): Promise<ActionResult<{ clientSecret: string | null }>> {
+  const access = await authorizeSession();
+  if (!access.ok) return authenticate("google", "/dashboard/oauth");
   const user = await signedInMember();
 
   return expected(async () => {
@@ -236,6 +244,8 @@ export async function addRedirectUri(
   clientId: string,
   rawUri: string,
 ): Promise<ActionResult> {
+  const access = await authorizeSession();
+  if (!access.ok) return authenticate("google", "/dashboard/oauth");
   const user = await signedInMember();
   const uri = rawUri.trim();
 
@@ -277,6 +287,8 @@ export async function removeRedirectUri(
   clientId: string,
   rawUri: string,
 ): Promise<ActionResult> {
+  const access = await authorizeSession();
+  if (!access.ok) return authenticate("google", "/dashboard/oauth");
   const user = await signedInMember();
   const uri = rawUri.trim();
 
