@@ -1,33 +1,37 @@
 ---
 name: Navigation
-description: The top nav and the docs sidebar, the two data sources behind them, how console items are gated by permission, and why the user cluster loads on the client.
+description: The public nav, dashboard registry and docs menus, their access rules, and why the user cluster loads on the client.
 order: 4
 section: guides
 ---
 
 # Navigation
 
-Two separate surfaces, not one system: a **top nav** (`src/components/TopNav/`) that every page in the `(site)` layout carries, and a **docs sidebar** (`src/components/DocsSidebar/`) mounted only by `app/(site)/docs/[project]/layout.tsx`. There is no shared manifest module. Read this before adding a link, adding a console page, or working out where a navbar entry comes from.
+The public top nav (`src/components/TopNav/`), dashboard side nav (`src/components/AppSideNav.tsx`) and docs sidebar (`src/components/DocsSidebar/`) use different data sources.
 
-## The two data sources
+## Navigation sources
 
-**`src/config/nav.ts`** holds everything hand-curated, as plain exported consts: `PUBLIC_LINKS` (the navbar's own links), `CONSOLE_ITEMS` (the Console dropdown), `PROFILE_ITEMS` (the profile popover), `SEARCH_ONLY_PAGES` (indexed but not shown), and the app-switcher and social entries. The file's types and comments are the reference — `INVOLVEMENT_NETWORK_URL` and its `/events` and `/roster` variants live there too, so every page that sends a member to the Involvement Network imports the URL rather than retyping it.
+`src/config/nav.ts` holds `PUBLIC_LINKS`, `SEARCH_ONLY_PAGES`, social links and shared external URLs. Featured projects and app-switcher entries come from the database through `server/projects/showcase.ts`.
 
-**The compiled docs data** is the other one. `src/server/docs/queries.ts` reads the bundled `@devdogsuga/docs` module and `src/lib/docsTree.ts` folds its flat `(path, title, order)` rows into the sidebar tree; the tree itself comes from `getDocsTree(project)`. Every read is in-memory — see [the docs system](../../toolkit/infrastructure/docs-system/index.md).
+`src/config/dashboard.ts` is the signed-in section registry: labels, URLs, groups, access rules and refusal policies. Account, Projects, Developer and Console sections all live directly under `/dashboard`; Console has no URL segment. The profile popover and mobile sheet offer Dashboard and Sign out beside the member’s name and role. Verification lives on the overview.
+
+**Bundled docs** use compiled data. `src/server/docs/queries.ts` reads the bundled `@devdogsuga/docs` module and `src/lib/docsTree.ts` folds its flat `(path, title, order)` rows into the sidebar tree; the tree itself comes from `getDocsTree(project)`. These bundled reads are in-memory; published project snapshots are loaded separately from R2 by `server/docs/published/` — see [the docs system](../../toolkit/infrastructure/docs-system/index.md).
 
 The navbar has two docs menus, and `src/server/docs/menu.ts` builds both. **Docs** is platform-authored: the rows in `DOCS_MENU` (`src/config/docs.ts`) are Workshops, Shared tooling, Ops and the guides for building on DevDogs, named from the docs' own frontmatter or, for a guide, from the config. **Contribute** is project-authored: the platform first, then every Project whose docs have published, each named and marked by its own project row (its `iconKey` and `colorKey` through the showcase registry), never by a map in the code. The sidebar's project selector uses the same names and marks (`getDocsSwitcher`).
 
-Search draws on both: `src/server/search/appEntries.ts` builds entries from the nav config (plus `src/config/pageSections.ts`, so a query can land on `/dashboard/profile#graduation` rather than `/dashboard/profile`), and `docsSearch.ts` queries Postgres for the docs.
+Search draws on both: `src/server/search/appEntries.ts` builds entries from the nav config (plus `src/config/pageSections.ts`, so a query can land on `/dashboard/profile#graduation` rather than `/dashboard/profile`), and `docsSearch.ts` queries Postgres for bundled docs. `publishedDocsSearch.ts` searches published project snapshots.
 
-## Permission gating
+The dashboard’s Docs toggle opens a reviewed PR for `.github/docs-projects.json` v2, keyed by permanent slug with numeric repo id and confirmed owner. Snapshots still require publishing approval. A repo transfer pauses publishing until an officer confirms the new owner. Docs preview renders the default branch live through the hardened compiler, without code highlighting; owners, contributors and docs reviewers can read it. The same compile powers readiness and `pnpm devtools docs check`.
 
-Each `ConsoleItem` carries one `permission` field — a key of `ResolvedPermissions`. `visibleConsoleItems(permissions)` in `nav.ts` filters the list, and it runs on the server, inside `GET /me`: the client only ever receives the items it may see. That one field is the whole visibility model, and search inherits it, because sub-entries are only generated for a page the caller could already open.
+## Access rules
 
-The items are not the enforcement. Each console page enforces its own permission server-side; `CONSOLE_ITEMS` decides what is offered, so the two are kept in step by hand.
+`server/dashboard/sections.ts` resolves the registry’s named rules against a Caller from `server/auth/access.ts`. The dashboard side nav and search use `visibleSections(caller)`. Signed-out callers see no dashboard search entries. `pageSections.ts` supplies searchable anchors within those entries.
+
+The shared dashboard layout calls `requireDashboard()`; restricted pages call `requireAccess(rules.<name>)` or a domain gate. Record rules protect individual projects, reports and clients. Docs preview uses 404 refusals to avoid leaking project existence. Tests in `server/dashboard/sections.test.ts` check page gates against the registry and its explicit sub-page exceptions.
 
 ## Why the user cluster loads on the client
 
-Pages under `(site)` are cached as HTML and shared by every visitor, so nothing in the navbar's server render may depend on who is asking. `TopNav` renders the chrome (logo, links, search, app switcher) plus the loading state of the per-viewer pieces, `TopNavProfile` and `TopNavMobile` in `TopNavUser.tsx`. After hydration, `NavUserProvider` fetches `GET /me` (`app/(api)/me/route.ts`) with TanStack Query and fills them in: the avatar, the role, the filtered console items, and the verification checklist data that `/dashboard/profile` also reads.
+Pages under `(site)` are cached as HTML and shared by every visitor, so nothing in the navbar's server render may depend on who is asking. `TopNav` renders the chrome (logo, links, search, app switcher) plus the loading state of the per-viewer pieces, `TopNavProfile` and `TopNavMobile` in `TopNavUser.tsx`. After hydration, `NavUserProvider` fetches `GET /me` (`app/(api)/me/route.ts`) with TanStack Query and fills them in: the avatar and role, plus verification data and filtered officer sections for consumers of the response.
 
 `/me` runs `getNavUser()` (`TopNav/data.ts`) and returns `private, no-store`. It 404s to a navigation and to a cross-site request, so it isn't a page anyone lands on, and robots.txt disallows it. A visitor with no Supabase session cookie never calls it at all.
 

@@ -55,6 +55,7 @@ export const TERMINAL_ROUTES = {
 
   "/": home,
   "/auth/failed": signInProblem,
+  "/oauth/consent": browserNotice("OAuth consent"),
   "/oauth/connect": cliApproval,
   "/oauth/device": cliApproval,
   "/changelog": changelogArchive,

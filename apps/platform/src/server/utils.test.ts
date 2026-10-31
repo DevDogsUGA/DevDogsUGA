@@ -14,8 +14,8 @@ const { callbackPathSchema } = await import("./utils");
 describe("callbackPathSchema", () => {
   it("passes a plain path through unchanged", async () => {
     await expect(
-      callbackPathSchema.parseAsync("/settings/oauth"),
-    ).resolves.toBe("/settings/oauth");
+      callbackPathSchema.parseAsync("/dashboard/oauth"),
+    ).resolves.toBe("/dashboard/oauth");
   });
 
   it("preserves a query string, e.g. the OAuth connect handoff's params", async () => {

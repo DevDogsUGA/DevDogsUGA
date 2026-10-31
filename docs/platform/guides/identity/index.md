@@ -9,7 +9,7 @@ section: guides
 
 "The DevDogs identity" means one thing: **Sign in with DevDogs**, DevDogs Auth acting as an OAuth 2.1 / OIDC provider. It is **inbound**: another project signs a DevDogs member in. Whoever adds a sign-in button to a sibling project needs it; the credential is a client id and secret, per project, from `/dashboard/oauth`, and `pnpm devtools oauth` sets it up in the consuming project. See [Getting started: Running](../../../_shared/getting-started/running.md).
 
-The platform used to hold a second identity, a GitHub App it authenticated as to administer the `DevDogsUGA` organization (teams, branch rulesets, invitations). That integration is deleted along with Teams and competitions, and its credentials (`GH_APP_ID`, `GH_APP_INSTALLATION_ID`, `GH_APP_PRIVATE_KEY`, `GH_WEBHOOK_SECRET`) are gone from the env contract. The platform no longer calls GitHub as an App, and linking a GitHub account does not add anyone to the organization.
+GitHub account linking and the platform’s GitHub App are separate. Linking identifies a member’s commits; it does not add them to the organization. The App in `server/github/` checks repo control, syncs default-branch commits and reads project docs. Organization administration belongs to Backstage. See [Contributions](../contributions.md) and [GitHub credentials](../../../operations/credentials/github.md).
 
 ## Who can create an account
 
@@ -37,7 +37,7 @@ The consent page (`/oauth/consent`) decides on the server, before anything rende
 
 A production client cannot be deleted until another live production client exists: the delete form names the replacement, and the audit entry records it. Roll a production secret from `/dashboard/oauth`; it is shown once. Each audited change and its GoTrue call share one transaction, so an entry never exists for a change that did not happen, and a secret is never rolled without its entry.
 
-Unlinking GitHub on `/dashboard/profile` deletes the member's development clients (they are gated on GitHub) and never touches a production client, whoever created it.
+Unlinking GitHub on `/dashboard/accounts` deletes the member's development clients (they are gated on GitHub) and never touches a production client, whoever created it.
 
 ## What a Sign in with DevDogs token is good for
 

@@ -6,6 +6,7 @@ vi.mock("~/server/auth/permissions", () => ({ getCallerContext: vi.fn() }));
 import { DASHBOARD_SECTIONS } from "~/config/dashboard";
 import { rules, type Caller } from "~/server/auth/access";
 import { matchTerminalPath, TERMINAL_PATHS } from "~/terminal/paths";
+import { buildAppSearchEntries } from "~/server/search/appEntries";
 import { sectionFor, visibleSections } from "./sections";
 
 const flags: Caller["flags"] = {
@@ -31,6 +32,22 @@ const callers: Caller[] = [false, true].flatMap((isLeader) =>
 );
 
 describe("Section registry", () => {
+  it("search indexes exactly the visible registry pages, with no retired URLs", () => {
+    for (const caller of [null, ...callers]) {
+      const entries = buildAppSearchEntries(caller);
+      const dashboardPages = entries.filter(
+        (entry) =>
+          entry.url.startsWith("/dashboard") && entry.id.startsWith("page:"),
+      );
+      expect(dashboardPages.map((entry) => entry.url)).toEqual(
+        visibleSections(caller).map((section) => section.href),
+      );
+      for (const entry of entries)
+        expect(entry.url).not.toMatch(
+          /^\/(?:settings|console|tools\/oauth)(?:\/|$)/,
+        );
+    }
+  });
   it("hides every section when signed out", () =>
     expect(visibleSections(null)).toEqual([]));
   it.each(DASHBOARD_SECTIONS)(
@@ -100,7 +117,7 @@ describe("Section registry", () => {
 });
 
 const SRC = resolve(process.cwd(), "src");
-const CONSOLE = resolve(SRC, "app/(site)/dashboard");
+const DASHBOARD = resolve(SRC, "app/(site)/dashboard");
 function pages(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory()
@@ -156,69 +173,83 @@ function loaderSource(file: string, name: string) {
     .split(/\nexport (?:const |(?:async )?function )/)[0]!;
 }
 
-describe("console page access drift", () => {
-  it.each(pages(CONSOLE))("has a terminal twin for %s", (file) => {
+describe("dashboard page access drift", () => {
+  it.each(pages(DASHBOARD))("has a terminal twin for %s", (file) => {
     expect(
       TERMINAL_PATHS.some(
         (entry) => entry.page === relative(resolve(SRC, "app"), file),
       ),
     ).toBe(true);
   });
-  it.each(
-    pages(CONSOLE).filter(
-      (file) =>
-        sectionFor(
-          "/dashboard/" + relative(CONSOLE, file).replace(/\/page\.tsx$/, ""),
-        )?.group === "Console" || file.includes("/reviews/"),
-    ),
-  )("matches its section or an explicit sub-page exception: %s", (file) => {
-    const path =
-      "/dashboard/" + relative(CONSOLE, file).replace(/\/page\.tsx$/, "");
-    const section = sectionFor(path);
-    expect(section, path).not.toBeNull();
-    const source = readFileSync(file, "utf8");
-    const expected = EXCEPTIONS[path] ?? section!.access;
-    if (path.startsWith("/dashboard/docs-preview")) {
-      // Signed in for everything under it (the layout), then per page: the
-      // landing page is for docs reviewers alone, and a project's pages go
-      // through the project gate (owners, contributors and reviewers).
-      const layout = readFileSync(
-        resolve(CONSOLE, "docs-preview/layout.tsx"),
-        "utf8",
+  it.each(pages(DASHBOARD))(
+    "matches its section or an explicit sub-page exception: %s",
+    (file) => {
+      const suffix = relative(DASHBOARD, file).replace(
+        /(?:^|\/)page\.tsx$/,
+        "",
       );
-      expect(layout).toContain("await requireDashboard()");
-      const gate = readFileSync(
-        resolve(SRC, "server/docs/previewAccess.ts"),
-        "utf8",
-      );
-      expect(gate).toContain("await requireDashboard()");
-      expect(gate).toContain("notFound()");
-      if (path === "/dashboard/docs-preview") {
-        expect(source).toContain("await requireDocsPreview()");
-        expect(gate).toContain("!rules.previewDocs(caller)");
-      } else {
-        const projectLayout = readFileSync(
-          resolve(CONSOLE, "docs-preview/[slug]/layout.tsx"),
-          "utf8",
+      const path = suffix ? `/dashboard/${suffix}` : "/dashboard";
+      const section = sectionFor(path);
+      // Pending deletion is deliberately absent from navigation; the layout gates it.
+      if (path === "/dashboard/[...slug]") {
+        expect(readFileSync(file, "utf8")).toContain(
+          "await requireDashboard()",
         );
-        const route = readFileSync(
-          resolve(SRC, "components/DocsPreviewRoute.tsx"),
-          "utf8",
-        );
-        expect(projectLayout).toContain("PreviewLayout");
-        expect(route).toContain("await requirePreviewProject(slug)");
-        expect(gate).toContain("mayPreviewDocs(project.facts)");
+        expect(readFileSync(file, "utf8")).toContain("notFound()");
+        return;
       }
-      return;
-    }
-    const delegated = LOADER_GATES[path];
-    const gateSource = delegated ? loaderSource(...delegated) : source;
-    if (delegated) expect(source).toContain(delegated[1]);
-    const gates = [
-      ...gateSource.matchAll(/requireAccess\(rules\.(\w+)\)/g),
-    ].map((match) => match[1]);
-    expect(gates).toEqual([expected]);
-  });
+      if (path !== "/dashboard/deletion") expect(section, path).not.toBeNull();
+      const source = readFileSync(file, "utf8");
+      const expected = EXCEPTIONS[path] ?? section?.access ?? "member";
+      if (path.startsWith("/dashboard/docs-preview")) {
+        // Signed in for everything under it (the layout), then per page: the
+        // landing page is for docs reviewers alone, and a project's pages go
+        // through the project gate (owners, contributors and reviewers).
+        const layout = readFileSync(
+          resolve(DASHBOARD, "docs-preview/layout.tsx"),
+          "utf8",
+        );
+        expect(layout).toContain("await requireDashboard()");
+        const gate = readFileSync(
+          resolve(SRC, "server/docs/previewAccess.ts"),
+          "utf8",
+        );
+        expect(gate).toContain("await requireDashboard()");
+        expect(gate).toContain("notFound()");
+        if (path === "/dashboard/docs-preview") {
+          expect(source).toContain("await requireDocsPreview()");
+          expect(gate).toContain("!rules.previewDocs(caller)");
+        } else {
+          const projectLayout = readFileSync(
+            resolve(DASHBOARD, "docs-preview/[slug]/layout.tsx"),
+            "utf8",
+          );
+          const route = readFileSync(
+            resolve(SRC, "components/DocsPreviewRoute.tsx"),
+            "utf8",
+          );
+          expect(projectLayout).toContain("PreviewLayout");
+          expect(route).toContain("await requirePreviewProject(slug)");
+          expect(gate).toContain("mayPreviewDocs(project.facts)");
+        }
+        return;
+      }
+      if (expected === "member") {
+        const layout = readFileSync(resolve(DASHBOARD, "layout.tsx"), "utf8");
+        expect(layout).toContain("await requireDashboard()");
+        // Member pages may check auxiliary grants, but must not impose a page rule.
+        expect(source).not.toMatch(/requireAccess\(rules\./);
+        return;
+      }
+      const delegated = LOADER_GATES[path];
+      const gateSource = delegated ? loaderSource(...delegated) : source;
+      if (delegated) expect(source).toContain(delegated[1]);
+      const gates = [
+        ...gateSource.matchAll(/requireAccess\(rules\.(\w+)\)/g),
+      ].map((match) => match[1]);
+      expect(gates).toEqual([expected]);
+    },
+  );
   it("gates the review queue on reviewProjectReports alone: officers without it are refused, and advisors review from the project page", () => {
     const reviews = DASHBOARD_SECTIONS.find((s) => s.id === "reviews")!;
     expect(reviews.access).toBe("reviewProjectReports");
@@ -229,16 +260,16 @@ describe("console page access drift", () => {
     }
     // The project page serves the advisor through its record rule, not this section.
     const project = readFileSync(
-      resolve(CONSOLE, "projects/[idOrSlug]/page.tsx"),
+      resolve(DASHBOARD, "projects/[idOrSlug]/page.tsx"),
       "utf8",
     );
     expect(project).toContain("relation.isAdvisor");
     expect(project).toContain("rules.reviewProjectReports(caller)");
   });
   it("keeps every exception tied to a real sub-page", () => {
-    const paths = pages(CONSOLE).map(
+    const paths = pages(DASHBOARD).map(
       (file) =>
-        "/dashboard/" + relative(CONSOLE, file).replace(/\/page\.tsx$/, ""),
+        "/dashboard/" + relative(DASHBOARD, file).replace(/\/page\.tsx$/, ""),
     );
     for (const [path, access] of Object.entries(EXCEPTIONS)) {
       expect(paths).toContain(path);
