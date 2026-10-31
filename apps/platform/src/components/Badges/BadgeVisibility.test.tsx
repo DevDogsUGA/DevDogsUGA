@@ -5,7 +5,7 @@ import { failure, success } from "~/lib/actionResult";
 
 const calls = vi.hoisted(() => ({
   args: [] as unknown[],
-  result: null as unknown,
+  result: null as object | null,
   toast: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));

@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
     id: string;
     position: number;
   }[],
-  guildError: null as unknown,
+  guildError: null as Error | null,
   canManage: true,
   link: vi.fn(),
   create: vi.fn(),
@@ -58,7 +58,7 @@ vi.mock("~/server/discord/adminCapability", () => ({
 vi.mock("~/server/discord/roleSync", () => ({
   fetchGuildRoles: () =>
     mocks.guildError
-      ? Promise.reject(mocks.guildError as Error)
+      ? Promise.reject(mocks.guildError)
       : Promise.resolve(mocks.guildRoles),
   importRoleFromDiscord: mocks.importRole,
   linkRoleToDiscord: mocks.link,

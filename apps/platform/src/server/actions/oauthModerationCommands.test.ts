@@ -10,19 +10,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const CLIENT = "11111111-1111-4111-8111-111111111111";
 const USER = "22222222-2222-4222-8222-222222222222";
 
-const mocks = vi.hoisted(() => ({
-  access: null as { ok: boolean; message?: string; caller?: unknown } | null,
-  canManage: true,
-  registration: null as null | Record<string, unknown>,
-  existing: null as null | Record<string, unknown>,
-  signingKey: "key" as string | undefined,
-  inserted: [] as unknown[],
-  audit: [] as unknown[],
-  rateOk: true,
-  outcome: { ack: true, result: "delivered" } as Record<string, unknown>,
-  queue: vi.fn(),
-  revalidate: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  const delivery: { ack: boolean; result?: string; error?: string } = {
+    ack: true,
+  };
+  return {
+    access: null as { ok: boolean; message?: string; caller?: unknown } | null,
+    canManage: true,
+    registration: null as null | Record<string, unknown>,
+    existing: null as null | Record<string, unknown>,
+    signingKey: undefined as string | undefined,
+    inserted: [] as unknown[],
+    audit: [] as unknown[],
+    rateOk: true,
+    outcome: delivery,
+    queue: vi.fn(),
+    revalidate: vi.fn(),
+  };
+});
 
 vi.mock("~/server/auth/access", () => ({
   authorizeSession: () => Promise.resolve(mocks.access),

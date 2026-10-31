@@ -17,16 +17,16 @@ const mocks = vi.hoisted(() => ({
   allowed: true,
   /** What `db.execute` does: resolve rows, or reject with this. */
   executeRows: [] as unknown[],
-  executeError: null as unknown,
+  executeError: null as Error | null,
   executed: 0,
   registrationBefore: null as null | { clientId: string },
-  transactionError: null as unknown,
+  transactionError: null as Error | null,
   inserted: [] as unknown[],
   ban: vi.fn(),
   queue: vi.fn(),
   reset: vi.fn(),
   revalidate: vi.fn(),
-  signingKey: "key" as string | undefined,
+  signingKey: undefined as string | undefined,
 }));
 
 vi.mock("~/server/auth/access", () => ({
@@ -50,7 +50,7 @@ vi.mock("~/server/db", () => {
   const execute = () => {
     mocks.executed += 1;
     return mocks.executeError
-      ? Promise.reject(mocks.executeError as Error)
+      ? Promise.reject(mocks.executeError)
       : Promise.resolve(mocks.executeRows);
   };
   const tx = {
@@ -75,7 +75,7 @@ vi.mock("~/server/db", () => {
         }),
       }),
       transaction: async (work: (t: typeof tx) => Promise<unknown>) => {
-        if (mocks.transactionError) throw mocks.transactionError as Error;
+        if (mocks.transactionError) throw mocks.transactionError;
         return work(tx);
       },
     },
