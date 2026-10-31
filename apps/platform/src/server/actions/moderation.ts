@@ -1,11 +1,13 @@
 "use server";
 
+import { authorize, rules, loadCaller } from "~/server/auth/access";
+
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { userSuspensions } from "~/server/db/schema";
-import { expectSession } from "~/server/auth";
+
 import { supabaseAdmin } from "~/supabase/admin";
-import { canUserManageSuspensions } from "~/server/auth/permissions";
+
 import { queueDeliveriesQuietly } from "~/server/moderation/queue";
 
 // 10 years in hours, so a permanent ban through Supabase's own ban field.
@@ -72,7 +74,12 @@ export async function resolveReport(
   note?: string,
   applyGlobally?: boolean,
 ): Promise<void> {
-  const moderatorUserId = await expectSession();
+  const access = await authorize(rules.moderate);
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
+  const moderatorUserId = access.caller.userId;
 
   const rows = await db.execute<{
     resolve_report: {
@@ -109,7 +116,12 @@ export async function dismissReport(
   reportId: string,
   note?: string,
 ): Promise<void> {
-  const moderatorUserId = await expectSession();
+  const access = await authorize(rules.moderate);
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
+  const moderatorUserId = access.caller.userId;
 
   await db.execute(
     sql`select "platform".dismiss_report_as(
@@ -130,9 +142,21 @@ export async function updateUserRole(
   role: "member" | "suspended" | "banned",
   reason?: string,
 ): Promise<void> {
-  const callerUserId = await expectSession();
+  const access = await authorize(rules.manageSuspensions);
+  if (!access.ok) {
+    throw new Error("Not authorized to change user standing");
+  }
 
-  if (!(await canUserManageSuspensions(callerUserId))) {
+  const callerUserId = access.caller.userId;
+
+  if (
+    !(await loadCaller().then(
+      (caller) =>
+        caller !== null &&
+        caller.userId === callerUserId &&
+        rules.manageSuspensions(caller),
+    ))
+  ) {
     throw new Error("Not authorized to change user standing");
   }
 

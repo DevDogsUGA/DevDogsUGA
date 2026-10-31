@@ -1,5 +1,8 @@
 "use server";
 
+import { expectSession } from "~/server/auth";
+import { authorize, rules } from "~/server/auth/access";
+
 import { and, asc, eq, ilike, inArray, or } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
@@ -23,7 +26,6 @@ import { fetchGuildRoles, pushRoleToDiscord } from "~/server/discord/roleSync";
 import { revalidateOfficers } from "~/server/loaders/officers";
 import {
   requireCustomRole,
-  requireManageRoles,
   requirePermissionGuard,
   requireRankGuard,
   resolveUserPermissions,
@@ -70,12 +72,22 @@ export type CreateRoleInput = {
   canPreviewDocs?: boolean | null;
   canManageOAuthApps?: boolean | null;
   canDeleteAccounts?: boolean | null;
+  canReviewProjectReports?: boolean | null;
 };
 
 export async function createRole(
   data: CreateRoleInput,
 ): Promise<{ id: string }> {
-  const { ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
   requireRankGuard(data.rank, ctx.minRank);
   await requirePermissionGuard(data, ctx.resolvedPermissions);
 
@@ -100,6 +112,7 @@ export async function createRole(
       canPreviewDocs: data.canPreviewDocs ?? null,
       canManageOAuthApps: data.canManageOAuthApps ?? null,
       canDeleteAccounts: data.canDeleteAccounts ?? null,
+      canReviewProjectReports: data.canReviewProjectReports ?? null,
     })
     .returning({ id: roles.id });
 
@@ -111,7 +124,16 @@ export async function updateRole(
   roleId: string,
   data: Partial<CreateRoleInput>,
 ): Promise<void> {
-  const { ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
 
   const [target] = await db
     .select({
@@ -167,6 +189,9 @@ export async function updateRole(
       ...(data.canDeleteAccounts !== undefined && {
         canDeleteAccounts: data.canDeleteAccounts,
       }),
+      ...(data.canReviewProjectReports !== undefined && {
+        canReviewProjectReports: data.canReviewProjectReports,
+      }),
     })
     .where(eq(roles.id, roleId));
   revalidateOfficers();
@@ -191,7 +216,16 @@ export async function updateRole(
 }
 
 export async function deleteRole(roleId: string): Promise<void> {
-  const { ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
 
   const [target] = await db
     .select({ rank: roles.rank, roleType: roles.roleType })
@@ -213,7 +247,16 @@ export async function reorderRole(
   roleId: string,
   newRank: number,
 ): Promise<void> {
-  const { ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
 
   const [target] = await db
     .select({ rank: roles.rank, roleType: roles.roleType })
@@ -235,7 +278,17 @@ export async function assignRoleToUser(
   targetUserId: string,
   roleId: string,
 ): Promise<void> {
-  const { callerId, ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const callerId = access.caller.userId;
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
 
   const [target] = await db
     .select({
@@ -298,7 +351,17 @@ export async function removeRoleFromUser(
   targetUserId: string,
   roleId: string,
 ): Promise<void> {
-  const { callerId, ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const callerId = access.caller.userId;
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
 
   const [target] = await db
     .select({
@@ -360,53 +423,6 @@ export async function removeRoleFromUser(
   }
 }
 
-/**
- * Stores (or clears, with `null`) a Discord user id for an officer who hasn't
- * linked Discord yet, so the membership cron can sync their roles right away.
- * The id is entered without OAuth proof, so it is only accepted for users who
- * hold a leadership role, and a linked Discord account overrides it.
- */
-export async function setOfficerDiscordId(
-  targetUserId: string,
-  discordUserId: string | null,
-): Promise<void> {
-  await requireManageRoles();
-
-  if (discordUserId === null) {
-    await db
-      .delete(officerDiscordIds)
-      .where(eq(officerDiscordIds.userId, targetUserId));
-    revalidateOfficers();
-    return;
-  }
-
-  const id = discordUserId.trim();
-  if (!/^[0-9]{15,25}$/.test(id)) {
-    throw new Error("A Discord user id is a string of 15 to 25 digits.");
-  }
-
-  const [leadership] = await db
-    .select({ roleId: userRoles.roleId })
-    .from(userRoles)
-    .innerJoin(roles, eq(roles.id, userRoles.roleId))
-    .where(
-      and(eq(userRoles.userId, targetUserId), eq(roles.isLeadership, true)),
-    )
-    .limit(1);
-  if (!leadership) {
-    throw new Error("Discord ids can only be stored for officers.");
-  }
-
-  await db
-    .insert(officerDiscordIds)
-    .values({ userId: targetUserId, discordUserId: id })
-    .onConflictDoUpdate({
-      target: officerDiscordIds.userId,
-      set: { discordUserId: id },
-    });
-  revalidateOfficers();
-}
-
 // ── User search ───────────────────────────────────────────────────────────────
 
 /**
@@ -416,7 +432,11 @@ export async function setOfficerDiscordId(
  * can call it directly and the page gate alone would not protect the emails.
  */
 export async function searchUsers(query: string): Promise<UserSearchResult[]> {
-  await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
 
   const trimmed = query.trim();
   if (!trimmed) return [];
@@ -521,7 +541,11 @@ export async function getUserResolvedPermissions(userId: string): Promise<{
   roles: RoleSummary[];
   resolved: ResolvedPermissions;
 }> {
-  await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
 
   const [assignedRoles, resolved] = await Promise.all([
     db

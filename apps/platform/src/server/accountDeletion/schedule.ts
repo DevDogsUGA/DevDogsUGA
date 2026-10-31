@@ -1,8 +1,10 @@
+import { rules } from "~/server/auth/access";
+import { getCallerContext } from "~/server/auth/permissions";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { env } from "~/env";
 import { COMMUNITY_PATH, profilePath } from "~/lib/profilePath";
-import { canUserDeleteAccounts } from "~/server/auth/permissions";
+
 import { db } from "~/server/db";
 import {
   accountDeletions,
@@ -126,7 +128,7 @@ export async function scheduleAccountDeletion(
   options: { reason?: string | null; now?: Date } = {},
 ): Promise<ScheduledDeletion> {
   const byOfficer = actorUserId !== userId;
-  if (byOfficer && !(await canUserDeleteAccounts(actorUserId))) {
+  if (byOfficer && !(await mayDeleteOtherAccounts(actorUserId))) {
     throw new Error(NOT_ALLOWED);
   }
 
@@ -218,7 +220,7 @@ export async function cancelAccountDeletion(
   actorUserId: string = userId,
 ): Promise<boolean> {
   const cancelledByOfficer = actorUserId !== userId;
-  if (cancelledByOfficer && !(await canUserDeleteAccounts(actorUserId))) {
+  if (cancelledByOfficer && !(await mayDeleteOtherAccounts(actorUserId))) {
     throw new Error(NOT_ALLOWED);
   }
   const cancelled = await db.transaction(async (tx) => {
@@ -260,4 +262,14 @@ export async function cancelAccountDeletion(
     await revalidateMemberPages(userId);
   }
   return cancelled;
+}
+
+/** The inner defence also checks trusted actors passed by server-side callers. */
+async function mayDeleteOtherAccounts(userId: string): Promise<boolean> {
+  const {
+    resolvedPermissions: flags,
+    isLeader,
+    minRank,
+  } = await getCallerContext(userId);
+  return rules.deleteAccounts({ userId, flags, isLeader, minRank });
 }

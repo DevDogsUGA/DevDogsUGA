@@ -1,3 +1,4 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import {
   EXPORTS,
@@ -10,8 +11,7 @@ import ExportsWorkspace, {
 } from "~/components/Exports/ExportsWorkspace";
 import { CONSOLE_EXPORT_KINDS } from "~/lib/exports";
 import { formatEventShortDate } from "~/lib/eventTime";
-import { canUserManageAttendance } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { listImportableMeetings } from "~/server/imports/deps";
 import { PageHeading } from "~/ui/app-shell";
 
@@ -37,7 +37,7 @@ const formats = Object.fromEntries(
  * the stars export later; it is not here.
  */
 export default async function ExportsPage() {
-  await requirePermission(canUserManageAttendance);
+  await requireAccess(rules.manageAttendance);
   // Exports keep the CLI's reach (Q76): any past meeting, not only the
   // newest 80 the import picker lists.
   const meetings = await listImportableMeetings(new Date(), 1000);

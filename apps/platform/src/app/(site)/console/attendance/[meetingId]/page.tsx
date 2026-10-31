@@ -1,3 +1,4 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { PresentationIcon, UploadSimpleIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
@@ -14,13 +15,13 @@ import { formatAttendanceCount } from "~/lib/attendanceCount";
 import { isMeetingEditable } from "~/lib/attendanceInvite";
 import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
-import { canUserManageAttendance } from "~/server/auth/permissions";
+
 import { getOfficerAttendanceMeeting } from "~/server/attendance/getOfficerMeeting";
 import {
   getMeetingDetail,
   type DetailAttendee,
 } from "~/server/attendance/meetingDetail";
-import { requirePermission } from "~/server/auth/require";
+
 import { PageHeading } from "~/ui/app-shell";
 import Badge from "~/ui/badge";
 import Callout from "~/ui/callout";
@@ -90,7 +91,7 @@ export default async function MeetingDetailPage({
 }: {
   params: Promise<{ meetingId: string }>;
 }) {
-  await requirePermission(canUserManageAttendance);
+  await requireAccess(rules.manageAttendance);
   const { meetingId } = await params;
   const meeting = await getOfficerAttendanceMeeting(meetingId);
   if (!meeting) notFound();

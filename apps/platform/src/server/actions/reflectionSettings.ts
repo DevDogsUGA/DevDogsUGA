@@ -1,12 +1,13 @@
 "use server";
 
+import { authorize, rules, loadCaller } from "~/server/auth/access";
+
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { expectSession } from "~/server/auth";
+
 import { db } from "~/server/db";
 import { auditEvents, reflectionSettings } from "~/server/db/schema";
-import { canUserManageAttendance } from "~/server/auth/permissions";
 
 export interface ReflectionSettingsActionState {
   ok: boolean;
@@ -44,8 +45,23 @@ export async function updateReflectionSettings(
   _previous: ReflectionSettingsActionState,
   formData: FormData,
 ): Promise<ReflectionSettingsActionState> {
-  const userId = await expectSession();
-  if (!(await canUserManageAttendance(userId))) {
+  const access = await authorize(rules.manageAttendance);
+  if (!access.ok) {
+    return {
+      ok: false,
+      message: "Not authorized: canManageAttendance required.",
+    };
+  }
+
+  const userId = access.caller.userId;
+  if (
+    !(await loadCaller().then(
+      (caller) =>
+        caller !== null &&
+        caller.userId === userId &&
+        rules.manageAttendance(caller),
+    ))
+  ) {
     return {
       ok: false,
       message: "Not authorized: canManageAttendance required.",

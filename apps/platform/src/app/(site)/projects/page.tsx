@@ -1,3 +1,4 @@
+import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -6,7 +7,7 @@ import ProjectActionForm from "~/components/Projects/ProjectActionForm";
 import ProposeProjectForm from "~/components/Projects/ProposeProjectForm";
 import ReportCard from "~/components/Projects/ReportCard";
 import "~/components/Projects/projects.css";
-import { isOfficer } from "~/server/auth/permissions";
+
 import { deleteReportAction } from "~/server/actions/projects";
 import { requireSession } from "~/server/auth/require";
 import {
@@ -43,7 +44,10 @@ export default async function ProjectsPage() {
     getMyProjects(userId),
     getMyReports(userId),
     advisesAnyProject(userId),
-    isOfficer(userId),
+    loadCaller().then(
+      (caller) =>
+        caller !== null && caller.userId === userId && rules.officer(caller),
+    ),
   ]);
 
   return (

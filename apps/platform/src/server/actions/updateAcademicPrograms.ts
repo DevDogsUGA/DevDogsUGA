@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { eq, inArray, sql } from "drizzle-orm";
 import { authenticate, expectSession } from "~/server/auth";
 import { db } from "~/server/db";
@@ -19,6 +21,14 @@ export interface UpdateAcademicProgramsResult {
 export default async function updateAcademicPrograms(
   programIds: number[],
 ): Promise<UpdateAcademicProgramsResult> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await expectSession().catch(() =>
+      authenticate("google", "/settings/profile"),
+    );
+    throw new Error(access.message);
+  }
+
   const userId = await expectSession().catch(() =>
     authenticate("google", "/settings/profile"),
   );

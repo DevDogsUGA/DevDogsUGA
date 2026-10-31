@@ -3,7 +3,6 @@ import "server-only";
 import { asc, and, eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { resolvedUserPermissions, roles, userRoles } from "~/server/db/schema";
-import { expectSession } from "~/server/auth";
 
 /**
  * Permission reads and guards for server code: loaders, route handlers, pages,
@@ -44,6 +43,7 @@ const PERMISSION_KEYS = [
   "canPreviewDocs",
   "canManageOAuthApps",
   "canDeleteAccounts",
+  "canReviewProjectReports",
 ] as const satisfies readonly PermissionKey[];
 
 // Two-way exhaustiveness check: fails to compile if a nullable-boolean
@@ -76,6 +76,7 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canPreviewDocs: false,
   canManageOAuthApps: false,
   canDeleteAccounts: false,
+  canReviewProjectReports: false,
 };
 
 /**
@@ -97,6 +98,7 @@ export async function resolveUserPermissions(
       canPreviewDocs: resolvedUserPermissions.canPreviewDocs,
       canManageOAuthApps: resolvedUserPermissions.canManageOAuthApps,
       canDeleteAccounts: resolvedUserPermissions.canDeleteAccounts,
+      canReviewProjectReports: resolvedUserPermissions.canReviewProjectReports,
     })
     .from(resolvedUserPermissions)
     .where(eq(resolvedUserPermissions.userId, userId))
@@ -139,65 +141,14 @@ export async function getCallerContext(userId: string): Promise<{
       canPreviewDocs: row.canPreviewDocs,
       canManageOAuthApps: row.canManageOAuthApps,
       canDeleteAccounts: row.canDeleteAccounts,
+      canReviewProjectReports: row.canReviewProjectReports,
     },
     minRank: row.minRank,
     isLeader: row.isLeader,
   };
 }
 
-// ── Per-flag helpers (thin wrappers consumed by loaders and action files) ──────
-
-export async function canUserModerate(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canModerate);
-}
-export async function canUserManageRoles(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canManageRoles);
-}
-export async function canUserManageSuspensions(
-  userId: string,
-): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canManageSuspensions);
-}
-export async function canUserViewAuditLog(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canViewAuditLog);
-}
-export async function canUserManageAttendance(
-  userId: string,
-): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canManageAttendance);
-}
-export async function canUserPreviewDocs(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canPreviewDocs);
-}
-export async function canUserManageOAuthApps(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canManageOAuthApps);
-}
-export async function canUserDeleteAccounts(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canDeleteAccounts);
-}
-
-/**
- * Whether the user is an officer: holds a role marked `isLeadership`. Gates
- * the badge console. Not a `ResolvedPermissions` flag (those are inherited
- * per-capability booleans), so it reads the `isLeader` trait directly.
- */
-export async function isOfficer(userId: string): Promise<boolean> {
-  return getCallerContext(userId).then((ctx) => ctx.isLeader);
-}
-
 // ── Shared guards ─────────────────────────────────────────────────────────────
-
-export async function requireManageRoles(): Promise<{
-  callerId: string;
-  ctx: { resolvedPermissions: ResolvedPermissions; minRank: number };
-}> {
-  const callerId = await expectSession();
-  const ctx = await getCallerContext(callerId);
-  if (!ctx.resolvedPermissions.canManageRoles) {
-    throw new Error("Not authorized: canManageRoles required");
-  }
-  return { callerId, ctx };
-}
 
 export async function requirePermissionGuard(
   requested: Partial<

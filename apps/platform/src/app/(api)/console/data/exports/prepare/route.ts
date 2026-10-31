@@ -1,5 +1,6 @@
+import { rules, loadCaller } from "~/server/auth/access";
 import { isOwnScript } from "~/lib/isOwnScript";
-import { canUserManageAttendance } from "~/server/auth/permissions";
+
 import { expectSession } from "~/server/auth";
 import { exportDeps } from "~/server/exports/deps";
 import { prepareExport } from "~/server/exports/run";
@@ -27,7 +28,15 @@ export async function POST(request: Request) {
     return json({ kind: "error", message: "That request was refused." }, 403);
   }
   const userId = await expectSession().catch(() => null);
-  if (!userId || !(await canUserManageAttendance(userId))) {
+  if (
+    !userId ||
+    !(await loadCaller().then(
+      (caller) =>
+        caller !== null &&
+        caller.userId === userId &&
+        rules.manageAttendance(caller),
+    ))
+  ) {
     return json(
       {
         kind: "error",

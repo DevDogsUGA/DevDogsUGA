@@ -92,6 +92,7 @@ export function useRoles(
             canPreviewDocs: data.canPreviewDocs ?? null,
             canManageOAuthApps: data.canManageOAuthApps ?? null,
             canDeleteAccounts: data.canDeleteAccounts ?? null,
+            canReviewProjectReports: data.canReviewProjectReports ?? null,
             discordRoleId: null,
             discordSyncedName: null,
             discordRolePosition: null,
@@ -154,6 +155,9 @@ export function useRoles(
                 }),
                 ...(data.canDeleteAccounts !== undefined && {
                   canDeleteAccounts: data.canDeleteAccounts ?? null,
+                }),
+                ...(data.canReviewProjectReports !== undefined && {
+                  canReviewProjectReports: data.canReviewProjectReports ?? null,
                 }),
               }
             : r,

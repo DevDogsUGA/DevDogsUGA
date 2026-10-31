@@ -23,7 +23,13 @@ vi.mock("~/server/db/schema", () => ({
   sandboxReports: { clientId: "c", createdAt: "t" },
 }));
 vi.mock("~/server/auth/permissions", () => ({
-  canUserManageOAuthApps: mocks.canManage,
+  getCallerContext: async () => ({
+    resolvedPermissions: {
+      canManageOAuthApps: Boolean(await mocks.canManage()),
+    },
+    isLeader: false,
+    minRank: Infinity,
+  }),
 }));
 vi.mock("~/server/auth", () => ({ expectSession: mocks.expectSession }));
 vi.mock("~/server/loaders/console", () => ({

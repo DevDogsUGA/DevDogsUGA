@@ -1,11 +1,17 @@
 "use server";
 
-import { expectSession } from "~/server/auth";
+import { authorizeSession } from "~/server/auth/access";
+
 import { supabaseAdmin } from "~/supabase/admin";
 import { env } from "~/env";
 
 export default async function createAvatarUploadUrl(): Promise<string> {
-  const userId = await expectSession();
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
+  const userId = access.caller.userId;
 
   const { data, error } = await supabaseAdmin.storage
     .from(env.NEXT_PUBLIC_AVATARS_BUCKET)

@@ -1,11 +1,11 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import {
   DownloadSimpleIcon,
   UploadSimpleIcon,
 } from "@phosphor-icons/react/ssr";
 import ConsoleShell from "~/components/Console/ConsoleShell";
-import { canUserManageAttendance } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { PageHeading, Panel } from "~/ui/app-shell";
 import LinkButton from "~/ui/link-button";
 import { ListRow } from "~/ui/list-row";
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
  * Everything on it needs `canManageAttendance` and nothing else (Q16).
  */
 export default async function DataToolsPage() {
-  await requirePermission(canUserManageAttendance);
+  await requireAccess(rules.manageAttendance);
   return (
     <ConsoleShell current="/console/data">
       <PageHeading

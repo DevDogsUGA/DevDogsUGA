@@ -1,6 +1,7 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import { notFound } from "next/navigation";
 import { EVENT_FORMATS } from "@devdogsuga/sdk/brand";
-import { canUserUseGraphics } from "~/server/graphics/access";
+
 import { getGraphicsMeeting } from "~/server/graphics/meeting";
 import {
   formatOf,
@@ -8,7 +9,6 @@ import {
   renderableOnWorker,
 } from "~/server/graphics/render";
 import { badRequest, pngResponse } from "~/server/graphics/respond";
-import { requirePermission } from "~/server/auth/require";
 
 /**
  * One meeting graphic as a PNG, drawn on request: the preview's `<img>` and the
@@ -18,13 +18,13 @@ import { requirePermission } from "~/server/auth/require";
  * and the size. It takes ids and names from fixed lists, never text, so it
  * cannot draw arbitrary words on the club's branding.
  *
- * Any officer may call it (`canUserUseGraphics`).
+ * Any officer may call it (`rules.useGraphics`).
  */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ meetingId: string }> },
 ) {
-  await requirePermission(canUserUseGraphics);
+  await requireAccess(rules.useGraphics);
   const { meetingId } = await params;
   const query = new URL(request.url).searchParams;
 

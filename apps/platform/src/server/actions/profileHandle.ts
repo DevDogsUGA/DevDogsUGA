@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { profilePath, COMMUNITY_PATH } from "~/lib/profilePath";
@@ -37,6 +39,14 @@ const SET_HANDLE_WINDOW_SECONDS = 10 * 60;
 export default async function setHandle(
   handle: string,
 ): Promise<SetHandleOutcome> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await expectSession().catch(() =>
+      authenticate("google", "/settings/profile"),
+    );
+    throw new Error(access.message);
+  }
+
   if (!publicProfilesEnabled()) throw new Error("Public profiles are off");
   const userId = await expectSession().catch(() =>
     authenticate("google", "/settings/profile"),

@@ -1,3 +1,4 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import AuditLogContent from "~/components/AuditLogContent";
@@ -5,8 +6,7 @@ import ConsoleShell from "~/components/Console/ConsoleShell";
 import { TableSkeleton } from "~/components/Skeletons";
 import { PageHeading } from "~/ui/app-shell";
 import { parseAuditSource } from "~/lib/audit";
-import { canUserViewAuditLog } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import {
   getAuditLogPageData,
   type AuditLogFilters,
@@ -39,7 +39,7 @@ export default async function AuditLogPage({
     targetType?: string | string[];
   }>;
 }) {
-  await requirePermission(canUserViewAuditLog);
+  await requireAccess(rules.viewAuditLog);
   const params = await searchParams;
   const single = (value: string | string[] | undefined) =>
     typeof value === "string" ? value : undefined;

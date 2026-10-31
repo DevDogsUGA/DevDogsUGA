@@ -28,6 +28,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   canPreviewDocs: "Preview docs",
   canManageOAuthApps: "Manage OAuth apps",
   canDeleteAccounts: "Delete accounts",
+  canReviewProjectReports: "Review project reports",
 };
 
 const PERMISSION_KEYS = Object.keys(

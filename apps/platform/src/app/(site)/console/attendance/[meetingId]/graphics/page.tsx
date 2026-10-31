@@ -1,3 +1,4 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EVENT_FORMATS } from "@devdogsuga/sdk/brand";
@@ -6,14 +7,14 @@ import GraphicTile from "~/components/Graphics/GraphicTile";
 import ZipForm from "~/components/Graphics/ZipForm";
 import { formatEventSpan } from "~/lib/eventTime";
 import { MAX_PICKS, pickValue } from "~/lib/graphics/picks";
-import { canUserUseGraphics } from "~/server/graphics/access";
+
 import { getGraphicsMeeting } from "~/server/graphics/meeting";
 import {
   formatOf,
   outputSize,
   renderableOnWorker,
 } from "~/server/graphics/render";
-import { requirePermission } from "~/server/auth/require";
+
 import { PageHeading } from "~/ui/app-shell";
 import Callout from "~/ui/callout";
 import { Checkbox } from "~/ui/checkbox";
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
  * Every graphic for one meeting: the night, then each workshop on it, each at
  * every size, with individual downloads and a ZIP of whatever is ticked.
  *
- * Open to any officer, not only attendance managers (see `canUserUseGraphics`).
+ * Open to any officer, not only attendance managers (see `rules.useGraphics`).
  *
  * Personal revisions (C2) are not built. When they are, the loader takes the
  * officer's saved fields (`getGraphicsMeeting(id, revision)`), and the tile
@@ -40,7 +41,7 @@ export default async function MeetingGraphicsPage({
 }: {
   params: Promise<{ meetingId: string }>;
 }) {
-  await requirePermission(canUserUseGraphics);
+  await requireAccess(rules.useGraphics);
   const { meetingId } = await params;
   const meeting = await getGraphicsMeeting(meetingId);
   if (!meeting) notFound();

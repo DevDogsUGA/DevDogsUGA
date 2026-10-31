@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { eq } from "drizzle-orm";
 import { authenticate, expectSession } from "../auth";
 import { db } from "../db";
@@ -17,6 +19,14 @@ export default async function updateGraduation(
   semester: Semester | null,
   year: number | null,
 ): Promise<{ error?: string }> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    await expectSession().catch(() =>
+      authenticate("google", "/settings/profile"),
+    );
+    throw new Error(access.message);
+  }
+
   const userId = await expectSession().catch(() =>
     authenticate("google", "/settings/profile"),
   );

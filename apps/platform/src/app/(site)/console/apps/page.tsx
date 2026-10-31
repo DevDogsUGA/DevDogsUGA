@@ -1,10 +1,10 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ConsoleAppsField from "~/components/Console/ConsoleAppsField";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import { TableSkeleton } from "~/components/Skeletons";
-import { canUserManageOAuthApps } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { getConsoleApps } from "~/server/loaders/oauthApps";
 import { PageHeading, Panel } from "~/ui/app-shell";
 
@@ -27,7 +27,7 @@ async function AppsData() {
 }
 
 export default async function ConsoleAppsPage() {
-  await requirePermission(canUserManageOAuthApps);
+  await requireAccess(rules.manageOAuthApps);
 
   return (
     <ConsoleShell current="/console/apps">

@@ -1,8 +1,8 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import ReflectionSettingsCard from "~/components/ReflectionSettingsCard";
-import { canUserManageAttendance } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { getReflectionSettings } from "~/server/reflections/settings";
 import { PageHeading } from "~/ui/app-shell";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ReflectionsPage() {
-  await requirePermission(canUserManageAttendance);
+  await requireAccess(rules.manageAttendance);
   const settings = await getReflectionSettings();
 
   return (

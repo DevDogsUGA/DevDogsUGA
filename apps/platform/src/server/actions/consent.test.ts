@@ -133,3 +133,11 @@ describe("cancelConsent with an existing approval", () => {
     expect(approveAs).not.toHaveBeenCalled();
   });
 });
+
+vi.mock("~/server/auth/permissions", () => ({
+  getCallerContext: async () => ({
+    resolvedPermissions: {},
+    isLeader: false,
+    minRank: Infinity,
+  }),
+}));

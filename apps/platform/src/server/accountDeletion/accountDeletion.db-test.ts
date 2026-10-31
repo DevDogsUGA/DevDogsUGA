@@ -59,7 +59,11 @@ vi.mock("~/server/email/send", () => ({
   },
 }));
 vi.mock("~/server/auth/permissions", () => ({
-  canUserDeleteAccounts: (id: string) => Promise.resolve(fake.officers.has(id)),
+  getCallerContext: async (id: string) => ({
+    resolvedPermissions: { canDeleteAccounts: fake.officers.has(id) },
+    isLeader: false,
+    minRank: Infinity,
+  }),
 }));
 vi.mock("~/server/moderation/queue", () => ({
   queueDeliveriesQuietly: (ids: string[]) => {
