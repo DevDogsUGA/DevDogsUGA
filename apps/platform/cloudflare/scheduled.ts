@@ -78,6 +78,14 @@ export const CRON_ROUTES: Record<
     label: "GitHub default-branch commit sync for DevDogs members",
     routes: ["/cron/project-commits"],
   },
+  // The Devpost hackathon sync gets its own slot so a GitHub outage cannot
+  // starve discovery, and records `platform-devpost-sync` the same way. The
+  // route answers 200 when Devpost fails (the feed is undocumented), so a bad
+  // morning shows up as that heartbeat going overdue, not as a failed run.
+  "40 5 * * *": {
+    label: "Devpost online hackathon sync",
+    routes: ["/cron/hackathons-devpost"],
+  },
   // Fifteen minutes is the WORST case now: `.github/workflows/deploy-app.yaml`
   // also calls this route directly, right after each platform deploy, so a
   // promoted config normally lands the moment that deploy finishes (see
@@ -115,6 +123,9 @@ export const CRON_ROUTES: Record<
       // Resumes the commit sync's cycle, or a member's backfill, within the
       // same 100-request budget. Starts nothing when neither is waiting.
       "/cron/project-commits?continue=1",
+      // Resumes the Devpost sync's cycle, or its retry after a failure. Starts
+      // nothing when none is waiting.
+      "/cron/hackathons-devpost?continue=1",
       // Fails while a daily job is overdue, which errors this slot's
       // monitor: the daily jobs have none of their own. Last, and cheap.
       "/cron/heartbeats",

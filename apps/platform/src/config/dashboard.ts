@@ -74,6 +74,17 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     access: "member",
     refusal: "forbidden",
   },
+  {
+    id: "hackathons",
+    label: "Hackathons",
+    icon: "TrophyIcon",
+    description:
+      "Online hackathons from Devpost and from members, and a way to submit one for review.",
+    group: "Projects",
+    href: "/dashboard/hackathons",
+    access: "member",
+    refusal: "forbidden",
+  },
   // TODO(D3): reveal the review queue to advisors and report reviewers.
   {
     id: "reviews",

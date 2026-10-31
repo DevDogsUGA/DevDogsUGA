@@ -45,3 +45,28 @@ export const projectReport = terminal(PUBLIC, ({ path }) =>
     ],
   }),
 );
+
+/**
+ * The hackathon list is for signed-in members, and a curl request carries no
+ * session, so the terminal says what the page is for and where to sign in. It
+ * never lists a hackathon or a submission.
+ */
+export const hackathons = terminal(PUBLIC, ({ path }) =>
+  page({
+    banner: "DEVDOGS",
+    accent: "cyan",
+    aside: ["members", "sign in required"],
+    command: "hackathons",
+    body: [
+      {
+        type: "notice",
+        notice: {
+          tone: "info",
+          title: "Hackathons live in the browser",
+          text: "See the online hackathons from Devpost and the ones members have submitted, and submit one for an officer to approve, after signing in.",
+          url: `${SITE}${path}`,
+        },
+      },
+    ],
+  }),
+);
