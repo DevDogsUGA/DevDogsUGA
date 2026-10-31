@@ -51,7 +51,7 @@ max_client_conn = 100
 # app instead and give the account a role with `pnpm devtools roles grant`.
 [db.seed]
 enabled = true
-sql_paths = ["./seed/roles/*.sql", "./seed/apps/*.sql"]
+sql_paths = ["./seed/roles/*.sql", "./seed/apps/*.sql", "./seed/projects/*.sql"]
 
 [realtime]
 enabled = false
