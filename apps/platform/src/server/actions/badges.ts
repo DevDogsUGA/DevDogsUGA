@@ -1,5 +1,7 @@
 "use server";
 
+import { authorize, rules, authorizeSession } from "~/server/auth/access";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -11,7 +13,6 @@ import {
 } from "~/server/badges/manual";
 import { db } from "~/server/db";
 import { profiles } from "~/server/db/schema";
-import { expectSession } from "~/server/auth";
 
 /**
  * The badge actions. Officers award and withdraw from the console; members
@@ -57,9 +58,14 @@ export async function awardBadge(
   _previous: BadgeActionState,
   formData: FormData,
 ): Promise<BadgeActionState> {
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return { ok: false, message: MESSAGES.forbidden };
+  }
+
   const parsed = awardSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, message: "That award is invalid." };
-  const officerId = await expectSession();
+  const officerId = access.caller.userId;
   const result = await awardManualBadge(officerId, parsed.data);
   if (result.status !== "awarded") {
     return { ok: false, message: MESSAGES[result.status] };
@@ -77,10 +83,15 @@ export async function withdrawBadgeAward(
   _previous: BadgeActionState,
   formData: FormData,
 ): Promise<BadgeActionState> {
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return { ok: false, message: MESSAGES.forbidden };
+  }
+
   const parsed = withdrawSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success)
     return { ok: false, message: "That request is invalid." };
-  const officerId = await expectSession();
+  const officerId = access.caller.userId;
   const result = await withdrawBadge(
     officerId,
     parsed.data.awardId,
@@ -103,8 +114,13 @@ const hideSchema = z.object({
 export async function setMyBadgeHidden(
   input: z.input<typeof hideSchema>,
 ): Promise<{ changed: number }> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const parsed = hideSchema.parse(input);
-  const userId = await expectSession();
+  const userId = access.caller.userId;
   const changed = await setBadgeHidden(
     userId,
     parsed.badgeId,

@@ -5,11 +5,9 @@ const mocks = vi.hoisted(() => ({
   canManage: vi.fn(),
 }));
 
-vi.mock("~/server/auth/require", () => ({
-  requirePermission: mocks.requirePermission,
-}));
-vi.mock("~/server/auth/permissions", () => ({
-  canUserManageOAuthApps: mocks.canManage,
+vi.mock("~/server/auth/access", () => ({
+  requireAccess: mocks.requirePermission,
+  rules: { manageOAuthApps: mocks.canManage },
 }));
 vi.mock("~/server/loaders/oauthApps", () => ({ getConsoleApps: vi.fn() }));
 vi.mock("~/components/Console/ConsoleShell", () => ({ default: () => null }));
@@ -31,7 +29,7 @@ describe("Console → Apps", () => {
   });
 
   it("renders for a holder", async () => {
-    mocks.requirePermission.mockResolvedValue("holder");
+    mocks.requirePermission.mockResolvedValue({ userId: "holder" });
     await expect(ConsoleAppsPage()).resolves.toBeTruthy();
   });
 });

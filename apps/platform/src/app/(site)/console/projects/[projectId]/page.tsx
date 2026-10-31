@@ -1,3 +1,4 @@
+import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,7 +7,7 @@ import ConsoleShell from "~/components/Console/ConsoleShell";
 import ProjectActionForm from "~/components/Projects/ProjectActionForm";
 import ReportCard from "~/components/Projects/ReportCard";
 import "~/components/Projects/projects.css";
-import { isOfficer } from "~/server/auth/permissions";
+
 import {
   addProjectMemberAction,
   archiveProjectAction,
@@ -52,7 +53,10 @@ export default async function ProjectConsolePage({
   if (!z.string().uuid().safeParse(projectId).success) notFound();
   const project = await getProject(projectId);
   if (!project) notFound();
-  const officer = await isOfficer(userId);
+  const officer = await loadCaller().then(
+    (caller) =>
+      caller !== null && caller.userId === userId && rules.officer(caller),
+  );
   const advisor = project.advisorId === userId;
   if (!officer && !advisor) notFound();
 

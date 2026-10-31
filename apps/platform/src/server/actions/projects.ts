@@ -1,8 +1,10 @@
 "use server";
 
+import { authorizeSession, authorize, rules } from "~/server/auth/access";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { expectSession } from "~/server/auth";
+
 import {
   REPORT_PROBLEM_MESSAGE,
   PROJECT_DESCRIPTION_MAX,
@@ -72,9 +74,14 @@ export async function proposeProjectAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const parsed = proposeSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid;
-  const userId = await expectSession();
+  const userId = access.caller.userId;
   const result = await proposeProject(userId, parsed.data);
   if (result.status === "repos_invalid") {
     return { ok: false, message: result.message };
@@ -130,9 +137,14 @@ export async function decideProjectAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return { ok: false, message: DECIDE_MESSAGES.forbidden };
+  }
+
   const parsed = decideSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid;
-  const officerId = await expectSession();
+  const officerId = access.caller.userId;
   if (parsed.data.intent === "decline") {
     return decided(
       await decideProject(officerId, parsed.data.projectId, {
@@ -162,9 +174,14 @@ export async function setProjectAdvisorAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return { ok: false, message: DECIDE_MESSAGES.forbidden };
+  }
+
   const parsed = advisorSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid;
-  const officerId = await expectSession();
+  const officerId = access.caller.userId;
   return decided(
     await setProjectAdvisor(
       officerId,
@@ -182,9 +199,14 @@ export async function archiveProjectAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return { ok: false, message: DECIDE_MESSAGES.forbidden };
+  }
+
   const parsed = projectOnly.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid;
-  const officerId = await expectSession();
+  const officerId = access.caller.userId;
   return decided(
     await archiveProject(officerId, parsed.data.projectId),
     "Project archived.",
@@ -222,9 +244,14 @@ export async function addProjectMemberAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const parsed = memberSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid;
-  const actorId = await expectSession();
+  const actorId = access.caller.userId;
   return managed(
     await addProjectMember(actorId, parsed.data.projectId, parsed.data.userId),
     "Member added.",
@@ -236,9 +263,14 @@ export async function removeProjectMemberAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const parsed = memberSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid;
-  const actorId = await expectSession();
+  const actorId = access.caller.userId;
   return managed(
     await removeProjectMember(
       actorId,
@@ -256,9 +288,14 @@ export async function updateProjectReposAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const parsed = reposSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid;
-  const actorId = await expectSession();
+  const actorId = access.caller.userId;
   return managed(
     await updateProjectRepos(actorId, parsed.data.projectId, parsed.data.repos),
     "Repositories saved.",
@@ -301,6 +338,11 @@ export async function submitReportAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const raw = Object.fromEntries(formData);
   if (raw.reportId === "") delete raw.reportId;
   const parsed = reportSchema.safeParse(raw);
@@ -309,7 +351,7 @@ export async function submitReportAction(
     .max(200)
     .safeParse(formData.getAll("contributionId"));
   if (!parsed.success || !ids.success) return invalid;
-  const userId = await expectSession();
+  const userId = access.caller.userId;
   const result = await submitProjectReport(userId, {
     ...parsed.data,
     contributionIds: ids.data,
@@ -324,9 +366,14 @@ export async function deleteReportAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const parsed = reportOnly.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid;
-  const userId = await expectSession();
+  const userId = access.caller.userId;
   const result = await deleteProjectReport(userId, parsed.data.reportId);
   if (result === "deleted") {
     refresh();
@@ -365,11 +412,16 @@ export async function reviewReportAction(
   _previous: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const raw = Object.fromEntries(formData);
   if (raw.hours === "") delete raw.hours;
   const parsed = reviewSchema.safeParse(raw);
   if (!parsed.success) return invalid;
-  const actorId = await expectSession();
+  const actorId = access.caller.userId;
   const result = await reviewProjectReport(
     actorId,
     parsed.data.reportId,

@@ -1,4 +1,5 @@
-import { canUserUseGraphics } from "~/server/graphics/access";
+import { rules, requireAccess } from "~/server/auth/access";
+
 import {
   brandGraphics,
   formatOf,
@@ -6,7 +7,6 @@ import {
   renderableOnWorker,
 } from "~/server/graphics/render";
 import { badRequest, pngResponse } from "~/server/graphics/respond";
-import { requirePermission } from "~/server/auth/require";
 
 /**
  * One reusable brand asset (a club lockup, an app icon or card) as a PNG:
@@ -16,7 +16,7 @@ import { requirePermission } from "~/server/auth/require";
  * `backstage graphics` renders from, so the two always offer the same assets.
  */
 export async function GET(request: Request) {
-  await requirePermission(canUserUseGraphics);
+  await requireAccess(rules.useGraphics);
   const query = new URL(request.url).searchParams;
 
   const graphic = brandGraphics().find(

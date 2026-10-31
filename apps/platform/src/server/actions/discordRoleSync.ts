@@ -1,12 +1,14 @@
 "use server";
 
+import { expectSession } from "~/server/auth";
+import { authorize, rules } from "~/server/auth/access";
+
 import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { roles } from "~/server/db/schema";
 import { revalidateOfficers } from "~/server/loaders/officers";
 import {
   requireCustomRole,
-  requireManageRoles,
   requirePermissionGuard,
   requireRankGuard,
 } from "~/server/auth/permissions";
@@ -43,7 +45,12 @@ async function getTargetRole(
 export async function listImportableDiscordRoles(): Promise<
   ImportableDiscordRole[]
 > {
-  await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
   return _listImportableDiscordRoles();
 }
 
@@ -51,7 +58,17 @@ export async function importRoleFromDiscord(
   discordRoleId: string,
   fields: ImportRoleInput,
 ): Promise<{ id: string }> {
-  const { callerId, ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const callerId = access.caller.userId;
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
   requireRankGuard(fields.rank, ctx.minRank);
   await requirePermissionGuard(fields, ctx.resolvedPermissions);
 
@@ -71,7 +88,17 @@ export async function linkRoleToDiscord(
   roleId: string,
   discordRoleId: string,
 ): Promise<void> {
-  const { callerId, ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const callerId = access.caller.userId;
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
   const target = await getTargetRole(roleId);
   requireRankGuard(requireCustomRole(target), ctx.minRank);
 
@@ -90,7 +117,17 @@ export async function linkRoleToDiscord(
 }
 
 export async function createDiscordRoleFromRole(roleId: string): Promise<void> {
-  const { callerId, ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const callerId = access.caller.userId;
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
   const target = await getTargetRole(roleId);
   requireRankGuard(requireCustomRole(target), ctx.minRank);
 
@@ -107,7 +144,16 @@ export async function createDiscordRoleFromRole(roleId: string): Promise<void> {
 }
 
 export async function unsyncRole(roleId: string): Promise<void> {
-  const { ctx } = await requireManageRoles();
+  const access = await authorize(rules.manageRoles);
+  if (!access.ok) {
+    await expectSession();
+    throw new Error("Not authorized: canManageRoles required");
+  }
+
+  const ctx = {
+    resolvedPermissions: access.caller.flags,
+    minRank: access.caller.minRank,
+  };
   const target = await getTargetRole(roleId);
   requireRankGuard(requireCustomRole(target), ctx.minRank);
   await _unsyncRole(roleId);

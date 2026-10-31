@@ -1,11 +1,11 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import { getAuthoredFiles } from "@devdogsuga/events";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ChangeList from "~/components/ConfigEditor/ChangeList";
 import ConfigItemForm from "~/components/ConfigEditor/ConfigItemForm";
 import ConsoleShell from "~/components/Console/ConsoleShell";
-import { isOfficer } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import {
   COLLECTION_LABELS,
   FIELDS,
@@ -37,7 +37,7 @@ export default async function ScheduleItemPage({
 }: {
   params: Promise<{ collection: string; key: string }>;
 }) {
-  const userId = await requirePermission(isOfficer);
+  const userId = (await requireAccess(rules.officer)).userId;
   const { collection, key } = await params;
   if (!isCollection(collection)) notFound();
   const isNew = key === "new";

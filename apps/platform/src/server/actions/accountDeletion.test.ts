@@ -3,9 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fake = vi.hoisted(
   (): {
     session: string | null;
+    canDelete: boolean;
     schedule: ReturnType<typeof vi.fn>;
     cancel: ReturnType<typeof vi.fn>;
-  } => ({ session: "officer-1", schedule: vi.fn(), cancel: vi.fn() }),
+  } => ({
+    session: "officer-1",
+    canDelete: true,
+    schedule: vi.fn(),
+    cancel: vi.fn(),
+  }),
 );
 
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
@@ -33,6 +39,7 @@ const { requestAccountDeletion, cancelMemberDeletion } =
 
 beforeEach(() => {
   fake.session = "officer-1";
+  fake.canDelete = true;
   fake.schedule.mockReset();
   fake.cancel.mockReset();
 });
@@ -117,4 +124,35 @@ describe("cancelMemberDeletion", () => {
       error: "Not authorized: canDeleteAccounts required",
     });
   });
+});
+
+vi.mock("~/server/auth/permissions", () => ({
+  getCallerContext: async () => ({
+    resolvedPermissions: { canDeleteAccounts: fake.canDelete },
+    isLeader: false,
+    minRank: Infinity,
+  }),
+}));
+
+it("refuses another member at action level before either domain write", async () => {
+  fake.canDelete = false;
+  expect(await requestAccountDeletion("member-1")).toEqual({
+    ok: false,
+    error: "Not authorized: canDeleteAccounts required",
+  });
+  expect(await cancelMemberDeletion("member-1")).toEqual({
+    ok: false,
+    error: "Not authorized: canDeleteAccounts required",
+  });
+  expect(fake.schedule).not.toHaveBeenCalled();
+  expect(fake.cancel).not.toHaveBeenCalled();
+});
+it("allows self-service without deleteAccounts", async () => {
+  fake.canDelete = false;
+  fake.schedule.mockResolvedValue({
+    scheduledFor: new Date("2026-11-06T15:00:00Z"),
+  });
+  fake.cancel.mockResolvedValue(true);
+  expect((await requestAccountDeletion("officer-1")).ok).toBe(true);
+  expect((await cancelMemberDeletion("officer-1")).ok).toBe(true);
 });

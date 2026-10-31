@@ -16,7 +16,11 @@ vi.mock("~/server/auth", () => ({
   expectSession: () => Promise.resolve("viewer-1"),
 }));
 vi.mock("~/server/auth/permissions", () => ({
-  canUserDeleteAccounts: () => Promise.resolve(fake.canDelete),
+  getCallerContext: async () => ({
+    resolvedPermissions: { canDeleteAccounts: fake.canDelete },
+    isLeader: false,
+    minRank: Infinity,
+  }),
 }));
 vi.mock("~/server/accountDeletion/schedule", () => ({
   getPendingDeletion: () => {

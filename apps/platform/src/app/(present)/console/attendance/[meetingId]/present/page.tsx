@@ -1,11 +1,11 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AttendanceDisplay from "~/components/AttendanceDisplay";
 import { toTitleCardMeeting } from "~/components/AttendanceDisplay/TitleCard";
 import { meetingTitle } from "~/lib/meetingTitle";
-import { canUserManageAttendance } from "~/server/auth/permissions";
+
 import { getOfficerAttendanceMeeting } from "~/server/attendance/getOfficerMeeting";
-import { requirePermission } from "~/server/auth/require";
 
 export const metadata: Metadata = {
   title: "Attendance Display | DevDogs",
@@ -32,7 +32,7 @@ export default async function PresentAttendancePage({
 }: {
   params: Promise<{ meetingId: string }>;
 }) {
-  await requirePermission(canUserManageAttendance);
+  await requireAccess(rules.manageAttendance);
   const { meetingId } = await params;
   const meeting = await getOfficerAttendanceMeeting(meetingId);
   if (!meeting) notFound();

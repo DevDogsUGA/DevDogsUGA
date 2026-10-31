@@ -1,10 +1,11 @@
+import { callerFor, rules } from "~/server/auth/access";
 import {
   BADGE_CITATION_MAX_LENGTH,
   BADGE_WITHDRAWAL_REASON_MAX_LENGTH,
   getBadges,
 } from "@devdogsuga/events";
 import { and, eq, isNull } from "drizzle-orm";
-import { isOfficer } from "~/server/auth/permissions";
+
 import { db } from "~/server/db";
 import { auditEvents, badgeAwards } from "~/server/db/schema";
 import { usersInAuth } from "~/supabase/drizzle/schema";
@@ -38,7 +39,8 @@ export async function awardManualBadge(
   officerId: string,
   input: { userId: string; badgeId: string; citation: string },
 ): Promise<AwardResult> {
-  if (!(await isOfficer(officerId))) return { status: "forbidden" };
+  if (!(await callerFor(officerId).then(rules.officer)))
+    return { status: "forbidden" };
   const definition = getBadges().badges.find((b) => b.id === input.badgeId);
   if (definition?.kind !== "manual" || definition.perWorkshop) {
     return { status: "unknown_badge" };
@@ -114,7 +116,8 @@ export async function withdrawBadge(
   awardId: string,
   reason: string,
 ): Promise<WithdrawResult> {
-  if (!(await isOfficer(officerId))) return { status: "forbidden" };
+  if (!(await callerFor(officerId).then(rules.officer)))
+    return { status: "forbidden" };
   const trimmed = reason.trim();
   if (trimmed === "") return { status: "reason_required" };
   if (trimmed.length > BADGE_WITHDRAWAL_REASON_MAX_LENGTH) {

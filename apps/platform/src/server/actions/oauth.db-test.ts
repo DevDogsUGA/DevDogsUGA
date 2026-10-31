@@ -31,6 +31,10 @@ vi.mock("~/server/auth", () => ({
     session.user
       ? Promise.resolve(session.user)
       : Promise.reject(new Error("signed out")),
+  expectSession: () =>
+    session.user
+      ? Promise.resolve(session.user.id)
+      : Promise.reject(new Error("signed out")),
   authenticate: () => Promise.reject(new Error("sign-in required")),
 }));
 

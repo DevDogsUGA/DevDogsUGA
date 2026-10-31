@@ -1,10 +1,12 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import type { Answer, Question } from "@devdogsuga/events";
 import { sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { expectSession } from "~/server/auth";
+
 import { db } from "~/server/db";
 import { auditEvents, surveyAnswerRevisions } from "~/server/db/schema";
 import { reflectionDeadline } from "~/server/reflections/policy";
@@ -43,12 +45,17 @@ export async function saveSurvey(
   _previous: SurveyActionState,
   formData: FormData,
 ): Promise<SurveyActionState> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const parsed = inputSchema.safeParse({
     meetingId: formData.get("meetingId"),
   });
   if (!parsed.success) return { ok: false, message: "That survey is invalid." };
 
-  const userId = await expectSession();
+  const userId = access.caller.userId;
   try {
     const changed = await writeSurvey(userId, parsed.data.meetingId, formData);
     revalidatePath("/attendance");

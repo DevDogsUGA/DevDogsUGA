@@ -1,3 +1,4 @@
+import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,7 +6,7 @@ import ConsoleShell from "~/components/Console/ConsoleShell";
 import ReportCard from "~/components/Projects/ReportCard";
 import ReviewForm from "~/components/Projects/ReviewForm";
 import "~/components/Projects/projects.css";
-import { isOfficer } from "~/server/auth/permissions";
+
 import { requireSession } from "~/server/auth/require";
 import {
   advisesAnyProject,
@@ -35,7 +36,10 @@ const STATUS_LABEL = {
  */
 export default async function ProjectsConsolePage() {
   const userId = await requireSession();
-  const officer = await isOfficer(userId);
+  const officer = await loadCaller().then(
+    (caller) =>
+      caller !== null && caller.userId === userId && rules.officer(caller),
+  );
   if (!officer && !(await advisesAnyProject(userId))) notFound();
   const [queue, projects] = await Promise.all([
     getReviewQueue(userId, officer),

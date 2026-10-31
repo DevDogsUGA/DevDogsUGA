@@ -1,3 +1,4 @@
+import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import ScheduleDeletionPanel from "~/components/AccountDeletion/ScheduleDeletionPanel";
 import ConsoleShell from "~/components/Console/ConsoleShell";
@@ -6,7 +7,7 @@ import { StandingBadge, standingOf } from "~/components/StatusBadges";
 import UserRoleForm from "~/components/UserRoleForm";
 import { formatDeletionDate } from "~/server/accountDeletion/dates";
 import { getPendingDeletion } from "~/server/accountDeletion/schedule";
-import { canUserDeleteAccounts } from "~/server/auth/permissions";
+
 import { expectSession } from "~/server/auth";
 import { getUserModerationData } from "~/server/loaders/moderation";
 import { PageHeading, Panel } from "~/ui/app-shell";
@@ -28,7 +29,12 @@ export default async function UserModerationPage({
   // The panel is for officers holding canDeleteAccounts; the actions check it
   // again, so hiding it here is only for tidiness.
   const viewerId = await expectSession();
-  const canDelete = await canUserDeleteAccounts(viewerId);
+  const canDelete = await loadCaller().then(
+    (caller) =>
+      caller !== null &&
+      caller.userId === viewerId &&
+      rules.deleteAccounts(caller),
+  );
   const pendingDeletion = canDelete
     ? await getPendingDeletion(targetUserId)
     : null;

@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession, callerFor, rules } from "~/server/auth/access";
+
 import { eq } from "drizzle-orm";
 import { env } from "~/env";
 import { supabaseAdmin } from "~/supabase/admin";
@@ -15,7 +17,6 @@ import {
 import { APP_NOT_FOUND } from "../oauth/appStatus";
 import { oauthAuditEvent } from "../oauth/audit";
 import { z } from "zod";
-import { canUserManageOAuthApps } from "~/server/auth/permissions";
 
 /**
  * The details of an OAuth app: logo, homepage and privacy policy (oauth-consent
@@ -51,7 +52,7 @@ async function requireEditableApp(clientId: string) {
 
   const allowed =
     app.userId === null
-      ? await canUserManageOAuthApps(userId)
+      ? await callerFor(userId).then(rules.manageOAuthApps)
       : app.userId === userId;
   if (!allowed) throw new Error(APP_NOT_FOUND);
   return { userId, app };
@@ -80,6 +81,11 @@ export async function saveAppDetails(
   clientId: string,
   input: { homepageUrl: string; privacyPolicyUrl: string },
 ): Promise<DetailsResult> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const { userId, app } = await requireEditableApp(clientId);
   if (brandingLocked(app)) return { ok: false, error: BRANDING_LOCKED };
 
@@ -133,6 +139,11 @@ export async function saveAppDetails(
 export async function createAppLogoUploadToken(
   clientId: string,
 ): Promise<{ path: string; token: string; maxBytes: number }> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const { app } = await requireEditableApp(clientId);
   if (brandingLocked(app)) throw new Error(BRANDING_LOCKED);
   const path = appLogoPath(clientId, crypto.randomUUID());
@@ -148,6 +159,11 @@ export async function saveAppLogo(
   clientId: string,
   path: string,
 ): Promise<DetailsResult> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
   const { userId, app } = await requireEditableApp(clientId);
   if (brandingLocked(app)) return { ok: false, error: BRANDING_LOCKED };
   if (!isAppLogoPath(clientId, path)) {

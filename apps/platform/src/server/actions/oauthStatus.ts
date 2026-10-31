@@ -1,7 +1,9 @@
 "use server";
 
+import { authorize, rules, authorizeSession } from "~/server/auth/access";
+
 import * as z from "zod";
-import { expectSession } from "../auth";
+
 import { db } from "../db";
 import {
   forgetApproval as forgetApprovalStep,
@@ -13,7 +15,6 @@ import {
 } from "../oauth/appStatus";
 import type { OAuthStatus } from "../oauth/status";
 import { parseStatus } from "../oauth/status";
-import { canUserManageOAuthApps } from "~/server/auth/permissions";
 
 /**
  * The status and consent actions for OAuth apps (oauth-consent Q155–Q164).
@@ -29,18 +30,16 @@ const NOT_AUTHORIZED = "Not authorized: canManageOAuthApps required";
 
 const uuid = z.uuid();
 
-/** The signed-in member, if they hold `canManageOAuthApps`. */
-async function requireHolder(): Promise<string> {
-  const userId = await expectSession();
-  if (!(await canUserManageOAuthApps(userId))) throw new Error(NOT_AUTHORIZED);
-  return userId;
-}
-
 export async function setStatus(
   clientId: string,
   status: OAuthStatus,
 ): Promise<{ changed: boolean; counts: RevokeCounts | null }> {
-  const actorUserId = await requireHolder();
+  const access = await authorize(rules.manageOAuthApps);
+  if (!access.ok) {
+    throw new Error(NOT_AUTHORIZED);
+  }
+
+  const actorUserId = access.caller.userId;
   const parsedStatus = parseStatus(status);
   if (!parsedStatus || !uuid.safeParse(clientId).success) {
     throw new Error(APP_NOT_FOUND);
@@ -52,7 +51,12 @@ export async function setAsksForConsent(
   clientId: string,
   asksForConsent: boolean,
 ): Promise<{ changed: boolean }> {
-  const actorUserId = await requireHolder();
+  const access = await authorize(rules.manageOAuthApps);
+  if (!access.ok) {
+    throw new Error(NOT_AUTHORIZED);
+  }
+
+  const actorUserId = access.caller.userId;
   if (!uuid.safeParse(clientId).success) throw new Error(APP_NOT_FOUND);
   return setAsksForConsentStep({
     actorUserId,
@@ -64,7 +68,12 @@ export async function setAsksForConsent(
 export async function transferToDevDogs(
   clientId: string,
 ): Promise<{ changed: boolean }> {
-  const actorUserId = await requireHolder();
+  const access = await authorize(rules.manageOAuthApps);
+  if (!access.ok) {
+    throw new Error(NOT_AUTHORIZED);
+  }
+
+  const actorUserId = access.caller.userId;
   if (!uuid.safeParse(clientId).success) throw new Error(APP_NOT_FOUND);
   return transferToDevDogsStep({ actorUserId, clientId });
 }
@@ -79,7 +88,12 @@ export async function forgetApproval(
   clientId: string,
   userId: string,
 ): Promise<RevokeCounts> {
-  const actorUserId = await expectSession();
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
+  const actorUserId = access.caller.userId;
   if (!uuid.safeParse(clientId).success || !uuid.safeParse(userId).success) {
     throw new Error(APP_NOT_FOUND);
   }

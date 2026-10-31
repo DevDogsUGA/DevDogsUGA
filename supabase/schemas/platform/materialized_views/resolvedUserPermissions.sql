@@ -10,7 +10,8 @@ CREATE MATERIALIZED VIEW "platform"."resolvedUserPermissions"
             r."canManageAttendance",
             r."canPreviewDocs",
             r."canManageOAuthApps",
-            r."canDeleteAccounts"
+            r."canDeleteAccounts",
+            r."canReviewProjectReports"
            FROM (platform."userRoles" ur
              JOIN platform.roles r ON (((r.id = ur."roleId") AND (r."roleType" = 'custom'::platform."roleType"))))
         ), first_non_null AS (
@@ -24,7 +25,8 @@ CREATE MATERIALIZED VIEW "platform"."resolvedUserPermissions"
             (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE (ucr."canManageAttendance" IS NOT NULL)))[1] AS "canManageAttendance",
             (array_agg(ucr."canPreviewDocs" ORDER BY ucr.rank) FILTER (WHERE (ucr."canPreviewDocs" IS NOT NULL)))[1] AS "canPreviewDocs",
             (array_agg(ucr."canManageOAuthApps" ORDER BY ucr.rank) FILTER (WHERE (ucr."canManageOAuthApps" IS NOT NULL)))[1] AS "canManageOAuthApps",
-            (array_agg(ucr."canDeleteAccounts" ORDER BY ucr.rank) FILTER (WHERE (ucr."canDeleteAccounts" IS NOT NULL)))[1] AS "canDeleteAccounts"
+            (array_agg(ucr."canDeleteAccounts" ORDER BY ucr.rank) FILTER (WHERE (ucr."canDeleteAccounts" IS NOT NULL)))[1] AS "canDeleteAccounts",
+            (array_agg(ucr."canReviewProjectReports" ORDER BY ucr.rank) FILTER (WHERE (ucr."canReviewProjectReports" IS NOT NULL)))[1] AS "canReviewProjectReports"
            FROM user_custom_roles ucr
           GROUP BY ucr."userId"
         ), all_users AS (
@@ -40,6 +42,7 @@ CREATE MATERIALIZED VIEW "platform"."resolvedUserPermissions"
     COALESCE(fnn."canPreviewDocs", false) AS "canPreviewDocs",
     COALESCE(fnn."canManageOAuthApps", false) AS "canManageOAuthApps",
     COALESCE(fnn."canDeleteAccounts", false) AS "canDeleteAccounts",
+    COALESCE(fnn."canReviewProjectReports", false) AS "canReviewProjectReports",
     COALESCE(fnn."isLeader", false) AS "isLeader",
     COALESCE(fnn."minRank", 'Infinity'::double precision) AS "minRank"
    FROM (all_users au

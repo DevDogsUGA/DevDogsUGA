@@ -1,8 +1,8 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import QrGenerator from "~/components/QrGenerator";
-import { canUserManageAttendance } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { PageHeading } from "~/ui/app-shell";
 import Callout from "~/ui/callout";
 
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
  * Kept working for now, with new features going to the CLI only.
  */
 export default async function QrPage() {
-  await requirePermission(canUserManageAttendance);
+  await requireAccess(rules.manageAttendance);
   return (
     <ConsoleShell current="/console/qr">
       <PageHeading

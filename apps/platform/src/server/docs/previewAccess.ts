@@ -1,6 +1,5 @@
+import { rules, loadCaller } from "~/server/auth/access";
 import { notFound } from "next/navigation";
-import { canUserPreviewDocs } from "~/server/auth/permissions";
-import { expectSession } from "~/server/auth";
 
 /**
  * The one gate on `/preview/docs`.
@@ -13,7 +12,7 @@ import { expectSession } from "~/server/auth";
  * that can.
  */
 export async function requireDocsPreview(): Promise<string> {
-  const userId = await expectSession().catch(() => null);
-  if (userId === null || !(await canUserPreviewDocs(userId))) notFound();
-  return userId;
+  const caller = await loadCaller();
+  if (!caller || !rules.previewDocs(caller)) notFound();
+  return caller.userId;
 }

@@ -1,5 +1,7 @@
 "use server";
 
+import { authorize, rules } from "~/server/auth/access";
+
 import {
   getAuthoredFiles,
   MEETING_SLUG_PATTERN,
@@ -7,8 +9,7 @@ import {
 } from "@devdogsuga/events";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { expectSession } from "~/server/auth";
-import { isOfficer } from "~/server/auth/permissions";
+
 import {
   FIELDS,
   isCollection,
@@ -52,11 +53,6 @@ function refresh(collection?: Collection, key?: string) {
   }
 }
 
-async function officerId(): Promise<string | null> {
-  const userId = await expectSession();
-  return (await isOfficer(userId)) ? userId : null;
-}
-
 function keyProblem(collection: Collection, key: string): string | null {
   if (key === "new") return "That id is reserved.";
   if (collection === "meeting") {
@@ -73,10 +69,15 @@ export async function saveConfigEditAction(
   _previous: ConfigActionState,
   formData: FormData,
 ): Promise<ConfigActionState> {
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return FORBIDDEN;
+  }
+
   const collection = collectionSchema.safeParse(formData.get("collection"));
   if (!collection.success) return { ok: false, message: "Unknown item type." };
   const kind = collection.data;
-  const userId = await officerId();
+  const userId = access.caller.userId;
   if (!userId) return FORBIDDEN;
 
   const isNew = formData.get("isNew") === "1";
@@ -155,12 +156,17 @@ export async function resetConfigEditAction(
   _previous: ConfigActionState,
   formData: FormData,
 ): Promise<ConfigActionState> {
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return FORBIDDEN;
+  }
+
   const collection = collectionSchema.safeParse(formData.get("collection"));
   const key = z.string().min(1).max(120).safeParse(formData.get("key"));
   if (!collection.success || !key.success) {
     return { ok: false, message: "That request is invalid." };
   }
-  const userId = await officerId();
+  const userId = access.caller.userId;
   if (!userId) return FORBIDDEN;
   await resetEdit(userId, collection.data, key.data);
   refresh(collection.data, key.data);
@@ -168,7 +174,12 @@ export async function resetConfigEditAction(
 }
 
 export async function resetAllConfigEditsAction(): Promise<ConfigActionState> {
-  const userId = await officerId();
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return FORBIDDEN;
+  }
+
+  const userId = access.caller.userId;
   if (!userId) return FORBIDDEN;
   const n = await resetAllEdits(userId);
   refresh();
@@ -188,7 +199,12 @@ const OPEN_MESSAGES = {
 } as const;
 
 export async function openConfigPrAction(): Promise<ConfigActionState> {
-  const userId = await expectSession();
+  const access = await authorize(rules.officer);
+  if (!access.ok) {
+    return FORBIDDEN;
+  }
+
+  const userId = access.caller.userId;
   const result = await openConfigPr(userId);
   if (result.status === "opened") {
     refresh();
