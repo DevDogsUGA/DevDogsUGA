@@ -21,8 +21,8 @@ vi.mock("~/env", () => ({ env: { BASE_URL: "http://localhost:3000" } }));
  *    predicate, off the same way. A page that 404s in production can't leak
  *    through its terminal twin.
  *
- * Twins are opt-in, so there is no rule that every page has one: a page
- * without a twin gets the generic response (`cloudflare/terminal.ts`).
+ * Dashboard and auth pages must have twins. Other pages are opt-in and
+ * otherwise get the generic response (`cloudflare/terminal.ts`).
  */
 
 const APP = join(__dirname, "../app");
@@ -42,6 +42,15 @@ describe("terminal paths", () => {
     for (const entry of TERMINAL_PATHS) {
       if (entry.page !== null) expect(files).toContain(entry.page);
     }
+  });
+
+  it("covers every dashboard and auth page", () => {
+    const mirrored = new Set(TERMINAL_PATHS.map((entry) => entry.page));
+    for (const file of files.filter(
+      (file) =>
+        file.startsWith("(site)/dashboard/") || file.startsWith("(auth)/"),
+    ))
+      expect(mirrored, file).toContain(file);
   });
 
   it("leaves other pages without a twin", () => {

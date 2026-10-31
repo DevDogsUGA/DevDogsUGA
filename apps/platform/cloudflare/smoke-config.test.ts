@@ -15,6 +15,8 @@ const root = join(appDir, "..", "..");
 interface Smoke {
   hosts: { staging: string; production: string };
   publicPaths: string[];
+  protectedPath: string;
+  protectedRedirectPrefix: string;
 }
 
 const entry = (
@@ -37,6 +39,11 @@ function routePattern(wrangler: string, tier: string): string {
 describe("workers.json smoke data for platform", () => {
   it("exists", () => {
     expect(smoke).toBeDefined();
+  });
+
+  it("probes the dashboard gate, with sign-in as its redirect", () => {
+    expect(smoke?.protectedPath).toBe("/dashboard");
+    expect(smoke?.protectedRedirectPrefix).toBe("/auth");
   });
 
   it("names the hosts wrangler.jsonc routes", () => {

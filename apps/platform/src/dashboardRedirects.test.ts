@@ -5,8 +5,11 @@ import {
   preserveRedirectDestinationQuery,
   requestContextFromRequest,
 } from "../node_modules/vinext/dist/config/config-matchers.js";
-vi.mock("~/env", () => ({ env: { NODE_ENV: "test" } }));
+vi.mock("~/env", () => ({
+  env: { NODE_ENV: "test", BASE_URL: "https://devdogsuga.org" },
+}));
 import config from "../next.config";
+import robots from "./app/robots";
 
 /** Exercise the installed vinext matcher, including query preservation. */
 describe("permanent dashboard redirects", async () => {
@@ -44,6 +47,13 @@ describe("permanent dashboard redirects", async () => {
         new URL(request.url).search,
       ),
     ).toBe(`${to}?x=1&x=2&return=%2Fevents`);
+  });
+  it("disallows the dashboard, OAuth flows and legacy redirect prefixes", () => {
+    const rules = robots().rules;
+    expect(Array.isArray(rules)).toBe(false);
+    if (Array.isArray(rules)) throw new Error("expected one robots rule");
+    for (const path of ["/dashboard", "/oauth", "/console", "/settings"])
+      expect(rules.disallow).toContain(path);
   });
   it("leaves public project detail URLs alone", () => {
     const request = new Request("https://devdogsuga.org/projects/a");
