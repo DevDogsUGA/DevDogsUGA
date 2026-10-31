@@ -78,31 +78,6 @@ export const consoleBadges = terminal(PUBLIC, ({ path }) =>
 );
 
 /**
- * Project proposals and report reviews name members and quote their writing,
- * and a curl request carries no session, so the terminal says what the page is
- * and where to sign in. It never names a project, a member or a report.
- */
-export const consoleProjects = terminal(PUBLIC, ({ path }) =>
-  page({
-    banner: "DEVDOGS",
-    accent: "cyan",
-    aside: ["advisors and officers", "sign in required"],
-    command: "console projects",
-    body: [
-      {
-        type: "notice",
-        notice: {
-          tone: "info",
-          title: "Project review lives in the browser",
-          text: "Officers approve project proposals and assign advisors; advisors and officers review project reports for EL credit, approving them or returning them with a note, after signing in.",
-          url: `${SITE}${path}`,
-        },
-      },
-    ],
-  }),
-);
-
-/**
  * Data tools: a CSV upload, a preview and a confirmation, none of which a curl
  * request can do, and every one behind a session. So the terminal names the
  * page and points at the browser, and shows nothing about members or files.

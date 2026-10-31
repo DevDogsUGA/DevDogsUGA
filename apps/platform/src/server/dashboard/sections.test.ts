@@ -178,13 +178,6 @@ describe("console page access drift", () => {
     expect(section, path).not.toBeNull();
     const source = readFileSync(file, "utf8");
     const expected = EXCEPTIONS[path] ?? section!.access;
-    // D3 owns advisor visibility. Both project pages already apply an officer-or-advisor record gate.
-    if (path.startsWith("/dashboard/reviews")) {
-      expect(source).toContain("rules.officer(caller)");
-      expect(source).toMatch(/advisesAnyProject|project.advisorId === userId/);
-      expect(section!.access).toBe("officer");
-      return;
-    }
     if (path.startsWith("/dashboard/docs-preview")) {
       const layout = readFileSync(
         resolve(CONSOLE, "docs-preview/layout.tsx"),
@@ -207,6 +200,22 @@ describe("console page access drift", () => {
       ...gateSource.matchAll(/requireAccess\(rules\.(\w+)\)/g),
     ].map((match) => match[1]);
     expect(gates).toEqual([expected]);
+  });
+  it("gates the review queue on reviewProjectReports alone: officers without it are refused, and advisors review from the project page", () => {
+    const reviews = DASHBOARD_SECTIONS.find((s) => s.id === "reviews")!;
+    expect(reviews.access).toBe("reviewProjectReports");
+    for (const caller of callers) {
+      expect(visibleSections(caller).includes(reviews)).toBe(
+        caller.flags.canReviewProjectReports,
+      );
+    }
+    // The project page serves the advisor through its record rule, not this section.
+    const project = readFileSync(
+      resolve(CONSOLE, "projects/[idOrSlug]/page.tsx"),
+      "utf8",
+    );
+    expect(project).toContain("relation.isAdvisor");
+    expect(project).toContain("rules.reviewProjectReports(caller)");
   });
   it("keeps every exception tied to a real sub-page", () => {
     const paths = pages(CONSOLE).map(
