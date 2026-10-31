@@ -93,9 +93,12 @@ export default function PronounsField({ id, profile }: ProfileData) {
     <SettingsField
       id="pronouns"
       label="Pronouns"
+      draft={pronouns}
       isDirty={dirty}
       error={error}
-      save={() => mutation.mutateAsync(pronouns)}
+      save={async () => {
+        await mutation.mutateAsync(pronouns);
+      }}
       reset={() => setPronouns([...saved])}
     >
       <div className="set-tags empty:hidden">

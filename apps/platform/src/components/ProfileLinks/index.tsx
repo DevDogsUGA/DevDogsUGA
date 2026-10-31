@@ -99,12 +99,15 @@ export default function ProfileLinks({ initialLinks }: Props) {
     return [...links, { ...pending, id: realId }];
   }, [pending, links, addLink, clearInput]);
 
-  const { isSaving } = useSettingsField({
+  const { isSaving, serverError } = useSettingsField({
     id: "links",
+    draft: [staged, urlInput, titleInput],
     label: "Links",
     isDirty: isDirtyFor(staged) || pendingUrlError !== null,
     error,
-    save: () => save(materialize()),
+    save: async () => {
+      await save(materialize());
+    },
     reset: () => {
       reset();
       clearInput();
@@ -213,7 +216,7 @@ export default function ProfileLinks({ initialLinks }: Props) {
           : `${links.length} of ${PROFILE_LIMITS.linkCount} links used.`}
       </p>
 
-      <FieldError error={visibleError} />
+      <FieldError error={serverError ?? visibleError} />
     </div>
   );
 }

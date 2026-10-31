@@ -73,12 +73,10 @@ export default function AcademicFields({
   const listboxId = `${uid}-listbox`;
 
   const mutation = useMutation({
-    mutationFn: async (values: number[]) => {
-      const result = await updateAcademicPrograms(values);
-      if (result.error) throw new Error(result.error);
-      return result.programIds ?? values;
+    mutationFn: (values: number[]) => updateAcademicPrograms(values),
+    onSuccess: (result, values) => {
+      if (result.ok) setSaved([...(result.data ?? values)]);
     },
-    onSuccess: (values) => setSaved([...values]),
   });
 
   const selectedSet = new Set(programIds);
@@ -131,6 +129,7 @@ export default function AcademicFields({
     <SettingsField
       id="academics"
       label="Academics"
+      draft={programIds}
       isDirty={dirty}
       error={error}
       save={() => mutation.mutateAsync(programIds)}
