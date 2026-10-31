@@ -123,34 +123,34 @@ export function planWorkshops(
   };
 }
 
-export interface FirstMergePlan {
-  /** Members with a matched contribution and no First Merge row at all. */
+export interface FirstCommitPlan {
+  /** Members with a stored default-branch commit and no First Commit row at all. */
   userIds: string[];
   /** Members who already have a row (live, withdrawn or officer-made). */
   alreadyHeld: number;
 }
 
 /**
- * First Merge goes to a member whose contributions are matched and who has
- * never had the badge: `award_first_merge` itself refuses once any row exists,
+ * First Commit goes to a member with a stored default-branch commit who has
+ * never had the badge: `award_first_commit` itself refuses once any row exists,
  * withdrawn or not, so a withdrawal by an officer stands.
  */
-export function planFirstMerge(
-  contributors: readonly string[],
+export function planFirstCommit(
+  committers: readonly string[],
   holders: ReadonlySet<string>,
-): FirstMergePlan {
-  const unique = [...new Set(contributors)].sort();
+): FirstCommitPlan {
+  const unique = [...new Set(committers)].sort();
   const userIds = unique.filter((u) => !holders.has(u));
   return { userIds, alreadyHeld: unique.length - userIds.length };
 }
 
 export interface BadgesPlan {
   workshop: WorkshopPlan;
-  firstMerge: FirstMergePlan;
+  firstCommit: FirstCommitPlan;
 }
 
 export function describePlan(plan: BadgesPlan): string {
-  const { workshop: w, firstMerge: f } = plan;
+  const { workshop: w, firstCommit: f } = plan;
   const skips = Object.entries(w.skipped)
     .filter(([, n]) => n > 0)
     .map(([why, n]) => `    ${n} skipped: ${why}`);
@@ -160,7 +160,7 @@ export function describePlan(plan: BadgesPlan): string {
     `  ${w.awards.length} to award (${defaulted} from a meeting that ran exactly one workshop, workshop recorded on the reflection)`,
     `  ${w.alreadyAwarded} already awarded`,
     ...(skips.length ? ["  skipped, never guessed:", ...skips] : []),
-    "First Merge:",
+    "First Commit:",
     `  ${f.userIds.length} to award`,
     `  ${f.alreadyHeld} already held (officer awards and withdrawals stand)`,
   ].join("\n");

@@ -52,7 +52,7 @@ export const PUBLIC_PROFILE_FIELD_OPTIONS: ReadonlyArray<{
     field: "showContributions",
     label: "Contributions",
     description:
-      "Pull requests you authored that were merged into public DevDogs repositories.",
+      "Commits you authored on the default branch of public repositories that DevDogs syncs: DevDogs organization repositories and linked project repositories.",
   },
 ];
 

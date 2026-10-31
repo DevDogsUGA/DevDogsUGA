@@ -32,7 +32,7 @@ export default async function BadgesConsolePage({
     <div className="con">
       <PageHeading
         title="Badges"
-        description="Award Workshop Host, Guide Author, Mentor and Event Organizer badges with a public citation, and withdraw any badge with a reason. Workshop completed and First Merge are awarded automatically."
+        description="Award Workshop Host, Guide Author, Mentor and Event Organizer badges with a public citation, and withdraw any badge with a reason. Workshop completed and First Commit are awarded automatically."
       />
       <Panel id="find-member" title="Find a member">
         <form method="get" className="bdg-inline">

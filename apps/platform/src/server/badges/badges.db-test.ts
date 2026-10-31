@@ -10,8 +10,6 @@ import {
   vi,
 } from "vitest";
 import { db } from "~/server/db";
-import { recordContribution } from "~/server/contributions/store";
-import type { MergedPullRequest } from "~/server/contributions/pullRequest";
 import { getPublicProfileActivity } from "~/server/loaders/publicProfiles";
 import {
   deleteMembers,
@@ -26,7 +24,7 @@ import { removeAttendance } from "~/server/attendance/officerAttendance";
 
 /**
  * Badges against a real database: the automatic awards the triggers write in
- * the evidence's own transaction (Workshop completed, First Merge), their
+ * the evidence's own transaction (Workshop completed, First Commit), their
  * withdrawal when the evidence goes, officer-awarded badges and who may award
  * them, the member hiding a badge, and what account deletion does (a member's
  * awards go; a badge a deleted officer awarded stays, with no awarder).
@@ -53,8 +51,7 @@ const MEETING_A = id(11);
 const MEETING_B = id(12);
 const MEETING_SOLO = id(13);
 const ROLE = id(21);
-const REPO = "DevDogsUGA/badges-dbtest";
-const GH = "9200000001";
+const REPO_ID = "920000001";
 const WS_A = "d2-ws-a";
 const WS_B = "d2-ws-b";
 const WS_SOLO = "d2-ws-solo";
@@ -71,9 +68,6 @@ async function cleanup() {
   // "userId".
   await db.transaction(async (tx) => {
     await tx.execute(sql`set local session_replication_role = replica`);
-    await tx.execute(
-      sql`delete from platform.contributions where repo like 'DevDogsUGA/badges-dbtest%'`,
-    );
     await tx.execute(sql`
       delete from platform."reflectionRevisions"
       where "userId" in (${ids}) or "meetingId" in (${meetings})
@@ -94,6 +88,17 @@ async function cleanup() {
     );
     await tx.execute(
       sql`delete from platform.meetings where id in (${meetings})`,
+    );
+    // The awards that pointed at a commit are gone, so the commit can go,
+    // and then the repository it was stored under.
+    await tx.execute(
+      sql`delete from platform."repoCommits" where "githubRepoId" = ${REPO_ID}::bigint`,
+    );
+    await tx.execute(
+      sql`delete from platform.commits where "githubRepoId" = ${REPO_ID}::bigint`,
+    );
+    await tx.execute(
+      sql`delete from platform."githubRepos" where "githubRepoId" = ${REPO_ID}::bigint`,
     );
     await tx.execute(sql`
       delete from platform."auditEvents"
@@ -448,50 +453,69 @@ describe("the reflection workshop picker (Q95, Q98)", () => {
   });
 });
 
-function pr(overrides: Partial<MergedPullRequest> = {}): MergedPullRequest {
-  return {
-    repo: REPO,
-    repoPrivate: false,
-    number: 1,
-    title: "First",
-    url: `https://github.com/${REPO}/pull/1`,
-    mergedAt: new Date("2026-10-14T15:00:00Z"),
-    authorGithubId: GH,
-    authorLogin: "badges-a",
-    ...overrides,
-  };
-}
+const SHA = (n: number) => `d2${String(n).padStart(2, "0")}${"0".repeat(36)}`;
 
-async function linkGithub(userId: string) {
+/**
+ * Stores one commit the way the sync does: the commit row first, then its
+ * default-branch provenance. `provenance: false` stops after the first write.
+ */
+async function storeCommit(
+  n: number,
+  options: { userId?: string; committedAt?: string; provenance?: boolean } = {},
+) {
+  const userId = options.userId ?? MEMBER;
+  const committedAt = options.committedAt ?? "2026-10-14T15:00:00Z";
   await db.execute(sql`
-    insert into auth.identities (id, user_id, provider, provider_id, identity_data)
-    values (gen_random_uuid(), ${userId}::uuid, 'github', ${GH},
-            ${JSON.stringify({ user_name: "badges-a" })}::jsonb)
+    insert into platform."githubRepos"
+      ("githubRepoId", "ownerId", owner, name, "ownerType", "defaultBranch")
+    values (${REPO_ID}::bigint, 920, 'DevDogsUGA', 'badges-dbtest', 'Organization', 'main')
+    on conflict do nothing
+  `);
+  await db.execute(sql`
+    insert into platform.commits
+      (sha, "githubRepoId", "authorGithubId", "authorLogin", "userId", "committedAt", message)
+    values (${SHA(n)}, ${REPO_ID}::bigint, 9200000001, 'badges-a', ${userId}::uuid,
+            ${committedAt}::timestamptz, ${`commit ${n}`})
+  `);
+  if (options.provenance === false) return;
+  await db.execute(sql`
+    insert into platform."repoCommits" ("githubRepoId", sha, "defaultBranch")
+    values (${REPO_ID}::bigint, ${SHA(n)}, 'main')
   `);
 }
 
-describe("First Merge (Q93)", () => {
-  it("is awarded when a merged PR is recorded for a matched member", async () => {
-    await linkGithub(MEMBER);
-    await recordContribution(pr(), "d2-1");
-    const rows = await awards(MEMBER, "first-merge");
+async function awardedSha(userId: string) {
+  const [row] = await db.execute<{ sha: string | null }>(sql`
+    select "commitSha" as sha from platform."badgeAwards"
+    where "userId" = ${userId}::uuid and "badgeId" = 'first-commit'
+  `);
+  return row?.sha;
+}
+
+describe("First Commit (Q42, Q46)", () => {
+  it("is awarded when a member's first commit is stored", async () => {
+    await storeCommit(1);
+    const rows = await awards(MEMBER, "first-commit");
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ method: "automatic", awardedBy: null });
+    expect(await awardedSha(MEMBER)).toBe(SHA(1));
     expect(await audit("badge.awarded", MEMBER)).toHaveLength(1);
   });
 
-  it("is awarded when an earlier unmatched PR is claimed by linking GitHub", async () => {
-    await recordContribution(pr(), "d2-1");
+  it("waits for the commit's default-branch provenance", async () => {
+    await storeCommit(1, { provenance: false });
     expect(await awards(MEMBER)).toHaveLength(0);
-    await linkGithub(MEMBER);
-    expect(await awards(MEMBER, "first-merge")).toHaveLength(1);
+    await db.execute(sql`
+      insert into platform."repoCommits" ("githubRepoId", sha, "defaultBranch")
+      values (${REPO_ID}::bigint, ${SHA(1)}, 'main')
+    `);
+    expect(await awards(MEMBER, "first-commit")).toHaveLength(1);
   });
 
-  it("is awarded once: later PRs add nothing, and a withdrawn one stays withdrawn", async () => {
-    await linkGithub(MEMBER);
-    await recordContribution(pr(), "d2-1");
-    await recordContribution(pr({ number: 2 }), "d2-2");
-    expect(await awards(MEMBER, "first-merge")).toHaveLength(1);
+  it("is awarded once: later commits add nothing, and a withdrawn one stays withdrawn", async () => {
+    await storeCommit(1);
+    await storeCommit(2, { committedAt: "2026-10-15T15:00:00Z" });
+    expect(await awards(MEMBER, "first-commit")).toHaveLength(1);
 
     const [award] = await db.execute<{ id: string }>(
       sql`select id from platform."badgeAwards" where "userId" = ${MEMBER}::uuid`,
@@ -499,25 +523,33 @@ describe("First Merge (Q93)", () => {
     expect(
       (await withdrawBadge(OFFICER, award!.id, "recorded in error")).status,
     ).toBe("withdrawn");
-    await recordContribution(pr({ number: 3 }), "d2-3");
-    const rows = await awards(MEMBER, "first-merge");
+    await storeCommit(3, { committedAt: "2026-10-16T15:00:00Z" });
+    const rows = await awards(MEMBER, "first-commit");
     expect(rows).toHaveLength(1);
     expect(rows[0]?.withdrawnAt).not.toBeNull();
+    expect(await audit("badge.awarded", MEMBER)).toHaveLength(1);
   });
 
-  it("points at the earliest merge", async () => {
-    await linkGithub(MEMBER);
-    await recordContribution(
-      pr({ number: 5, mergedAt: new Date("2026-10-20T00:00:00Z") }),
-      null,
-    );
-    const [first] = await db.execute<{ id: string }>(
-      sql`select "contributionId" as id from platform."badgeAwards" where "userId" = ${MEMBER}::uuid`,
-    );
-    const [five] = await db.execute<{ id: string }>(
-      sql`select id from platform.contributions where repo = ${REPO} and "prNumber" = 5`,
-    );
-    expect(first?.id).toBe(five?.id);
+  it("is idempotent when the function runs again", async () => {
+    await storeCommit(1);
+    await db.execute(sql`select platform.award_first_commit(${MEMBER}::uuid)`);
+    await db.execute(sql`select platform.award_first_commit(${MEMBER}::uuid)`);
+    expect(await awards(MEMBER, "first-commit")).toHaveLength(1);
+    expect(await audit("badge.awarded", MEMBER)).toHaveLength(1);
+  });
+
+  it("points at the earliest commit, and a backfilled older one only moves the pointer", async () => {
+    await storeCommit(5, { committedAt: "2026-10-20T00:00:00Z" });
+    expect(await awardedSha(MEMBER)).toBe(SHA(5));
+    await storeCommit(4, { committedAt: "2026-10-01T00:00:00Z" });
+    expect(await awards(MEMBER, "first-commit")).toHaveLength(1);
+    expect(await awardedSha(MEMBER)).toBe(SHA(4));
+  });
+
+  it("awards each member for their own commit only", async () => {
+    await storeCommit(1, { userId: OTHER });
+    expect(await awards(MEMBER)).toHaveLength(0);
+    expect(await awards(OTHER, "first-commit")).toHaveLength(1);
   });
 });
 
@@ -562,7 +594,7 @@ describe("manual awards (Q104, Q106, Q107)", () => {
         .status,
     ).toBe("citation_too_long");
     expect(
-      (await awardManualBadge(OFFICER, input({ badgeId: "first-merge" })))
+      (await awardManualBadge(OFFICER, input({ badgeId: "first-commit" })))
         .status,
     ).toBe("unknown_badge");
     expect(

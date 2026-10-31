@@ -1,20 +1,7 @@
--- Trigger bodies that call the two award functions in the same transaction as
--- the write that changes the evidence. Each is a thin wrapper so the rule
--- lives in sync_workshop_badge / award_first_merge alone.
-
-CREATE OR REPLACE FUNCTION platform.badges_after_contribution ()
-  RETURNS TRIGGER
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  SET search_path TO ''
-  AS $function$
-begin
-  if new."userId" is not null then
-    perform platform.award_first_merge(new."userId");
-  end if;
-  return null;
-end;
-$function$;
+-- Trigger bodies that call the award functions in the same transaction as the
+-- write that changes the evidence. Each is a thin wrapper so the rule lives in
+-- sync_workshop_badge alone. (First Commit's wrapper, badges_after_commit, lives
+-- with award_first_commit.)
 
 CREATE OR REPLACE FUNCTION platform.badges_after_attendance ()
   RETURNS TRIGGER
@@ -135,13 +122,11 @@ begin
 end;
 $function$;
 
-GRANT EXECUTE ON FUNCTION "platform"."badges_after_contribution"() TO "postgres", "service_role";
 GRANT EXECUTE ON FUNCTION "platform"."badges_after_attendance"() TO "postgres", "service_role";
 GRANT EXECUTE ON FUNCTION "platform"."badges_after_reflection"() TO "postgres", "service_role";
 GRANT EXECUTE ON FUNCTION "platform"."badges_after_meeting"() TO "postgres", "service_role";
 GRANT EXECUTE ON FUNCTION "platform"."badges_after_workshop"() TO "postgres", "service_role";
 
-REVOKE ALL ON FUNCTION "platform"."badges_after_contribution"() FROM PUBLIC;
 REVOKE ALL ON FUNCTION "platform"."badges_after_attendance"() FROM PUBLIC;
 REVOKE ALL ON FUNCTION "platform"."badges_after_reflection"() FROM PUBLIC;
 REVOKE ALL ON FUNCTION "platform"."badges_after_meeting"() FROM PUBLIC;
