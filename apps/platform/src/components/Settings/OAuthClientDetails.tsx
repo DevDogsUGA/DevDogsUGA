@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   ArrowsClockwiseIcon,
   CheckIcon,
@@ -17,8 +17,13 @@ import {
   MAX_REDIRECT_URIS,
   REDIRECT_RULE_HELP,
 } from "~/components/Settings/redirectUris";
-import { toast } from "~/lib/toast";
-import oauthAction from "~/server/actions/oauth";
+import { success } from "~/lib/actionResult";
+import {
+  addRedirectUri,
+  deleteOAuthClient,
+  regenerateOAuthSecret,
+  removeRedirectUri,
+} from "~/server/actions/oauth";
 import { saveAppDetails } from "~/server/actions/oauthApps";
 import { forgetApproval } from "~/server/actions/oauthStatus";
 import type { TestAccount } from "~/server/actions/testAccounts";
@@ -31,6 +36,7 @@ import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
 import SettingsField from "~/ui/settings-field";
 import { SettingsFormProvider } from "~/ui/settings-form";
 import SettingsSaveBar from "~/ui/settings-save-bar";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 interface Props {
   client: OAuthClientSummary;
@@ -47,7 +53,7 @@ interface Props {
 /**
  * The body of `/dashboard/oauth/<id>`: one OAuth client, edited on its own page
  * where it used to be a drawer. Redirect URIs, regenerate and delete are
- * immediate server actions, each of the destructive ones behind a named confirm.
+ * Commands, each of the destructive ones behind a named confirm.
  * A fresh secret is shown once, inline, until the member presses Done. The
  * homepage and privacy policy, and the moderation endpoint, are Draft fields
  * held by the page's one save bar. Deleting the app leaves for the list,
@@ -60,28 +66,26 @@ export default function OAuthClientDetails({
   devDogsApp = false,
 }: Props) {
   const router = useRouter();
-  const [{ clientId: mintedClientId, clientSecret }, dispatch, isPending] =
-    useActionState(oauthAction, { clientId: null, clientSecret: null });
-
-  // Whether the dispatch in flight is the delete, which ends this page.
-  const deleting = useRef(false);
-  const wasPending = useRef(false);
-  useEffect(() => {
-    if (wasPending.current && !isPending) {
-      if (deleting.current) router.replace("/dashboard/oauth");
-      else router.refresh();
-    }
-    wasPending.current = isPending;
-  }, [isPending, router]);
-
-  function act(formData: FormData) {
-    deleting.current = formData.get("intent") === "revoke-client";
-    dispatch(formData);
-  }
+  const addUri = useCommand(addRedirectUri);
+  const removeUri = useCommand(removeRedirectUri);
+  const regenerate = useCommand(regenerateOAuthSecret);
+  // The page ends with the app, so there is nothing to refresh after a delete.
+  const remove = useCommand(
+    async (clientId: string) => {
+      const result = await deleteOAuthClient(clientId);
+      if (result.ok) router.replace("/dashboard/oauth");
+      return result;
+    },
+    { refresh: false },
+  );
+  const isPending =
+    addUri.pending || removeUri.pending || regenerate.pending || remove.pending;
 
   // The secret the member has already acknowledged, so Done hides it for good.
   const [acknowledged, setAcknowledged] = useState<string | null>(null);
-  const secret = mintedClientId === client.clientId ? clientSecret : null;
+  const secret = regenerate.result?.ok
+    ? (regenerate.result.data?.clientSecret ?? null)
+    : null;
   const revealed = secret !== null && secret !== acknowledged ? secret : null;
   const published = client.status === "in_production";
   // Q178: a member's published app keeps its branding until an officer returns
@@ -146,14 +150,10 @@ export default function OAuthClientDetails({
             {client.redirectUris.map((uri) => (
               <li key={uri} className="set-uri">
                 <Input mono value={uri} readOnly aria-label={uri} />
-                <form action={act} className="contents">
-                  <input type="hidden" name="intent" value="remove-uri" />
-                  <input
-                    type="hidden"
-                    name="clientId"
-                    value={client.clientId}
-                  />
-                  <input type="hidden" name="uri" value={uri} />
+                <form
+                  action={() => removeUri.run(client.clientId, uri)}
+                  className="contents"
+                >
                   <button
                     type="submit"
                     className="iconbtn"
@@ -167,9 +167,12 @@ export default function OAuthClientDetails({
             ))}
           </ul>
           {client.redirectUris.length < MAX_REDIRECT_URIS && (
-            <form action={act} className="set-uri">
-              <input type="hidden" name="intent" value="add-uri" />
-              <input type="hidden" name="clientId" value={client.clientId} />
+            <form
+              action={(formData) =>
+                addUri.run(client.clientId, String(formData.get("uri") ?? ""))
+              }
+              className="set-uri"
+            >
               <Input
                 mono
                 name="uri"
@@ -184,6 +187,8 @@ export default function OAuthClientDetails({
               </FormButton>
             </form>
           )}
+          <CommandFeedback result={addUri.result} />
+          <CommandFeedback result={removeUri.result} />
           <span className="help">{REDIRECT_RULE_HELP} At least one.</span>
         </div>
       </Panel>
@@ -247,7 +252,7 @@ export default function OAuthClientDetails({
         </p>
         <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
           <ConfirmDestructiveAction
-            action={act}
+            action={() => regenerate.run(client.clientId)}
             title={`Regenerate secret for ${client.label}?`}
             description={
               published
@@ -256,8 +261,6 @@ export default function OAuthClientDetails({
             }
             submitLabel="Regenerate secret"
           >
-            <input type="hidden" name="intent" value="reset-secret" />
-            <input type="hidden" name="clientId" value={client.clientId} />
             <FormButton
               theme="rose"
               variant="destructive"
@@ -271,13 +274,11 @@ export default function OAuthClientDetails({
           </ConfirmDestructiveAction>
 
           <ConfirmDestructiveAction
-            action={act}
+            action={() => remove.run(client.clientId)}
             title="Delete OAuth app"
             description={`Deleting "${client.label}" removes its client ID and secret and signs out every other member who approved it. Your own sessions and test accounts are not signed out by this. Any project using the credentials loses access immediately.`}
             submitLabel="Delete app"
           >
-            <input type="hidden" name="intent" value="revoke-client" />
-            <input type="hidden" name="clientId" value={client.clientId} />
             <FormButton
               theme="rose"
               variant="destructive"
@@ -289,6 +290,8 @@ export default function OAuthClientDetails({
             </FormButton>
           </ConfirmDestructiveAction>
         </div>
+        <CommandFeedback result={regenerate.result} />
+        <CommandFeedback result={remove.result} />
       </Panel>
       <SettingsSaveBar />
     </SettingsFormProvider>
@@ -409,22 +412,6 @@ function TestAccountApprovals({
   client: OAuthClientSummary;
   testAccounts: TestAccount[];
 }) {
-  const router = useRouter();
-  const [pendingId, setPendingId] = useState<string | null>(null);
-
-  async function forget(account: TestAccount) {
-    setPendingId(account.userId);
-    try {
-      await forgetApproval(client.clientId, account.userId);
-      toast.success(`Forgot ${account.displayName}'s approval`);
-      router.refresh();
-    } catch {
-      toast.error("Failed to forget the approval");
-    } finally {
-      setPendingId(null);
-    }
-  }
-
   if (testAccounts.length === 0) {
     return (
       <p className="help" style={{ margin: 0 }}>
@@ -439,31 +426,53 @@ function TestAccountApprovals({
 
   return (
     <div className="set-rows" role="list">
-      {testAccounts.map((account) => {
-        const approved = client.approvedTestAccountIds.includes(account.userId);
-        return (
-          <div role="listitem" key={account.userId} className="arow">
-            <div className="min-w-0">
-              <b className="truncate">{account.displayName}</b>
-              <span className="small muted">
-                {approved ? "Approved this app" : "Not approved yet"}
-              </span>
-            </div>
-            <div className="end shrink-0">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!approved || pendingId === account.userId}
-                aria-label={`Forget approval for ${account.displayName}`}
-                onClick={() => void forget(account)}
-              >
-                Forget approval
-              </Button>
-            </div>
-          </div>
-        );
-      })}
+      {testAccounts.map((account) => (
+        <TestAccountApproval
+          key={account.userId}
+          client={client}
+          account={account}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** One test account's Forget approval Command. */
+function TestAccountApproval({
+  client,
+  account,
+}: {
+  client: OAuthClientSummary;
+  account: TestAccount;
+}) {
+  const { run, pending, result } = useCommand(async () => {
+    const outcome = await forgetApproval(client.clientId, account.userId);
+    return outcome.ok
+      ? success(undefined, `Forgot ${account.displayName}'s approval`)
+      : outcome;
+  });
+  const approved = client.approvedTestAccountIds.includes(account.userId);
+  return (
+    <div role="listitem" className="arow">
+      <div className="min-w-0">
+        <b className="truncate">{account.displayName}</b>
+        <span className="small muted">
+          {approved ? "Approved this app" : "Not approved yet"}
+        </span>
+      </div>
+      <div className="end shrink-0">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={!approved || pending}
+          aria-label={`Forget approval for ${account.displayName}`}
+          onClick={() => run()}
+        >
+          Forget approval
+        </Button>
+      </div>
+      <CommandFeedback result={result} />
     </div>
   );
 }
