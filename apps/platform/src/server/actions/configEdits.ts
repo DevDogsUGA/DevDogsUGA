@@ -39,16 +39,7 @@ import { openConfigPr } from "~/server/config/proposals";
  * leaves the platform.
  */
 
-export interface ConfigActionState {
-  ok: boolean;
-  message: string;
-  url?: string;
-  errors?: string[];
-}
-
 const FORBIDDEN_MESSAGE = "Only officers can propose schedule changes.";
-
-const FORBIDDEN: ConfigActionState = { ok: false, message: FORBIDDEN_MESSAGE };
 
 const collectionSchema = z.string().refine(isCollection);
 
@@ -188,24 +179,23 @@ export async function resetConfigEditAction(
   return success(undefined, "Reset to official.");
 }
 
-export async function resetAllConfigEditsAction(): Promise<ConfigActionState> {
+/** Resets every saved edit the officer has. A Command beside Open PR. */
+export async function resetAllConfigEditsAction(): Promise<ActionResult> {
   const access = await authorize(rules.officer);
-  if (!access.ok) {
-    return FORBIDDEN;
-  }
+  if (!access.ok) return failure(FORBIDDEN_MESSAGE);
 
   const userId = access.caller.userId;
-  if (!userId) return FORBIDDEN;
+  if (!userId) return failure(FORBIDDEN_MESSAGE);
   const n = await resetAllEdits(userId);
   refresh();
-  return {
-    ok: true,
-    message: n === 0 ? "Nothing to reset." : "Everything is back to official.",
-  };
+  return success(
+    undefined,
+    n === 0 ? "Nothing to reset." : "Everything is back to official.",
+  );
 }
 
 const OPEN_MESSAGES = {
-  forbidden: FORBIDDEN.message,
+  forbidden: FORBIDDEN_MESSAGE,
   unavailable:
     "Opening pull requests is not set up in this environment. Your saved edits and the diff still work.",
   rate_limited:
@@ -213,37 +203,39 @@ const OPEN_MESSAGES = {
   nothing_to_propose: "Nothing differs from the official config.",
 } as const;
 
-export async function openConfigPrAction(): Promise<ConfigActionState> {
+/**
+ * Opens the officer's saved edits as a pull request. Success carries the link
+ * in `data.url`, which the editor keeps on screen. When the proposal fails the
+ * config checks, the failures come back in `fieldErrors`, keyed by their
+ * position ("0", "1", …), so the editor can list every one.
+ */
+export async function openConfigPrAction(): Promise<
+  ActionResult<{ url: string }>
+> {
   const access = await authorize(rules.officer);
-  if (!access.ok) {
-    return FORBIDDEN;
-  }
+  if (!access.ok) return failure(FORBIDDEN_MESSAGE);
 
   const userId = access.caller.userId;
   const result = await openConfigPr(userId);
   if (result.status === "opened") {
     refresh();
-    return {
-      ok: true,
-      message: result.draft
+    return success(
+      { url: result.url },
+      result.draft
         ? "Opened a draft pull request (staging)."
         : "Opened a pull request. Review and merging happen on GitHub.",
-      url: result.url,
-    };
+    );
   }
   if (result.status === "invalid") {
-    return {
-      ok: false,
-      message:
-        "This proposal does not pass the config checks, so no pull request was opened.",
-      errors: result.errors,
-    };
+    return failure(
+      "This proposal does not pass the config checks, so no pull request was opened.",
+      Object.fromEntries(result.errors.map((error, i) => [String(i), error])),
+    );
   }
   if (result.status === "github_error") {
-    return {
-      ok: false,
-      message: `GitHub refused the request, so no pull request was opened. (${result.message})`,
-    };
+    return failure(
+      `GitHub refused the request, so no pull request was opened. (${result.message})`,
+    );
   }
-  return { ok: false, message: OPEN_MESSAGES[result.status] };
+  return failure(OPEN_MESSAGES[result.status]);
 }

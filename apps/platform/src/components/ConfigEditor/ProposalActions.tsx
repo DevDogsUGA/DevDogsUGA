@@ -2,21 +2,19 @@
 
 import "./configEditor.css";
 
-import { useActionState } from "react";
 import {
   openConfigPrAction,
   resetAllConfigEditsAction,
-  type ConfigActionState,
 } from "~/server/actions/configEdits";
-import { cn } from "~/lib/cn";
 import { Button } from "~/ui/button";
-
-const initialState: ConfigActionState = { ok: false, message: "" };
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 /**
  * Open PR, and Reset all. Open PR is disabled while the proposal has no
  * changes, does not validate, or pull requests are not set up here; the server
- * checks all three again.
+ * checks all three again. Both are Commands: success is a toast, and the link
+ * to the pull request stays beside the buttons. When the config checks fail,
+ * every failure is listed under the message.
  */
 export default function ProposalActions({
   canOpen,
@@ -25,59 +23,49 @@ export default function ProposalActions({
   canOpen: boolean;
   hasEdits: boolean;
 }) {
-  const [opened, open, opening] = useActionState(
-    async () => await openConfigPrAction(),
-    initialState,
-  );
-  const [reset, resetAll, resetting] = useActionState(
-    async () => await resetAllConfigEditsAction(),
-    initialState,
-  );
+  const open = useCommand(openConfigPrAction);
+  const reset = useCommand(resetAllConfigEditsAction);
+  const failures =
+    open.result && !open.result.ok
+      ? Object.values(open.result.fieldErrors ?? {})
+      : [];
   return (
     <div className="cfg-stack">
       <div className="cfg-actions">
-        <form action={open}>
-          <Button type="submit" size="sm" disabled={!canOpen || opening}>
+        <form action={() => open.run()}>
+          <Button type="submit" size="sm" disabled={!canOpen || open.pending}>
             Open PR
           </Button>
         </form>
         {hasEdits && (
-          <form action={resetAll}>
+          <form action={() => reset.run()}>
             <Button
               type="submit"
               size="sm"
               variant="secondary"
-              disabled={resetting}
+              disabled={reset.pending}
             >
               Reset all to official
             </Button>
           </form>
         )}
       </div>
-      {opened.message && (
-        <div role="status">
-          <p className={cn("cfg-status", opened.ok ? "ok" : "bad")}>
-            {opened.message}{" "}
-            {opened.url && (
-              <a href={opened.url} target="_blank" rel="noreferrer">
-                View the pull request
-              </a>
-            )}
-          </p>
-          {opened.errors && (
-            <ul className="cfg-errors">
-              {opened.errors.map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-      {reset.message && (
-        <p className={cn("cfg-status", reset.ok ? "ok" : "bad")} role="status">
-          {reset.message}
+      {open.result?.ok && open.result.data?.url && (
+        <p className="cfg-status ok">
+          <a href={open.result.data.url} target="_blank" rel="noreferrer">
+            View the pull request
+          </a>
         </p>
       )}
+      <CommandFeedback result={open.result} />
+      {failures.length > 0 && (
+        <ul className="cfg-errors">
+          {failures.map((error) => (
+            <li key={error}>{error}</li>
+          ))}
+        </ul>
+      )}
+      <CommandFeedback result={reset.result} />
     </div>
   );
 }

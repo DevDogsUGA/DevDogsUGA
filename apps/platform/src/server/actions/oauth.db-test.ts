@@ -38,7 +38,13 @@ vi.mock("~/server/auth", () => ({
   authenticate: () => Promise.reject(new Error("sign-in required")),
 }));
 
-const { default: oauthAction } = await import("./oauth");
+const {
+  createOAuthClient,
+  deleteOAuthClient,
+  regenerateOAuthSecret,
+  addRedirectUri,
+  removeRedirectUri,
+} = await import("./oauth");
 
 const IDS = {
   officer: "f7000000-0000-4000-a000-000000000001",
@@ -51,7 +57,6 @@ const USERS = [
 ] as const;
 
 const PREFIX = "oauth-action-db-test";
-const EMPTY = { clientId: null, clientSecret: null };
 
 function form(fields: Record<string, string>): FormData {
   const data = new FormData();
@@ -59,8 +64,41 @@ function form(fields: Record<string, string>): FormData {
   return data;
 }
 
-function act(fields: Record<string, string>) {
-  return oauthAction(EMPTY, form(fields));
+/**
+ * One call per Command, named by the intent the tests were written against.
+ * Refusals come back as failures; only an upstream (GoTrue) failure throws.
+ */
+async function act(fields: Record<string, string>) {
+  const { intent = "", clientId = "", uri = "" } = fields;
+  switch (intent) {
+    case "create-client":
+      return createOAuthClient(form(fields));
+    case "revoke-client":
+      return deleteOAuthClient(clientId);
+    case "reset-secret":
+      return regenerateOAuthSecret(clientId);
+    case "add-uri":
+      return addRedirectUri(clientId, uri);
+    case "remove-uri":
+      return removeRedirectUri(clientId, uri);
+    default:
+      throw new Error(`Unknown intent: ${intent}`);
+  }
+}
+
+/** The client a create returned, failing the test when it was refused. */
+async function created(fields: Record<string, string>) {
+  const result = await act({ intent: "create-client", ...fields });
+  if (!result.ok) throw new Error(`create refused: ${result.message}`);
+  return result.data as { clientId: string; clientSecret: string };
+}
+
+/** Asserts a refusal, with its message. */
+function refused(result: Awaited<ReturnType<typeof act>>, message: RegExp) {
+  expect(result).toMatchObject({
+    ok: false,
+    message: expect.stringMatching(message) as unknown,
+  });
 }
 
 function signInAs(id: string, github = true) {
@@ -175,38 +213,35 @@ beforeEach(() => {
 describe("creating a client", () => {
   it("creates a Testing app that asks for consent, owned by the member, with no audit entry", async () => {
     signInAs(IDS.member);
-    const result = await act({
-      intent: "create-client",
-      label: `${PREFIX}-dev`,
-    });
+    const result = await created({ label: `${PREFIX}-dev` });
 
     expect(result.clientId).toBeTruthy();
     expect(result.clientSecret).toBeTruthy();
-    expect(await registration(result.clientId!)).toEqual({
+    expect(await registration(result.clientId)).toEqual({
       userId: IDS.member,
       status: "testing",
       asksForConsent: true,
       label: `${PREFIX}-dev`,
     });
-    expect(await auditRows(result.clientId!)).toHaveLength(0);
+    expect(await auditRows(result.clientId)).toHaveLength(0);
   });
 
   it("needs a linked GitHub account", async () => {
     signInAs(IDS.member, false);
-    await expect(
-      act({ intent: "create-client", label: `${PREFIX}-nogithub` }),
-    ).rejects.toThrow(/GitHub/);
+    refused(
+      await act({ intent: "create-client", label: `${PREFIX}-nogithub` }),
+      /GitHub/,
+    );
     expect(await liveClientCount(`${PREFIX}-nogithub`)).toBe(0);
   });
 
   it("ignores a requested tier: a holder's app starts as a Testing app too", async () => {
     signInAs(IDS.officer);
-    const result = await act({
-      intent: "create-client",
+    const result = await created({
       tier: "production",
       label: `${PREFIX}-officer-tier`,
     });
-    expect((await registration(result.clientId!))?.status).toBe("testing");
+    expect((await registration(result.clientId))?.status).toBe("testing");
   });
 
   it("refuses a return address the redirect rule refuses, and makes nothing", async () => {
@@ -216,25 +251,25 @@ describe("creating a client", () => {
       "myapp://callback",
       "https://user:pw@example.com/cb",
     ]) {
-      await expect(
-        act({
+      refused(
+        await act({
           intent: "create-client",
           label: `${PREFIX}-badcb`,
           callbackUri,
         }),
-      ).rejects.toThrow(/Redirect URIs must be/);
+        /Redirect URIs must be/,
+      );
     }
     expect(await liveClientCount(`${PREFIX}-badcb`)).toBe(0);
   });
 
   it("accepts any https address and a local http one", async () => {
     signInAs(IDS.officer);
-    const created = await act({
-      intent: "create-client",
+    const made = await created({
       label: `${PREFIX}-custom-host`,
       callbackUri: "https://api.example.com/auth/v1/callback",
     });
-    expect(created.clientId).toBeTruthy();
+    expect(made.clientId).toBeTruthy();
   });
 });
 
@@ -261,18 +296,16 @@ describe("the three-app cap", () => {
     signInAs(CAPPED);
     const ids: string[] = [];
     for (const n of [1, 2, 3]) {
-      const created = await act({
-        intent: "create-client",
-        label: `${PREFIX}-cap-${n}`,
-      });
-      ids.push(created.clientId!);
+      const made = await created({ label: `${PREFIX}-cap-${n}` });
+      ids.push(made.clientId);
     }
     // One of them In production still counts.
     await setState(ids[0]!, { status: "in_production" });
 
-    await expect(
-      act({ intent: "create-client", label: `${PREFIX}-cap-4` }),
-    ).rejects.toThrow(/at most 3/);
+    refused(
+      await act({ intent: "create-client", label: `${PREFIX}-cap-4` }),
+      /at most 3/,
+    );
     expect(await liveClientCount(`${PREFIX}-cap-4`)).toBe(0);
   });
 
@@ -287,11 +320,8 @@ describe("the three-app cap", () => {
       owner: null,
       asksForConsent: false,
     });
-    const created = await act({
-      intent: "create-client",
-      label: `${PREFIX}-cap-4`,
-    });
-    expect(created.clientId).toBeTruthy();
+    const made = await created({ label: `${PREFIX}-cap-4` });
+    expect(made.clientId).toBeTruthy();
   });
 });
 
@@ -303,18 +333,12 @@ describe("managing a client", () => {
   beforeAll(async () => {
     await clearOwned(IDS.member, IDS.officer);
     signInAs(IDS.member);
-    owned = (
-      await act({ intent: "create-client", label: `${PREFIX}-manage-dev` })
-    ).clientId!;
-    published = (
-      await act({ intent: "create-client", label: `${PREFIX}-manage-pub` })
-    ).clientId!;
+    owned = (await created({ label: `${PREFIX}-manage-dev` })).clientId;
+    published = (await created({ label: `${PREFIX}-manage-pub` })).clientId;
     await setState(published, { status: "in_production" });
 
     signInAs(IDS.officer);
-    devdogs = (
-      await act({ intent: "create-client", label: `${PREFIX}-manage-dd` })
-    ).clientId!;
+    devdogs = (await created({ label: `${PREFIX}-manage-dd` })).clientId;
     await setState(devdogs, {
       status: "in_production",
       owner: null,
@@ -325,35 +349,36 @@ describe("managing a client", () => {
   it("hides an app from anyone but its owner, holders included", async () => {
     signInAs(IDS.officer);
     for (const clientId of [owned, published]) {
-      await expect(act({ intent: "reset-secret", clientId })).rejects.toThrow(
-        /not found/,
-      );
+      refused(await act({ intent: "reset-secret", clientId }), /not found/);
     }
   });
 
   it("hides a DevDogs app from a member without the permission", async () => {
     signInAs(IDS.member);
     for (const intent of ["reset-secret", "revoke-client"]) {
-      await expect(act({ intent, clientId: devdogs })).rejects.toThrow(
-        /not found/,
-      );
+      refused(await act({ intent, clientId: devdogs }), /not found/);
     }
   });
 
   it("lets every holder roll a DevDogs app's secret, with an audit entry", async () => {
     signInAs(IDS.officer);
     const result = await act({ intent: "reset-secret", clientId: devdogs });
-    expect(result.clientSecret).toBeTruthy();
+    const secret = result.ok
+      ? (result.data as { clientSecret: string | null }).clientSecret
+      : null;
+    expect(secret).toBeTruthy();
     const rotated = (await auditRows(devdogs)).filter(
       (row) => row.action === "oauth_client.secret_rotated",
     );
     expect(rotated).toHaveLength(1);
-    expect(JSON.stringify(rotated)).not.toContain(result.clientSecret!);
+    expect(JSON.stringify(rotated)).not.toContain(secret!);
   });
 
   it("lets the owner of a published app keep its secret, audited", async () => {
     signInAs(IDS.member);
-    await act({ intent: "reset-secret", clientId: published });
+    expect(
+      await act({ intent: "reset-secret", clientId: published }),
+    ).toMatchObject({ ok: true });
     expect((await auditRows(published)).map((row) => row.action)).toContain(
       "oauth_client.secret_rotated",
     );
@@ -362,34 +387,44 @@ describe("managing a client", () => {
   it("rolls a Testing app's secret for its owner without an audit entry", async () => {
     signInAs(IDS.member);
     const result = await act({ intent: "reset-secret", clientId: owned });
-    expect(result.clientSecret).toBeTruthy();
+    expect(result).toMatchObject({
+      ok: true,
+      data: { clientSecret: expect.any(String) as unknown },
+    });
     expect(await auditRows(owned)).toHaveLength(0);
   });
 
   it("applies one redirect rule to every app, and audits an audited app's changes", async () => {
     signInAs(IDS.member);
     for (const uri of ["http://example.com/cb", "myapp://cb"]) {
-      await expect(
-        act({ intent: "add-uri", clientId: owned, uri }),
-      ).rejects.toThrow(/Redirect URIs must be/);
+      refused(
+        await act({ intent: "add-uri", clientId: owned, uri }),
+        /Redirect URIs must be/,
+      );
     }
-    await act({
-      intent: "add-uri",
-      clientId: owned,
-      uri: "http://localhost:4000/cb",
-    });
+    expect(
+      await act({
+        intent: "add-uri",
+        clientId: owned,
+        uri: "http://localhost:4000/cb",
+      }),
+    ).toMatchObject({ ok: true });
     expect(await auditRows(owned)).toHaveLength(0);
 
-    await act({
-      intent: "add-uri",
-      clientId: published,
-      uri: "https://app.example.com/cb",
-    });
-    await act({
-      intent: "remove-uri",
-      clientId: published,
-      uri: "https://app.example.com/cb",
-    });
+    expect(
+      await act({
+        intent: "add-uri",
+        clientId: published,
+        uri: "https://app.example.com/cb",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await act({
+        intent: "remove-uri",
+        clientId: published,
+        uri: "https://app.example.com/cb",
+      }),
+    ).toMatchObject({ ok: true });
     const actions = (await auditRows(published)).map((row) => row.action);
     expect(actions).toContain("oauth_client.redirect_uri_added");
     expect(actions).toContain("oauth_client.redirect_uri_removed");
@@ -430,16 +465,17 @@ describe("deleting an app", () => {
 
   it("deletes any app for its owner with no replacement, audits an In production one", async () => {
     signInAs(IDS.member);
-    const testing = (
-      await act({ intent: "create-client", label: `${PREFIX}-del-testing` })
-    ).clientId!;
-    const published = (
-      await act({ intent: "create-client", label: `${PREFIX}-del-pub` })
-    ).clientId!;
+    const testing = (await created({ label: `${PREFIX}-del-testing` }))
+      .clientId;
+    const published = (await created({ label: `${PREFIX}-del-pub` })).clientId;
     await setState(published, { status: "in_production" });
 
-    await act({ intent: "revoke-client", clientId: testing });
-    await act({ intent: "revoke-client", clientId: published });
+    expect(
+      await act({ intent: "revoke-client", clientId: testing }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await act({ intent: "revoke-client", clientId: published }),
+    ).toMatchObject({ ok: true });
 
     for (const [id, label] of [
       [testing, `${PREFIX}-del-testing`],
@@ -465,15 +501,15 @@ describe("deleting an app", () => {
 
   it("lets a holder delete a DevDogs app, the last one included", async () => {
     signInAs(IDS.officer);
-    const id = (
-      await act({ intent: "create-client", label: `${PREFIX}-del-dd` })
-    ).clientId!;
+    const id = (await created({ label: `${PREFIX}-del-dd` })).clientId;
     await setState(id, {
       status: "in_production",
       owner: null,
       asksForConsent: false,
     });
-    await act({ intent: "revoke-client", clientId: id });
+    expect(await act({ intent: "revoke-client", clientId: id })).toMatchObject({
+      ok: true,
+    });
     expect(await registration(id)).toBeNull();
     expect(await liveClientCount(`${PREFIX}-del-dd`)).toBe(0);
   });

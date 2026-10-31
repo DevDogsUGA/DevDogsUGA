@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
   cancelMemberDeletion,
   requestAccountDeletion,
@@ -10,6 +9,7 @@ import { Button } from "~/ui/button";
 import Callout from "~/ui/callout";
 import Field from "~/ui/field";
 import { Input } from "~/ui/input";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 import { confirmationMatches, OFFICER_DELETE_PHRASE } from "./confirm";
 
 export type PendingDeletionView = {
@@ -39,31 +39,17 @@ export default function ScheduleDeletionPanel({
   memberName: string;
   pending: PendingDeletionView | null;
 }) {
-  const router = useRouter();
   const [reason, setReason] = useState("");
   const [typed, setTyped] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [working, startTransition] = useTransition();
-
-  function run(
-    action: () => Promise<{ ok: true } | { ok: false; error: string }>,
-  ) {
-    setError(null);
-    startTransition(async () => {
-      try {
-        const result = await action();
-        if (!result.ok) {
-          setError(result.error);
-          return;
-        }
-        setReason("");
-        setTyped("");
-        router.refresh();
-      } catch {
-        setError("Something went wrong. Nothing was changed. Try again.");
-      }
-    });
-  }
+  const schedule = useCommand(async (note: string) => {
+    const result = await requestAccountDeletion(targetUserId, note);
+    if (result.ok) {
+      setReason("");
+      setTyped("");
+    }
+    return result;
+  });
+  const cancel = useCommand(() => cancelMemberDeletion(targetUserId));
 
   if (pendingDeletion) {
     return (
@@ -79,18 +65,14 @@ export default function ScheduleDeletionPanel({
             ? "The deletion has started and can no longer be cancelled."
             : "Until then they are signed out and hidden from the community. Cancelling restores everything."}
         </Callout>
-        {error && (
-          <Callout tone="critical" alert>
-            {error}
-          </Callout>
-        )}
+        <CommandFeedback result={cancel.result} />
         {!pendingDeletion.started && (
           <Button
             type="button"
             variant="outline"
             className="w-fit"
-            loading={working}
-            onClick={() => run(() => cancelMemberDeletion(targetUserId))}
+            loading={cancel.pending}
+            onClick={() => cancel.run()}
           >
             Cancel deletion
           </Button>
@@ -106,7 +88,7 @@ export default function ScheduleDeletionPanel({
       onSubmit={(event) => {
         event.preventDefault();
         if (!confirmed) return;
-        run(() => requestAccountDeletion(targetUserId, reason));
+        schedule.run(reason);
       }}
     >
       <p className="muted m-0">
@@ -143,17 +125,13 @@ export default function ScheduleDeletionPanel({
           />
         </Field>
       </div>
-      {error && (
-        <Callout tone="critical" alert>
-          {error}
-        </Callout>
-      )}
+      <CommandFeedback result={schedule.result} />
       <Button
         type="submit"
         variant="danger-solid"
         className="w-fit"
         disabled={!confirmed}
-        loading={working}
+        loading={schedule.pending}
       >
         Schedule deletion
       </Button>

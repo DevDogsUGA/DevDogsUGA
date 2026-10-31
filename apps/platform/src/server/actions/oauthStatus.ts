@@ -2,7 +2,12 @@
 
 import { authorize, rules, authorizeSession } from "~/server/auth/access";
 
-import { failure, expected, type ActionResult } from "~/lib/actionResult";
+import {
+  expected,
+  ExpectedFailure,
+  failure,
+  type ActionResult,
+} from "~/lib/actionResult";
 import * as z from "zod";
 
 import { db } from "../db";
@@ -91,29 +96,29 @@ export async function transferToDevDogs(
 export async function forgetApproval(
   clientId: string,
   userId: string,
-): Promise<RevokeCounts> {
+): Promise<ActionResult<RevokeCounts>> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
   const actorUserId = access.caller.userId;
   if (!uuid.safeParse(clientId).success || !uuid.safeParse(userId).success) {
-    throw new Error(APP_NOT_FOUND);
+    return failure(APP_NOT_FOUND);
   }
 
-  if (userId !== actorUserId) {
-    const registration = await db.query.oauthRegistrations.findFirst({
-      columns: { userId: true },
-      where: { clientId },
-    });
-    const testAccount = await db.query.oauthTestAccounts.findFirst({
-      columns: { testUserId: true },
-      where: { testUserId: userId, ownerUserId: actorUserId },
-    });
-    if (registration?.userId !== actorUserId || !testAccount) {
-      throw new Error(APP_NOT_FOUND);
+  return expected(async () => {
+    if (userId !== actorUserId) {
+      const registration = await db.query.oauthRegistrations.findFirst({
+        columns: { userId: true },
+        where: { clientId },
+      });
+      const testAccount = await db.query.oauthTestAccounts.findFirst({
+        columns: { testUserId: true },
+        where: { testUserId: userId, ownerUserId: actorUserId },
+      });
+      if (registration?.userId !== actorUserId || !testAccount) {
+        throw new ExpectedFailure(APP_NOT_FOUND);
+      }
     }
-  }
-  return forgetApprovalStep({ actorUserId, clientId, userId });
+    return forgetApprovalStep({ actorUserId, clientId, userId });
+  });
 }

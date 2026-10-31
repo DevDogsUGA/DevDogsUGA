@@ -1,20 +1,37 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { failure, success } from "~/lib/actionResult";
 
-const calls = vi.hoisted(() => ({ args: [] as unknown[] }));
+const calls = vi.hoisted(() => ({
+  args: [] as unknown[],
+  result: null as object | null,
+  toast: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("~/lib/toast", () => ({
+  toast: { success: calls.toast, error: vi.fn() },
+}));
 vi.mock("~/server/actions/badges", () => ({
   setMyBadgeHidden: (input: unknown) => {
     calls.args.push(input);
-    return Promise.resolve({ changed: 1 });
+    return Promise.resolve(calls.result);
   },
 }));
 
 const { default: BadgeVisibility } = await import("./BadgeVisibility");
 
+beforeEach(() => {
+  calls.result = success(
+    { changed: 1 },
+    "Badge hidden from your public profile.",
+  );
+});
+
 afterEach(() => {
   cleanup();
   calls.args = [];
+  calls.toast.mockReset();
 });
 
 const items = [
@@ -62,6 +79,19 @@ describe("BadgeVisibility", () => {
     expect(calls.args).toEqual([
       { badgeId: "mentor", workshopDefinitionId: null, hidden: true },
     ]);
+    expect(calls.toast).toHaveBeenCalledWith(
+      "Badge hidden from your public profile.",
+    );
+  });
+
+  it("keeps the switch where it was and says why when the change is refused", async () => {
+    calls.result = failure("That request is invalid.");
+    render(<BadgeVisibility items={items} />);
+    const toggle = screen.getByRole("switch", { name: /Show Mentor/ });
+    await userEvent.click(toggle);
+    expect(await screen.findByText("That request is invalid.")).toBeTruthy();
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect(calls.toast).not.toHaveBeenCalled();
   });
 
   it("says so with no badges", () => {

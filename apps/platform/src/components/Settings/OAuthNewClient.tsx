@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
 import { CheckIcon, LockIcon, PlusIcon } from "@phosphor-icons/react/ssr";
 import FormButton from "~/components/FormButton";
 import Input from "~/components/Input";
 import { REDIRECT_RULE_HELP } from "~/components/Settings/redirectUris";
-import oauthAction from "~/server/actions/oauth";
+import { createOAuthClient } from "~/server/actions/oauth";
 import { buttonVariants } from "~/ui/button";
 import Callout from "~/ui/callout";
 import { Panel } from "~/ui/app-shell";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 /**
  * The two steps of making an app (settings-oauth-new.html):
@@ -24,12 +24,17 @@ export default function OAuthNewClient({
   /** The redirect URIs a new client starts with (the server's, not typed here). */
   defaultRedirectUris: string[];
 }) {
-  const [{ clientId, clientSecret }, dispatch, isPending] = useActionState(
-    oauthAction,
-    { clientId: null, clientSecret: null },
-  );
+  // No refresh on success: the page would re-count the member's apps, and at
+  // the cap it swaps this form for a notice, taking the one-time secret with it.
+  const {
+    run,
+    pending: isPending,
+    result,
+  } = useCommand(createOAuthClient, { refresh: false });
+  const created = result?.ok ? result.data : undefined;
 
-  if (clientId && clientSecret) {
+  if (created) {
+    const { clientId, clientSecret } = created;
     return (
       <Panel id="step-2" title="Copy your client secret">
         <div className="eyebrow" style={{ marginTop: -8, marginBottom: 14 }}>
@@ -80,8 +85,7 @@ export default function OAuthNewClient({
       <div className="eyebrow" style={{ marginTop: -8 }}>
         Step 1 of 2
       </div>
-      <form action={dispatch}>
-        <input type="hidden" name="intent" value="create-client" />
+      <form action={run}>
         <div className="fields" style={{ marginTop: 18 }}>
           <label className="field">
             <span className="label">App name</span>
@@ -131,6 +135,7 @@ export default function OAuthNewClient({
             Create app
           </FormButton>
         </div>
+        <CommandFeedback result={result} />
       </form>
     </Panel>
   );

@@ -34,13 +34,12 @@ import { z } from "zod";
  * gets the "not found" they would get for an app that does not exist.
  */
 
-export type DetailsResult = { ok: true } | { ok: false; error: string };
-
 const uuid = z.uuid();
 
 async function requireEditableApp(clientId: string) {
   const userId = await expectSession();
-  if (!uuid.safeParse(clientId).success) throw new Error(APP_NOT_FOUND);
+  if (!uuid.safeParse(clientId).success)
+    throw new ExpectedFailure(APP_NOT_FOUND);
 
   const app = await db.query.oauthRegistrations.findFirst({
     columns: {
@@ -54,10 +53,10 @@ async function requireEditableApp(clientId: string) {
     },
     where: { clientId },
   });
-  if (!app) throw new Error(APP_NOT_FOUND);
+  if (!app) throw new ExpectedFailure(APP_NOT_FOUND);
 
   if (!mayManageClient(app, await callerFor(userId)))
-    throw new Error(APP_NOT_FOUND);
+    throw new ExpectedFailure(APP_NOT_FOUND);
   return { userId, app };
 }
 
@@ -163,64 +162,65 @@ export async function saveAppDetails(
  * A token to upload the cropped logo into the public avatars bucket, at a fresh
  * path in this app's folder (`apps/<clientId>/<uuid>.webp`). The browser
  * uploads straight to Storage; `saveAppLogo` then records that path. Signed
- * upload URLs stay valid for two hours, so the path is never reused.
+ * upload URLs stay valid for two hours, so the path is never reused. The first
+ * step of the logo flow, a Command of its own: a locked app or one the member
+ * does not manage comes back as a failure.
  */
 export async function createAppLogoUploadToken(
   clientId: string,
-): Promise<{ path: string; token: string; maxBytes: number }> {
+): Promise<ActionResult<{ path: string; token: string; maxBytes: number }>> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
-  const { app } = await requireEditableApp(clientId);
-  if (brandingLocked(app)) throw new Error(BRANDING_LOCKED);
-  const path = appLogoPath(clientId, crypto.randomUUID());
-  const { data, error } = await supabaseAdmin.storage
-    .from(env.NEXT_PUBLIC_AVATARS_BUCKET)
-    .createSignedUploadUrl(path);
-  if (error ?? !data) throw new Error("Failed to create the logo upload");
-  return { path, token: data.token, maxBytes: APP_LOGO_MAX_BYTES };
+  return expected(async () => {
+    const { app } = await requireEditableApp(clientId);
+    if (brandingLocked(app)) throw new ExpectedFailure(BRANDING_LOCKED);
+    const path = appLogoPath(clientId, crypto.randomUUID());
+    const { data, error } = await supabaseAdmin.storage
+      .from(env.NEXT_PUBLIC_AVATARS_BUCKET)
+      .createSignedUploadUrl(path);
+    if (error ?? !data) throw new Error("Failed to create the logo upload");
+    return { path, token: data.token, maxBytes: APP_LOGO_MAX_BYTES };
+  });
 }
 
-/** Records the uploaded logo on the app, once the object is really there. */
+/** Records the uploaded logo on the app, once the object is really there. The last step of the logo flow. */
 export async function saveAppLogo(
   clientId: string,
   path: string,
-): Promise<DetailsResult> {
+): Promise<ActionResult> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
-  const { userId, app } = await requireEditableApp(clientId);
-  if (brandingLocked(app)) return { ok: false, error: BRANDING_LOCKED };
-  if (!isAppLogoPath(clientId, path)) {
-    return { ok: false, error: "The logo did not upload. Try again" };
-  }
-
-  const { data: exists, error } = await supabaseAdmin.storage
-    .from(env.NEXT_PUBLIC_AVATARS_BUCKET)
-    .exists(path);
-  if (error || !exists) {
-    return { ok: false, error: "The logo did not upload. Try again" };
-  }
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(oauthRegistrations)
-      .set({ logoPath: path })
-      .where(eq(oauthRegistrations.clientId, clientId));
-    if (isLive(app)) {
-      await tx.insert(auditEvents).values(
-        oauthAuditEvent({
-          actorUserId: userId,
-          action: "oauth_app.details_changed",
-          clientId,
-          metadata: { label: app.label, field: "logo", logoPath: path },
-        }),
-      );
+  return expected(async (): Promise<undefined> => {
+    const { userId, app } = await requireEditableApp(clientId);
+    if (brandingLocked(app)) throw new ExpectedFailure(BRANDING_LOCKED);
+    if (!isAppLogoPath(clientId, path)) {
+      throw new ExpectedFailure("The logo did not upload. Try again");
     }
+
+    const { data: exists, error } = await supabaseAdmin.storage
+      .from(env.NEXT_PUBLIC_AVATARS_BUCKET)
+      .exists(path);
+    if (error || !exists) {
+      throw new ExpectedFailure("The logo did not upload. Try again");
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(oauthRegistrations)
+        .set({ logoPath: path })
+        .where(eq(oauthRegistrations.clientId, clientId));
+      if (isLive(app)) {
+        await tx.insert(auditEvents).values(
+          oauthAuditEvent({
+            actorUserId: userId,
+            action: "oauth_app.details_changed",
+            clientId,
+            metadata: { label: app.label, field: "logo", logoPath: path },
+          }),
+        );
+      }
+    });
   });
-  return { ok: true };
 }
