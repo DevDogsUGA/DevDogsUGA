@@ -14,7 +14,7 @@ member taps Report
   -> your `report` Edge Function
        POST /moderation/v1/reports        (signed with your client's secret)
   -> the platform: a report in the moderators' queue
-  -> a moderator decides in the console
+  -> a moderator decides in the dashboard
   -> the decision commits together with its deliveries (platform."moderationDeliveries")
   -> Cloudflare Queue -> signed POST to your `platform-moderation` Edge Function
   -> `moderation.apply_event(...)` hides the content, bans the user
@@ -94,21 +94,21 @@ The platform POSTs to the endpoint URL you registered. Seven message types:
 **Your receiver must:**
 
 1. **Verify the signature** against the raw body, and answer 401 when it fails. The function's JWT check must be off; the signature is the authentication. The platform sends no `Authorization` or `apikey` header, so a Supabase Edge Function deployed with the default `verify_jwt = true` is refused at the gateway with `401 UNAUTHORIZED_NO_AUTH_HEADER` before your code runs, and every delivery retries until it dead-letters. Set it in the function's `supabase/config.toml` (`[functions.platform-moderation]` with `verify_jwt = false`), or deploy with `--no-verify-jwt`; `supabase functions serve` honours the same setting.
-2. **Be idempotent.** Record `webhook-id` in a `moderation_events` table and answer 2xx for one you have seen. The platform retries, and a console resend reuses the id.
+2. **Be idempotent.** Record `webhook-id` in a `moderation_events` table and answer 2xx for one you have seen. The platform retries, and a dashboard resend reuses the id.
 3. **Be order-safe.** Ignore (but acknowledge) a message whose `timestamp` is older than the last decision applied to the same item (`content:<type>:<ref>` or `user:<id>`).
 4. Answer **2xx** once handled, including for a duplicate or a stale message, and **5xx** only for a failure worth retrying.
 
-Anything but a 2xx is retried with a growing delay (30 s doubling to an hour, about ten tries). After that the delivery is dead-lettered: it is marked failed, an alert is raised for a registered app (a development client's failure only marks it failed: it is the owner's endpoint under test), and the report page in the console shows a **Resend** button. A delivery to an app with no endpoint is recorded as failed immediately instead of being dropped. A 15-minute cron re-queues a pending delivery only when it has shown no sign of life (queued or attempted) for 90 minutes, longer than the longest retry delay, so a delivery that is still retrying is never queued twice.
+Anything but a 2xx is retried with a growing delay (30 s doubling to an hour, about ten tries). After that the delivery is dead-lettered: it is marked failed, an alert is raised for a registered app (a development client's failure only marks it failed: it is the owner's endpoint under test), and the report page in the dashboard shows a **Resend** button. A delivery to an app with no endpoint is recorded as failed immediately instead of being dropped. A 15-minute cron re-queues a pending delivery only when it has shown no sign of life (queued or attempted) for 90 minutes, longer than the longest retry delay, so a delivery that is still retrying is never queued twice.
 
 `createReceiver` in `@devdogsuga/sdk/moderation` is the reference implementation of all of it, with an in-memory store. Port its three rules to SQL in `apply_event`; do not invent others. Record the message id, check the order and apply the change in one transaction: an id recorded by a run that then failed would make the platform's retry a duplicate, and the decision would be lost.
 
 ## Registering a production app
 
-An officer who holds `canManageOAuthApps` (the permission that manages production OAuth clients) registers an OAuth client as a production app on the moderation console (**Apps Outside the Platform**): a slug, a name, the client id, the endpoint URL (`https`, a public hostname) and one content type per line, `type | Label | https://app/{ref}`. Reports from that client then reach the moderators. Re-registering a slug updates it; pointing it at another client moves the registration, and the old client's reports are then refused until it is registered again.
+An officer holding `canManageOAuthApps` configures a production client on its own `/dashboard/oauth/<clientId>` page. The Moderation panel registers a slug, name, endpoint URL (`https`, a public hostname) and content types (`type | Label | https://app/{ref}`). Reports from that client then reach moderators. Re-registering a slug updates it; pointing it at another client moves the registration, and the old client’s reports are refused until registered again.
 
 Only a **production** OAuth client made on [`/dashboard/oauth`](/dashboard/oauth) can be registered; a development client, a client created some other way (it has no tier) and a deleted client are all refused. Deleting a client removes its moderation registration, so a deleted client's reports are refused and nothing is delivered to its endpoint. A **development** client that is not registered files its reports into a sandbox only its owner reads (below). A **production** client that is not registered gets `403 client_not_registered` instead of a sandbox answer, so a missed registration shows up in the app's first Report & Block instead of sending every report where no moderator will see it.
 
-When registering is what first creates the client's moderation record, the console shows the client's signing secret once, under the form. Copy it into the app's environment (DogPack: `PLATFORM_MODERATION_SECRET`). If the secret is lost or copied wrongly, a holder of `canManageOAuthApps` rotates it on [`/dashboard/oauth`](/dashboard/oauth) under **Moderation**, where every production client is listed (the old secret stops working at once). Registering, rotating the secret and changing the endpoint of a production client are written to the audit log (`oauth_client.moderation_registered`, `oauth_client.moderation_secret_rotated`, `oauth_client.moderation_endpoint_changed`).
+When registering is what first creates the client's moderation record, the dashboard shows the client's signing secret once, under the form. Copy it into the app's environment (DogPack: `PLATFORM_MODERATION_SECRET`). If the secret is lost or copied wrongly, a holder of `canManageOAuthApps` rotates it on [`/dashboard/oauth`](/dashboard/oauth) on the client’s page under **Moderation** (the old secret stops working at once). Registering, rotating the secret and changing the endpoint of a production client are written to the audit log (`oauth_client.moderation_registered`, `oauth_client.moderation_secret_rotated`, `oauth_client.moderation_endpoint_changed`).
 
 ## Testing, in three layers
 

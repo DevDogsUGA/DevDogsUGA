@@ -1,7 +1,7 @@
 # DevDogs Monorepo
 
 DevDogs is UGA's student developer club. This repository is the platform and
-everything it runs on: the site, console, docs and OAuth server (`apps/platform`),
+everything it runs on: the site, dashboard, docs and OAuth server (`apps/platform`),
 Schedule Builder, the Study Group Finder, the database (`supabase/`: every
 migration, seed and config), the club's published packages and the officer CLIs
 (`packages/`), the docs (`docs/`), and the workflows that test, deploy and
@@ -10,7 +10,7 @@ the fold-back merged them, and Backstage is archived.)
 
 Pick your team's docs to get started:
 
-- [Platform](https://devdogsuga.org/docs/platform/getting-started/prerequisites): the site, console, docs, and OAuth server (Next.js)
+- [Platform](https://devdogsuga.org/docs/platform/getting-started/prerequisites): the site, dashboard, docs, and OAuth server (Next.js)
 - [DogDays](https://github.com/DevDogsUGA/DogDays): course schedule planning (its own repository)
 - [DogPack](https://github.com/DevDogsUGA/DogPack): study groups (its own repository, Flutter)
 
