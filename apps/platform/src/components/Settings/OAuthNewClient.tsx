@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { CheckIcon, LockIcon, PlusIcon } from "@phosphor-icons/react/ssr";
 import FormButton from "~/components/FormButton";
 import Input from "~/components/Input";
-import { REDIRECT_RULE_HELP } from "~/components/Settings/OAuthClientSheet";
+import { REDIRECT_RULE_HELP } from "~/components/Settings/redirectUris";
 import oauthAction from "~/server/actions/oauth";
 import { buttonVariants } from "~/ui/button";
 import Callout from "~/ui/callout";
@@ -42,7 +42,7 @@ export default function OAuthNewClient({
             title="You won't see this secret again."
           >
             Copy it now and keep this tab open until it&rsquo;s in your project.
-            If you lose it, regenerate it from the client&rsquo;s edit panel.
+            If you lose it, regenerate it from the app&rsquo;s page.
           </Callout>
           <div className="field" style={{ marginTop: 20 }}>
             <label className="label" htmlFor="new-cid">
@@ -106,7 +106,7 @@ export default function OAuthNewClient({
             </ul>
             <span className="help">
               {REDIRECT_RULE_HELP} A new app starts with the one above; add more
-              from its edit panel.
+              from its page.
             </span>
           </div>
           <div className="field">

@@ -1,5 +1,4 @@
-"use client";
-
+import Link from "next/link";
 import { PencilSimpleIcon } from "@phosphor-icons/react/ssr";
 import { CopyButton } from "~/ui/copy-field";
 import type { OAuthClientSummary } from "~/server/loaders/console";
@@ -14,14 +13,12 @@ export function statusLabel(status: OAuthClientSummary["status"]): string {
 /**
  * The member's apps as a table (settings-oauth.html): name with its status,
  * client ID with a copy button, how many redirect URIs it has and the edit
- * button that opens the drawer.
+ * link that opens the app's page.
  */
 export default function OAuthClientTable({
   clients,
-  onEdit,
 }: {
   clients: OAuthClientSummary[];
-  onEdit: (clientId: string) => void;
 }) {
   return (
     <Table caption="Your apps">
@@ -57,14 +54,13 @@ export default function OAuthClientTable({
             </Td>
             <Td>{client.redirectUris.length}</Td>
             <Td style={{ textAlign: "right" }}>
-              <button
-                type="button"
+              <Link
+                href={`/dashboard/oauth/${client.clientId}`}
                 className="iconbtn"
                 aria-label={`Edit ${client.label}`}
-                onClick={() => onEdit(client.clientId)}
               >
                 <PencilSimpleIcon aria-hidden />
-              </button>
+              </Link>
             </Td>
           </Tr>
         ))}

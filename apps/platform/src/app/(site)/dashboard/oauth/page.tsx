@@ -34,6 +34,10 @@ async function OAuthData({ searchParams }: Props) {
       searchParams,
     ]);
 
+  // An app's moderation lives on its own page. What is left here is the
+  // published apps a holder moderates but has no page for.
+  const unpaged = moderation.filter((client) => !client.hasPage);
+
   return (
     <>
       <Panel
@@ -84,14 +88,20 @@ async function OAuthData({ searchParams }: Props) {
         <SettingsAnchor
           id="moderation-clients"
           label="Report and Block"
-          description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from an app in Testing land in the sandbox below, never in the moderators' queue."
+          description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from an app in Testing land in a sandbox on its page, never in the moderators' queue."
         >
           <p className="help" style={{ marginBottom: 16, maxWidth: "62ch" }}>
             Sign reports from your app&rsquo;s backend, and receive the
-            decisions moderators make. Reports from an app in Testing land in
-            the sandbox below, never in the moderators&rsquo; queue.
+            decisions moderators make. Reports from an app in Testing land in a
+            sandbox on its page, never in the moderators&rsquo; queue.
           </p>
-          <OAuthModerationField clients={moderation} />
+          {unpaged.length > 0 ? (
+            <OAuthModerationField clients={unpaged} />
+          ) : (
+            <p className="help">
+              Moderation is set up per app. Open an app above to find it.
+            </p>
+          )}
         </SettingsAnchor>
       </Panel>
     </>
