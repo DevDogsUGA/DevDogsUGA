@@ -1,4 +1,4 @@
-import { pgSchema, uuid, integer, boolean, text, varchar, timestamp, numeric, smallint, date, jsonb, doublePrecision, customType, bytea, index, uniqueIndex, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { foreignKey, bigint, pgSchema, uuid, integer, boolean, text, varchar, timestamp, numeric, smallint, date, jsonb, doublePrecision, customType, bytea, index, uniqueIndex, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by types:drizzle after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -201,6 +201,8 @@ export const accountDeletionsInPlatform = platform.table.withRLS("accountDeletio
 ]);
 
 export const badgeAwardsInPlatform = platform.table.withRLS("badgeAwards", {
+	commitSha: text().references(() => commitsInPlatform.sha, { onUpdate: "cascade", onDelete: "set null" }),
+
 	id: uuid().defaultRandom().primaryKey(),
 	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	badgeId: text().notNull(),
@@ -216,7 +218,8 @@ export const badgeAwardsInPlatform = platform.table.withRLS("badgeAwards", {
 	withdrawnReason: text(),
 	hidden: boolean().default(false).notNull(),
 }, (table) => [
-	index("badgeAwards_meetingId_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("meetingId" IS NOT NULL)`),
+	index("badgeAwards_commitSha_idx").on(table.commitSha).where(sql`"commitSha" IS NOT NULL`),
+index("badgeAwards_meetingId_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("meetingId" IS NOT NULL)`),
 	uniqueIndex("badgeAwards_one_live_key").using("btree", table.userId.asc().nullsLast(), table.badgeId.asc().nullsLast(), sql`(COALESCE("workshopDefinitionId", ''::text))`).where(sql`(("withdrawnAt" IS NULL) AND (NOT repeatable))`),
 	index("badgeAwards_userId_awardedAt_idx").using("btree", table.userId.asc().nullsLast(), table.awardedAt.desc().nullsFirst()),
 	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
@@ -1071,6 +1074,33 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("workshops_definitionId_format", sql`(("definitionId" IS NULL) OR ("definitionId" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))`),check("workshops_description_length", sql`((description IS NULL) OR (char_length(description) <= 280))`),check("workshops_elHours_range", sql`(("elHours" > (0)::numeric) AND ("elHours" <= (8)::numeric))`),check("workshops_title_length", sql`((title IS NULL) OR (char_length(title) <= 80))`),]);
 export const projectsInPlatform = platform.table.withRLS("projects", {
+	slug: text(),
+	tags: text().array().default(sql`'{}'::text[]`).notNull(),
+	featured: boolean().default(sql`false`).notNull(),
+	inSwitcher: boolean().default(sql`false`).notNull(),
+	devdogsOwned: boolean().default(sql`false`).notNull(),
+	tagline: text(),
+	yearLabel: text(),
+	note: text(),
+	liveLabel: text(),
+	switcherBlurb: text(),
+	iconKey: text(),
+	colorKey: text(),
+	showcaseLabel: text(),
+	liveUrl: text(),
+	switcherUrl: text(),
+	contributionMode: text(),
+	displayOrder: integer().default(sql`0`).notNull(),
+	docsRepoId: bigint({ mode: "bigint" }).references(() => githubReposInPlatform.githubRepoId, { onUpdate: "cascade", onDelete: "restrict" }),
+	docsRequested: boolean().default(sql`false`).notNull(),
+	docsFirstPublishedAt: timestamp({ withTimezone: true }),
+	docsPausedAt: timestamp({ withTimezone: true }),
+	docsPauseReason: text(),
+	docsConfirmedOwnerId: bigint({ mode: "bigint" }),
+	docsConfirmedBy: uuid().references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+	docsConfirmedAt: timestamp({ withTimezone: true }),
+	lastDocsDispatchedSha: text(),
+
 	id: uuid().defaultRandom().primaryKey(),
 	name: text().notNull(),
 	description: text(),
@@ -1083,7 +1113,26 @@ export const projectsInPlatform = platform.table.withRLS("projects", {
 	decidedAt: timestamp({ withTimezone: true }),
 	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 }, (table) => [
-	index("projects_advisorId_idx").using("btree", table.advisorId.asc().nullsLast()).where(sql`("advisorId" IS NOT NULL)`),
+	check("projects_slug_length", sql`char_length("slug") <= 80 AND char_length(btrim("slug")) >= 2`),
+check("projects_tagline_length", sql`char_length("tagline") <= 160`),
+check("projects_yearLabel_length", sql`char_length("yearLabel") <= 40`),
+check("projects_note_length", sql`char_length("note") <= 280`),
+check("projects_liveLabel_length", sql`char_length("liveLabel") <= 80`),
+check("projects_switcherBlurb_length", sql`char_length("switcherBlurb") <= 80`),
+check("projects_iconKey_length", sql`char_length("iconKey") <= 64`),
+check("projects_colorKey_length", sql`char_length("colorKey") <= 64`),
+check("projects_showcaseLabel_length", sql`char_length("showcaseLabel") <= 80`),
+check("projects_liveUrl_shape", sql`char_length("liveUrl") <= 2048 AND ("liveUrl" ~ '^https://[^/[:space:]]+' OR "liveUrl" ~ '^/([^/]|$)')`),
+check("projects_switcherUrl_shape", sql`char_length("switcherUrl") <= 2048 AND ("switcherUrl" ~ '^https://[^/[:space:]]+' OR "switcherUrl" ~ '^/([^/]|$)')`),
+check("projects_contributionMode_choices", sql`"contributionMode" IN ('open','closed')`),
+check("projects_docsPauseReason_length", sql`char_length("docsPauseReason") <= 280`),
+check("projects_docsConfirmedOwnerId_positive", sql`"docsConfirmedOwnerId" > 0`),
+check("projects_lastDocsDispatchedSha_format", sql`"lastDocsDispatchedSha" ~ '^[0-9a-f]{40}$'`),
+check("projects_docs_pause_shape", sql`("docsPausedAt" IS NULL) = ("docsPauseReason" IS NULL)`),
+uniqueIndex("projects_slug_key").on(table.slug).where(sql`slug IS NOT NULL`),
+index("projects_featured_displayOrder_id_idx").on(table.displayOrder, table.id).where(sql`featured`),
+index("projects_inSwitcher_displayOrder_id_idx").on(table.displayOrder, table.id).where(sql`"inSwitcher"`),
+index("projects_advisorId_idx").using("btree", table.advisorId.asc().nullsLast()).where(sql`("advisorId" IS NOT NULL)`),
 	uniqueIndex("projects_name_key").using("btree", sql`lower(btrim(name))`),
 	index("projects_status_idx").using("btree", table.status.asc().nullsLast()),
 	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
@@ -1304,3 +1353,334 @@ export { surveyQuestionsInPlatform as surveyQuestions };
 export { userRolesInPlatform as userRoles };
 export { userSuspensionsInPlatform as userSuspensions };
 export { workshopsInPlatform as workshops };
+
+export const githubReposInPlatform = platform.table.withRLS("githubRepos", {
+	githubRepoId: bigint({ mode: "bigint" }).notNull(),
+	ownerId: bigint({ mode: "bigint" }).notNull(),
+	owner: text().notNull(),
+	name: text().notNull(),
+	ownerType: text().notNull(),
+	defaultBranch: text(),
+	health: text().default(sql`'available'`).notNull(),
+	lastCheckedAt: timestamp({ withTimezone: true }),
+	lastAvailableAt: timestamp({ withTimezone: true }),
+	unavailableSince: timestamp({ withTimezone: true }),
+	lastError: text(),
+	isDevdogsOrg: boolean().default(sql`false`).notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+check("githubRepos_githubRepoId_positive", sql`"githubRepoId" > 0`),
+check("githubRepos_ownerId_positive", sql`"ownerId" > 0`),
+check("githubRepos_owner_length", sql`char_length("owner") <= 100 AND char_length(btrim("owner")) >= 1`),
+check("githubRepos_name_length", sql`char_length("name") <= 100 AND char_length(btrim("name")) >= 1`),
+check("githubRepos_ownerType_choices", sql`"ownerType" IN ('User','Organization')`),
+check("githubRepos_defaultBranch_length", sql`char_length("defaultBranch") <= 255 AND char_length(btrim("defaultBranch")) >= 1`),
+check("githubRepos_health_choices", sql`"health" IN ('available','unavailable')`),
+check("githubRepos_lastError_length", sql`char_length("lastError") <= 500`),
+check("githubRepos_health_shape", sql`(health = 'unavailable') = ("unavailableSince" IS NOT NULL)`),
+index("githubRepos_isDevdogsOrg_githubRepoId_idx").on(sql`"isDevdogsOrg", "githubRepoId"`),
+primaryKey({ columns: [table.githubRepoId], name: "githubRepos_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const githubRepos = githubReposInPlatform;
+
+export const projectReposInPlatform = platform.table.withRLS("projectRepos", {
+	projectId: uuid().notNull().references(() => projectsInPlatform.id, { onUpdate: "cascade", onDelete: "cascade" }),
+	githubRepoId: bigint({ mode: "bigint" }).notNull().references(() => githubReposInPlatform.githubRepoId, { onUpdate: "cascade", onDelete: "restrict" }),
+	linkedBy: uuid().references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+	linkedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	approval: text().notNull(),
+	approvalBasis: text().notNull(),
+	approvedBy: uuid().references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+	decidedAt: timestamp({ withTimezone: true }),
+	approvalOwnerId: bigint({ mode: "bigint" }).notNull(),
+}, (table) => [
+check("projectRepos_approval_choices", sql`"approval" IN ('pending','approved','declined')`),
+check("projectRepos_approvalBasis_choices", sql`"approvalBasis" IN ('personal','devdogs-write','officer')`),
+check("projectRepos_approvalOwnerId_positive", sql`"approvalOwnerId" > 0`),
+check("projectRepos_decision_shape", sql`(approval = 'pending') = ("decidedAt" IS NULL)`),
+index("projectRepos_githubRepoId_projectId_idx").on(sql`"githubRepoId", "projectId"`),
+index("projectRepos_linkedAt_idx").on(sql`"linkedAt"`).where(sql`approval = 'pending'`),
+primaryKey({ columns: [table.projectId, table.githubRepoId], name: "projectRepos_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const projectRepos = projectReposInPlatform;
+
+export const projectOwnersInPlatform = platform.table.withRLS("projectOwners", {
+	projectId: uuid().notNull().references(() => projectsInPlatform.id, { onUpdate: "cascade", onDelete: "cascade" }),
+	userId: uuid().notNull().references(() => users.id, { onUpdate: "cascade", onDelete: "cascade" }),
+	addedBy: uuid().references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+	addedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+index("projectOwners_userId_projectId_idx").on(sql`"userId", "projectId"`),
+primaryKey({ columns: [table.projectId, table.userId], name: "projectOwners_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const projectOwners = projectOwnersInPlatform;
+
+export const commitsInPlatform = platform.table.withRLS("commits", {
+	sha: text().notNull(),
+	githubRepoId: bigint({ mode: "bigint" }).notNull().references(() => githubReposInPlatform.githubRepoId, { onUpdate: "cascade", onDelete: "restrict" }),
+	authorGithubId: bigint({ mode: "bigint" }),
+	authorLogin: text(),
+	userId: uuid().notNull().references(() => users.id, { onUpdate: "cascade", onDelete: "cascade" }),
+	committedAt: timestamp({ withTimezone: true }).notNull(),
+	message: text().notNull(),
+	files: integer(),
+	additions: bigint({ mode: "bigint" }),
+	deletions: bigint({ mode: "bigint" }),
+	statsState: text().default(sql`'pending'`).notNull(),
+	firstSeenAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+check("commits_sha_format", sql`"sha" ~ '^[0-9a-f]{40}$'`),
+check("commits_authorGithubId_positive", sql`"authorGithubId" > 0`),
+check("commits_authorLogin_length", sql`char_length("authorLogin") <= 100`),
+check("commits_files_nonnegative", sql`files >= 0`),
+check("commits_additions_nonnegative", sql`additions >= 0`),
+check("commits_deletions_nonnegative", sql`deletions >= 0`),
+check("commits_statsState_choices", sql`"statsState" IN ('pending','complete','truncated','unavailable')`),
+check("commits_stats_shape", sql`"statsState" <> 'complete' OR (files IS NOT NULL AND additions IS NOT NULL AND deletions IS NOT NULL)`),
+index("commits_userId_committedAt_idx").on(sql`"userId", "committedAt" DESC`),
+index("commits_githubRepoId_committedAt_idx").on(sql`"githubRepoId", "committedAt"`),
+index("commits_firstSeenAt_idx").on(sql`"firstSeenAt"`).where(sql`"statsState" = 'pending'`),
+primaryKey({ columns: [table.sha], name: "commits_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const commits = commitsInPlatform;
+
+export const repoCommitsInPlatform = platform.table.withRLS("repoCommits", {
+	githubRepoId: bigint({ mode: "bigint" }).notNull().references(() => githubReposInPlatform.githubRepoId, { onUpdate: "cascade", onDelete: "restrict" }),
+	sha: text().notNull().references(() => commitsInPlatform.sha, { onUpdate: "cascade", onDelete: "cascade" }),
+	firstSeenAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	defaultBranch: text().notNull(),
+}, (table) => [
+check("repoCommits_defaultBranch_length", sql`char_length("defaultBranch") <= 255 AND char_length(btrim("defaultBranch")) >= 1`),
+index("repoCommits_sha_githubRepoId_idx").on(sql`sha, "githubRepoId"`),
+primaryKey({ columns: [table.githubRepoId, table.sha], name: "repoCommits_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const repoCommits = repoCommitsInPlatform;
+
+export const projectReportCommitsInPlatform = platform.table.withRLS("projectReportCommits", {
+	reportId: uuid().notNull().references(() => projectReportsInPlatform.id, { onUpdate: "cascade", onDelete: "cascade" }),
+	sha: text().notNull().references(() => commitsInPlatform.sha, { onUpdate: "cascade", onDelete: "cascade" }),
+	githubRepoId: bigint({ mode: "bigint" }).notNull(),
+}, (table) => [
+foreignKey({ name: "projectReportCommits_githubRepoId_sha_fkey", columns: [table.githubRepoId, table.sha], foreignColumns: [repoCommitsInPlatform.githubRepoId, repoCommitsInPlatform.sha] }).onUpdate("cascade").onDelete("cascade"),
+index("projectReportCommits_githubRepoId_sha_idx").on(sql`"githubRepoId", sha`),
+primaryKey({ columns: [table.reportId, table.sha], name: "projectReportCommits_pkey" }),
+unique("projectReportCommits_sha_key").on(table.sha),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const projectReportCommits = projectReportCommitsInPlatform;
+
+export const hackathonsInPlatform = platform.table.withRLS("hackathons", {
+	id: uuid().defaultRandom().notNull(),
+	source: text().notNull(),
+	devpostId: bigint({ mode: "bigint" }),
+	url: text().notNull(),
+	name: text().notNull(),
+	startsOn: date(),
+	endsOn: date(),
+	dateLabel: text(),
+	location: text().notNull(),
+	online: boolean().default(sql`false`).notNull(),
+	openState: text(),
+	approval: text().notNull(),
+	submittedBy: uuid().references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+	approvedBy: uuid().references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+	decidedAt: timestamp({ withTimezone: true }),
+	lastSeenAt: timestamp({ withTimezone: true }),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+check("hackathons_source_choices", sql`"source" IN ('devpost','other')`),
+check("hackathons_devpostId_positive", sql`"devpostId" > 0`),
+check("hackathons_url_shape", sql`char_length("url") <= 2048 AND "url" ~ '^https://[^/[:space:]]+' AND position('#' in "url") = 0`),
+check("hackathons_name_length", sql`char_length("name") <= 200 AND char_length(btrim("name")) >= 2`),
+check("hackathons_dateLabel_length", sql`char_length("dateLabel") <= 200`),
+check("hackathons_location_length", sql`char_length("location") <= 200`),
+check("hackathons_openState_choices", sql`"openState" IN ('open','upcoming','closed')`),
+check("hackathons_approval_choices", sql`"approval" IN ('pending','approved','declined')`),
+check("hackathons_dates_order", sql`"startsOn" <= "endsOn"`),
+check("hackathons_source_shape", sql`(source = 'devpost' AND "devpostId" IS NOT NULL AND approval = 'approved') OR (source = 'other' AND "devpostId" IS NULL)`),
+index("hackathons_approval_startsOn_idx").on(sql`approval, "startsOn"`),
+index("hackathons_lastSeenAt_idx").on(sql`"lastSeenAt"`).where(sql`source = 'devpost'`),
+primaryKey({ columns: [table.id], name: "hackathons_pkey" }),
+unique("hackathons_devpostId_key").on(table.devpostId),
+unique("hackathons_url_key").on(table.url),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const hackathons = hackathonsInPlatform;
+
+export const submissionsInPlatform = platform.table.withRLS("submissions", {
+	id: uuid().defaultRandom().notNull(),
+	projectId: uuid().notNull().references(() => projectsInPlatform.id, { onUpdate: "cascade", onDelete: "restrict" }),
+	hackathonId: uuid().notNull().references(() => hackathonsInPlatform.id, { onUpdate: "cascade", onDelete: "restrict" }),
+	url: text().notNull(),
+	result: text(),
+	recordedBy: uuid().references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+check("submissions_url_shape", sql`char_length("url") <= 2048 AND "url" ~ '^https://[^/[:space:]]+' AND position('#' in "url") = 0`),
+check("submissions_result_length", sql`char_length("result") <= 280 AND char_length(btrim("result")) >= 1`),
+index("submissions_projectId_createdAt_idx").on(sql`"projectId", "createdAt"`),
+index("submissions_hackathonId_projectId_idx").on(sql`"hackathonId", "projectId"`),
+primaryKey({ columns: [table.id], name: "submissions_pkey" }),
+unique("submissions_url_key").on(table.url),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const submissions = submissionsInPlatform;
+
+export const submissionMembersInPlatform = platform.table.withRLS("submissionMembers", {
+	submissionId: uuid().notNull().references(() => submissionsInPlatform.id, { onUpdate: "cascade", onDelete: "cascade" }),
+	userId: uuid().notNull().references(() => users.id, { onUpdate: "cascade", onDelete: "cascade" }),
+}, (table) => [
+index("submissionMembers_userId_submissionId_idx").on(sql`"userId", "submissionId"`),
+primaryKey({ columns: [table.submissionId, table.userId], name: "submissionMembers_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const submissionMembers = submissionMembersInPlatform;
+
+export const repoSyncStateInPlatform = platform.table.withRLS("repoSyncState", {
+	githubRepoId: bigint({ mode: "bigint" }).notNull().references(() => githubReposInPlatform.githubRepoId, { onUpdate: "cascade", onDelete: "restrict" }),
+	lastAttemptAt: timestamp({ withTimezone: true }),
+	lastSucceededAt: timestamp({ withTimezone: true }),
+	lastFullScanAt: timestamp({ withTimezone: true }),
+	leaseUntil: timestamp({ withTimezone: true }),
+	nextAttemptAt: timestamp({ withTimezone: true }),
+	leaseToken: uuid(),
+	lastHeadSha: text(),
+	scanHeadSha: text(),
+	scanPage: integer().default(sql`1`).notNull(),
+	scanSince: timestamp({ withTimezone: true }),
+	mode: text().default(sql`'incremental'`).notNull(),
+	lastError: text(),
+	attempts: integer().default(sql`0`).notNull(),
+}, (table) => [
+check("repoSyncState_lastHeadSha_format", sql`"lastHeadSha" ~ '^[0-9a-f]{40}$'`),
+check("repoSyncState_scanHeadSha_format", sql`"scanHeadSha" ~ '^[0-9a-f]{40}$'`),
+check("repoSyncState_scanPage_positive", sql`"scanPage" > 0`),
+check("repoSyncState_mode_choices", sql`"mode" IN ('incremental','full')`),
+check("repoSyncState_lastError_length", sql`char_length("lastError") <= 500`),
+check("repoSyncState_attempts_nonnegative", sql`attempts >= 0`),
+index("repoSyncState_nextAttemptAt_leaseUntil_idx").on(sql`"nextAttemptAt", "leaseUntil"`),
+primaryKey({ columns: [table.githubRepoId], name: "repoSyncState_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const repoSyncState = repoSyncStateInPlatform;
+
+export const commitBackfillRequestsInPlatform = platform.table.withRLS("commitBackfillRequests", {
+	userId: uuid().notNull().references(() => users.id, { onUpdate: "cascade", onDelete: "cascade" }),
+	githubId: bigint({ mode: "bigint" }).notNull(),
+	requestedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	completedAt: timestamp({ withTimezone: true }),
+	leaseUntil: timestamp({ withTimezone: true }),
+	leaseToken: uuid(),
+	lastError: text(),
+	attempts: integer().default(sql`0`).notNull(),
+}, (table) => [
+check("commitBackfillRequests_githubId_positive", sql`"githubId" > 0`),
+check("commitBackfillRequests_lastError_length", sql`char_length("lastError") <= 500`),
+check("commitBackfillRequests_attempts_nonnegative", sql`attempts >= 0`),
+primaryKey({ columns: [table.userId], name: "commitBackfillRequests_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const commitBackfillRequests = commitBackfillRequestsInPlatform;
+
+export const projectSyncJobsInPlatform = platform.table.withRLS("projectSyncJobs", {
+	job: text().notNull(),
+	leaseToken: uuid(),
+	leaseUntil: timestamp({ withTimezone: true }),
+	lastAttemptAt: timestamp({ withTimezone: true }),
+	lastSucceededAt: timestamp({ withTimezone: true }),
+	nextAttemptAt: timestamp({ withTimezone: true }),
+	cursor: jsonb().default(sql`'{}'`).notNull(),
+	lastError: text(),
+	attempts: integer().default(sql`0`).notNull(),
+}, (table) => [
+check("projectSyncJobs_job_choices", sql`"job" IN ('commit-sync','devpost-sync')`),
+check("projectSyncJobs_cursor_shape", sql`jsonb_typeof(cursor) = 'object' AND octet_length(cursor::text) <= 16384`),
+check("projectSyncJobs_lastError_length", sql`char_length("lastError") <= 500`),
+check("projectSyncJobs_attempts_nonnegative", sql`attempts >= 0`),
+primaryKey({ columns: [table.job], name: "projectSyncJobs_pkey" }),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const projectSyncJobs = projectSyncJobsInPlatform;
+
+export const projectDocsProposalsInPlatform = platform.table.withRLS("projectDocsProposals", {
+	id: uuid().defaultRandom().notNull(),
+	projectId: uuid().notNull().references(() => projectsInPlatform.id, { onUpdate: "cascade", onDelete: "cascade" }),
+	requestedBy: uuid().references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+	enable: boolean().notNull(),
+	githubRepoId: bigint({ mode: "bigint" }).notNull().references(() => githubReposInPlatform.githubRepoId, { onUpdate: "cascade", onDelete: "restrict" }),
+	ownerId: bigint({ mode: "bigint" }).notNull(),
+	slug: text().notNull(),
+	baseSha: text().notNull(),
+	prNumber: integer(),
+	prUrl: text(),
+	state: text().notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	lastError: text(),
+}, (table) => [
+check("projectDocsProposals_ownerId_positive", sql`"ownerId" > 0`),
+check("projectDocsProposals_slug_length", sql`char_length("slug") <= 80 AND char_length(btrim("slug")) >= 2`),
+check("projectDocsProposals_baseSha_format", sql`"baseSha" ~ '^[0-9a-f]{40}$'`),
+check("projectDocsProposals_prNumber_positive", sql`"prNumber" > 0`),
+check("projectDocsProposals_prUrl_shape", sql`char_length("prUrl") <= 2048 AND "prUrl" ~ '^https://[^/[:space:]]+'`),
+check("projectDocsProposals_state_choices", sql`"state" IN ('opening','open','merged','closed','failed')`),
+check("projectDocsProposals_lastError_length", sql`char_length("lastError") <= 500`),
+uniqueIndex("projectDocsProposals_projectId_idx").on(sql`"projectId"`).where(sql`state IN ('opening','open')`),
+index("projectDocsProposals_state_updatedAt_idx").on(sql`state, "updatedAt"`),
+primaryKey({ columns: [table.id], name: "projectDocsProposals_pkey" }),
+unique("projectDocsProposals_prNumber_key").on(table.prNumber),
+pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", to: ["public"], withCheck: sql`false` }),
+pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", to: ["public"], using: sql`false` }),
+pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", to: ["public"], using: sql`false`, withCheck: sql`false` }),
+]);
+export const projectDocsProposals = projectDocsProposalsInPlatform;
+
+export const projectRepoDetailsInPlatform = platform.view("projectRepoDetails", {
+ projectId: uuid().notNull(), githubRepoId: bigint({ mode: "bigint" }).notNull(), linkedBy: uuid(), linkedAt: timestamp({ withTimezone: true }).notNull(), approval: text().notNull(), approvalBasis: text().notNull(), approvedBy: uuid(), decidedAt: timestamp({ withTimezone: true }), approvalOwnerId: bigint({ mode: "bigint" }).notNull(), owner: text().notNull(), name: text().notNull(), ownerId: bigint({ mode: "bigint" }).notNull(), defaultBranch: text(), health: text().notNull(), lastCheckedAt: timestamp({ withTimezone: true }), lastAvailableAt: timestamp({ withTimezone: true }), unavailableSince: timestamp({ withTimezone: true })
+}).with({ securityInvoker: true }).as(sql`SELECT pr.*, gr.owner, gr.name, gr."ownerId", gr."defaultBranch", gr.health, gr."lastCheckedAt", gr."lastAvailableAt", gr."unavailableSince" FROM platform."projectRepos" pr JOIN platform."githubRepos" gr USING ("githubRepoId")`);
+export const projectRepoDetails = projectRepoDetailsInPlatform;
