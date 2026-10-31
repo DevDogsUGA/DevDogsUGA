@@ -29,6 +29,18 @@ export const isBundledSlug = (slug: string): boolean =>
   getDocsProjects().some((project) => project.slug === slug);
 
 /**
+ * The numeric id of the repository a project's docs are read from: its chosen
+ * docs repository, or its only linked one, approved and available. Null when
+ * there is none to read.
+ */
+export async function previewRepoOf(projectId: string): Promise<string | null> {
+  const loaded = await createDocsStore().loadProject(projectId);
+  if (!loaded) return null;
+  const repo = docsRepo(loaded.project, loaded.repos);
+  return repo && repo.approved && repo.available ? repo.githubRepoId : null;
+}
+
+/**
  * The project under `slug`, the repository its docs come from (its chosen docs
  * repository, or its only linked one, approved and available), and the
  * caller's relation to it. Null when any of that is missing; the caller can't
@@ -49,17 +61,15 @@ export async function resolvePreviewTarget(
     .where(eq(projects.slug, slug));
   if (!row) return null;
 
-  const loaded = await createDocsStore().loadProject(row.id);
-  if (!loaded) return null;
-  const repo = docsRepo(loaded.project, loaded.repos);
-  if (!repo || !repo.approved || !repo.available) return null;
+  const repoId = await previewRepoOf(row.id);
+  if (repoId === null) return null;
 
   const relation = await getRelation(caller.userId, row.id);
   return {
     id: row.id,
     slug,
     name: row.name,
-    repoId: repo.githubRepoId,
+    repoId,
     facts: {
       isOwner: relation.isOwner || (row.devdogsOwned && rules.officer(caller)),
       isContributor: relation.isContributor,

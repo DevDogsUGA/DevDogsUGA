@@ -19,6 +19,10 @@ const mocks = vi.hoisted(() => ({
   getShowcaseFields: vi.fn(),
   getTeamCandidates: vi.fn(),
   getSubmittableHackathons: vi.fn(),
+  getDocsStatus: vi.fn(),
+  previewRepoOf: vi.fn(),
+  setProjectDocs: vi.fn(),
+  confirmDocsOwner: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({ connection: async () => undefined }));
@@ -34,7 +38,33 @@ vi.mock("~/server/auth/access", () => ({
     officer: (caller: Caller) => caller.isLeader,
     reviewProjectReports: (caller: Caller) =>
       caller.flags.canReviewProjectReports,
+    previewDocs: (caller: Caller) => caller.flags.canPreviewDocs,
   },
+}));
+vi.mock("~/server/docs/docsStatusLoad", () => ({
+  getDocsStatus: mocks.getDocsStatus,
+}));
+vi.mock("~/server/docs/previewAccess", () => ({
+  mayPreviewDocs: (facts: {
+    isOwner: boolean;
+    isContributor: boolean;
+    isReviewer: boolean;
+  }) => facts.isOwner || facts.isContributor || facts.isReviewer,
+}));
+vi.mock("~/server/docs/previewTarget", () => ({
+  previewRepoOf: mocks.previewRepoOf,
+}));
+// The check streams in from GitHub; its words are tested with the view.
+vi.mock("~/components/Projects/DocsReadiness", () => ({
+  default: ({ slug, repoId }: { slug: string; repoId: string }) => (
+    <p>
+      readiness for {slug} from {repoId}
+    </p>
+  ),
+}));
+vi.mock("~/server/actions/projectDocs", () => ({
+  setProjectDocs: mocks.setProjectDocs,
+  confirmDocsOwner: mocks.confirmDocsOwner,
 }));
 vi.mock("~/server/projects/load", () => ({
   findProjectId: mocks.findProjectId,
@@ -88,13 +118,18 @@ afterEach(cleanup);
 
 const ME = "11111111-1111-4111-8111-111111111111";
 const caller = (
-  over: { isLeader?: boolean; canReview?: boolean } = {},
+  over: {
+    isLeader?: boolean;
+    canReview?: boolean;
+    canPreviewDocs?: boolean;
+  } = {},
 ): Caller => ({
   userId: ME,
   isLeader: over.isLeader ?? false,
   minRank: Infinity,
   flags: {
     canReviewProjectReports: over.canReview ?? false,
+    canPreviewDocs: over.canPreviewDocs ?? false,
   } as Caller["flags"],
 });
 
@@ -205,6 +240,11 @@ beforeEach(() => {
   mocks.getSubmittableHackathons.mockResolvedValue([
     { id: "h-1", name: "HackGT", when: null },
   ]);
+  mocks.getDocsStatus.mockResolvedValue({
+    status: { kind: "off" },
+    slug: "porchlight",
+  });
+  mocks.previewRepoOf.mockResolvedValue("11");
 });
 
 const button = (name: string | RegExp) =>
@@ -607,5 +647,154 @@ describe("the showcase panel", () => {
       cleanup();
     }
     expect(mocks.getShowcaseFields).not.toHaveBeenCalled();
+  });
+});
+
+const DOCS_ID = "22222222-2222-4222-8222-222222222222";
+const previewLink = () =>
+  screen.queryByRole("link", { name: "Open the docs preview" });
+
+describe("the docs panel", () => {
+  it("tells everyone who can see the project where its docs stand, and nothing more", async () => {
+    await renderPage();
+    const panel = screen
+      .getByRole("heading", { name: "Docs" })
+      .closest("section")!;
+    expect(within(panel).getByText("Off")).toBeTruthy();
+    expect(previewLink()).toBeNull();
+    expect(screen.queryByText(/readiness for/)).toBeNull();
+    expect(button("Enable docs")).toBeNull();
+    expect(button("Disable docs")).toBeNull();
+    expect(button("Confirm new owner")).toBeNull();
+    expect(mocks.previewRepoOf).not.toHaveBeenCalled();
+  });
+
+  it.each<
+    [string, { owner?: boolean; contributor?: boolean; reviewer?: boolean }]
+  >([
+    ["an owner", { owner: true }],
+    ["a contributor", { contributor: true }],
+    ["a docs reviewer", { reviewer: true }],
+  ])(
+    "gives %s the preview and the readiness check, and no officer buttons",
+    async (_who, who) => {
+      mocks.caller = caller({ canPreviewDocs: who.reviewer === true });
+      mocks.getRelation.mockResolvedValue(
+        relation({
+          isOwner: who.owner === true,
+          isContributor: who.contributor === true,
+        }),
+      );
+      if (who.owner)
+        mocks.getProjectDetail.mockResolvedValue(
+          detail({ owners: [{ userId: ME, name: "Me", handle: "me" }] }),
+        );
+      await renderPage();
+      expect(previewLink()?.getAttribute("href")).toBe(
+        "/dashboard/docs-preview/porchlight",
+      );
+      expect(screen.getByText("readiness for porchlight from 11")).toBeTruthy();
+      expect(mocks.previewRepoOf).toHaveBeenCalledWith(DOCS_ID);
+      expect(button("Enable docs")).toBeNull();
+    },
+  );
+
+  it("says there is nothing to read when the project has no repository to read", async () => {
+    mocks.getRelation.mockResolvedValue(relation({ isContributor: true }));
+    mocks.previewRepoOf.mockResolvedValue(null);
+    await renderPage();
+    expect(previewLink()).toBeNull();
+    expect(
+      screen.getByText(/no repository to read docs from yet/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/readiness for/)).toBeNull();
+  });
+
+  it("gives an officer who is not an owner the buttons but not the preview", async () => {
+    mocks.caller = caller({ isLeader: true });
+    await renderPage();
+    expect(button("Enable docs")).toBeTruthy();
+    expect(button("Disable docs")).toBeNull();
+    expect(previewLink()).toBeNull();
+  });
+
+  it("gives an officer of a DevDogs-owned project both, since they own it", async () => {
+    mocks.caller = caller({ isLeader: true });
+    mocks.getProjectDetail.mockResolvedValue(
+      detail({ devdogsOwned: true, owners: [] }),
+    );
+    await renderPage();
+    expect(previewLink()).toBeTruthy();
+    expect(button("Enable docs")).toBeTruthy();
+  });
+
+  it("shows each state in words, with the pull request's link and the publish date", async () => {
+    mocks.caller = caller({ isLeader: true });
+    const cases: [object, RegExp, string[], string[]][] = [
+      [
+        { kind: "on" },
+        /Docs are on/,
+        ["Disable docs"],
+        ["Enable docs", "Confirm new owner"],
+      ],
+      [
+        { kind: "published", at: new Date("2026-10-30T16:00:00Z") },
+        /first published Oct 30, 2026/,
+        ["Disable docs"],
+        ["Enable docs", "Confirm new owner"],
+      ],
+      [
+        { kind: "paused" },
+        /changed owner/,
+        ["Disable docs", "Confirm new owner"],
+        ["Enable docs"],
+      ],
+      [
+        { kind: "bundled" },
+        /part of the site/,
+        [],
+        ["Enable docs", "Disable docs"],
+      ],
+    ];
+    for (const [status, text, shown, hidden] of cases) {
+      cleanup();
+      mocks.getDocsStatus.mockResolvedValue({ status, slug: "porchlight" });
+      await renderPage();
+      expect(screen.getByText(text), JSON.stringify(status)).toBeTruthy();
+      for (const label of shown) expect(button(label), label).toBeTruthy();
+      for (const label of hidden) expect(button(label), label).toBeNull();
+    }
+  });
+
+  it("links an open pull request and offers no button while it is open", async () => {
+    mocks.caller = caller({ isLeader: true });
+    mocks.getDocsStatus.mockResolvedValue({
+      status: {
+        kind: "proposal",
+        enable: true,
+        prUrl: "https://github.com/DevDogsUGA/DevDogsUGA/pull/9",
+      },
+      slug: "porchlight",
+    });
+    await renderPage();
+    expect(
+      screen
+        .getByRole("link", { name: "view the pull request" })
+        .getAttribute("href"),
+    ).toBe("https://github.com/DevDogsUGA/DevDogsUGA/pull/9");
+    expect(button("Enable docs")).toBeNull();
+    expect(button("Disable docs")).toBeNull();
+  });
+
+  it("lets an officer retry a pull request that never finished opening, in its own direction", async () => {
+    mocks.caller = caller({ isLeader: true });
+    mocks.getDocsStatus.mockResolvedValue({
+      status: { kind: "proposal", enable: false, prUrl: null },
+      slug: "porchlight",
+    });
+    await renderPage();
+    expect(screen.getByText(/is being opened/)).toBeTruthy();
+    expect(button("Disable docs")).toBeTruthy();
+    expect(button("Enable docs")).toBeNull();
   });
 });
