@@ -2,22 +2,16 @@
 
 import "./projects.css";
 
-import { useActionState } from "react";
-import {
-  reviewReportAction,
-  type ProjectActionState,
-} from "~/server/actions/projects";
-import { cn } from "~/lib/cn";
+import { reviewReportAction } from "~/server/actions/projects";
 import { Button } from "~/ui/button";
 import Field from "~/ui/field";
 import { Input } from "~/ui/input";
 import { Textarea } from "~/ui/textarea";
-
-const initialState: ProjectActionState = { ok: false, message: "" };
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 /**
  * Approve a report (confirming the hours or adjusting them) or return it with
- * a note. Both go through one action; the button picks the intent.
+ * a note. Both go through one Command; the button picks the intent.
  */
 export default function ReviewForm({
   reportId,
@@ -26,17 +20,16 @@ export default function ReviewForm({
   reportId: string;
   claimedHours: number;
 }) {
-  const [state, action, pending] = useActionState(
-    reviewReportAction,
-    initialState,
-  );
+  const { run, pending, result } = useCommand(reviewReportAction);
+  const errors = result && !result.ok ? (result.fieldErrors ?? {}) : {};
   return (
-    <form action={action} className="prj-form">
+    <form action={run} className="prj-form">
       <input type="hidden" name="reportId" value={reportId} />
       <Field
         label="Hours to approve"
         htmlFor={`prj-approve-${reportId}`}
         description="Confirm the claim or adjust it. Quarter hours."
+        error={errors.hours}
       >
         <Input
           id={`prj-approve-${reportId}`}
@@ -53,6 +46,7 @@ export default function ReviewForm({
         label="Note to the author"
         htmlFor={`prj-note-${reportId}`}
         description="Required when you return the report."
+        error={errors.note}
       >
         <Textarea
           id={`prj-note-${reportId}`}
@@ -82,11 +76,7 @@ export default function ReviewForm({
           Return with note
         </Button>
       </div>
-      {state.message && (
-        <p className={cn("prj-status", state.ok ? "ok" : "bad")} role="status">
-          {state.message}
-        </p>
-      )}
+      {Object.keys(errors).length === 0 && <CommandFeedback result={result} />}
     </form>
   );
 }

@@ -10,7 +10,6 @@ import {
   consoleImports,
   consoleMeeting,
   consoleMeetings,
-  consoleProjects,
   meetingGraphics,
 } from "./routes/console";
 import { cliApproval, signInProblem } from "./routes/auth";
@@ -19,7 +18,13 @@ import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
 import { communityDirectory, communityProfile } from "./routes/community";
 import { directions, eventDetail, eventsSchedule } from "./routes/events";
 import { home } from "./routes/home";
-import { hackathons, projectReport, projects } from "./routes/projects";
+import {
+  hackathons,
+  projectDetail,
+  projectReport,
+  projectReviews,
+  projects,
+} from "./routes/projects";
 import { docs, help, helpThread, kitGallery } from "./routes/misc";
 
 /**
@@ -71,11 +76,11 @@ export const TERMINAL_ROUTES = {
   "/dashboard/schedule/:collection/:key": consoleMeetings,
   "/dashboard/badges": consoleBadges,
   "/dashboard/badges/:userId": consoleBadges,
-  "/dashboard/reviews": consoleProjects,
-  "/dashboard/reviews/:projectId": consoleProjects,
+  "/dashboard/reviews": projectReviews,
   "/dashboard/projects": projects,
   "/dashboard/hackathons": hackathons,
-  "/dashboard/projects/:projectId/report": projectReport,
+  "/dashboard/projects/:idOrSlug": projectDetail,
+  "/dashboard/projects/:idOrSlug/report": projectReport,
   "/help": help,
   "/help/:threadId": helpThread,
   "/dashboard/data": consoleData,

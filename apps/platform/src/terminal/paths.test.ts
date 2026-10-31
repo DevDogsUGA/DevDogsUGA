@@ -85,15 +85,20 @@ describe("matchTerminalPath", () => {
       "/dashboard/badges/:userId",
     ],
     ["/dashboard/projects", "/dashboard/projects"],
+    ["/dashboard/projects/porchlight", "/dashboard/projects/:idOrSlug"],
+    [
+      "/dashboard/projects/6f0c1b0e-0000-4000-8000-000000000001",
+      "/dashboard/projects/:idOrSlug",
+    ],
+    [
+      "/dashboard/projects/porchlight/report",
+      "/dashboard/projects/:idOrSlug/report",
+    ],
     [
       "/dashboard/projects/6f0c1b0e-0000-4000-8000-000000000001/report",
-      "/dashboard/projects/:projectId/report",
+      "/dashboard/projects/:idOrSlug/report",
     ],
     ["/dashboard/reviews", "/dashboard/reviews"],
-    [
-      "/dashboard/reviews/6f0c1b0e-0000-4000-8000-000000000001",
-      "/dashboard/reviews/:projectId",
-    ],
     ["/dashboard/data", "/dashboard/data"],
     ["/dashboard/data/imports/", "/dashboard/data/imports"],
     ["/dashboard/data/exports", "/dashboard/data/exports"],

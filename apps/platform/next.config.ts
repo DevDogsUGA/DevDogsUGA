@@ -44,8 +44,20 @@ const config = {
         permanent: true,
       },
       {
-        source: "/console/projects/:path*",
-        destination: "/dashboard/reviews/:path*",
+        source: "/console/projects",
+        destination: "/dashboard/reviews",
+        permanent: true,
+      },
+      {
+        source: "/console/projects/:id",
+        destination: "/dashboard/projects/:id",
+        permanent: true,
+      },
+      // The review queue once had a page per project; the project's own page
+      // serves its advisor now.
+      {
+        source: "/dashboard/reviews/:id",
+        destination: "/dashboard/projects/:id",
         permanent: true,
       },
       {

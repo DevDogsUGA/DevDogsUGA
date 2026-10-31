@@ -17,8 +17,8 @@ export const PROJECT_NAME_MIN = 2;
 export const PROJECT_NAME_MAX = 80;
 export const PROJECT_DESCRIPTION_MAX = 1000;
 export const PROJECT_MAX_REPOS = 10;
-/** Proposals one member may have waiting on leadership at once. */
-export const MAX_OPEN_PROPOSALS = 3;
+export const PROJECT_MAX_TAGS = 20;
+export const PROJECT_TAG_MAX = 40;
 export const REVIEW_NOTE_MAX = 1000;
 
 const REPO = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]{1,100}$/;
@@ -79,8 +79,8 @@ export interface ReportDraft {
   endDate: string;
   hours: number;
   content: string;
-  /** The merged pull requests the report cites (Q119, Q120). */
-  contributionIds: string[];
+  /** The commits the report cites, by SHA (Q38, Q119, Q120). */
+  shas: string[];
 }
 
 export type ReportProblem =
@@ -89,7 +89,7 @@ export type ReportProblem =
   | "range_too_long"
   | "bad_hours"
   | "too_short"
-  | "no_prs";
+  | "no_commits";
 
 /**
  * Why a report cannot be submitted, or null. `today` is the Eastern day the
@@ -123,7 +123,7 @@ export function reportProblem(
   if (reflectionWordCount(draft.content) < REPORT_MINIMUM_WORDS) {
     return "too_short";
   }
-  if (draft.contributionIds.length === 0) return "no_prs";
+  if (draft.shas.length === 0) return "no_commits";
   return null;
 }
 
@@ -132,7 +132,7 @@ export const REPORT_PROBLEM_MESSAGE: Record<ReportProblem, string> = {
   future: "The date range cannot end in the future.",
   range_too_long: "One report covers at most a year. Split it into two.",
   bad_hours: `Hours must be in quarter-hour steps, above 0 and no more than ${REPORT_MAX_HOURS}.`,
-  no_prs: "Cite at least one of your merged pull requests as evidence.",
+  no_commits: "Cite at least one of your commits as evidence.",
   too_short: `Write at least ${REPORT_MINIMUM_WORDS} words about what you did and learned.`,
 };
 
@@ -147,25 +147,62 @@ export function easternDay(at: Date): string {
   return parts;
 }
 
-export interface ReviewActor {
-  userId: string;
-  isOfficer: boolean;
-  advisorId: string | null;
-}
+export type TagParse =
+  { ok: true; tags: string[] } | { ok: false; message: string };
 
 /**
- * Who may review a report (Q119): the project's advisor or leadership, never
- * the report's own author, so nobody approves their own hours. Leadership's own
- * EL is a separate process (Q125), so officers do not file ordinary reports
- * (see `submitProjectReport`); this only lets them review members'.
+ * Tags as typed, comma- or line-separated. They are trimmed and lowercased,
+ * duplicates collapse, and an empty box is fine. The database repeats the
+ * bounds in `validate_project_showcase`.
  */
-export function canReviewReport(
-  actor: ReviewActor,
-  authorId: string,
-): "yes" | "own_report" | "forbidden" {
-  const eligible =
-    actor.isOfficer ||
-    (actor.advisorId !== null && actor.advisorId === actor.userId);
-  if (!eligible) return "forbidden";
-  return actor.userId === authorId ? "own_report" : "yes";
+export function parseTags(input: string): TagParse {
+  const tags: string[] = [];
+  for (const raw of input.split(/[,\n]+/u)) {
+    const tag = raw.trim().replace(/\s+/gu, " ").toLowerCase();
+    if (tag === "") continue;
+    if (tag.length > PROJECT_TAG_MAX) {
+      return {
+        ok: false,
+        message: `A tag is at most ${PROJECT_TAG_MAX} characters.`,
+      };
+    }
+    if (!tags.includes(tag)) tags.push(tag);
+  }
+  if (tags.length > PROJECT_MAX_TAGS) {
+    return {
+      ok: false,
+      message: `A project has at most ${PROJECT_MAX_TAGS} tags.`,
+    };
+  }
+  return { ok: true, tags };
+}
+
+/** The name as stored: trimmed, inner whitespace collapsed. */
+export function normalizeProjectName(name: string): string {
+  return name.trim().replace(/\s+/gu, " ");
+}
+
+/** Why a name or description cannot be saved, or null. */
+export function projectTextProblem(
+  name: string,
+  description: string,
+): { field: "name" | "description"; message: string } | null {
+  if (name.length < PROJECT_NAME_MIN || name.length > PROJECT_NAME_MAX) {
+    return {
+      field: "name",
+      message: `Give the project a name of ${PROJECT_NAME_MIN} to ${PROJECT_NAME_MAX} characters.`,
+    };
+  }
+  if (description.length > PROJECT_DESCRIPTION_MAX) {
+    return {
+      field: "description",
+      message: `Keep the description under ${PROJECT_DESCRIPTION_MAX} characters.`,
+    };
+  }
+  return null;
+}
+
+/** The first line of a commit message, the part GitHub shows in lists. */
+export function commitTitle(message: string): string {
+  return message.split("\n", 1)[0]!.trim();
 }

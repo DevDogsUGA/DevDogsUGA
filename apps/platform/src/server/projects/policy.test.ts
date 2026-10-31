@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  canReviewReport,
+  commitTitle,
   easternDay,
   isQuarterHours,
+  normalizeProjectName,
   parseRepos,
+  parseTags,
+  projectTextProblem,
   reportProblem,
 } from "./policy";
 
@@ -13,7 +16,7 @@ const base = {
   endDate: "2026-10-14",
   hours: 6.5,
   content: words(100),
-  contributionIds: ["c-1"],
+  shas: ["a".repeat(40)],
 };
 
 describe("parseRepos", () => {
@@ -55,10 +58,8 @@ describe("reportProblem", () => {
       reportProblem({ ...base, content: `  ${words(100)}\n` }, today),
     ).toBeNull();
   });
-  it("wants at least one cited pull request", () => {
-    expect(reportProblem({ ...base, contributionIds: [] }, today)).toBe(
-      "no_prs",
-    );
+  it("wants at least one cited commit", () => {
+    expect(reportProblem({ ...base, shas: [] }, today)).toBe("no_commits");
   });
   it("counts NBSP-separated words as the database does", () => {
     const nb = Array.from({ length: 100 }, () => "word").join("\u00a0");
@@ -87,24 +88,44 @@ describe("reportProblem", () => {
   });
 });
 
-describe("canReviewReport", () => {
-  const advisor = { userId: "a", isOfficer: false, advisorId: "a" };
-  it("lets the advisor and leadership review someone else's report", () => {
-    expect(canReviewReport(advisor, "m")).toBe("yes");
-    expect(
-      canReviewReport({ userId: "o", isOfficer: true, advisorId: null }, "m"),
-    ).toBe("yes");
+describe("parseTags", () => {
+  it("trims, lowercases and collapses duplicates", () => {
+    expect(parseTags(" Web, web ,Mobile  App\n\nai ")).toEqual({
+      ok: true,
+      tags: ["web", "mobile app", "ai"],
+    });
   });
-  it("never lets anyone review their own", () => {
-    expect(canReviewReport(advisor, "a")).toBe("own_report");
-    expect(
-      canReviewReport({ userId: "o", isOfficer: true, advisorId: null }, "o"),
-    ).toBe("own_report");
+  it("allows none", () => {
+    expect(parseTags("")).toEqual({ ok: true, tags: [] });
   });
-  it("turns everyone else away", () => {
+  it("bounds a tag and the list", () => {
+    expect(parseTags("x".repeat(41)).ok).toBe(false);
+    const many = Array.from({ length: 21 }, (_, i) => `t${i}`).join(",");
+    expect(parseTags(many).ok).toBe(false);
     expect(
-      canReviewReport({ userId: "m", isOfficer: false, advisorId: "a" }, "x"),
-    ).toBe("forbidden");
+      parseTags(Array.from({ length: 20 }, (_, i) => `t${i}`).join(",")).ok,
+    ).toBe(true);
+  });
+});
+
+describe("project text", () => {
+  it("collapses a name's whitespace", () => {
+    expect(normalizeProjectName("  Dog   Days \n")).toBe("Dog Days");
+  });
+  it("bounds the name and the description", () => {
+    expect(projectTextProblem("x", "")?.field).toBe("name");
+    expect(projectTextProblem("x".repeat(81), "")?.field).toBe("name");
+    expect(projectTextProblem("Porchlight", "d".repeat(1001))?.field).toBe(
+      "description",
+    );
+    expect(projectTextProblem("Porchlight", "d".repeat(1000))).toBeNull();
+  });
+});
+
+describe("commitTitle", () => {
+  it("is the first line of the message", () => {
+    expect(commitTitle("Add the feed\n\nLong body")).toBe("Add the feed");
+    expect(commitTitle("  Fix  ")).toBe("Fix");
   });
 });
 
