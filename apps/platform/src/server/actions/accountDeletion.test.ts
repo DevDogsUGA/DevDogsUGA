@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ExpectedFailure } from "~/lib/actionResult";
 
 const fake = vi.hoisted(
   (): {
@@ -60,27 +61,28 @@ describe("requestAccountDeletion", () => {
     });
     expect(result).toEqual({
       ok: true,
-      scheduledFor: "2026-11-06T15:00:00.000Z",
+      data: { scheduledFor: "2026-11-06T15:00:00.000Z" },
+      message: "Account scheduled for deletion.",
     });
   });
 
   it("returns the sole-President refusal as a message to show", async () => {
     fake.schedule.mockRejectedValue(
-      new Error("Grant President to someone else first"),
+      new ExpectedFailure("Grant President to someone else first"),
     );
     await expect(requestAccountDeletion("officer-1")).resolves.toEqual({
       ok: false,
-      error: "Grant President to someone else first",
+      message: "Grant President to someone else first",
     });
   });
 
   it("returns the permission refusal for an officer without canDeleteAccounts", async () => {
     fake.schedule.mockRejectedValue(
-      new Error("Not authorized: canDeleteAccounts required"),
+      new ExpectedFailure("Not authorized: canDeleteAccounts required"),
     );
     await expect(requestAccountDeletion("member-1")).resolves.toEqual({
       ok: false,
-      error: "Not authorized: canDeleteAccounts required",
+      message: "Not authorized: canDeleteAccounts required",
     });
   });
 
@@ -93,9 +95,10 @@ describe("requestAccountDeletion", () => {
 
   it("refuses with no session before touching anything", async () => {
     fake.session = null;
-    await expect(requestAccountDeletion("member-1")).rejects.toThrow(
-      "Session expected",
-    );
+    await expect(requestAccountDeletion("member-1")).resolves.toEqual({
+      ok: false,
+      message: "Session expected but not found.",
+    });
     expect(fake.schedule).not.toHaveBeenCalled();
   });
 });
@@ -105,24 +108,34 @@ describe("cancelMemberDeletion", () => {
     fake.cancel.mockResolvedValue(true);
     await expect(cancelMemberDeletion("member-1")).resolves.toEqual({
       ok: true,
+      message: "Deletion cancelled.",
     });
     expect(fake.cancel).toHaveBeenCalledWith("member-1", "officer-1");
   });
 
   it("says so when there is nothing to cancel", async () => {
     fake.cancel.mockResolvedValue(false);
-    const result = await cancelMemberDeletion("member-1");
-    expect(result.ok).toBe(false);
+    expect(await cancelMemberDeletion("member-1")).toEqual({
+      ok: false,
+      message: "There is no pending deletion to cancel, or it has started.",
+    });
   });
 
   it("returns the permission refusal", async () => {
     fake.cancel.mockRejectedValue(
-      new Error("Not authorized: canDeleteAccounts required"),
+      new ExpectedFailure("Not authorized: canDeleteAccounts required"),
     );
     await expect(cancelMemberDeletion("member-1")).resolves.toEqual({
       ok: false,
-      error: "Not authorized: canDeleteAccounts required",
+      message: "Not authorized: canDeleteAccounts required",
     });
+  });
+
+  it("lets a real failure surface", async () => {
+    fake.cancel.mockRejectedValue(new Error("connection reset"));
+    await expect(cancelMemberDeletion("member-1")).rejects.toThrow(
+      "connection reset",
+    );
   });
 });
 
@@ -138,11 +151,11 @@ it("refuses another member at action level before either domain write", async ()
   fake.canDelete = false;
   expect(await requestAccountDeletion("member-1")).toEqual({
     ok: false,
-    error: "Not authorized: canDeleteAccounts required",
+    message: "Not authorized: canDeleteAccounts required",
   });
   expect(await cancelMemberDeletion("member-1")).toEqual({
     ok: false,
-    error: "Not authorized: canDeleteAccounts required",
+    message: "Not authorized: canDeleteAccounts required",
   });
   expect(fake.schedule).not.toHaveBeenCalled();
   expect(fake.cancel).not.toHaveBeenCalled();
