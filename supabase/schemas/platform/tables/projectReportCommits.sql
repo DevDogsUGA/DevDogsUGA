@@ -35,3 +35,8 @@ REVOKE ALL ON TABLE "platform"."projectReportCommits" FROM "anon", "authenticate
 CREATE TRIGGER projectReportCommits_validate
   BEFORE INSERT OR UPDATE ON platform."projectReportCommits"
   FOR EACH ROW EXECUTE FUNCTION platform.validate_report_commit();
+
+CREATE CONSTRAINT TRIGGER projectReportCommits_require_commits
+  AFTER DELETE OR UPDATE OF "reportId" ON platform."projectReportCommits"
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW EXECUTE FUNCTION platform.require_report_commits();

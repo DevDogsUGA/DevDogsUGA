@@ -101,7 +101,6 @@ const detail = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
   devdogsOwned: false,
   advisorId: null,
   advisorName: null,
-  legacy: false,
   repos: [repo()],
   owners: [{ userId: "owner-1", name: "Ada", handle: "ada" }],
   submissions: [],
@@ -460,25 +459,6 @@ describe("what a member may not see", () => {
   it("is a 404 when the project row is gone", async () => {
     mocks.getProjectDetail.mockResolvedValue(null);
     await expect(renderPage()).rejects.toThrow("NEXT_NOT_FOUND");
-  });
-
-  it("is a 404 for a legacy project, unless an officer asks", async () => {
-    mocks.getProjectDetail.mockResolvedValue(
-      detail({
-        status: "proposed",
-        legacy: true,
-        slug: null,
-        repos: [],
-        owners: [],
-      }),
-    );
-    await expect(renderPage()).rejects.toThrow("NEXT_NOT_FOUND");
-    mocks.caller = caller({ isLeader: true });
-    await renderPage();
-    expect(screen.getByText("A project from before the redesign")).toBeTruthy();
-    expect(screen.queryByText("Edit project")).toBeNull();
-    expect(button("Archive project")).toBeNull();
-    expect(button("Make DevDogs-owned")).toBeNull();
   });
 
   it("shows an archived project to any signed-in member", async () => {

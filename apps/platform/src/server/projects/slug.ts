@@ -46,7 +46,7 @@ export function projectSlug(name: string, taken: ReadonlySet<string>): string {
   }
 }
 
-/** A project route segment: the slug, or a legacy row's UUID. */
+/** A project route segment: the slug, or the UUID that links from before slugs use. */
 export const PROJECT_ID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 export const PROJECT_ICON_KEYS = [
@@ -66,7 +66,7 @@ export const PROJECT_COLOR_KEYS = [
   "emerald-400",
 ] as const;
 
-/** A project's dashboard path: its slug, or a legacy row's UUID. */
-export function projectPath(project: { slug: string | null; id: string }) {
-  return `/dashboard/projects/${project.slug ?? project.id}`;
+/** A project's dashboard path. */
+export function projectPath(project: { slug: string }) {
+  return `/dashboard/projects/${project.slug}`;
 }

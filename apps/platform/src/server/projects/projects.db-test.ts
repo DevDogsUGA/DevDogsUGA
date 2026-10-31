@@ -203,32 +203,36 @@ async function project(
   } = {},
 ): Promise<string> {
   const { status = "active", repos = [1], owners = [MEMBER] } = opts;
-  const [row] = await db.execute<{ id: string }>(sql`
-    insert into platform.projects (name, slug, status, "advisorId", "devdogsOwned")
-    values (${name}, ${name.toLowerCase().replace(/\s+/gu, "-")}, ${status},
-      ${opts.advisor ?? null}::uuid, ${opts.devdogsOwned ?? false})
-    returning id`);
-  const projectId = row!.id;
-  for (const n of repos) {
-    await repo(n);
-    await db.execute(sql`
-      insert into platform."projectRepos"
-        ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId", "decidedAt")
-      values (${projectId}::uuid, ${REPO0 + n}, 'approved', 'personal', ${3000 + n}, now())`);
-  }
-  for (const n of opts.pending ?? []) {
-    await repo(n, "Organization");
-    await db.execute(sql`
-      insert into platform."projectRepos"
-        ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId")
-      values (${projectId}::uuid, ${REPO0 + n}, 'pending', 'officer', ${3000 + n})`);
-  }
-  for (const owner of owners) {
-    await db.execute(sql`
-      insert into platform."projectOwners" ("projectId", "userId")
-      values (${projectId}::uuid, ${owner}::uuid)`);
-  }
-  return projectId;
+  for (const n of repos) await repo(n);
+  for (const n of opts.pending ?? []) await repo(n, "Organization");
+  // One transaction: an active project needs an approved link by commit
+  // (require_approved_repo), so the project and its links go in together.
+  return db.transaction(async (tx) => {
+    const [row] = await tx.execute<{ id: string }>(sql`
+      insert into platform.projects (name, slug, status, "advisorId", "devdogsOwned")
+      values (${name}, ${name.toLowerCase().replace(/\s+/gu, "-")}, ${status},
+        ${opts.advisor ?? null}::uuid, ${opts.devdogsOwned ?? false})
+      returning id`);
+    const projectId = row!.id;
+    for (const n of repos) {
+      await tx.execute(sql`
+        insert into platform."projectRepos"
+          ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId", "decidedAt")
+        values (${projectId}::uuid, ${REPO0 + n}, 'approved', 'personal', ${3000 + n}, now())`);
+    }
+    for (const n of opts.pending ?? []) {
+      await tx.execute(sql`
+        insert into platform."projectRepos"
+          ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId")
+        values (${projectId}::uuid, ${REPO0 + n}, 'pending', 'officer', ${3000 + n})`);
+    }
+    for (const owner of owners) {
+      await tx.execute(sql`
+        insert into platform."projectOwners" ("projectId", "userId")
+        values (${projectId}::uuid, ${owner}::uuid)`);
+    }
+    return projectId;
+  });
 }
 
 /** A stored commit of `userId` on repo `n`, with the provenance row the sync writes. */
