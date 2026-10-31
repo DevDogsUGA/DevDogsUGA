@@ -63,8 +63,11 @@ import {
   updateUserRole as updateUserRoleAction,
 } from "~/server/actions/moderation";
 import { registerExternalApp } from "~/server/actions/moderationDeliveries";
-import oauthModerationAction, {
+import {
+  enableModeration,
+  rotateModerationSecret,
   saveModerationEndpoint,
+  sendModerationTest,
 } from "~/server/actions/oauthModeration";
 import { handleFileReport } from "./api";
 import { attemptDelivery } from "./delivery";
@@ -943,14 +946,25 @@ describe("OAuth status", () => {
  * and every change to one is audited.
  */
 describe("moderation controls on /dashboard/oauth", () => {
+  /** One call per Command, named by the intent the tests were written against. */
   const act = (fields: Record<string, string>) => {
     const data = new FormData();
     for (const [name, value] of Object.entries(fields)) data.set(name, value);
-    return oauthModerationAction(
-      { clientId: null, secret: null, message: null, ok: true },
-      data,
-    );
+    const { clientId = "" } = fields;
+    switch (fields.intent) {
+      case "enable":
+        return enableModeration(clientId, data);
+      case "rotate-secret":
+        return rotateModerationSecret(clientId);
+      default:
+        return sendModerationTest(clientId, data);
+    }
   };
+  /** The secret a Command showed, if it showed one. */
+  const secretOf = (result: Awaited<ReturnType<typeof act>>) =>
+    result.ok
+      ? (result.data as { secret?: string } | undefined)?.secret
+      : undefined;
 
   const registerForm = (client: string) => {
     const data = new FormData();
@@ -995,10 +1009,11 @@ describe("moderation controls on /dashboard/oauth", () => {
     signedInAs = OWNER;
     const first = await act({ intent: "enable", clientId: DEV_CLIENT });
     expect(first.ok).toBe(true);
-    expect(first.secret).toBe(await deriveClientSecret(KEY, DEV_CLIENT, 1));
+    expect(secretOf(first)).toBe(await deriveClientSecret(KEY, DEV_CLIENT, 1));
 
     const second = await act({ intent: "enable", clientId: DEV_CLIENT });
-    expect(second).toMatchObject({ ok: false, secret: null });
+    expect(second).toMatchObject({ ok: false });
+    expect(secretOf(second)).toBeUndefined();
   });
 
   it("answers 'not found' to anyone but the owner of a development client", async () => {
@@ -1017,7 +1032,7 @@ describe("moderation controls on /dashboard/oauth", () => {
       intent: "rotate-secret",
       clientId: DEV_CLIENT,
     });
-    expect(result.secret).toBe(await deriveClientSecret(KEY, DEV_CLIENT, 2));
+    expect(secretOf(result)).toBe(await deriveClientSecret(KEY, DEV_CLIENT, 2));
     expect(
       await auditCount(DEV_CLIENT, "oauth_client.moderation_secret_rotated"),
     ).toBe(0);
@@ -1043,8 +1058,10 @@ describe("moderation controls on /dashboard/oauth", () => {
       intent: "rotate-secret",
       clientId: PROD_CLIENT,
     });
-    expect(rotated).toMatchObject({ ok: true, clientId: PROD_CLIENT });
-    expect(rotated.secret).toBe(await deriveClientSecret(KEY, PROD_CLIENT, 2));
+    expect(rotated).toMatchObject({ ok: true });
+    expect(secretOf(rotated)).toBe(
+      await deriveClientSecret(KEY, PROD_CLIENT, 2),
+    );
     expect(
       await auditCount(PROD_CLIENT, "oauth_client.moderation_secret_rotated"),
     ).toBe(before + 1);
@@ -1085,7 +1102,8 @@ describe("moderation controls on /dashboard/oauth", () => {
     await tiered(PROD_CLIENT, "production");
     signedInAs = MODERATOR;
     const enable = await act({ intent: "enable", clientId: PROD_CLIENT });
-    expect(enable).toMatchObject({ ok: false, secret: null });
+    expect(enable).toMatchObject({ ok: false });
+    expect(secretOf(enable)).toBeUndefined();
     expect(enable.message).toContain("registering");
 
     await registeredProduction();

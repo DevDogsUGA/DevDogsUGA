@@ -7,20 +7,34 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { failure, success } from "~/lib/actionResult";
 import type { OAuthClientSummary } from "~/server/loaders/console";
 import type { ClientModeration } from "~/server/loaders/oauthModeration";
 
 const mocks = vi.hoisted(() => ({
   forgetApproval: vi.fn(),
   saveAppDetails: vi.fn(),
+  addUri: vi.fn(),
+  removeUri: vi.fn(),
+  regenerate: vi.fn(),
+  deleteClient: vi.fn(),
   refresh: vi.fn(),
+  replace: vi.fn(),
+  toast: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: mocks.refresh, replace: vi.fn() }),
+  useRouter: () => ({ refresh: mocks.refresh, replace: mocks.replace }),
 }));
-vi.mock("~/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("~/server/actions/oauth", () => ({ default: vi.fn() }));
+vi.mock("~/lib/toast", () => ({
+  toast: { success: mocks.toast, error: vi.fn() },
+}));
+vi.mock("~/server/actions/oauth", () => ({
+  addRedirectUri: mocks.addUri,
+  removeRedirectUri: mocks.removeUri,
+  regenerateOAuthSecret: mocks.regenerate,
+  deleteOAuthClient: mocks.deleteClient,
+}));
 vi.mock("~/server/actions/oauthStatus", () => ({
   forgetApproval: mocks.forgetApproval,
 }));
@@ -90,7 +104,7 @@ afterEach(() => {
 describe("OAuthClientDetails", () => {
   it("forgets one test account's approval, only where there is one", async () => {
     const user = userEvent.setup();
-    mocks.forgetApproval.mockResolvedValue({});
+    mocks.forgetApproval.mockResolvedValue(success({ consents: 1 }));
     renderPage();
 
     expect(
@@ -105,6 +119,21 @@ describe("OAuthClientDetails", () => {
         "t1",
       ),
     );
+    expect(mocks.toast).toHaveBeenCalledWith("Forgot Tess's approval");
+  });
+
+  it("shows a refused Forget approval on that account's row", async () => {
+    const user = userEvent.setup();
+    mocks.forgetApproval.mockResolvedValue(failure("OAuth client not found"));
+    renderPage();
+    await user.click(
+      screen.getByRole("button", { name: "Forget approval for Tess" }),
+    );
+    const row = screen.getByText("Tess").closest('[role="listitem"]')!;
+    expect(
+      await within(row as HTMLElement).findByRole("alert"),
+    ).toHaveTextContent("OAuth client not found");
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   it("explains that the details are optional in Testing but needed to publish", () => {
@@ -213,5 +242,129 @@ describe("branding lock", () => {
     expect(screen.getByLabelText("Homepage")).not.toHaveAttribute("readonly");
     await user.type(screen.getByLabelText("Homepage"), "/x");
     expect(screen.getByRole("button", { name: /^Save/ })).toBeInTheDocument();
+  });
+});
+
+/** Opens a named confirm and presses its action. */
+async function confirm(
+  user: ReturnType<typeof userEvent.setup>,
+  open: string,
+  submit: string,
+) {
+  await user.click(screen.getByRole("button", { name: open }));
+  await user.click(
+    within(await screen.findByRole("alertdialog")).getByRole("button", {
+      name: submit,
+    }),
+  );
+}
+
+describe("redirect URIs", () => {
+  it("adds one through addRedirectUri, with a toast", async () => {
+    const user = userEvent.setup();
+    mocks.addUri.mockResolvedValue(success(undefined, "Redirect URI added."));
+    renderPage();
+    await user.type(
+      screen.getByLabelText("New redirect URI"),
+      "https://lab.example/cb",
+    );
+    await user.click(screen.getByRole("button", { name: "Add URI" }));
+    await waitFor(() =>
+      expect(mocks.addUri).toHaveBeenCalledExactlyOnceWith(
+        CLIENT.clientId,
+        "https://lab.example/cb",
+      ),
+    );
+    expect(mocks.toast).toHaveBeenCalledWith("Redirect URI added.");
+    expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it("shows a rejected address inline", async () => {
+    const user = userEvent.setup();
+    mocks.addUri.mockResolvedValue(
+      failure("Redirect URIs must be https, or http on localhost"),
+    );
+    renderPage();
+    await user.type(
+      screen.getByLabelText("New redirect URI"),
+      "http://example.com/cb",
+    );
+    await user.click(screen.getByRole("button", { name: "Add URI" }));
+    expect(
+      await screen.findByText(
+        "Redirect URIs must be https, or http on localhost",
+      ),
+    ).toBeVisible();
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
+
+  it("removes one, and shows the refusal when it is the last", async () => {
+    const user = userEvent.setup();
+    mocks.removeUri.mockResolvedValue(
+      failure("An app needs at least one redirect URI"),
+    );
+    renderPage({
+      redirectUris: [
+        "http://127.0.0.1:3000/auth",
+        "http://127.0.0.1:3001/auth",
+      ],
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Remove http://127.0.0.1:3001/auth" }),
+    );
+    expect(mocks.removeUri).toHaveBeenCalledExactlyOnceWith(
+      CLIENT.clientId,
+      "http://127.0.0.1:3001/auth",
+    );
+    expect(
+      await screen.findByText("An app needs at least one redirect URI"),
+    ).toBeVisible();
+  });
+});
+
+describe("the danger zone", () => {
+  it("regenerates the secret, reveals it once, and hides it for good on Done", async () => {
+    const user = userEvent.setup();
+    mocks.regenerate.mockResolvedValue(
+      success({ clientSecret: "s3cret" }, "Secret regenerated."),
+    );
+    renderPage();
+    await confirm(user, "Regenerate secret…", "Regenerate secret");
+    expect(await screen.findByDisplayValue("s3cret")).toBeVisible();
+    expect(mocks.regenerate).toHaveBeenCalledExactlyOnceWith(CLIENT.clientId);
+    expect(mocks.toast).toHaveBeenCalledWith("Secret regenerated.");
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.queryByDisplayValue("s3cret")).toBeNull();
+  });
+
+  it("shows a refused regenerate beside the button", async () => {
+    const user = userEvent.setup();
+    mocks.regenerate.mockResolvedValue(failure("OAuth client not found"));
+    renderPage();
+    await confirm(user, "Regenerate secret…", "Regenerate secret");
+    expect(await screen.findByText("OAuth client not found")).toBeVisible();
+    expect(screen.queryByText("New client secret")).toBeNull();
+  });
+
+  it("deletes the app and leaves for the list without refreshing", async () => {
+    const user = userEvent.setup();
+    mocks.deleteClient.mockResolvedValue(success(undefined, "App deleted."));
+    renderPage();
+    await confirm(user, "Delete app…", "Delete app");
+    await waitFor(() =>
+      expect(mocks.replace).toHaveBeenCalledWith("/dashboard/oauth"),
+    );
+    expect(mocks.deleteClient).toHaveBeenCalledExactlyOnceWith(CLIENT.clientId);
+    expect(mocks.toast).toHaveBeenCalledWith("App deleted.");
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it("stays on the page and shows why when the delete is refused", async () => {
+    const user = userEvent.setup();
+    mocks.deleteClient.mockResolvedValue(failure("OAuth client not found"));
+    renderPage();
+    await confirm(user, "Delete app…", "Delete app");
+    expect(await screen.findByText("OAuth client not found")).toBeVisible();
+    expect(mocks.replace).not.toHaveBeenCalled();
   });
 });

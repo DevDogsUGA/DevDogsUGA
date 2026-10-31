@@ -1,18 +1,22 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { failure, success } from "~/lib/actionResult";
 
 const ME = "22222222-2222-4222-8222-222222222222";
 
 const mocks = vi.hoisted(() => ({
   forgetApproval: vi.fn(),
   refresh: vi.fn(),
+  toast: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh }),
 }));
-vi.mock("~/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("~/lib/toast", () => ({
+  toast: { success: mocks.toast, error: vi.fn() },
+}));
 vi.mock("~/server/actions/oauthStatus", () => ({
   forgetApproval: mocks.forgetApproval,
 }));
@@ -58,9 +62,9 @@ describe("ConnectedAppsField", () => {
     expect(screen.getByText("No connected apps")).toBeInTheDocument();
   });
 
-  it("removes access for that one app after a confirm", async () => {
+  it("removes access for that one app after a confirm, with a toast", async () => {
     const user = userEvent.setup();
-    mocks.forgetApproval.mockResolvedValue({});
+    mocks.forgetApproval.mockResolvedValue(success({ consents: 1 }));
     render(<ConnectedAppsField apps={APPS} userId={ME} />);
 
     await user.click(
@@ -78,5 +82,25 @@ describe("ConnectedAppsField", () => {
       ),
     );
     expect(mocks.refresh).toHaveBeenCalled();
+    expect(mocks.toast).toHaveBeenCalledWith("Lab can no longer sign you in");
+  });
+
+  it("shows a refusal on that app's row and does not toast", async () => {
+    const user = userEvent.setup();
+    mocks.forgetApproval.mockResolvedValue(failure("OAuth client not found"));
+    render(<ConnectedAppsField apps={APPS} userId={ME} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove access for Lab" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Remove access" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "OAuth client not found",
+    );
+    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
   });
 });
