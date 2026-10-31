@@ -2,7 +2,7 @@ import { and, count, desc, eq, type SQL } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import type { AuditSource } from "~/lib/audit";
-import { canUserViewAuditLog } from "~/server/actions/permissions";
+import { canUserViewAuditLog } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { db } from "~/server/db";
 import { auditEvents, reflectionRevisions } from "~/server/db/schema";

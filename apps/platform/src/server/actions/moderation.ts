@@ -5,7 +5,7 @@ import { db } from "~/server/db";
 import { userSuspensions } from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
-import { canUserManageSuspensions } from "~/server/actions/permissions";
+import { canUserManageSuspensions } from "~/server/auth/permissions";
 import { queueDeliveriesQuietly } from "~/server/moderation/queue";
 
 // 10 years in hours, so a permanent ban through Supabase's own ban field.

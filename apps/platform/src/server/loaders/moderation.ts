@@ -5,7 +5,7 @@ import {
   canUserManageOAuthApps,
   canUserManageSuspensions,
   canUserModerate,
-} from "~/server/actions/permissions";
+} from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { db } from "~/server/db";
 import {

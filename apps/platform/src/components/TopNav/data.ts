@@ -5,7 +5,7 @@ import {
   getHighestRankingRole,
   type HighestRankingRole,
   type ResolvedPermissions,
-} from "~/server/actions/permissions";
+} from "~/server/auth/permissions";
 import { expectUserWith } from "~/server/auth";
 import type { profiles } from "~/server/db/schema";
 import { githubLoginFor } from "~/server/auth/githubLogin";

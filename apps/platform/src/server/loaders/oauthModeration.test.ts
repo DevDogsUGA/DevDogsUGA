@@ -22,7 +22,7 @@ vi.mock("~/server/db/schema", () => ({
   moderationDeliveries: { clientId: "c", createdAt: "t" },
   sandboxReports: { clientId: "c", createdAt: "t" },
 }));
-vi.mock("~/server/actions/permissions", () => ({
+vi.mock("~/server/auth/permissions", () => ({
   canUserManageOAuthApps: mocks.canManage,
 }));
 vi.mock("~/server/auth", () => ({ expectSession: mocks.expectSession }));

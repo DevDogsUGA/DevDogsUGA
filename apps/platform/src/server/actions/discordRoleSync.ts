@@ -4,8 +4,12 @@ import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { roles } from "~/server/db/schema";
 import { revalidateOfficers } from "~/server/loaders/officers";
-import { requireManageRoles, requirePermissionGuard } from "./permissions";
-import { requireCustomRole, requireRankGuard } from "./permissionGuards";
+import {
+  requireCustomRole,
+  requireManageRoles,
+  requirePermissionGuard,
+  requireRankGuard,
+} from "~/server/auth/permissions";
 import {
   canManageDiscordRolePosition,
   getDiscordSyncCapability,

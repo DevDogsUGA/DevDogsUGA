@@ -2,7 +2,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { env } from "~/env";
 import { COMMUNITY_PATH, profilePath } from "~/lib/profilePath";
-import { canUserDeleteAccounts } from "~/server/actions/permissions";
+import { canUserDeleteAccounts } from "~/server/auth/permissions";
 import { db } from "~/server/db";
 import {
   accountDeletions,

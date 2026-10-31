@@ -18,7 +18,7 @@ import {
 } from "~/server/attendance/officerAttendance";
 import { expectSession } from "~/server/auth";
 import { sendTemplate } from "~/server/email/send";
-import { canUserManageAttendance } from "./permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 
 /**
  * The console meeting page's writes (meeting detail). Every one re-checks

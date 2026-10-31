@@ -6,7 +6,7 @@ import OrphanReset from "~/components/ConfigEditor/OrphanReset";
 import ProposalActions from "~/components/ConfigEditor/ProposalActions";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import { formatEventDateTime } from "~/lib/eventTime";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import type { Collection } from "~/server/config/editFields";
 import {

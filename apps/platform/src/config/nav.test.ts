@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ResolvedPermissions } from "~/server/actions/permissions";
+import type { ResolvedPermissions } from "~/server/auth/permissions";
 import { visibleConsoleItems } from "./nav";
 
 function permissions(on: Partial<ResolvedPermissions>): ResolvedPermissions {

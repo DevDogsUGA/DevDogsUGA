@@ -9,7 +9,7 @@ import { expectSession } from "~/server/auth";
 import {
   canUserManageOAuthApps,
   canUserModerate,
-} from "~/server/actions/permissions";
+} from "~/server/auth/permissions";
 import { oauthAuditEvent } from "~/server/oauth/audit";
 import { parseContentTypes } from "~/server/moderation/contentTypes";
 import { endpointUrlProblem } from "~/server/moderation/endpoint";

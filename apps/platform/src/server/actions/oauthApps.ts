@@ -15,7 +15,7 @@ import {
 import { APP_NOT_FOUND } from "../oauth/appStatus";
 import { oauthAuditEvent } from "../oauth/audit";
 import { z } from "zod";
-import { canUserManageOAuthApps } from "./permissions";
+import { canUserManageOAuthApps } from "~/server/auth/permissions";
 
 /**
  * The details of an OAuth app: logo, homepage and privacy policy (oauth-consent

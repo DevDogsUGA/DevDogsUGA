@@ -28,7 +28,7 @@ vi.mock("~/server/auth", () => ({
 }));
 
 const permissions = vi.hoisted(() => ({ canManageAttendance: false }));
-vi.mock("~/server/actions/permissions", () => ({
+vi.mock("~/server/auth/permissions", () => ({
   canUserManageAttendance: () =>
     Promise.resolve(permissions.canManageAttendance),
 }));

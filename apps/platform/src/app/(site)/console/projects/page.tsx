@@ -5,7 +5,7 @@ import ConsoleShell from "~/components/Console/ConsoleShell";
 import ReportCard from "~/components/Projects/ReportCard";
 import ReviewForm from "~/components/Projects/ReviewForm";
 import "~/components/Projects/projects.css";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import { requireSession } from "~/server/auth/require";
 import {
   advisesAnyProject,
