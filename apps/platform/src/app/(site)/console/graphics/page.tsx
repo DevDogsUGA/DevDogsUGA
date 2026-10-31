@@ -1,6 +1,8 @@
 import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import GraphicTile from "~/components/Graphics/GraphicTile";
 
 import {
@@ -18,8 +20,6 @@ export const metadata: Metadata = {
   title: "Graphics | Console | DevDogs",
   robots: { index: false },
 };
-
-const PATH = "/console/graphics";
 
 /** What each asset previews as: an icon where it has one, and its link card. */
 const PREVIEW_FORMATS = ["icon-512", "og"];
@@ -41,7 +41,7 @@ export default async function BrandGraphicsPage() {
   );
 
   return (
-    <ConsoleShell current={PATH}>
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Graphics"
         description="Club logos, banners and app icons, ready to download. Meeting graphics are on each meeting's page."
@@ -122,6 +122,6 @@ export default async function BrandGraphicsPage() {
           <code>pnpm backstage graphics</code> for those.
         </p>
       ) : null}
-    </ConsoleShell>
+    </AppShell>
   );
 }

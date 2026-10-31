@@ -1,8 +1,6 @@
+import { loadCaller } from "~/server/auth/access";
+import { visibleSections, sectionFor } from "~/server/dashboard/sections";
 import { headers } from "next/headers";
-import { visibleConsoleItems } from "~/config/nav";
-import { consoleSectionFor } from "~/lib/consoleSection";
-import { getCallerContext } from "~/server/auth/permissions";
-import { expectSession } from "~/server/auth";
 import AccessDenied from "./AccessDenied";
 import NotFoundPage from "./NotFoundPage";
 
@@ -14,14 +12,15 @@ import NotFoundPage from "./NotFoundPage";
  * `/console`.
  */
 export default async function ConsoleForbidden() {
-  const userId = await expectSession().catch(() => null);
+  const caller = await loadCaller();
   // `forbidden()` is only thrown for a signed-in caller; a signed-out one
   // gets the 404 everywhere under the console.
-  if (!userId) return <NotFoundPage />;
+  if (!caller) return <NotFoundPage />;
 
-  const { resolvedPermissions } = await getCallerContext(userId);
-  const open = visibleConsoleItems(resolvedPermissions);
-  const section = consoleSectionFor((await headers()).get("x-request-path"));
+  const open = visibleSections(caller).filter(
+    (section) => section.group === "Console",
+  );
+  const section = sectionFor((await headers()).get("x-request-path"));
 
   if (open.length === 0)
     return <AccessDenied section={null} consoleHref={null} />;

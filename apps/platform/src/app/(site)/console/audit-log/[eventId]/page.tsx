@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import { formatEventDateTime } from "~/lib/eventTime";
 import type { ReflectionRevisionDetail } from "~/server/loaders/auditLog";
 import { getAuditEventDetailData } from "~/server/loaders/auditLog";
@@ -55,7 +57,7 @@ export default async function AuditEventPage({
     await getAuditEventDetailData(eventId);
 
   return (
-    <ConsoleShell current="/console/audit-log">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         crumbs={[
           { label: "Audit log", href: "/console/audit-log" },
@@ -99,6 +101,6 @@ export default async function AuditEventPage({
 
       <Revision label="Before reflection revision" revision={beforeRevision} />
       <Revision label="After reflection revision" revision={afterRevision} />
-    </ConsoleShell>
+    </AppShell>
   );
 }

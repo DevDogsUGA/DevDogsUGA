@@ -1,6 +1,8 @@
 import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import ImportsWorkspace from "~/components/Imports/ImportsWorkspace";
 import { formatEventShortDate } from "~/lib/eventTime";
 
@@ -35,7 +37,7 @@ export default async function ImportsPage({
   const wanted = single(params.meeting);
 
   return (
-    <ConsoleShell current="/console/data/imports">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Imports"
         description="Upload a CSV, check the columns and the preview, then confirm. Uploading changes nothing by itself, and the file is not kept."
@@ -54,6 +56,6 @@ export default async function ImportsPage({
           wanted && meetings.some((m) => m.id === wanted) ? wanted : null
         }
       />
-    </ConsoleShell>
+    </AppShell>
   );
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import RolesManager from "~/components/RolesManager";
 import { CardSkeleton } from "~/components/Skeletons";
 import UserRoleManager from "~/components/UserRoleManager";
@@ -60,7 +62,7 @@ async function PermissionsData() {
 
 export default function PermissionsPage() {
   return (
-    <ConsoleShell current="/console/permissions">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Permissions"
         description="Every member starts with no permissions; President holds all of them and is assigned on Discord."
@@ -75,6 +77,6 @@ export default function PermissionsPage() {
       >
         <PermissionsData />
       </Suspense>
-    </ConsoleShell>
+    </AppShell>
   );
 }

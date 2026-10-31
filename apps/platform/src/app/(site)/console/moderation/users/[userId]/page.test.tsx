@@ -41,7 +41,7 @@ vi.mock("~/server/loaders/moderation", () => ({
       reports: [],
     }),
 }));
-vi.mock("~/components/Console/ConsoleShell", () => ({
+vi.mock("~/components/AppSideNav", () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("~/components/ReportListItem", () => ({ default: () => null }));

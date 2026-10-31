@@ -2,7 +2,10 @@ import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import SettingsShell from "~/components/Settings/SettingsShell";
+import "~/components/Settings/settings.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
+import { requireSignedIn } from "~/server/dashboard/requireSignedIn";
 import ProjectActionForm from "~/components/Projects/ProjectActionForm";
 import ProposeProjectForm from "~/components/Projects/ProposeProjectForm";
 import ReportCard from "~/components/Projects/ReportCard";
@@ -50,8 +53,9 @@ export default async function ProjectsPage() {
     ),
   ]);
 
+  await requireSignedIn("/projects");
   return (
-    <SettingsShell current="/projects">
+    <AppShell side={<AppSideNav />} className="settings-shell">
       <PageHeading
         title="Projects"
         description="Long-running DevDogs projects. Members propose one, leadership approves it and assigns an advisor, and the advisor keeps its member list. You write a project report only to earn EL credit; any merged pull request already counts toward your streak."
@@ -164,6 +168,6 @@ export default async function ProjectsPage() {
       >
         <ProposeProjectForm />
       </Panel>
-    </SettingsShell>
+    </AppShell>
   );
 }

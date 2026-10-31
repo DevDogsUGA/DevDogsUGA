@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { visibleConsoleItems } from "~/config/nav";
+import { visibleSections } from "~/server/dashboard/sections";
 import {
   getCallerContext,
   getHighestRankingRole,
@@ -21,6 +21,8 @@ export interface NavUser {
   permissions: ResolvedPermissions | null;
   /** Holds a leadership role (any officer). */
   isLeader: boolean;
+  /** Rank from the same Caller context used by section rules. */
+  minRank: number;
   highestRole: HighestRankingRole;
   verification: VerificationData | null;
   /** The linked GitHub account's login, or null when none is linked. */
@@ -50,6 +52,7 @@ export const getNavUser = cache(async (): Promise<NavUser | null> => {
     profile: user.profile,
     permissions: callerContext?.resolvedPermissions ?? null,
     isLeader: callerContext?.isLeader ?? false,
+    minRank: callerContext?.minRank ?? Infinity,
     highestRole: highestRole ?? { title: "Member", color: null },
     verification: verificationStatus
       ? {
@@ -81,6 +84,13 @@ export function toMeResponse(user: NavUser | null): MeResponse {
     },
     verification: user.verification,
     githubLogin: user.githubLogin,
-    consoleItems: visibleConsoleItems(user.permissions, user.isLeader),
+    consoleItems: user.permissions
+      ? visibleSections({
+          userId: user.profile.userId,
+          flags: user.permissions,
+          isLeader: user.isLeader,
+          minRank: user.minRank,
+        }).filter((section) => section.group === "Console")
+      : [],
   };
 }

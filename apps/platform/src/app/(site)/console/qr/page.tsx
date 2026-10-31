@@ -1,6 +1,8 @@
 import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import QrGenerator from "~/components/QrGenerator";
 
 import { PageHeading } from "~/ui/app-shell";
@@ -19,7 +21,7 @@ export const metadata: Metadata = {
 export default async function QrPage() {
   await requireAccess(rules.manageAttendance);
   return (
-    <ConsoleShell current="/console/qr">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="QR codes"
         description="Create branded, print-ready QR codes without installing the contributor CLI."
@@ -31,6 +33,6 @@ export default async function QrPage() {
       </Callout>
       <div style={{ height: 24 }} />
       <QrGenerator />
-    </ConsoleShell>
+    </AppShell>
   );
 }

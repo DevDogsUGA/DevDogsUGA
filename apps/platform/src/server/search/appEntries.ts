@@ -1,12 +1,7 @@
-import {
-  PROFILE_ITEMS,
-  PUBLIC_LINKS,
-  SEARCH_ONLY_PAGES,
-  visibleConsoleItems,
-  type NavItem,
-} from "~/config/nav";
+import { visibleSections } from "~/server/dashboard/sections";
+import { PUBLIC_LINKS, SEARCH_ONLY_PAGES, type NavItem } from "~/config/nav";
 import { PAGE_SECTIONS } from "~/config/pageSections";
-import type { ResolvedPermissions } from "~/server/auth/permissions";
+import type { Caller } from "~/server/auth/access";
 import { publicProfilesEnabled } from "~/server/features";
 import type { SearchEntry } from "./types";
 
@@ -71,17 +66,10 @@ function toEntries(item: NavItem, breadcrumbs: string[] = []): SearchEntry[] {
  * pages for sessions, console pages only where permitted. Search can never
  * leak the existence of a page its caller couldn't open.
  */
-export function buildAppSearchEntries(
-  permissions: ResolvedPermissions | null,
-  signedIn: boolean,
-  isLeader = false,
-): SearchEntry[] {
+export function buildAppSearchEntries(caller: Caller | null): SearchEntry[] {
   return [
     ...PUBLIC_LINKS.flatMap((item) => toEntries(item)),
     ...SEARCH_ONLY_PAGES.flatMap((item) => toEntries(item)),
-    ...(signedIn ? PROFILE_ITEMS.flatMap((item) => toEntries(item)) : []),
-    ...visibleConsoleItems(permissions, isLeader).flatMap((item) =>
-      toEntries(item, ["Console"]),
-    ),
+    ...visibleSections(caller).flatMap((item) => toEntries(item, [item.group])),
   ];
 }
