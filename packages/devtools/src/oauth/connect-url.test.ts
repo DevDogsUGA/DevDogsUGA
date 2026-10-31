@@ -14,7 +14,7 @@ describe("buildConnectUrl", () => {
     const parsed = new URL(url);
 
     expect(parsed.origin).toBe("https://devdogsuga.org");
-    expect(parsed.pathname).toBe("/tools/oauth/connect");
+    expect(parsed.pathname).toBe("/oauth/connect");
     expect(parsed.searchParams.get("redirect_uri")).toBe(
       "http://127.0.0.1:54123/callback",
     );
@@ -36,9 +36,7 @@ describe("buildConnectUrl", () => {
       label: "l",
       callbackUri: "http://x/auth/v1/callback",
     });
-    expect(url.startsWith("https://devdogsuga.org/tools/oauth/connect?")).toBe(
-      true,
-    );
+    expect(url.startsWith("https://devdogsuga.org/oauth/connect?")).toBe(true);
   });
 
   it("truncates a label past 100 characters", () => {

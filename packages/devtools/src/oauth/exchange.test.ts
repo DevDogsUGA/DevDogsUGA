@@ -12,9 +12,9 @@ describe("exchangeCode", () => {
     vi.unstubAllGlobals();
   });
 
-  it("posts to /tools/oauth/connect/exchange and returns the credentials", async () => {
+  it("posts to /oauth/connect/exchange and returns the credentials", async () => {
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      expect(url).toBe("https://devdogsuga.org/tools/oauth/connect/exchange");
+      expect(url).toBe("https://devdogsuga.org/oauth/connect/exchange");
       expect(init?.method).toBe("POST");
       expect(JSON.parse(init?.body as string)).toEqual({
         code: "abc",

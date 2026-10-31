@@ -4,8 +4,8 @@ import { safeReturnPath } from "./returnPath";
 describe("safeReturnPath", () => {
   it("keeps a same-site path with its query and hash", () => {
     expect(safeReturnPath("/attendance/complete")).toBe("/attendance/complete");
-    expect(safeReturnPath("/tools/oauth/connect?state=a%2Fb&x=1#top")).toBe(
-      "/tools/oauth/connect?state=a%2Fb&x=1#top",
+    expect(safeReturnPath("/oauth/connect?state=a%2Fb&x=1#top")).toBe(
+      "/oauth/connect?state=a%2Fb&x=1#top",
     );
   });
 

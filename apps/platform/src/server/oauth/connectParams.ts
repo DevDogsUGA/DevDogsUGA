@@ -32,7 +32,7 @@ function isLoopbackRedirectUri(value: string): boolean {
 }
 
 /**
- * Validates the query string `/tools/oauth/connect` receives from
+ * Validates the query string `/oauth/connect` receives from
  * `devtools oauth` (and re-validates the hidden fields the consent form
  * posts back, since those arrive as an ordinary POST body that anyone could
  * forge without ever loading the page). Every failure is reported as a

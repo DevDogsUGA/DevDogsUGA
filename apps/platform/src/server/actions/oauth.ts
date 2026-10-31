@@ -105,7 +105,7 @@ function formText(formData: FormData, name: string): string {
 }
 
 /**
- * `/tools/oauth`'s manual client management.
+ * `/settings/oauth`'s manual client management.
  *
  * Every client a member creates is their own Testing app that asks for consent
  * (one per project, migration 32; the one-click `devtools oauth` connect flow,

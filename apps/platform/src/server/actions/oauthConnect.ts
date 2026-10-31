@@ -15,7 +15,7 @@ import { createOauthClientAndRegister } from "~/server/oauth/registerClient";
 
 /**
  * The consent step of the `devtools oauth` connect handoff. The five hidden
- * fields below are exactly `/tools/oauth/connect`'s query string, round-
+ * fields below are exactly `/oauth/connect`'s query string, round-
  * tripped through the consent form -- see that page for where they came
  * from and `~/server/oauth/connectParams` for what "valid" means for each.
  */
@@ -37,7 +37,7 @@ function connectPath(fields: z.infer<typeof connectSchema>): string {
     label: fields.label,
     callback_uri: fields.callbackUri,
   });
-  return `/tools/oauth/connect?${qs.toString()}`;
+  return `/oauth/connect?${qs.toString()}`;
 }
 
 function redirectWith(

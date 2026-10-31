@@ -13,14 +13,14 @@ const { callbackPathSchema } = await import("./utils");
 
 describe("callbackPathSchema", () => {
   it("passes a plain path through unchanged", async () => {
-    await expect(callbackPathSchema.parseAsync("/tools/oauth")).resolves.toBe(
-      "/tools/oauth",
-    );
+    await expect(
+      callbackPathSchema.parseAsync("/settings/oauth"),
+    ).resolves.toBe("/settings/oauth");
   });
 
   it("preserves a query string, e.g. the OAuth connect handoff's params", async () => {
     const path =
-      "/tools/oauth/connect?redirect_uri=http%3A%2F%2F127.0.0.1%3A5000%2Fcallback&code_challenge=abc123&code_challenge_method=S256&state=xyz&label=my-project&callback_uri=https%3A%2F%2Fexample.supabase.co%2Fauth%2Fv1%2Fcallback";
+      "/oauth/connect?redirect_uri=http%3A%2F%2F127.0.0.1%3A5000%2Fcallback&code_challenge=abc123&code_challenge_method=S256&state=xyz&label=my-project&callback_uri=https%3A%2F%2Fexample.supabase.co%2Fauth%2Fv1%2Fcallback";
     await expect(callbackPathSchema.parseAsync(path)).resolves.toBe(path);
   });
 

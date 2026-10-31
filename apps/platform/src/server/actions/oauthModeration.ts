@@ -72,7 +72,7 @@ async function managedClient(clientId: string, userId: string) {
 }
 
 /**
- * The per-client moderation controls on `/tools/oauth`.
+ * The per-client moderation controls on `/settings/oauth`.
  *
  * Every intent starts from management rights: a development client must be the
  * signed-in member's own, a production client needs `canManageOAuthApps`. A

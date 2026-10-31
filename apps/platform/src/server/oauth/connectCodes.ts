@@ -5,7 +5,7 @@ import { oauthConnectCodes } from "~/server/db/schema";
 
 /**
  * Crypto and lifecycle helpers for the `devtools oauth` connect handoff
- * (`/tools/oauth/connect` → `/tools/oauth/connect/exchange`, migration 32's
+ * (`/oauth/connect` → `/oauth/connect/exchange`, migration 32's
  * `oauthConnectCodes` table). Kept out of the action/route files so both
  * sides of the handoff hash things the same way without importing from each
  * other.

@@ -15,8 +15,8 @@ export const DEFAULT_API_URLS: readonly string[] = [
 
 /**
  * DevDogs website — human-facing links, and (since TASK-351) the origin
- * that serves the one-click connect flow's `/tools/oauth/connect` and
- * `/tools/oauth/connect/exchange` endpoints. Overridable via `--platform-url`
+ * that serves the one-click connect flow's `/oauth/connect` and
+ * `/oauth/connect/exchange` endpoints. Overridable via `--platform-url`
  * / `DEVDOGS_PLATFORM_URL` for local testing against a platform dev server —
  * see `commands.ts`'s `oauth` node and `wizard.ts`.
  */
