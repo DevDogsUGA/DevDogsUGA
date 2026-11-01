@@ -2,13 +2,9 @@ CREATE TABLE "platform"."projects" (
   "id"          uuid                     NOT NULL DEFAULT gen_random_uuid(),
   "name"        text                     NOT NULL,
   "description" text,
-  "repos"       text[]                   NOT NULL DEFAULT '{}'::text[],
   "status"      text                     NOT NULL DEFAULT 'active',
   "advisorId"   uuid,
-  "proposedBy"  uuid,
-  "approvedBy"  uuid,
   "createdAt"   timestamp with time zone NOT NULL DEFAULT now(),
-  "decidedAt"   timestamp with time zone,
   "updatedAt"   timestamp with time zone NOT NULL DEFAULT now(),
   "slug" text NOT NULL CONSTRAINT "projects_slug_length" CHECK (char_length("slug") <= 80 AND char_length(btrim("slug")) >= 2),
   "tags" text[] NOT NULL DEFAULT '{}'::text[],
@@ -38,12 +34,9 @@ CREATE TABLE "platform"."projects" (
   "lastDocsDispatchedSha" text CONSTRAINT "projects_lastDocsDispatchedSha_format" CHECK ("lastDocsDispatchedSha" ~ '^[0-9a-f]{40}$'),
   CONSTRAINT "projects_docs_pause_shape" CHECK (("docsPausedAt" IS NULL) = ("docsPauseReason" IS NULL)),
   CONSTRAINT "projects_advisorId_fkey" FOREIGN KEY ("advisorId") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE SET NULL,
-  CONSTRAINT "projects_approvedBy_fkey" FOREIGN KEY ("approvedBy") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT "projects_description_length" CHECK (((description IS NULL) OR (char_length(description) <= 1000))),
   CONSTRAINT "projects_name_length" CHECK ((char_length(btrim(name)) BETWEEN 2 AND 80)),
   CONSTRAINT "projects_pkey" PRIMARY KEY (id),
-  CONSTRAINT "projects_proposedBy_fkey" FOREIGN KEY ("proposedBy") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE SET NULL,
-  CONSTRAINT "projects_repos_count" CHECK ((cardinality(repos) <= 10)),
   CONSTRAINT "projects_slug_key" UNIQUE ("slug"),
   CONSTRAINT "projects_status_choices" CHECK ((status = ANY (ARRAY['active'::text, 'archived'::text])))
 );
@@ -87,13 +80,13 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 
 REVOKE ALL ON TABLE "platform"."projects" FROM "anon", "authenticated";
 
-COMMENT ON TABLE "platform"."projects" IS 'Server-only. A long-lived DevDogs project that members can report independent work on for EL credit (Q119, Q123, Q170). Any member creates one from repositories they control (active) or, while every repository waits on an officer, archived. Owners edit it (projectOwners; Officers on a DevDogs-owned one, as a record rule, never as rows); Contributors are derived from stored commits. "advisorId" is the member who reviews its reports. The legacy "repos" strings and proposal columns are read by nothing and drop in the contract change. Account deletion: a project outlives the people on it. A deleted advisor leaves "advisorId" null (ON DELETE SET NULL) so the project is waiting for a new one, not gone; "proposedBy" and "approvedBy" are likewise set null.';
+COMMENT ON TABLE "platform"."projects" IS 'Server-only. A long-lived DevDogs project that members can report independent work on for EL credit (Q119, Q123, Q170). Any member creates one from repositories they control (active) or, while every repository waits on an officer, archived. Owners edit it (projectOwners; Officers on a DevDogs-owned one, as a record rule, never as rows); Contributors are derived from stored commits. "advisorId" is the member who reviews its reports. Account deletion: a project outlives the people on it. A deleted advisor leaves "advisorId" null (ON DELETE SET NULL) so the project is waiting for a new one, not gone.';
 
 COMMENT ON COLUMN "platform"."projects"."status" IS 'active or archived. Only an active project takes reports. An active project always has at least one approved repository link (a deferred constraint trigger, checked at commit); archive it, never delete one with reports or submissions.';
 
 COMMENT ON COLUMN "platform"."projects"."slug" IS 'The project''s URL segment and docs mount: lowercase hyphenated, 2 to 80 characters, unique. Frozen once docs have published; the reserved docs namespaces are refused (guard_project_structure).';
 
-COMMENT ON COLUMN "platform"."projects"."advisorId" IS 'The member who keeps the project''s member list and reviews its reports. Null until leadership assigns one, and again after the advisor''s account is deleted.';
+COMMENT ON COLUMN "platform"."projects"."advisorId" IS 'The member who reviews the project''s reports. Null until leadership assigns one, and again after the advisor''s account is deleted.';
 
 CREATE INDEX "projects_featured_displayOrder_id_idx" ON platform.projects ("displayOrder", id) WHERE featured;
 CREATE INDEX "projects_inSwitcher_displayOrder_id_idx" ON platform.projects ("displayOrder", id) WHERE "inSwitcher";
