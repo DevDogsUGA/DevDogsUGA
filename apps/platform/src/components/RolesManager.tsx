@@ -22,6 +22,9 @@ import type { ResolvedPermissions } from "~/server/auth/permissions";
 import type { DiscordSyncCapability } from "~/lib/discordCapability";
 import Callout from "~/ui/callout";
 import { EmptyState } from "~/ui/empty-state";
+import { SettingsFormProvider } from "~/ui/settings-form";
+import SettingsSaveBar from "~/ui/settings-save-bar";
+import { CommandFeedback } from "~/ui/use-command";
 import RoleCard from "./RoleCard";
 import CreateRoleDialog from "./CreateRoleDialog";
 import ImportDiscordRoleDialog from "./ImportDiscordRoleDialog";
@@ -33,20 +36,21 @@ interface Props {
   callerCapability: DiscordSyncCapability;
 }
 
+/**
+ * The role definitions. Every card's edit mode is a Draft field on the one
+ * save bar below the list; create, delete and reorder are Commands.
+ */
 export default function RolesManager({
   initialRoles,
   callerMinRank,
   callerPermissions,
   callerCapability,
 }: Props) {
-  const {
-    roles,
-    canEdit,
-    handleDragEnd,
-    createMutation,
-    updateMutation,
-    deleteMutation,
-  } = useRoles(initialRoles, callerMinRank, callerPermissions);
+  const { roles, canEdit, handleDragEnd, reorder, saveRole } = useRoles(
+    initialRoles,
+    callerMinRank,
+    callerPermissions,
+  );
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeRole = roles.find((r) => r.id === activeId);
@@ -74,7 +78,7 @@ export default function RolesManager({
     roles.length > 0 ? Math.max(...roles.map((r) => r.rank)) + 1 : 1;
 
   return (
-    <div>
+    <SettingsFormProvider>
       <div className="con-toolbar">
         <p className="help" style={{ margin: 0 }}>
           Order is rank: the top role outranks the ones below. Drag a row, or
@@ -89,8 +93,6 @@ export default function RolesManager({
           <CreateRoleDialog
             nextRank={nextRank}
             callerPermissions={callerPermissions}
-            isPending={createMutation.isPending}
-            onCreate={(data) => createMutation.mutate(data)}
           />
         </div>
       </div>
@@ -101,6 +103,8 @@ export default function RolesManager({
           roles ranked below yours.
         </Callout>
       )}
+
+      <CommandFeedback result={reorder.result} />
 
       <DndContext
         sensors={sensors}
@@ -119,18 +123,7 @@ export default function RolesManager({
                 editable={canEdit(role)}
                 callerPermissions={callerPermissions}
                 callerCapability={callerCapability}
-                isUpdating={
-                  updateMutation.isPending &&
-                  updateMutation.variables?.roleId === role.id
-                }
-                isDeleting={
-                  deleteMutation.isPending &&
-                  deleteMutation.variables === role.id
-                }
-                onUpdate={(data) =>
-                  updateMutation.mutate({ roleId: role.id, data })
-                }
-                onDelete={() => deleteMutation.mutate(role.id)}
+                onUpdate={(data) => saveRole(role.id, data)}
               />
             ))}
             {roles.length === 0 && (
@@ -156,6 +149,7 @@ export default function RolesManager({
           )}
         </DragOverlay>
       </DndContext>
-    </div>
+      <SettingsSaveBar />
+    </SettingsFormProvider>
   );
 }

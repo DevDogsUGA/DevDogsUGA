@@ -33,33 +33,44 @@ const {
   resetConfigEditAction,
   saveConfigEditAction,
 } = await import("./configEdits");
+type ConfigEditInput = Parameters<typeof saveConfigEditAction>[0];
 
 const USER = "11111111-1111-4111-8111-111111111111";
-const initial = { ok: false, message: "" };
 
-function form(entries: Record<string, string>) {
-  const data = new FormData();
-  for (const [k, v] of Object.entries(entries)) data.set(k, v);
-  return data;
+/** The refusal in a result, failing the test if it succeeded. */
+function refusal(result: { ok: boolean }) {
+  if (result.ok) throw new Error("Expected a refusal, got success.");
+  return result as {
+    ok: false;
+    message: string;
+    fieldErrors?: Record<string, string>;
+  };
 }
 
-const meetingForm = (over: Record<string, string> = {}) =>
-  form({
-    collection: "meeting",
-    key: "2026-09-14",
-    f_slug: "2026-09-14",
-    f_title: "Cold Start",
-    f_summary:
-      "The inaugural meeting for the 2026-2027 school year. Get set up to contribute to this year's projects! We've simplified the onboarding process this year, and we're excited to get everyone rocking and rolling for the rest of the semester.",
-    f_category: "milestone",
-    f_venue: "dlw",
-    f_room: "200",
-    f_startsAt: "2026-09-14T18:00",
-    f_endsAt: "2026-09-14T19:30",
-    f_rsvpUrl: "https://uga.campuslabs.com/engage/event/12664196",
-    f_agenda: "collaborative-coding",
-    ...over,
-  });
+const MEETING_VALUES = {
+  slug: "2026-09-14",
+  title: "Cold Start",
+  summary:
+    "The inaugural meeting for the 2026-2027 school year. Get set up to contribute to this year's projects! We've simplified the onboarding process this year, and we're excited to get everyone rocking and rolling for the rest of the semester.",
+  category: "milestone",
+  venue: "dlw",
+  room: "200",
+  startsAt: "2026-09-14T18:00",
+  endsAt: "2026-09-14T19:30",
+  rsvpUrl: "https://uga.campuslabs.com/engage/event/12664196",
+  agenda: "collaborative-coding",
+};
+
+/** The item form's input: the meeting's own text, with `values` overridden. */
+const meetingInput = (
+  over: Partial<ConfigEditInput> & { values?: Record<string, string> } = {},
+): ConfigEditInput => ({
+  collection: "meeting",
+  key: "2026-09-14",
+  isNew: false,
+  ...over,
+  values: { ...MEETING_VALUES, ...over.values },
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -72,34 +83,27 @@ beforeEach(() => {
 describe("permissions", () => {
   it("lets a non-officer neither save, reset nor open", async () => {
     mocks.isOfficer.mockResolvedValue(false);
-    expect((await saveConfigEditAction(initial, meetingForm())).ok).toBe(false);
-    expect(
-      (
-        await resetConfigEditAction(
-          initial,
-          form({ collection: "meeting", key: "x" }),
-        )
-      ).ok,
-    ).toBe(false);
+    expect((await saveConfigEditAction(meetingInput())).ok).toBe(false);
+    expect((await resetConfigEditAction("meeting", "x")).ok).toBe(false);
     expect((await resetAllConfigEditsAction()).ok).toBe(false);
     expect(mocks.saveEdit).not.toHaveBeenCalled();
     expect(mocks.resetEdit).not.toHaveBeenCalled();
     expect(mocks.resetAllEdits).not.toHaveBeenCalled();
   });
 
-  it("passes the caller's own id, never one from the form", async () => {
-    await saveConfigEditAction(
-      initial,
-      meetingForm({ userId: "someone-else" }),
-    );
+  it("passes the caller's own id, never one from the input", async () => {
+    await saveConfigEditAction({
+      ...meetingInput(),
+      userId: "someone-else",
+    } as ConfigEditInput);
     expect(mocks.saveEdit.mock.calls[0]![0]).toBe(USER);
   });
 });
 
 describe("saveConfigEditAction", () => {
   it("stores only the changed fields", async () => {
-    const state = await saveConfigEditAction(initial, meetingForm());
-    expect(state.ok).toBe(true);
+    const result = await saveConfigEditAction(meetingInput());
+    expect(result).toMatchObject({ ok: true, data: { cleared: false } });
     expect(mocks.saveEdit).toHaveBeenCalledWith(USER, {
       collection: "meeting",
       key: "2026-09-14",
@@ -108,70 +112,121 @@ describe("saveConfigEditAction", () => {
     });
   });
 
-  it("refuses a time that is not a time", async () => {
-    const state = await saveConfigEditAction(
-      initial,
-      meetingForm({ f_startsAt: "later" }),
+  it("succeeds with cleared when no differences remain, and says nothing is saved", async () => {
+    mocks.saveEdit.mockResolvedValue("cleared");
+    const result = await saveConfigEditAction(
+      meetingInput({ values: { room: "124" } }),
     );
-    expect(state.ok).toBe(false);
+    expect(result).toMatchObject({ ok: true, data: { cleared: true } });
+    expect(result.ok && result.message).toMatch(/nothing is saved/);
+  });
+
+  it("refuses a time that is not a time, under that field", async () => {
+    const result = await saveConfigEditAction(
+      meetingInput({ values: { startsAt: "later" } }),
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      fieldErrors: { startsAt: "Starts is not a valid date and time." },
+    });
+    expect(mocks.saveEdit).not.toHaveBeenCalled();
+  });
+
+  it("returns every problem at once, keyed by field name", async () => {
+    const result = await saveConfigEditAction(
+      meetingInput({ values: { startsAt: "later", endsAt: "" } }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.fieldErrors).toEqual({
+      startsAt: "Starts is not a valid date and time.",
+      endsAt: "Ends is required.",
+    });
+    expect(result.message).toBe("Starts is not a valid date and time.");
     expect(mocks.saveEdit).not.toHaveBeenCalled();
   });
 
   it("will not create a meeting whose slug already exists, or one badly named", async () => {
-    const dup = await saveConfigEditAction(
-      initial,
-      meetingForm({ isNew: "1", key: "new", f_slug: "2026-09-14" }),
+    const dup = refusal(
+      await saveConfigEditAction(
+        meetingInput({
+          isNew: true,
+          key: "new",
+          values: { slug: "2026-09-14" },
+        }),
+      ),
     );
     expect(dup.message).toMatch(/already exists/);
-    const bad = await saveConfigEditAction(
-      initial,
-      meetingForm({ isNew: "1", key: "new", f_slug: "Monday" }),
+    expect(dup.fieldErrors?.slug).toMatch(/already exists/);
+    const bad = refusal(
+      await saveConfigEditAction(
+        meetingInput({ isNew: true, key: "new", values: { slug: "Monday" } }),
+      ),
     );
     expect(bad.message).toMatch(/Eastern date/);
+    expect(bad.fieldErrors?.slug).toMatch(/Eastern date/);
     expect(mocks.saveEdit).not.toHaveBeenCalled();
   });
 
   it("will not edit an item the official config does not have", async () => {
-    const state = await saveConfigEditAction(
-      initial,
-      meetingForm({ key: "2020-01-01", f_slug: "2020-01-01" }),
+    const result = await saveConfigEditAction(
+      meetingInput({ key: "2020-01-01", values: { slug: "2020-01-01" } }),
     );
-    expect(state.ok).toBe(false);
+    expect(result.ok).toBe(false);
     expect(mocks.saveEdit).not.toHaveBeenCalled();
   });
 
+  it("refuses an edit that is too long to store, and one past the saved-edit limit", async () => {
+    const long = refusal(
+      await saveConfigEditAction(
+        meetingInput({
+          values: {
+            summary: "x".repeat(5000),
+            room: "y".repeat(5000),
+            agenda: "z".repeat(5000),
+          },
+        }),
+      ),
+    );
+    expect(long.message).toMatch(/too long/);
+    mocks.saveEdit.mockResolvedValue("too_many");
+    const many = refusal(await saveConfigEditAction(meetingInput()));
+    expect(many.message).toMatch(/too many saved edits/);
+  });
+
   it("reserves 'new' as an id", async () => {
-    const state = await saveConfigEditAction(
-      initial,
-      form({
+    const result = refusal(
+      await saveConfigEditAction({
         collection: "workshop",
-        isNew: "1",
+        isNew: true,
         key: "new",
-        f_id: "new",
-        f_title: "X",
-        f_elHours: "1",
+        values: { id: "new", title: "X", elHours: "1" },
       }),
     );
-    expect(state.message).toMatch(/reserved/);
+    expect(result.message).toMatch(/reserved/);
   });
 
   it("rejects an unknown collection", async () => {
-    const state = await saveConfigEditAction(
-      initial,
-      form({ collection: "roles" }),
-    );
-    expect(state.ok).toBe(false);
+    const result = await saveConfigEditAction({
+      collection: "roles",
+      key: "x",
+      isNew: false,
+      values: {},
+    });
+    expect(result.ok).toBe(false);
   });
 });
 
 describe("resetConfigEditAction and openConfigPrAction", () => {
   it("resets one item for the caller", async () => {
-    const state = await resetConfigEditAction(
-      initial,
-      form({ collection: "venue", key: "dlw" }),
-    );
-    expect(state.ok).toBe(true);
+    const result = await resetConfigEditAction("venue", "dlw");
+    expect(result).toMatchObject({ ok: true, message: "Reset to official." });
     expect(mocks.resetEdit).toHaveBeenCalledWith(USER, "venue", "dlw");
+  });
+
+  it("refuses a reset for an unknown collection", async () => {
+    expect((await resetConfigEditAction("roles", "dlw")).ok).toBe(false);
+    expect(mocks.resetEdit).not.toHaveBeenCalled();
   });
 
   it("words each way opening can end", async () => {

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { asc, and, eq } from "drizzle-orm";
+import { ExpectedFailure } from "~/lib/actionResult";
 import { db } from "~/server/db";
 import { resolvedUserPermissions, roles, userRoles } from "~/server/db/schema";
 
@@ -149,6 +150,10 @@ export async function getCallerContext(userId: string): Promise<{
 }
 
 // ── Shared guards ─────────────────────────────────────────────────────────────
+//
+// A guard's refusal is something the caller can cause, so each throws an
+// ExpectedFailure: actions that return an ActionResult show its message, and
+// the actions that still throw plain Errors see the same message as before.
 
 export async function requirePermissionGuard(
   requested: Partial<
@@ -158,7 +163,7 @@ export async function requirePermissionGuard(
 ): Promise<void> {
   for (const key of PERMISSION_KEYS) {
     if (requested[key] === true && !callerPerms[key]) {
-      throw new Error(
+      throw new ExpectedFailure(
         `Not authorized: you do not hold the "${key}" permission`,
       );
     }
@@ -169,7 +174,7 @@ export async function requirePermissionGuard(
 
 export function requireRankGuard(targetRank: number, callerMinRank: number) {
   if (targetRank <= callerMinRank) {
-    throw new Error(
+    throw new ExpectedFailure(
       "Not authorized: cannot manage a role with equal or higher authority than your own",
     );
   }
@@ -185,7 +190,9 @@ export function requireCustomRole(target: {
   roleType: string;
 }): number {
   if (target.roleType !== "custom" || target.rank === null) {
-    throw new Error("Not authorized: this role cannot be modified directly");
+    throw new ExpectedFailure(
+      "Not authorized: this role cannot be modified directly",
+    );
   }
   return target.rank;
 }
