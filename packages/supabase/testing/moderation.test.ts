@@ -1298,7 +1298,7 @@ describe("platform.conformance_check", () => {
           "graduationYear", "showGithub", "showDiscord", "showEmail",
           "showLinkedin", "viewedConsole", "roleDescription",
           "publicProfile", "showName", "showAvatar", "showBio", "showLinks",
-          "showCompetitions", "showContributions", "showStars"
+          "showContributions", "showStars"
         ) on "platform"."profile" to authenticated
       `);
     }

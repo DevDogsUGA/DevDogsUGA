@@ -26,7 +26,7 @@ archive page showed:
 The unredacted rows (`teams.json`, `teamMembers.json`,
 `teamMembershipRequests.json`, `competitions.json`, `competitionEntries.json`)
 were written outside the repository, for officers: on the machine that ran the
-export, in `~/.devdogs-secrets/archive-2026-10/` (re-exported 2026-10-12, after production gained one team, one member and two membership requests; the earlier 2026-10-11 export is superseded). That is
+export, in `~/.devdogs-secrets/archive-2026-10/` (re-exported 2026-10-12, after production gained one team, one member and two membership requests, and again 2026-11-01, after two competitions closed and the GitHub sync refreshed their timestamps; each earlier export is superseded). That is
 the only copy. An officer who wants it kept should move it to the officers'
 shared drive before the machine is retired.
 

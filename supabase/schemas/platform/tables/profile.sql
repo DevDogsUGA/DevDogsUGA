@@ -23,7 +23,6 @@ CREATE TABLE "platform"."profile" (
   "showAvatar"            boolean                     NOT NULL DEFAULT true,
   "showBio"               boolean                     NOT NULL DEFAULT true,
   "showLinks"             boolean                     NOT NULL DEFAULT true,
-  "showCompetitions"      boolean                     NOT NULL DEFAULT true,
   "showContributions"     boolean                     NOT NULL DEFAULT true,
   "showStars"             boolean                     NOT NULL DEFAULT true,
   "handle"                text,
@@ -138,10 +137,6 @@ GRANT UPDATE ("showAvatar") ON TABLE "platform"."profile" TO "authenticated";
 REVOKE ALL ("showBio") ON TABLE "platform"."profile" FROM "authenticated";
 
 GRANT UPDATE ("showBio") ON TABLE "platform"."profile" TO "authenticated";
-
-REVOKE ALL ("showCompetitions") ON TABLE "platform"."profile" FROM "authenticated";
-
-GRANT UPDATE ("showCompetitions") ON TABLE "platform"."profile" TO "authenticated";
 
 REVOKE ALL ("showContributions") ON TABLE "platform"."profile" FROM "authenticated";
 

@@ -1,15 +1,12 @@
 CREATE TABLE "platform"."reflections" (
   "id"            uuid                     NOT NULL DEFAULT gen_random_uuid(),
   "userId"        uuid                     NOT NULL,
-  "meetingId"     uuid,
-  "competitionId" uuid,
+  "meetingId"     uuid                     NOT NULL,
   "content"       text                     NOT NULL DEFAULT ''::text,
   "submittedAt"   timestamp with time zone,
   "createdAt"     timestamp with time zone NOT NULL DEFAULT now(),
   "updatedAt"     timestamp with time zone NOT NULL DEFAULT now(),
   "workshopDefinitionId" text,
-  CONSTRAINT "reflections_competitionId_fkey" FOREIGN KEY ("competitionId") REFERENCES platform.competitions(id) ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT "reflections_exactly_one_activity" CHECK ((((("meetingId" IS NOT NULL))::integer + (("competitionId" IS NOT NULL))::integer) = 1)),
   CONSTRAINT "reflections_meetingId_fkey" FOREIGN KEY ("meetingId") REFERENCES platform.meetings(id) ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT "reflections_pkey" PRIMARY KEY (id),
   CONSTRAINT "reflections_workshopDefinitionId_format" CHECK ((("workshopDefinitionId" IS NULL) OR ("workshopDefinitionId" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))),
@@ -18,9 +15,6 @@ CREATE TABLE "platform"."reflections" (
 
 ALTER TABLE "platform"."reflections"
   ENABLE ROW LEVEL SECURITY;
-
-CREATE UNIQUE INDEX "reflections_userId_competitionId_key" ON platform.reflections USING btree ("userId", "competitionId")
-  WHERE ("competitionId" IS NOT NULL);
 
 CREATE UNIQUE INDEX "reflections_userId_meetingId_key" ON platform.reflections USING btree ("userId", "meetingId")
   WHERE ("meetingId" IS NOT NULL);
