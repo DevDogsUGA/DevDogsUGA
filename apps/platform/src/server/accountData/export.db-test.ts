@@ -111,6 +111,9 @@ afterAll(cleanup);
 describe("buildMemberDataExport", () => {
   it("holds the member's own rows", async () => {
     const data = await buildMemberDataExport(ME);
+    // Teams are retired before their tables are dropped in a later deploy.
+    expect(data).not.toHaveProperty("teamMemberships");
+    expect(data).not.toHaveProperty("teamMembershipRequests");
 
     expect(data.account?.id).toBe(ME);
     expect(data.profile?.preferredName).toBe("Export Me");
