@@ -68,9 +68,15 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+      - uses: ./.github/actions/cache-pnpm
       - name: Install devtools and cli-core
         run: pnpm install --frozen-lockfile --filter '@devdogsuga/devtools...' --filter '@devdogsuga/cli-core...'
+      - name: Save the shared pnpm store
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && (github.event_name == 'push' || github.event_name == 'schedule')
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Build devtools
         run: pnpm --filter '@devdogsuga/devtools...' --if-present run build
       - name: Break the build on purpose (manual runs only)
