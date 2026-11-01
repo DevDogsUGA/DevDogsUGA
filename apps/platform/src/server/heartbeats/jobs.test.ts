@@ -37,6 +37,29 @@ describe("overdueJobs", () => {
     ]);
   });
 
+  it("reports the Devpost sync once it is older than 26 hours, or never recorded", () => {
+    expect(JOB_HEARTBEATS["platform-devpost-sync"]).toEqual({
+      maxAgeHours: 26,
+    });
+    const rows = allAt(hoursAgo(1)).map((row) =>
+      row.job === "platform-devpost-sync"
+        ? { ...row, succeededAt: hoursAgo(26.5) }
+        : row,
+    );
+    expect(overdueJobs(rows, NOW)).toEqual([
+      {
+        job: "platform-devpost-sync",
+        lastSucceededAt: hoursAgo(26.5).toISOString(),
+      },
+    ]);
+    expect(
+      overdueJobs(
+        allAt(hoursAgo(1)).filter((row) => row.job !== "platform-devpost-sync"),
+        NOW,
+      ),
+    ).toEqual([{ job: "platform-devpost-sync", lastSucceededAt: null }]);
+  });
+
   it("ignores rows for jobs it does not know", () => {
     const rows = [
       ...allAt(hoursAgo(1)),
@@ -50,6 +73,7 @@ describe("overdueJobs", () => {
 describe("isHeartbeatJob", () => {
   it("accepts listed jobs only", () => {
     expect(isHeartbeatJob("schedule-builder-scrape")).toBe(true);
+    expect(isHeartbeatJob("platform-devpost-sync")).toBe(true);
     expect(isHeartbeatJob("platform-nightly-repair")).toBe(false);
     expect(isHeartbeatJob("toString")).toBe(false);
     expect(isHeartbeatJob(undefined)).toBe(false);

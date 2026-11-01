@@ -36,6 +36,11 @@ export const JOB_HEARTBEATS = {
   // cycle can span several continuation runs, so it writes this row when the
   // cycle completes cleanly, not when a request returns; migration 79 seeds it.
   "platform-commit-sync": { maxAgeHours: 26 },
+  // The Devpost hackathon sync (`/cron/hackathons-devpost`, 05:40 UTC). Written
+  // like the commit sync's: when a cycle completes with every item stored, not
+  // when a request returns. A failing feed leaves it to go overdue, which is
+  // the sync's whole alarm; migration 80 seeds it.
+  "platform-devpost-sync": { maxAgeHours: 26 },
 } as const satisfies Record<string, { maxAgeHours: number }>;
 
 export type HeartbeatJob = keyof typeof JOB_HEARTBEATS;
