@@ -70,12 +70,14 @@ export const CRON_ROUTES: Record<
     heartbeat?: HeartbeatJob;
   }
 > = {
-  // There is no daily group any more. The "0 0 * * *" group ran the GitHub
-  // reconcile (deleted with Teams and competitions) and the UGA Bulletin
-  // program sync (moved to the catalog Worker's ProgramsWorkflow, TASK-469,
-  // which reports through the "catalog-academic-programs" heartbeat). A job
-  // that needs a nightly slot adds the group, its cron trigger in
-  // wrangler.jsonc, and a heartbeat row in a migration together.
+  // The daily group starts the commit sync's cycle. It declares no
+  // `heartbeat`: a cycle can take several invocations, so the sync records
+  // `platform-commit-sync` itself, in the transaction that completes it, and
+  // an HTTP 200 from this route says only that one batch ran.
+  "10 5 * * *": {
+    label: "GitHub default-branch commit sync for DevDogs members",
+    routes: ["/cron/project-commits"],
+  },
   // Fifteen minutes is the WORST case now: `.github/workflows/deploy-app.yaml`
   // also calls this route directly, right after each platform deploy, so a
   // promoted config normally lands the moment that deploy finishes (see
@@ -110,6 +112,9 @@ export const CRON_ROUTES: Record<
       // stays pending and this slot retries it, and the route answers 500
       // while one is stuck, which errors this slot's monitor.
       "/cron/account-deletions",
+      // Resumes the commit sync's cycle, or a member's backfill, within the
+      // same 100-request budget. Starts nothing when neither is waiting.
+      "/cron/project-commits?continue=1",
       // Fails while a daily job is overdue, which errors this slot's
       // monitor: the daily jobs have none of their own. Last, and cheap.
       "/cron/heartbeats",

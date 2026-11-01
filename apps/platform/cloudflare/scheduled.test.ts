@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_ROUTES, scheduled } from "./scheduled";
+import { isHeartbeatJob } from "~/server/heartbeats/jobs";
 
 /**
  * Every cron path must correspond to a route that exists.
@@ -33,7 +34,7 @@ const APP = join(import.meta.dirname, "..", "src", "app");
 function routeExists(urlPath: string): boolean {
   const GROUPS = ["(api)", "(site)", ""];
   return GROUPS.some((group) =>
-    existsSync(join(APP, group, urlPath, "route.ts")),
+    existsSync(join(APP, group, urlPath.split("?")[0]!, "route.ts")),
   );
 }
 
@@ -100,8 +101,16 @@ describe("cron dispatcher", () => {
     );
   });
 
-  it("has no daily group left (the nightly repair was retired)", () => {
-    expect(Object.keys(CRON_ROUTES)).toEqual(["*/15 * * * *"]);
+  it("registers the daily commit sweep and its lightweight continuation", () => {
+    expect(CRON_ROUTES["10 5 * * *"]?.routes).toEqual([
+      "/cron/project-commits",
+    ]);
+    expect(CRON_ROUTES["*/15 * * * *"]?.routes).toContain(
+      "/cron/project-commits?continue=1",
+    );
+    // The sync records its own heartbeat when a whole cycle completes.
+    expect(CRON_ROUTES["10 5 * * *"]?.heartbeat).toBeUndefined();
+    expect(isHeartbeatJob("platform-commit-sync")).toBe(true);
   });
 
   it("records the group's heartbeat once every route succeeded", async () => {
