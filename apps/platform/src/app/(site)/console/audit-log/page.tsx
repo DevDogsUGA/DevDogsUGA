@@ -2,7 +2,9 @@ import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import AuditLogContent from "~/components/AuditLogContent";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import { TableSkeleton } from "~/components/Skeletons";
 import { PageHeading } from "~/ui/app-shell";
 import { parseAuditSource } from "~/lib/audit";
@@ -57,7 +59,7 @@ export default async function AuditLogPage({
   };
 
   return (
-    <ConsoleShell current="/console/audit-log">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Audit log"
         description="The append-only history of attendance, reflections, exports, moderation actions, and production OAuth client changes. Nothing here can be edited or removed."
@@ -65,6 +67,6 @@ export default async function AuditLogPage({
       <Suspense fallback={<TableSkeleton />}>
         <AuditLogData page={page} filters={filters} />
       </Suspense>
-    </ConsoleShell>
+    </AppShell>
   );
 }

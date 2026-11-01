@@ -4,7 +4,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ChangeList from "~/components/ConfigEditor/ChangeList";
 import ConfigItemForm from "~/components/ConfigEditor/ConfigItemForm";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 
 import {
   COLLECTION_LABELS,
@@ -76,7 +78,7 @@ export default async function ScheduleItemPage({
     base && current ? diffItem(collection, key, base, current) : undefined;
 
   return (
-    <ConsoleShell current="/console/meetings">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         crumbs={[
           { label: "Schedule editor", href: "/console/meetings" },
@@ -107,6 +109,6 @@ export default async function ScheduleItemPage({
           <ChangeList changes={[change]} />
         </Panel>
       )}
-    </ConsoleShell>
+    </AppShell>
   );
 }

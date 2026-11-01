@@ -86,7 +86,11 @@ describe("terminal gate parity", () => {
 
       const route: TerminalRoute = TERMINAL_ROUTES[pattern];
 
-      const pageGates = featureGates(source);
+      // A predicate may toggle a card inside a page (profile settings), rather
+      // than gate the whole page. Only denial branches belong to route parity.
+      const pageGates = featureGates(source).filter(
+        (gate) => offBehaviour(source, gate) !== null,
+      );
       const routeGates =
         route.gate.kind === "feature" ? [route.gate.enabled.name] : [];
       expect(routeGates).toEqual(pageGates);

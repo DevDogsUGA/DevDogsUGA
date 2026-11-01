@@ -7,7 +7,9 @@ import {
 } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import OpenDisplayLink from "~/components/AttendanceDisplay/OpenDisplayLink";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import { tileOf } from "~/components/Console/meetings";
 import {
   CATEGORY_LABEL,
@@ -161,7 +163,7 @@ export default async function AttendanceDisplaysPage({
   );
 
   return (
-    <ConsoleShell current={PATH}>
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         title="Meetings"
         description={
@@ -287,6 +289,6 @@ export default async function AttendanceDisplaysPage({
           </div>
         </>
       )}
-    </ConsoleShell>
+    </AppShell>
   );
 }

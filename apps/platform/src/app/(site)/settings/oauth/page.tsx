@@ -5,7 +5,10 @@ import OAuthCredentialsField from "~/components/OAuthCredentialsField";
 import OAuthModerationField from "~/components/OAuthModerationField";
 import OAuthTestAccountsField from "~/components/OAuthTestAccountsField";
 import SettingsAnchor from "~/components/Settings/SettingsAnchor";
-import SettingsShell from "~/components/Settings/SettingsShell";
+import "~/components/Settings/settings.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
+import { requireSignedIn } from "~/server/dashboard/requireSignedIn";
 import { getOAuthPageData } from "~/server/loaders/console";
 import { getOAuthModerationData } from "~/server/loaders/oauthModeration";
 import { resolveIssuer } from "~/server/oauth/issuer";
@@ -16,8 +19,6 @@ export const metadata: Metadata = {
   title: "OAuth apps | Settings | DevDogs",
   robots: { index: false },
 };
-
-const PATH = "/settings/oauth";
 
 interface Props {
   searchParams: Promise<Record<string, string>>;
@@ -100,19 +101,20 @@ async function OAuthData({ searchParams }: Props) {
   );
 }
 
-export default function OAuthPage({ searchParams }: Props) {
+export default async function OAuthPage({ searchParams }: Props) {
+  await requireSignedIn("/settings/oauth");
   return (
-    <SettingsShell current={PATH}>
+    <AppShell side={<AppSideNav />} className="settings-shell">
       <PageHeading
         title="OAuth apps"
         description="Set up an OAuth app to test DevDogs sign-in from your own project."
       />
-      {/* The page itself awaits nothing: `searchParams` goes down as the promise
+      {/* `searchParams` goes down as the promise
           it already is, because awaiting it here would suspend the shell along
           with the data and put the title behind the same wait. */}
       <Suspense fallback={<Skeleton className="h-64 w-full max-w-[720px]" />}>
         <OAuthData searchParams={searchParams} />
       </Suspense>
-    </SettingsShell>
+    </AppShell>
   );
 }

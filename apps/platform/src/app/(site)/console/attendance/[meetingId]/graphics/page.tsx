@@ -2,7 +2,9 @@ import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EVENT_FORMATS } from "@devdogsuga/sdk/brand";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 import GraphicTile from "~/components/Graphics/GraphicTile";
 import ZipForm from "~/components/Graphics/ZipForm";
 import { formatEventSpan } from "~/lib/eventTime";
@@ -52,7 +54,7 @@ export default async function MeetingGraphicsPage({
   const base = `/console/graphics/meetings/${meeting.id}`;
 
   return (
-    <ConsoleShell current="/console/attendance">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         crumbs={[
           { label: "Meetings", href: "/console/attendance" },
@@ -113,6 +115,6 @@ export default async function MeetingGraphicsPage({
           </section>
         ))}
       </ZipForm>
-    </ConsoleShell>
+    </AppShell>
   );
 }

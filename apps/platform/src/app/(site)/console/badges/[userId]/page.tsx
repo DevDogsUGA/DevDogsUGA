@@ -8,7 +8,9 @@ import {
   BadgeWithdrawForm,
 } from "~/components/Badges/BadgeAwardForm";
 import BadgeList from "~/components/Badges/BadgeList";
-import ConsoleShell from "~/components/Console/ConsoleShell";
+import "~/components/Console/console.css";
+import AppSideNav from "~/components/AppSideNav";
+import { AppShell } from "~/ui/app-shell";
 
 import { getBadgesForOfficer, getMemberName } from "~/server/loaders/badges";
 import { PageHeading, Panel } from "~/ui/app-shell";
@@ -35,7 +37,7 @@ export default async function MemberBadgesPage({
     .map((badge) => ({ id: badge.id, name: badge.name }));
 
   return (
-    <ConsoleShell current="/console/badges">
+    <AppShell side={<AppSideNav />} className="con">
       <PageHeading
         crumbs={[{ label: "Badges", href: "/console/badges" }, { label: name }]}
         title={name}
@@ -51,6 +53,6 @@ export default async function MemberBadgesPage({
           actions={(award) => <BadgeWithdrawForm awardId={award.id} />}
         />
       </Panel>
-    </ConsoleShell>
+    </AppShell>
   );
 }
