@@ -27,7 +27,6 @@ interface VerificationStatus {
 }
 
 interface Props {
-  userId: string;
   verificationStatus: VerificationStatus;
   isVerified: boolean;
   involvementFullName: string | null;
@@ -88,7 +87,6 @@ function Step({
 }
 
 export default function VerificationChecklist({
-  userId,
   verificationStatus,
   isVerified,
   involvementFullName,
@@ -163,7 +161,6 @@ export default function VerificationChecklist({
               !verificationStatus.nameMatchesInvolvement ? (
                 <span className="mt-2 flex">
                   <SyncPreferredNameButton
-                    userId={userId}
                     involvementFullName={involvementFullName}
                   />
                 </span>
