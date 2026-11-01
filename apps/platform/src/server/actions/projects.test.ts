@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   authorize: vi.fn(),
   authorizeSession: vi.fn(),
   revalidatePath: vi.fn(),
+  revalidateShowcase: vi.fn(),
   store: {
     addOwner: vi.fn(),
     archiveProject: vi.fn(),
@@ -30,6 +31,9 @@ vi.mock("~/server/auth/access", () => ({
   authorize: mocks.authorize,
   authorizeSession: mocks.authorizeSession,
   rules: { officer: "officer-rule" },
+}));
+vi.mock("~/server/projects/showcase", () => ({
+  revalidateShowcase: mocks.revalidateShowcase,
 }));
 vi.mock("~/server/projects/store", () => mocks.store);
 vi.mock("~/server/projects/reports", () => mocks.reports);
@@ -177,8 +181,12 @@ describe("revalidation", () => {
     mocks.store.archiveProject.mockResolvedValue({ ok: false, message: "No." });
     await actions.archiveProjectAction(ID);
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.revalidateShowcase).not.toHaveBeenCalled();
     mocks.store.archiveProject.mockResolvedValue(ok);
     await actions.archiveProjectAction(ID);
+    // An archive can take a featured project off the homepage, so the
+    // showcase refreshes with the dashboard pages.
+    expect(mocks.revalidateShowcase).toHaveBeenCalledOnce();
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard/projects");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard/reviews");
   });
