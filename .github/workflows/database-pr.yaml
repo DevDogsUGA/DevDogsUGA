@@ -16,7 +16,8 @@ name: Database change
 #     only, so a seed that updates, deletes or drops is destructive too.
 #
 # `destructive-sql` fails unless the pull request carries the `allow-destructive`
-# label. `destructive-gate` fails if that label was applied by anyone who is not
+# label and a matching bot-recorded fingerprint approval. `destructive-gate`
+# fails if that label was applied by anyone who is not
 # a `devops` member (the label is read from the PR timeline, so who applied it
 # is on record). Both run here, on pull requests and on `merge_group`, so a
 # queued pull request is re-checked on the exact commit the queue built.
@@ -130,13 +131,9 @@ jobs:
           DESTRUCTIVE: ${{ steps.plan.outputs.destructive || 'false' }}
           PR: ${{ github.event.pull_request.number }}
           QUEUE_REF: ${{ github.event.merge_group.head_ref }}
-          # A push makes any label stale (destructive-gate.yaml removes it, and
-          # that removal starts no run): the label is not trusted on `synchronize`.
-          ACTION: ${{ github.event.action }}
         run: |
           set -euo pipefail
           if [ -n "$PR" ]; then target=(--pr "$PR"); else target=(--ref "$QUEUE_REF"); fi
-          if [ "$ACTION" = synchronize ]; then target+=(--ignore-label); fi
           node "$SCRIPTS/destructive-label.mjs" need --repo "$GITHUB_REPOSITORY" "${target[@]}" --destructive "$DESTRUCTIVE" | tee -a "$GITHUB_STEP_SUMMARY"
 
   # The required `destructive-gate` check, on pull requests and the merge queue

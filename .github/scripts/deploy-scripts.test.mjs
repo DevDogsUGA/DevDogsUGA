@@ -550,7 +550,12 @@ function checkDirWith(schemaReasons, migrations = []) {
 }
 
 const labeled = (login) => [
-  { event: "labeled", label: { name: "allow-destructive" }, actor: { login } },
+  {
+    id: 42,
+    event: "labeled",
+    label: { name: "allow-destructive" },
+    actor: { login },
+  },
 ];
 
 const OLD = "b".repeat(40);
@@ -600,6 +605,15 @@ function destructiveApi({
     [`/repos/${REPO}/actions/runs/8/artifacts`]: { artifacts },
   });
   return async (path) => {
+    if (/\/pulls\/\d+\/files\?/.test(path)) return [];
+    if (/\/issues\/\d+\/comments\?/.test(path))
+      return [
+        {
+          id: 1,
+          user: { login: "github-actions[bot]", type: "Bot" },
+          body: "<!-- allow-destructive fingerprint=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 approver=devops-person event=42 -->",
+        },
+      ];
     if (path.startsWith(`/repos/${REPO}/actions/runs?`)) {
       const event = /event=(\w+)/.exec(path)[1];
       const headSha = /head_sha=(\w+)/.exec(path)[1];

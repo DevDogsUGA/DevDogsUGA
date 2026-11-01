@@ -4,7 +4,7 @@
  *
  * A change that drops or rewrites data is approved ON THE PULL REQUEST: a
  * `devops` member reads the SQL and applies the `allow-destructive` label
- * (destructive-label.mjs; destructive-gate.yaml clears it on every push). The
+ * (destructive-label.mjs; destructive-gate.yaml binds it to the database fingerprint). The
  * deploy asks nobody a second time. It only checks that the approval is real
  * and that it covers what is about to run:
  *
@@ -43,7 +43,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { producingPulls } from "./approval-gate.mjs";
-import { isDevops, labelState } from "./destructive-label.mjs";
+import { evaluateNeed, isDevops, labelState } from "./destructive-label.mjs";
 import { apiAll, createApi } from "./github-api.mjs";
 import { isMain } from "./is-main.mjs";
 
@@ -223,6 +223,13 @@ export async function approvalOf({ api, repo, number }) {
       problem: `#${number} carries allow-destructive from ${state.actor ?? "an unknown user"}, who is not a devops member.`,
     };
   }
+  const verdict = await evaluateNeed({
+    api,
+    repo,
+    pr: number,
+    destructive: true,
+  });
+  if (!verdict.pass) return { problem: verdict.message };
   return { actor: state.actor };
 }
 

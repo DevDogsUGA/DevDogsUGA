@@ -28,16 +28,23 @@
  *          the token can edit the PR, with `--remove-rejected` to remove the
  *          label as well; it never checks out or runs the PR's code.
  *   need   Runs beside the SQL classification, on `pull_request` and
- *          `merge_group`. If the SQL is destructive the label must be there.
+ *          `merge_group`. Destructive SQL requires the label and a matching
+ *          bot-recorded fingerprint approval from devops.
  *          (In the merge queue the PR is found from the queue branch name.)
  *
  * Both are required checks, so a destructive change needs the label (`need`)
  * and the label needs a devops applier (`gate`).
  *
  * Usage:
- *   GH_TOKEN=... node destructive-label.mjs gate --repo OWNER/REPO --pr N [--remove-rejected]
- *   GH_TOKEN=... node destructive-label.mjs need --repo OWNER/REPO (--pr N | --ref REF) --destructive true|false [--ignore-label]
+ *   GH_TOKEN=... node destructive-label.mjs gate --repo OWNER/REPO --pr N [--remove-rejected] [--record --action ACTION --head SHA]
+ *   GH_TOKEN=... node destructive-label.mjs need --repo OWNER/REPO (--pr N | --ref REF) --destructive true|false
  */
+import {
+  currentFingerprint,
+  readApproval,
+  labelEvent,
+  reconcileApproval,
+} from "./destructive-fingerprint.mjs";
 import { apiAll, createApi, createRequest } from "./github-api.mjs";
 import { isMain } from "./is-main.mjs";
 
@@ -128,45 +135,35 @@ export async function evaluateGate({ api, repo, pr }) {
 /**
  * `need`: destructive SQL needs the label.
  *
- * `ignoreLabel` is for a run caused by a push: the label on the pull request
- * was applied to SQL that has since changed, and destructive-gate.yaml removes
- * it for that reason. Removing it with the workflow token does not start
- * another run, so this check must not trust a label that is about to be
- * removed: a devops member re-applies it after reading the new diff, and that
- * `labeled` event runs the check again.
+ * The label and bot-owned approval must both describe the current SQL.
  *
- * @param {{ api: (path: string) => Promise<any>, repo: string, pr: number, destructive: boolean, ignoreLabel?: boolean }} input
+ * @param {{ api: (path: string) => Promise<any>, repo: string, pr: number, destructive: boolean }} input
  * @returns {Promise<Verdict>}
  */
-export async function evaluateNeed({
-  api,
-  repo,
-  pr,
-  destructive,
-  ignoreLabel = false,
-}) {
-  if (!destructive) {
+export async function evaluateNeed({ api, repo, pr, destructive }) {
+  if (!destructive)
     return {
       pass: true,
       message: "The SQL is not destructive: no label needed.",
     };
-  }
-  if (ignoreLabel) {
-    return {
-      pass: false,
-      message: `The SQL is destructive and the pull request was just pushed to, so any \`${LABEL}\` label is stale. A devops member must read the new diff and apply the label again.`,
-    };
-  }
-  const timeline = await apiAll(api, `/repos/${repo}/issues/${pr}/timeline`);
-  if (labelState(timeline).present) {
-    return {
-      pass: true,
-      message: `The SQL is destructive and \`${LABEL}\` is on the pull request (the gate check verifies who applied it).`,
-    };
-  }
+  const verdict = await evaluateGate({ api, repo, pr });
+  if (!verdict.pass) return verdict;
+  const state = labelState(
+    await apiAll(api, `/repos/${repo}/issues/${pr}/timeline`),
+  );
+  const approval = await readApproval(api, repo, pr);
+  const fingerprint = await currentFingerprint(api, repo, pr);
+  const pass =
+    state.present &&
+    approval?.fingerprint === fingerprint &&
+    approval.approver === state.actor &&
+    approval.event === (await labelEvent(api, repo, pr)) &&
+    (await isDevops(api, repo, approval.approver));
   return {
-    pass: false,
-    message: `The SQL is destructive. A devops member must apply the \`${LABEL}\` label after reading it, or the change must be reworked (a hand-written migration, applied through the destructive gate at deploy time).`,
+    pass: Boolean(pass),
+    message: pass
+      ? "The destructive SQL has a matching devops approval."
+      : "The SQL is destructive. A devops member must read the current diff and apply the label again; a matching recorded approval is required.",
   };
 }
 
@@ -207,7 +204,17 @@ async function cli(argv) {
     return 0;
   }
   if (command === "gate") {
-    const verdict = await evaluateGate({ api, repo, pr });
+    let verdict = await evaluateGate({ api, repo, pr });
+    if (verdict.pass && rest.includes("--record")) {
+      verdict = await reconcileApproval({
+        api,
+        request: createRequest({ token }),
+        repo,
+        pr,
+        action: flag("--action"),
+        head: flag("--head"),
+      });
+    }
     process.stdout.write(`${verdict.message}\n`);
     if (verdict.reject && rest.includes("--remove-rejected")) {
       const request = createRequest({ token });
@@ -222,7 +229,6 @@ async function cli(argv) {
       repo,
       pr,
       destructive: flag("--destructive") === "true",
-      ignoreLabel: rest.includes("--ignore-label"),
     });
     process.stdout.write(`${verdict.message}\n`);
     return verdict.pass ? 0 : 1;

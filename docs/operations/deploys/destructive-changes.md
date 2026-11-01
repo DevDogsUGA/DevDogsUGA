@@ -21,7 +21,9 @@ Generated SQL may only add. A change that drops or rewrites data is stopped on t
 
 The `destructive-sql` check fails unless the pull request carries the **`allow-destructive`** label. The `destructive-gate` check fails if that label was applied by anyone who is not a `devops` member, which the check decides by repository permission: `maintain` (the `devops` team) or `admin` (the `admins` team). Admins are included because they can bypass the rulesets anyway; the gate keeps out everyone below them. The production deploy approvals are stricter, and name the `devops` team alone, read from the pull request's timeline so it is on record who did it. A label from anyone else is removed.
 
-A new push to the pull request removes the label: it was applied to SQL someone read, and the SQL has changed since. The check does not trust a label it sees on a push for the same reason (removing a label with the workflow token starts no new run), so a destructive pull request stays red after each push until a `devops` member reads the new diff and applies the label again.
+The gate records approval in a bot-owned PR comment, bound to a SHA-256 fingerprint of the changed database files (paths, statuses and blob SHAs from the GitHub API). It covers all of `supabase/`, including migrations, schemas, seeds, roles and configuration. A rebase or other push that leaves these inputs identical keeps the label. Changed inputs mark the comment stale and remove the label; devops must review the SQL and apply the label again. The destructive check requires both the label and a matching recorded approval from devops. Removing and re-adding the label requests a fresh review; there is no special push-time label bypass.
+
+Changes to the `pull_request_target` gate workflow take effect once merged to the default branch. It never checks out PR code to compute the fingerprint.
 
 To let one through, as a `devops` member: open the **Checks** tab, read the `db-check` summary (the exact SQL, with the destructive statements listed), and only then add the label.
 
