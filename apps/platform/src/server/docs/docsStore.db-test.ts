@@ -96,7 +96,7 @@ async function cleanup() {
     sql`delete from platform."projectDocsProposals" where "projectId" in (${PROJECT}::uuid, ${OTHER}::uuid)`,
   );
   await db.execute(
-    sql`update platform.projects set "docsRepoId" = null where id in (${PROJECT}::uuid, ${OTHER}::uuid)`,
+    sql`update platform.projects set "docsRepoId" = null, status = 'archived' where id in (${PROJECT}::uuid, ${OTHER}::uuid)`,
   );
   await db.execute(
     sql`delete from platform."projectRepos" where "projectId" in (${PROJECT}::uuid, ${OTHER}::uuid)`,
@@ -114,12 +114,15 @@ beforeEach(async () => {
   await cleanup();
   await insertMember({ id: MEMBER });
   await saveRepo(repo);
-  await db.execute(
-    sql`insert into platform.projects (id, name, slug) values (${PROJECT}::uuid, 'E1 docs fixture', ${SLUG})`,
-  );
-  await db.execute(
-    sql`insert into platform."projectRepos" ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId", "decidedAt") values (${PROJECT}::uuid, ${REPO_ID}::bigint, 'approved', 'devdogs-write', 191, now())`,
-  );
+  // The active-project guard checks the approved link at transaction commit.
+  await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`insert into platform.projects (id, name, slug) values (${PROJECT}::uuid, 'E1 docs fixture', ${SLUG})`,
+    );
+    await tx.execute(
+      sql`insert into platform."projectRepos" ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId", "decidedAt") values (${PROJECT}::uuid, ${REPO_ID}::bigint, 'approved', 'devdogs-write', 191, now())`,
+    );
+  });
 });
 afterAll(cleanup);
 
@@ -207,7 +210,7 @@ describe("beginning a proposal", () => {
 
   it("lets two projects each have one in flight", async () => {
     await db.execute(
-      sql`insert into platform.projects (id, name, slug) values (${OTHER}::uuid, 'E1 other fixture', 'e1-other-fixture')`,
+      sql`insert into platform.projects (id, name, slug, status) values (${OTHER}::uuid, 'E1 other fixture', 'e1-other-fixture', 'archived')`,
     );
     await store.beginProposal(proposal());
     await store.beginProposal(
