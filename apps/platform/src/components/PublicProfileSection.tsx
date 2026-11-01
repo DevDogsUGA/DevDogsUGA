@@ -20,7 +20,7 @@ import {
 import { createClient } from "~/supabase/client";
 import type { HandleChoices } from "~/server/loaders/publicProfiles";
 import Callout from "~/ui/callout";
-import { useSettingsField } from "~/ui/settings-form";
+import { FieldError, useSettingsField } from "~/ui/settings-form";
 import Toggle from "~/ui/switch";
 
 type Provider = "github" | "discord" | "linkedin";
@@ -114,9 +114,10 @@ export default function PublicProfileSection({
   const handleDirty = handle !== null && handle !== saved.handle;
   const isDirty = switchesDirty || accountsDirty || handleDirty;
 
-  useSettingsField({
+  const { serverError } = useSettingsField({
     id: "publicProfile",
     label: "Public profile",
+    draft: [switches, shown, handle],
     isDirty,
     error: null,
     reset: () => {
@@ -272,6 +273,8 @@ export default function PublicProfileSection({
           Never shown: your email, graduation semester, minors and certificates.
         </p>
       </div>
+
+      <FieldError error={serverError} />
 
       <div id="handle" className="scroll-mt-20" style={{ marginTop: 36 }}>
         <div className="label" style={{ marginBottom: 6 }}>

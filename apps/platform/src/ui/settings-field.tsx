@@ -5,6 +5,7 @@ import {
   FieldError,
   useBlurredError,
   useSettingsField,
+  type SettingsFieldRegistration,
 } from "~/ui/settings-form";
 
 interface SettingsFieldProps {
@@ -13,9 +14,10 @@ interface SettingsFieldProps {
   /** Human name, read back by the save bar when a write fails. */
   label: string;
   isDirty: boolean;
+  draft: unknown;
   /** From ~/lib/validation/profile. Blocks the save and shows on blur. */
   error: string | null;
-  save: () => Promise<unknown>;
+  save: SettingsFieldRegistration["save"];
   reset: () => void;
   className?: string;
   /** Counters and the like. Appears only while the field is dirty. */
@@ -36,6 +38,7 @@ export default function SettingsField({
   id,
   label,
   isDirty,
+  draft,
   error,
   save,
   reset,
@@ -44,13 +47,21 @@ export default function SettingsField({
   secondaryMeta,
   children,
 }: SettingsFieldProps) {
-  useSettingsField({ id, label, isDirty, error, save, reset });
+  const { serverError } = useSettingsField({
+    id,
+    label,
+    isDirty,
+    draft,
+    error,
+    save,
+    reset,
+  });
   const blurred = useBlurredError(error);
 
   return (
     <div className={className} onBlur={blurred.onBlur}>
       {children}
-      <FieldError error={blurred.error} />
+      <FieldError error={serverError ?? blurred.error} />
       {(Boolean(meta) || Boolean(secondaryMeta)) && (
         <div
           className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${

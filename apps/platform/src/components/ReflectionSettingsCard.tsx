@@ -10,6 +10,7 @@ import { Panel } from "~/ui/app-shell";
 import Field from "~/ui/field";
 import { InputGroup, InputGroupInput, InputGroupText } from "~/ui/input-group";
 import {
+  FieldError,
   SettingsFormProvider,
   useBlurredError,
   useSettingsField,
@@ -60,9 +61,10 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
   const wordsError = check(words, 100, 1000);
   const daysError = check(days, 7, 90);
 
-  const { isSaving } = useSettingsField({
+  const { isSaving, serverError } = useSettingsField({
     id: "reflectionSettings",
     label: "Reflection settings",
+    draft: [words, days],
     isDirty: words !== saved.words || days !== saved.days,
     error: wordsError ?? daysError,
     reset: () => {
@@ -81,8 +83,8 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
     data.set("minimumWordCount", nextWords);
     data.set("submissionWindowDays", nextDays);
     const outcome = await updateReflectionSettings(noState, data);
-    if (!outcome.ok) throw new Error(outcome.message);
-    setSaved({ words: nextWords, days: nextDays });
+    if (outcome.ok) setSaved({ words: nextWords, days: nextDays });
+    return outcome;
   }
 
   return (
@@ -141,6 +143,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
           </InputGroup>
         </Field>
       </div>
+      <FieldError error={serverError} />
     </Panel>
   );
 }
