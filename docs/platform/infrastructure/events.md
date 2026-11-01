@@ -1,6 +1,6 @@
 ---
 name: Events (meetings & workshops)
-description: Where meetings and workshops come from — versioned config in the Backstage repo, validated at Backstage CI, reconciled into Postgres after every deploy and on a keep-alive schedule.
+description: Where meetings and workshops come from — versioned config in the DevDogsUGA repo, validated at DevDogsUGA CI, reconciled into Postgres after every deploy and on a keep-alive schedule.
 order: 6
 section: infrastructure
 ---
@@ -10,17 +10,17 @@ section: infrastructure
 **Meetings and workshops are authored as data, not typed into a base.**
 `@devdogsuga/events` holds a Zod schema, a publishability validator, and the
 data itself — `src/data/meetings.json` today, one file per term if that ever
-stops being enough. It is a package in the **Backstage** workspace, imported by the platform
+stops being enough. It is a package in the **DevDogsUGA** workspace, imported by the platform
 app that lives beside it, not by anything here: officers propose a change as a
 pull request against `packages/events/src/data/meetings.json` there, and
-Backstage's own CI (`pnpm -F @devdogsuga/events check:events`) blocks the merge
+DevDogsUGA's own CI (`pnpm -F @devdogsuga/events check:events`) blocks the merge
 if it does not parse or fails a publishability rule. There is no runtime
 refusal path — Airtable's per-field sync-status refusals are gone along with
 the rest of that integration.
 
 ## The shape
 
-Backstage's `packages/events/src/schema.ts` is the Zod schema: a meeting has
+DevDogsUGA's `packages/events/src/schema.ts` is the Zod schema: a meeting has
 a `slug` (its identity and its URL: the Eastern date, plus a descriptor such
 as `2026-10-05-judging` when the date is shared), a title, a summary, `kind`
 and
@@ -38,11 +38,11 @@ lengths, the RSVP-host allowlist, cancellation reason↔date pairing, **every
 meeting slug is unique and dated on its own Eastern day**, and **no meeting
 lists two workshops with one title**. `getClubConfig()` (the package's main export) runs both the schema
 and the validator and throws a readable `ClubConfigError` if either fails;
-`check.ts` is the CLI wrapper Backstage's CI runs.
+`check.ts` is the CLI wrapper DevDogsUGA's CI runs.
 
 ## The reconcile
 
-`apps/platform/src/server/config/reconcile.ts`, in the same [Backstage](https://github.com/DevDogsUGA/Backstage) repository, is the consumer:
+`apps/platform/src/server/config/reconcile.ts`, in the same [DevDogsUGA](https://github.com/DevDogsUGA/DevDogsUGA) repository, is the consumer:
 upsert a meeting by `slug` and a workshop by its title within its meeting,
 soft-archive a live row the config no longer lists (`deletedAt` is set;
 attendance survives), and un-archive one that reappears. Every meeting is the
@@ -51,8 +51,8 @@ meeting, and the old one is archived with its attendance. Read its header for th
 per-row refusals**. A config file either validates whole, or the reconcile
 aborts the ENTIRE run and reports to Sentry rather than applying part of it.
 There is no "officer is mid-edit" state to protect against here, because
-`@devdogsuga/events` is built into the platform from the same Backstage commit:
-nothing reaches this function until Backstage's own CI has already approved the
+`@devdogsuga/events` is built into the platform from the same DevDogsUGA commit:
+nothing reaches this function until DevDogsUGA's own CI has already approved the
 file that produced it, and a validation failure this late means that package shipped a bug, not
 something the platform caused. The same is true of an empty config — zero
 meetings aborts rather than archiving the entire schedule.
@@ -72,7 +72,7 @@ transaction as the meetings, and each meeting's list into
 `meetings."surveyQuestionIds"`. A question config drops is deleted while
 nobody has answered it. One that has answers can't be removed, retyped or
 moved to the other scope: the reconcile refuses the whole run and alerts,
-the one check Backstage's CI can't make without the database. Retire it
+the one check DevDogsUGA's CI can't make without the database. Retire it
 (`"retired": true`) instead, or add a new question under a new id.
 
 ## Trigger
@@ -82,7 +82,7 @@ Two paths reach the reconcile, both through
 other cron route):
 
 - **The deploy pipeline**, immediately after each deploy of `platform`
-  (Backstage's `.github/workflows/deploy.yaml`, "Reconcile meetings/workshops from
+  (DevDogsUGA's `.github/workflows/deploy.yaml`, "Reconcile meetings/workshops from
   @devdogsuga/events" step, via `backstage deploy reconcile`).
   This is the primary trigger: a promoted config lands the moment its own
   build goes live, because the `@devdogsuga/events` version reconciled
@@ -123,12 +123,12 @@ the reconcile, and the reconcile is a platform route rather than a
 devtools-side function (it needs the app's Drizzle client, relations and
 Sentry wiring, none of which belong in devtools). `supabase db reset` no
 longer calls that route, so on a fresh development database, start the
-platform app (`pnpm -F platform dev`, from your Backstage clone) and fire the cron once, the same
+platform app (`pnpm -F platform dev`, from your DevDogsUGA clone) and fire the cron once, the same
 unauthenticated request the schedule sends, to `http://localhost:3000` by
 default:
 
 ```bash
-# from the Backstage clone
+# from the DevDogsUGA clone
 pnpm devtools jobs run --app platform --cron '*/15 * * * *' --yes
 ```
 

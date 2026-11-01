@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
     GH_CONFIG_APP_PRIVATE_KEY: undefined,
     GITHUB_ORG: "DevDogsUGA",
   }))(),
-  isOfficer: vi.fn(),
+  isLeader: vi.fn(),
   listEdits: vi.fn(),
   consume: vi.fn(),
   insertValues: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock("~/env", () => ({ env: mocks.env }));
 vi.mock("~/server/auth/permissions", () => ({
   getCallerContext: async () => ({
     resolvedPermissions: {},
-    isLeader: Boolean(await mocks.isOfficer()),
+    isLeader: Boolean(await mocks.isLeader()),
     minRank: 100,
   }),
 }));
@@ -58,7 +58,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.env.GH_CONFIG_APP_ID = "9";
   mocks.env.GH_CONFIG_APP_PRIVATE_KEY = TEST_PRIVATE_KEY_PKCS1;
-  mocks.isOfficer.mockResolvedValue(true);
+  mocks.isLeader.mockResolvedValue(true);
   mocks.listEdits.mockResolvedValue([roomEdit]);
   mocks.consume.mockResolvedValue(true);
   mocks.insertValues.mockResolvedValue(undefined);
@@ -69,7 +69,7 @@ beforeEach(() => {
 
 describe("openConfigPr permissions and gates", () => {
   it("refuses anyone who is not an officer, before reading or calling anything", async () => {
-    mocks.isOfficer.mockResolvedValue(false);
+    mocks.isLeader.mockResolvedValue(false);
     const github = fakeGithub();
     expect(await openConfigPr(USER, { fetch: github.fetch })).toEqual({
       status: "forbidden",

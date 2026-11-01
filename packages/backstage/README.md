@@ -185,8 +185,7 @@ under the key's owner, and creds ignores organization items of that name.
 
 ## Member data: `import` and `export`
 
-These replace the platform's `/console/verification` upload and
-`/console/exports` downloads. They read and write production only:
+These replace the platform’s retired roster upload and export downloads. They read and write production only:
 `DB_URL`, `API_URL` and `SECRET_KEY` come from `.env.production` in a checkout,
 else Secrets Manager. There is no `--db-url`, since a database override would
 leave account creation pointed at production. Days (`--meeting 2026-09-09`,
@@ -194,7 +193,7 @@ leave account creation pointed at production. Days (`--meeting 2026-09-09`,
 
 ### `import involvement`
 
-Replaces the platform's `/console/verification` upload. Export the roster from
+Replaces the platform's retired roster upload. Export the roster from
 the UGA Involvement Network (Roster → Export → Organization Roster) and pass the
 file as it downloads: the title lines above the header, the `(Hidden)` columns
 and the one-row-per-position layout are all expected. A roster for another

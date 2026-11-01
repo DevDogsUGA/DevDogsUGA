@@ -13,11 +13,11 @@ Read this before adding a "Report" affordance anywhere. If what you need is to m
 
 ## Three surfaces
 
-| Surface                                         | Who uses it         | What it is                                                                   |
-| ----------------------------------------------- | ------------------- | ---------------------------------------------------------------------------- |
-| `platform` RPCs                                 | consumer apps       | the public contract: file a report, read the reasons, read your own outcomes |
-| `platform` tables                               | the DevDogs console | the queue, resolutions and audit log, read server-side under RLS             |
-| a foreign key to `platform."reportResolutions"` | app migrations      | how a table declares itself moderatable                                      |
+| Surface                                         | Who uses it           | What it is                                                                   |
+| ----------------------------------------------- | --------------------- | ---------------------------------------------------------------------------- |
+| `platform` RPCs                                 | consumer apps         | the public contract: file a report, read the reasons, read your own outcomes |
+| `platform` tables                               | the DevDogs dashboard | the queue, resolutions and audit log, read server-side under RLS             |
+| a foreign key to `platform."reportResolutions"` | app migrations        | how a table declares itself moderatable                                      |
 
 Consumer apps never touch `platform` tables directly. That split is what keeps the public surface narrow enough to change without breaking apps.
 
@@ -101,6 +101,6 @@ There is no delivery step anywhere in that path, so there is nothing to retry, s
 
 ## What a reporter is told
 
-`my_reports` returns a coarse `outcome` — `action_taken`, `no_violation` or `dismissed`, and null while the report is open — plus `contentRemoved`. A reporter never learns what happened to the other member: another member's standing is not their business, and the console has the full record for anyone entitled to it. `moderatorNote` is internal and is never returned.
+`my_reports` returns a coarse `outcome` — `action_taken`, `no_violation` or `dismissed`, and null while the report is open — plus `contentRemoved`. A reporter never learns what happened to the other member: another member's standing is not their business, and the dashboard has the full record for anyone entitled to it. `moderatorNote` is internal and is never returned.
 
 The `snapshot` comes back only for content types marked `public`. Visibility defaults to `restricted`, so forgetting to configure it can never turn reporting into a disclosure oracle for private content.

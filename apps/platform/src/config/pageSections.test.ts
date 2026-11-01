@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -102,6 +102,10 @@ describe("PAGE_SECTIONS", () => {
 
     for (const href of Object.keys(PAGE_SECTIONS)) {
       expect(hrefs, `${href} is not a nav item`).toContain(href);
+      expect(
+        existsSync(resolve(SRC_DIR, `app/(site)${href}/page.tsx`)),
+        href,
+      ).toBe(true);
     }
   });
 

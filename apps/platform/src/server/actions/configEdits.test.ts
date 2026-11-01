@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   expectSession: vi.fn(),
-  isOfficer: vi.fn(),
+  isLeader: vi.fn(),
   saveEdit: vi.fn(),
   resetEdit: vi.fn(),
   resetAllEdits: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock("~/server/auth", () => ({ expectSession: mocks.expectSession }));
 vi.mock("~/server/auth/permissions", () => ({
   getCallerContext: async () => ({
     resolvedPermissions: {},
-    isLeader: Boolean(await mocks.isOfficer()),
+    isLeader: Boolean(await mocks.isLeader()),
     minRank: 100,
   }),
 }));
@@ -75,14 +75,14 @@ const meetingInput = (
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.expectSession.mockResolvedValue(USER);
-  mocks.isOfficer.mockResolvedValue(true);
+  mocks.isLeader.mockResolvedValue(true);
   mocks.saveEdit.mockResolvedValue("saved");
   mocks.resetAllEdits.mockResolvedValue(2);
 });
 
 describe("permissions", () => {
   it("lets a non-officer neither save, reset nor open", async () => {
-    mocks.isOfficer.mockResolvedValue(false);
+    mocks.isLeader.mockResolvedValue(false);
     expect((await saveConfigEditAction(meetingInput())).ok).toBe(false);
     expect((await resetConfigEditAction("meeting", "x")).ok).toBe(false);
     expect((await resetAllConfigEditsAction()).ok).toBe(false);
@@ -237,7 +237,7 @@ describe("resetConfigEditAction and openConfigPrAction", () => {
   });
 
   it("refuses to open a pull request for a non-officer", async () => {
-    mocks.isOfficer.mockResolvedValue(false);
+    mocks.isLeader.mockResolvedValue(false);
     expect(await openConfigPrAction()).toMatchObject({ ok: false });
     expect(mocks.openConfigPr).not.toHaveBeenCalled();
   });

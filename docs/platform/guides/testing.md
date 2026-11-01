@@ -7,7 +7,7 @@ section: guides
 
 # Testing
 
-The `platform` commands below run from a [Backstage](https://github.com/DevDogsUGA/Backstage) clone, where the app lives; the RLS suite runs here.
+Run these commands from the DevDogsUGA repository root.
 
 ```bash nocheck
 pnpm --filter platform test        # vitest, unit — no database
@@ -20,8 +20,14 @@ pnpm --filter @devdogsuga/supabase test:rls   # the RLS persona suite
 
 ## `test`
 
-Plain Vitest, no database involved. This is what `pnpm test` at the Backstage root
+Plain Vitest, no database involved. This is what `pnpm test` at the repository root
 runs for every package that has it.
+
+## Actions and forms
+
+Test authorization refusals before domain calls, returned `ActionResult` messages and field errors, and unexpected errors that still throw. `server/auth/actionCoverage.test.ts` audits every module with a `"use server"` directive. Access, section, terminal and redirect tests catch route drift.
+
+`lib/actionResult.test.ts`, `ui/use-command.test.tsx` and `ui/settings-form.test.tsx` cover the shared contracts. Feature tests should check decisions and saved values: Draft retains edits on failure; Command shows inline errors and refreshes after success. See [Writing a server action](./writing-a-server-action.md).
 
 ## `test:db`
 
@@ -66,11 +72,7 @@ for why it's the step that actually proves a moderation integration works.
   starts a local Supabase stack on an empty runner volume (which doubles as
   the "every migration still applies from scratch" check), generates the
   database types from it, then runs the RLS suite and `test:db` for
-  `schedule-builder`.
-
-The platform app's own `test` and `test:db` suites run in
-[Backstage](https://github.com/DevDogsUGA/Backstage), against a stack started from the DevDogsUGA commit its
-`devdogsuga.lock` pins.
+  `platform` and `catalog`.
 
 Every credential CI test suite uses is the well-known local-stack constant
 Supabase publishes in its own docs — nothing in CI can reach a real project,

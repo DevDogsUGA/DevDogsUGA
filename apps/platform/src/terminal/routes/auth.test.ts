@@ -32,3 +32,17 @@ describe("/auth/failed terminal twin", () => {
     expect(await render("reason=cancelled")).toContain("cancelled");
   });
 });
+
+// Consent identifiers and client details must never appear in terminal output.
+it("routes consent to a browser notice without echoing authorization data", async () => {
+  expect(matchTerminalPath("/oauth/consent")?.pattern).toBe("/oauth/consent");
+  const result = JSON.stringify(
+    await TERMINAL_ROUTES["/oauth/consent"].render({
+      path: "/oauth/consent",
+      params: {},
+      search: new URLSearchParams("authorization_id=private-request"),
+    }),
+  );
+  expect(result).toContain("OAuth consent lives in the browser");
+  expect(result).not.toContain("private-request");
+});
