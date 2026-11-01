@@ -89,9 +89,12 @@ async function inFlight(): Promise<ProposalRow[]> {
 }
 
 async function cleanup() {
-  await db.execute(
-    sql`delete from platform."auditEvents" where "targetId" = ${PROJECT}`,
-  );
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`set local session_replication_role = replica`);
+    await tx.execute(
+      sql`delete from platform."auditEvents" where "targetId" = ${PROJECT}`,
+    );
+  });
   await db.execute(
     sql`delete from platform."projectDocsProposals" where "projectId" in (${PROJECT}::uuid, ${OTHER}::uuid)`,
   );
