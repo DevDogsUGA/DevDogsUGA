@@ -11,7 +11,7 @@
     "kickedOffAt": "2026-09-27 22:42:46+00",
     "plannedEndAt": "2026-09-27 00:00:00+00",
     "closedAt": "2026-09-28 19:15:01+00",
-    "githubSyncedAt": "2026-10-12 00:01:51.244997+00"
+    "githubSyncedAt": "2026-10-13 00:01:25.238638+00"
   },
   {
     "id": "717bb6a5-3e67-4783-91cb-a655f51b0aed",
@@ -24,8 +24,8 @@
     "url": "https://github.com/DevDogsUGA/DevDogsUGA/issues/191",
     "kickedOffAt": "2026-09-29 01:12:08+00",
     "plannedEndAt": "2026-10-12 00:00:00+00",
-    "closedAt": null,
-    "githubSyncedAt": "2026-10-12 00:01:51.748453+00"
+    "closedAt": "2026-10-13 17:09:27+00",
+    "githubSyncedAt": "2026-10-13 17:09:29.237+00"
   },
   {
     "id": "fa052a92-ba6f-4a2b-a9a7-012da2e6780b",
@@ -38,7 +38,7 @@
     "url": "https://github.com/DevDogsUGA/DevDogsUGA/issues/196",
     "kickedOffAt": "2026-09-30 19:29:40+00",
     "plannedEndAt": "2026-10-12 00:00:00+00",
-    "closedAt": null,
-    "githubSyncedAt": "2026-10-12 00:01:51.49653+00"
+    "closedAt": "2026-10-13 17:09:28+00",
+    "githubSyncedAt": "2026-10-13 17:09:31.048+00"
   }
 ]
