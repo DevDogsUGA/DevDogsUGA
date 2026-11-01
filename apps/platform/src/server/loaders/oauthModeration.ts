@@ -42,11 +42,81 @@ export type ClientModeration = {
   production: boolean;
   /** Whether an officer has registered it as a moderation app (the console's Apps Outside the Platform). */
   registered: boolean;
+  /**
+   * Whether the viewer can open this client's page (`/dashboard/oauth/<id>`),
+   * which carries its moderation. False for another member's published app,
+   * which a holder moderates from the list.
+   */
+  hasPage: boolean;
   sandboxReports: SandboxReportRow[];
   testDeliveries: TestDeliveryRow[];
 };
 
 const PER_CLIENT = 10;
+
+/**
+ * The moderation state of `clients`: settings, recent sandbox reports and test
+ * deliveries. `productionIds` are the ones real members sign in with.
+ */
+async function moderationFor(
+  clients: { clientId: string; label: string; hasPage: boolean }[],
+  productionIds: Set<string>,
+): Promise<ClientModeration[]> {
+  const ids = clients.map((client) => client.clientId);
+
+  const [settings, reports, deliveries] = await Promise.all([
+    db
+      .select()
+      .from(moderationClients)
+      .where(inArray(moderationClients.clientId, ids)),
+    db
+      .select()
+      .from(sandboxReports)
+      .where(inArray(sandboxReports.clientId, ids))
+      .orderBy(desc(sandboxReports.createdAt))
+      .limit(PER_CLIENT * ids.length),
+    db
+      .select()
+      .from(moderationDeliveries)
+      .where(inArray(moderationDeliveries.clientId, ids))
+      .orderBy(desc(moderationDeliveries.createdAt))
+      .limit(PER_CLIENT * ids.length),
+  ]);
+
+  return clients.map((client) => {
+    const setting = settings.find((s) => s.clientId === client.clientId);
+    return {
+      clientId: client.clientId,
+      label: client.label,
+      enabled: setting !== undefined,
+      endpointUrl: setting?.endpointUrl ?? null,
+      production: productionIds.has(client.clientId) || setting?.appId != null,
+      registered: setting?.appId != null,
+      hasPage: client.hasPage,
+      sandboxReports: reports
+        .filter((r) => r.clientId === client.clientId)
+        .slice(0, PER_CLIENT)
+        .map((r) => ({
+          id: r.id,
+          contentType: r.contentType,
+          contentRef: r.contentRef,
+          reason: r.reason,
+          createdAt: r.createdAt.toISOString(),
+        })),
+      testDeliveries: deliveries
+        .filter((d) => d.clientId === client.clientId && d.sandbox)
+        .slice(0, PER_CLIENT)
+        .map((d) => ({
+          id: d.id,
+          type: d.type,
+          status: d.status,
+          attempts: d.attempts,
+          lastError: d.lastError,
+          createdAt: d.createdAt.toISOString(),
+        })),
+    };
+  });
+}
 
 /**
  * Moderation state for each OAuth client the signed-in member manages: their
@@ -72,64 +142,33 @@ export const getOAuthModerationData = cache(
       ...own.filter((c) => c.status === "in_production").map((c) => c.clientId),
       ...published.map((client) => client.clientId),
     ]);
+    // A page exists for the member's own apps and for DevDogs apps, which is
+    // the Record rule (`mayManageClient`); another member's published app has
+    // none.
     const clients = [
-      ...own,
-      ...published.filter((p) => !own.some((o) => o.clientId === p.clientId)),
+      ...own.map((c) => ({ ...c, hasPage: true })),
+      ...published
+        .filter((p) => !own.some((o) => o.clientId === p.clientId))
+        .map((p) => ({ ...p, hasPage: p.isDevDogs })),
     ];
     if (clients.length === 0) return [];
-    const ids = clients.map((client) => client.clientId);
-
-    const [settings, reports, deliveries] = await Promise.all([
-      db
-        .select()
-        .from(moderationClients)
-        .where(inArray(moderationClients.clientId, ids)),
-      db
-        .select()
-        .from(sandboxReports)
-        .where(inArray(sandboxReports.clientId, ids))
-        .orderBy(desc(sandboxReports.createdAt))
-        .limit(PER_CLIENT * ids.length),
-      db
-        .select()
-        .from(moderationDeliveries)
-        .where(inArray(moderationDeliveries.clientId, ids))
-        .orderBy(desc(moderationDeliveries.createdAt))
-        .limit(PER_CLIENT * ids.length),
-    ]);
-
-    return clients.map((client) => {
-      const setting = settings.find((s) => s.clientId === client.clientId);
-      return {
-        clientId: client.clientId,
-        label: client.label,
-        enabled: setting !== undefined,
-        endpointUrl: setting?.endpointUrl ?? null,
-        production:
-          productionIds.has(client.clientId) || setting?.appId != null,
-        registered: setting?.appId != null,
-        sandboxReports: reports
-          .filter((r) => r.clientId === client.clientId)
-          .slice(0, PER_CLIENT)
-          .map((r) => ({
-            id: r.id,
-            contentType: r.contentType,
-            contentRef: r.contentRef,
-            reason: r.reason,
-            createdAt: r.createdAt.toISOString(),
-          })),
-        testDeliveries: deliveries
-          .filter((d) => d.clientId === client.clientId && d.sandbox)
-          .slice(0, PER_CLIENT)
-          .map((d) => ({
-            id: d.id,
-            type: d.type,
-            status: d.status,
-            attempts: d.attempts,
-            lastError: d.lastError,
-            createdAt: d.createdAt.toISOString(),
-          })),
-      };
-    });
+    return moderationFor(clients, productionIds);
   },
 );
+
+/**
+ * The moderation state of one client the caller has already been allowed to
+ * manage (`mayManageClient`), for its page. A DevDogs app or a published app is
+ * a production client.
+ */
+export async function getClientModeration(client: {
+  clientId: string;
+  label: string;
+  production: boolean;
+}): Promise<ClientModeration> {
+  const [moderation] = await moderationFor(
+    [{ ...client, hasPage: true }],
+    new Set(client.production ? [client.clientId] : []),
+  );
+  return moderation!;
+}

@@ -24,9 +24,7 @@ import { PlusIcon } from "@phosphor-icons/react/ssr";
 import oauthAction from "~/server/actions/oauth";
 import type { getOAuthPageData } from "~/server/loaders/console";
 import Input from "~/components/Input";
-import OAuthClientSheet, {
-  MAX_REDIRECT_URIS,
-} from "~/components/Settings/OAuthClientSheet";
+import { MAX_REDIRECT_URIS } from "~/components/Settings/redirectUris";
 import OAuthClientTable from "~/components/Settings/OAuthClientTable";
 import { Button } from "~/ui/button";
 import EmptyState from "~/ui/empty-state";
@@ -38,13 +36,16 @@ export default function OAuthCredentialsField({
   hasGithub,
   appCount,
   maxApps,
-  testAccounts,
   prefillRedirectUri,
 }: OAuthData & { prefillRedirectUri?: string }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [{ clientId: mintedClientId, clientSecret }, dispatch, isPending] =
-    useActionState(oauthAction, { clientId: null, clientSecret: null });
+  // Only the prefill confirm dispatches from this list; an app's own page
+  // holds every other action.
+  const [, dispatch, isPending] = useActionState(oauthAction, {
+    clientId: null,
+    clientSecret: null,
+  });
 
   const prevIsPendingRef = useRef(false);
   useEffect(() => {
@@ -95,13 +96,6 @@ export default function OAuthCredentialsField({
     setPrefillOpen(open);
     if (!open) router.replace(pathname, { scroll: false });
   }
-
-  const [openId, setOpenId] = useState<string | null>(null);
-  const openClient = clients.find((c) => c.clientId === openId) ?? null;
-  const revealed =
-    mintedClientId !== null && openClient?.clientId === mintedClientId
-      ? clientSecret
-      : null;
 
   const prefill = (title: string, body: ReactNode, confirm?: ReactNode) => (
     <>
@@ -192,17 +186,8 @@ export default function OAuthCredentialsField({
           }
         />
       ) : (
-        <OAuthClientTable clients={clients} onEdit={setOpenId} />
+        <OAuthClientTable clients={clients} />
       )}
-
-      <OAuthClientSheet
-        client={openClient}
-        testAccounts={testAccounts}
-        dispatch={dispatch}
-        isPending={isPending}
-        secret={revealed}
-        onClose={() => setOpenId(null)}
-      />
     </>
   );
 }

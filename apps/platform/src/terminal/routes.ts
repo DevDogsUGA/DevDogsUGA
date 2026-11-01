@@ -33,6 +33,7 @@ export const TERMINAL_ROUTES = {
   "/dashboard/accounts": browserNotice("Connected accounts"),
   "/dashboard/oauth": browserNotice("OAuth apps"),
   "/dashboard/oauth/new": browserNotice("New OAuth app"),
+  "/dashboard/oauth/:clientId": browserNotice("OAuth app"),
   "/dashboard/attendance": browserNotice("Attendance passport"),
   "/dashboard/docs-preview": browserNotice("Docs preview"),
   "/dashboard/docs-preview/:project": browserNotice("Docs preview"),

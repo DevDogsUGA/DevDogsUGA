@@ -72,4 +72,18 @@ describe("getOAuthModerationData", () => {
     ]);
     expect(rows.every((r) => r.production)).toBe(true);
   });
+
+  it("marks which clients have a page of their own: the member's own and DevDogs apps", async () => {
+    mocks.getOAuthPageData.mockResolvedValue({
+      clients: [{ clientId: "mine", label: "Mine", status: "testing" }],
+    });
+    mocks.getConsoleApps.mockResolvedValue([
+      app("devdogs", { isDevDogs: true }),
+      app("published"),
+    ]);
+    const rows = await getOAuthModerationData();
+    expect(
+      Object.fromEntries(rows.map((r) => [r.clientId, r.hasPage])),
+    ).toEqual({ mine: true, devdogs: true, published: false });
+  });
 });

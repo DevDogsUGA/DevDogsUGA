@@ -6,10 +6,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard/oauth",
 }));
 vi.mock("~/server/actions/oauth", () => ({ default: vi.fn() }));
-vi.mock("~/components/Settings/OAuthClientSheet", () => ({
-  default: () => null,
-  MAX_REDIRECT_URIS: 5,
-}));
 
 const { NewAppButton } = await import("./OAuthCredentialsField");
 
