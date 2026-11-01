@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession, callerFor, rules } from "~/server/auth/access";
+
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import {
@@ -14,8 +16,7 @@ import {
   moderationClients,
   moderationDeliveries,
 } from "~/server/db/schema";
-import { expectSession } from "~/server/auth";
-import { canUserManageOAuthApps } from "~/server/auth/permissions";
+
 import { oauthAuditEvent } from "~/server/oauth/audit";
 import { attemptDelivery } from "~/server/moderation/delivery";
 import { databaseDeliveryStore } from "~/server/moderation/deliveryStore";
@@ -66,7 +67,7 @@ async function managedClient(clientId: string, userId: string) {
   if (!registration) return null;
   const allowed =
     registration.status === "in_production" || registration.userId === null
-      ? await canUserManageOAuthApps(userId)
+      ? await callerFor(userId).then(rules.manageOAuthApps)
       : registration.userId === userId;
   return allowed ? registration : null;
 }
@@ -86,7 +87,12 @@ export default async function oauthModerationAction(
   _previous: OAuthModerationState,
   formData: FormData,
 ): Promise<OAuthModerationState> {
-  const userId = await expectSession();
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
+  const userId = access.caller.userId;
   const intent = field(formData, "intent");
   const clientId = field(formData, "clientId");
 

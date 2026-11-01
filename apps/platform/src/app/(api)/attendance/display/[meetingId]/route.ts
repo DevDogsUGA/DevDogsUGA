@@ -1,3 +1,4 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "~/env";
 import {
@@ -5,15 +6,14 @@ import {
   createManualCode,
   createQrChallenge,
 } from "~/lib/attendanceChallenge";
-import { canUserManageAttendance } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { getOfficerAttendanceMeeting } from "~/server/attendance/getOfficerMeeting";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ meetingId: string }> },
 ) {
-  await requirePermission(canUserManageAttendance);
+  await requireAccess(rules.manageAttendance);
   const { meetingId } = await params;
   const meeting = await getOfficerAttendanceMeeting(meetingId);
   if (!meeting) {

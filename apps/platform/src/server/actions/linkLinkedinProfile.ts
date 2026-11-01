@@ -1,6 +1,8 @@
 "use server";
 
-import { notFound } from "next/navigation";
+import { authorizeSession } from "~/server/auth/access";
+
+import { notFound, redirect } from "next/navigation";
 import { authenticate } from "../auth";
 import { getCallbackPath } from "../utils";
 
@@ -10,6 +12,11 @@ import { getCallbackPath } from "../utils";
  * - `callbackPath` is the path to redirect the user to after the action completes. Defaults to the value of the `referer` header if present or `/` if not.
  */
 export default async function linkLinkedinProfile(formData: FormData) {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    redirect("/auth");
+  }
+
   const callbackPath = await getCallbackPath("/", formData);
   await authenticate("linkedin_oidc", callbackPath);
   console.error("Redirect failed.");

@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession, callerFor, rules } from "~/server/auth/access";
+
 import { eq } from "drizzle-orm";
 import { authenticate, expectUserWith } from "../auth";
 import { db } from "../db";
@@ -13,7 +15,6 @@ import {
 } from "../oauth/ownedClients";
 import { createOauthClientAndRegister } from "../oauth/registerClient";
 import { redirectUriError } from "../oauth/redirectRule";
-import { canUserManageOAuthApps } from "~/server/auth/permissions";
 
 const MAX_REDIRECT_URIS = 5;
 const MAX_LABEL_LENGTH = 100;
@@ -51,7 +52,7 @@ async function requireManagedClient(userId: string, clientId: string) {
 
   const allowed =
     registration.userId === null
-      ? await canUserManageOAuthApps(userId)
+      ? await callerFor(userId).then(rules.manageOAuthApps)
       : registration.userId === userId;
   if (!allowed) throw new Error(NOT_FOUND);
 
@@ -118,6 +119,9 @@ export default async function oauthAction(
   _prev: OAuthState,
   formData: FormData,
 ): Promise<OAuthState> {
+  const access = await authorizeSession();
+  if (!access.ok) return authenticate("google", "/settings/oauth");
+
   const intent = formText(formData, "intent");
 
   const user = await expectUserWith({

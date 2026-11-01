@@ -1,5 +1,7 @@
 "use server";
 
+import { authorize, rules } from "~/server/auth/access";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { env } from "~/env";
@@ -16,9 +18,8 @@ import {
   removeAttendance,
   resendAttendanceInvite,
 } from "~/server/attendance/officerAttendance";
-import { expectSession } from "~/server/auth";
+
 import { sendTemplate } from "~/server/email/send";
-import { canUserManageAttendance } from "~/server/auth/permissions";
 
 /**
  * The console meeting page's writes (meeting detail). Every one re-checks
@@ -40,12 +41,6 @@ const NOT_AUTHORIZED: OfficerAttendanceState = {
   message: "Not authorized: canManageAttendance required.",
 };
 
-async function officer(): Promise<string | null> {
-  const userId = await expectSession().catch(() => null);
-  if (!userId) return null;
-  return (await canUserManageAttendance(userId)) ? userId : null;
-}
-
 const meetingId = z.string().uuid();
 
 function refresh(id: string) {
@@ -63,7 +58,12 @@ export async function findAttendee(
   _previous: OfficerAttendanceState,
   formData: FormData,
 ): Promise<OfficerAttendanceState> {
-  if (!(await officer())) return NOT_AUTHORIZED;
+  const access = await authorize(rules.manageAttendance);
+  if (!access.ok) {
+    return NOT_AUTHORIZED;
+  }
+
+  if (!access.caller.userId) return NOT_AUTHORIZED;
   const parsed = parseMyId(field(formData, "myId"));
   if (!parsed.ok) return { status: "error", message: parsed.error };
   const found = await findAccountByEmail(parsed.email);
@@ -77,7 +77,12 @@ export async function addAttendee(
   _previous: OfficerAttendanceState,
   formData: FormData,
 ): Promise<OfficerAttendanceState> {
-  const officerId = await officer();
+  const access = await authorize(rules.manageAttendance);
+  if (!access.ok) {
+    return NOT_AUTHORIZED;
+  }
+
+  const officerId = access.caller.userId;
   if (!officerId) return NOT_AUTHORIZED;
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const parsed = parseMyId(field(formData, "myId"));
@@ -145,7 +150,12 @@ export async function inviteAttendee(
   _previous: OfficerAttendanceState,
   formData: FormData,
 ): Promise<OfficerAttendanceState> {
-  const officerId = await officer();
+  const access = await authorize(rules.manageAttendance);
+  if (!access.ok) {
+    return NOT_AUTHORIZED;
+  }
+
+  const officerId = access.caller.userId;
   if (!officerId) return NOT_AUTHORIZED;
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const parsed = parseMyId(field(formData, "myId"));
@@ -186,7 +196,12 @@ export async function resendInvite(
   _previous: OfficerAttendanceState,
   formData: FormData,
 ): Promise<OfficerAttendanceState> {
-  if (!(await officer())) return NOT_AUTHORIZED;
+  const access = await authorize(rules.manageAttendance);
+  if (!access.ok) {
+    return NOT_AUTHORIZED;
+  }
+
+  if (!access.caller.userId) return NOT_AUTHORIZED;
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const invite = z.string().uuid().safeParse(field(formData, "inviteId"));
   if (!meeting.success || !invite.success) {
@@ -213,7 +228,12 @@ export async function cancelInvite(
   _previous: OfficerAttendanceState,
   formData: FormData,
 ): Promise<OfficerAttendanceState> {
-  if (!(await officer())) return NOT_AUTHORIZED;
+  const access = await authorize(rules.manageAttendance);
+  if (!access.ok) {
+    return NOT_AUTHORIZED;
+  }
+
+  if (!access.caller.userId) return NOT_AUTHORIZED;
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const invite = z.string().uuid().safeParse(field(formData, "inviteId"));
   if (!meeting.success || !invite.success) {
@@ -230,7 +250,12 @@ export async function removeAttendee(
   _previous: OfficerAttendanceState,
   formData: FormData,
 ): Promise<OfficerAttendanceState> {
-  const officerId = await officer();
+  const access = await authorize(rules.manageAttendance);
+  if (!access.ok) {
+    return NOT_AUTHORIZED;
+  }
+
+  const officerId = access.caller.userId;
   if (!officerId) return NOT_AUTHORIZED;
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const attendance = z

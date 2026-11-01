@@ -1,5 +1,7 @@
 "use server";
 
+import { publicAction, authorizeSession } from "~/server/auth/access";
+
 import { redirect } from "next/navigation";
 import * as z from "zod";
 import { zfd } from "zod-form-data";
@@ -52,6 +54,8 @@ function redirectWith(
 }
 
 export async function denyConnect(formData: FormData): Promise<void> {
+  // Public: Only redirects a refusal; reads and writes no member data.
+  publicAction();
   const fields = connectSchema.parse(formData);
   redirectWith(fields.redirectUri, {
     error: "access_denied",
@@ -60,6 +64,11 @@ export async function denyConnect(formData: FormData): Promise<void> {
 }
 
 export async function approveConnect(formData: FormData): Promise<void> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    return authenticate("google", connectPath(connectSchema.parse(formData)));
+  }
+
   const fields = connectSchema.parse(formData);
 
   // Re-validate: this is a plain server action endpoint, reachable by any

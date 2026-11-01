@@ -1,3 +1,4 @@
+import { callerFor, rules } from "~/server/auth/access";
 import { desc, inArray } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
@@ -6,7 +7,7 @@ import {
   moderationDeliveries,
   sandboxReports,
 } from "~/server/db/schema";
-import { canUserManageOAuthApps } from "~/server/auth/permissions";
+
 import { expectSession } from "~/server/auth";
 import { getOAuthPageData } from "~/server/loaders/console";
 import { getConsoleApps } from "~/server/loaders/oauthApps";
@@ -63,7 +64,9 @@ export const getOAuthModerationData = cache(
     // the ones real members sign in with (the same rule Console → Apps lists).
     // getConsoleApps also returns members' Testing apps; those stay private.
     const published = (
-      (await canUserManageOAuthApps(userId)) ? await getConsoleApps() : []
+      (await callerFor(userId).then(rules.manageOAuthApps))
+        ? await getConsoleApps()
+        : []
     ).filter((app) => app.isDevDogs || app.status === "in_production");
     const productionIds = new Set([
       ...own.filter((c) => c.status === "in_production").map((c) => c.clientId),

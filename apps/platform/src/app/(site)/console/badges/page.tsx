@@ -1,8 +1,8 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import ConsoleShell from "~/components/Console/ConsoleShell";
-import { requirePermission } from "~/server/auth/require";
-import { isOfficer } from "~/server/auth/permissions";
+
 import { searchMembersForBadges } from "~/server/loaders/badges";
 import { PageHeading, Panel } from "~/ui/app-shell";
 import { Button } from "~/ui/button";
@@ -24,7 +24,7 @@ export default async function BadgesConsolePage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  await requirePermission(isOfficer);
+  await requireAccess(rules.officer);
   const q = ((await searchParams).q ?? "").trim().slice(0, 80);
   const results = q ? await searchMembersForBadges(q) : [];
 

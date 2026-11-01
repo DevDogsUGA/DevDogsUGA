@@ -1,8 +1,9 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import { notFound } from "next/navigation";
 import { EVENT_FORMATS } from "@devdogsuga/sdk/brand";
 import { parsePicks } from "~/lib/graphics/picks";
 import { zipStream, type ZipFile } from "~/lib/graphics/zip";
-import { canUserUseGraphics } from "~/server/graphics/access";
+
 import { getGraphicsMeeting } from "~/server/graphics/meeting";
 import {
   formatOf,
@@ -10,7 +11,6 @@ import {
   renderableOnWorker,
 } from "~/server/graphics/render";
 import { badRequest } from "~/server/graphics/respond";
-import { requirePermission } from "~/server/auth/require";
 
 /**
  * A ZIP of the graphics an officer ticked: `?pick=<subject>@<format>`, repeated.
@@ -27,7 +27,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ meetingId: string }> },
 ) {
-  await requirePermission(canUserUseGraphics);
+  await requireAccess(rules.useGraphics);
   const { meetingId } = await params;
 
   const meeting = await getGraphicsMeeting(meetingId);

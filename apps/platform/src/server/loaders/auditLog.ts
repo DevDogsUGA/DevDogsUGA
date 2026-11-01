@@ -1,9 +1,9 @@
+import { rules, requireAccess } from "~/server/auth/access";
 import { and, count, desc, eq, type SQL } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import type { AuditSource } from "~/lib/audit";
-import { canUserViewAuditLog } from "~/server/auth/permissions";
-import { requirePermission } from "~/server/auth/require";
+
 import { db } from "~/server/db";
 import { auditEvents, reflectionRevisions } from "~/server/db/schema";
 import {
@@ -64,7 +64,7 @@ export const getAuditLogPageData = cache(
     page: number,
     filters: AuditLogFilters = {},
   ): Promise<AuditLogPageData> => {
-    await requirePermission(canUserViewAuditLog);
+    await requireAccess(rules.viewAuditLog);
 
     const predicates: SQL[] = [];
     if (filters.source) predicates.push(eq(auditEvents.source, filters.source));
@@ -120,7 +120,7 @@ export const getAuditLogPageData = cache(
 );
 
 export const getAuditEventDetailData = cache(async (eventId: string) => {
-  await requirePermission(canUserViewAuditLog);
+  await requireAccess(rules.viewAuditLog);
 
   const [event] = await db
     .select()

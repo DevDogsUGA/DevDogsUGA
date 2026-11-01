@@ -1,7 +1,8 @@
+import { callerFor, rules } from "~/server/auth/access";
 import { getAuthoredFiles, validateConfigFiles } from "@devdogsuga/events";
 import { sql } from "drizzle-orm";
 import { env } from "~/env";
-import { isOfficer } from "~/server/auth/permissions";
+
 import { db } from "~/server/db";
 import { auditEvents, profiles } from "~/server/db/schema";
 import { consumeRateLimit } from "~/server/rateLimit";
@@ -115,7 +116,8 @@ export async function openConfigPr(
   userId: string,
   options: { fetch?: typeof fetch } = {},
 ): Promise<OpenResult> {
-  if (!(await isOfficer(userId))) return { status: "forbidden" };
+  if (!(await callerFor(userId).then(rules.officer)))
+    return { status: "forbidden" };
   if (!configPrsAvailable()) return { status: "unavailable" };
 
   // The local check first: a proposal that cannot validate never reaches GitHub.

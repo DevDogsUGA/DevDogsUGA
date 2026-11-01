@@ -1,5 +1,7 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import * as z from "zod";
@@ -32,6 +34,14 @@ function devicePath(userCode: string): string {
 }
 
 export async function denyDevice(formData: FormData): Promise<void> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    const { userCode } = deviceActionSchema.parse(formData);
+    const normalized = normalizeUserCode(userCode);
+    if (!normalized) throw new Error("Invalid code.");
+    return authenticate("google", devicePath(normalized));
+  }
+
   const { userCode } = deviceActionSchema.parse(formData);
   const normalized = normalizeUserCode(userCode);
   if (!normalized) throw new Error("Invalid code.");
@@ -56,6 +66,14 @@ export async function denyDevice(formData: FormData): Promise<void> {
 }
 
 export async function approveDevice(formData: FormData): Promise<void> {
+  const access = await authorizeSession();
+  if (!access.ok) {
+    const { userCode } = deviceActionSchema.parse(formData);
+    const normalized = normalizeUserCode(userCode);
+    if (!normalized) throw new Error("Invalid code.");
+    return authenticate("google", devicePath(normalized));
+  }
+
   const { userCode } = deviceActionSchema.parse(formData);
   const normalized = normalizeUserCode(userCode);
   if (!normalized) throw new Error("Invalid code.");

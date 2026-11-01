@@ -1,4 +1,6 @@
 "use server";
+
+import { authorizeSession } from "~/server/auth/access";
 import { and, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { authenticate, expectUserWith } from "../auth";
@@ -8,6 +10,9 @@ import { oauthRegistrations } from "../db/schema";
 import { supabaseAdmin } from "../../supabase/admin";
 
 export default async function unlinkGithubProfile() {
+  const access = await authorizeSession();
+  if (!access.ok) return authenticate("google", "/settings/accounts");
+
   const user = await expectUserWith({
     profile: {
       with: {

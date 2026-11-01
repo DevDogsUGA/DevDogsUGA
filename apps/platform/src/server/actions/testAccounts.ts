@@ -1,10 +1,12 @@
 "use server";
 
+import { authorizeSession } from "~/server/auth/access";
+
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { zfd } from "zod-form-data";
 import { supabaseAdmin } from "~/supabase/admin";
-import { authenticate, expectSession, expectUserWith } from "../auth";
+import { authenticate, expectUserWith } from "../auth";
 import { db } from "../db";
 import { oauthTestAccounts } from "../db/schema";
 
@@ -46,6 +48,9 @@ export type TestAccount = {
 };
 
 export async function addTestAccount(formData: FormData) {
+  const access = await authorizeSession();
+  if (!access.ok) return authenticate("google", "/settings/oauth");
+
   const { displayName } = await testAccountSchema.parseAsync(formData);
   const user = await expectUserWith({
     testAccounts: true,
@@ -106,7 +111,12 @@ export async function updateTestAccount(
   _prevState: unknown,
   formData: FormData,
 ) {
-  const ownerUserId = await expectSession();
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
+  const ownerUserId = access.caller.userId;
   const { testUserId, displayName } = await updateSchema.parseAsync(formData);
 
   const account = await db.query.oauthTestAccounts.findFirst({
@@ -137,7 +147,12 @@ export async function updateTestAccount(
 }
 
 export async function deleteTestAccount(testUserId: string): Promise<void> {
-  const ownerUserId = await expectSession();
+  const access = await authorizeSession();
+  if (!access.ok) {
+    throw new Error(access.message);
+  }
+
+  const ownerUserId = access.caller.userId;
 
   const account = await db.query.oauthTestAccounts.findFirst({
     where: { ownerUserId, testUserId },
