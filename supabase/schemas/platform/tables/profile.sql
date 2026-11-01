@@ -138,7 +138,6 @@ REVOKE ALL ("showBio") ON TABLE "platform"."profile" FROM "authenticated";
 
 GRANT UPDATE ("showBio") ON TABLE "platform"."profile" TO "authenticated";
 
-
 REVOKE ALL ("showContributions") ON TABLE "platform"."profile" FROM "authenticated";
 
 GRANT UPDATE ("showContributions") ON TABLE "platform"."profile" TO "authenticated";

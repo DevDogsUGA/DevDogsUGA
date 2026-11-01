@@ -7,7 +7,9 @@
 -- every reader of these objects (the Teams and competitions pages, the GitHub
 -- mirror, the stars and reflections queries that joined them) and after that
 -- release's generated Drizzle schema stopped listing them. Applying it before
--- that release would break the running platform.
+-- that release would break the running platform. In particular, deploy
+-- dr/d11-retire-team-readers (the final account-export readers) to production
+-- before merging this migration; only the newest main commit deploys.
 --
 -- The rows are archived first: `archive/` holds the last state of every table
 -- dropped here, and `archive/manifest.json` records production's row counts
