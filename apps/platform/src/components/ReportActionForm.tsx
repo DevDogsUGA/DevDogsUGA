@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { dismissReport, resolveReport } from "~/server/actions/moderation";
 import { Panel } from "~/ui/app-shell";
 import {
@@ -17,6 +17,7 @@ import { Button } from "~/ui/button";
 import { Checkbox } from "~/ui/checkbox";
 import Field from "~/ui/field";
 import { Textarea } from "~/ui/textarea";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 export interface ResolveArgs {
   subjectAction: "warn" | "suspend" | "ban" | "no_action";
@@ -61,7 +62,24 @@ export default function ReportActionForm({
   disabled = false,
 }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const resolve = useCommand(async (args: ResolveArgs) => {
+    const result = await resolveReport(
+      reportId,
+      args.subjectAction,
+      args.filerAction,
+      args.contentAction,
+      args.note,
+      args.applyGlobally,
+    );
+    if (result.ok) router.push(returnTo);
+    return result;
+  });
+  const dismiss = useCommand(async (note?: string) => {
+    const result = await dismissReport(reportId, note);
+    if (result.ok) router.push(returnTo);
+    return result;
+  });
+  const isPending = resolve.pending || dismiss.pending;
   const busy = isPending || disabled;
 
   function readArgs(formData: FormData): ResolveArgs {
@@ -86,18 +104,7 @@ export default function ReportActionForm({
       return;
     }
 
-    startTransition(async () => {
-      await resolveReport(
-        reportId,
-        args.subjectAction,
-        args.filerAction,
-        args.contentAction,
-        args.note,
-        args.applyGlobally,
-      );
-      router.push(returnTo);
-      router.refresh();
-    });
+    resolve.run(args);
   }
 
   function handleDismiss(note?: string) {
@@ -106,11 +113,7 @@ export default function ReportActionForm({
       return;
     }
 
-    startTransition(async () => {
-      await dismissReport(reportId, note);
-      router.push(returnTo);
-      router.refresh();
-    });
+    dismiss.run(note);
   }
 
   const formId = `resolve-form-${reportId}`;
@@ -262,6 +265,8 @@ export default function ReportActionForm({
             Dismiss report
           </Button>
         </div>
+        <CommandFeedback result={resolve.result} />
+        <CommandFeedback result={dismiss.result} />
       </form>
 
       <AlertDialog

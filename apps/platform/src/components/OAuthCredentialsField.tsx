@@ -12,22 +12,16 @@ import {
 } from "~/ui/alert-dialog";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  useActionState,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { PlusIcon } from "@phosphor-icons/react/ssr";
-import oauthAction from "~/server/actions/oauth";
+import { addRedirectUri } from "~/server/actions/oauth";
 import type { getOAuthPageData } from "~/server/loaders/console";
 import Input from "~/components/Input";
 import { MAX_REDIRECT_URIS } from "~/components/Settings/redirectUris";
 import OAuthClientTable from "~/components/Settings/OAuthClientTable";
 import { Button } from "~/ui/button";
 import EmptyState from "~/ui/empty-state";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 type OAuthData = Awaited<ReturnType<typeof getOAuthPageData>>;
 
@@ -40,20 +34,25 @@ export default function OAuthCredentialsField({
 }: OAuthData & { prefillRedirectUri?: string }) {
   const router = useRouter();
   const pathname = usePathname();
-  // Only the prefill confirm dispatches from this list; an app's own page
-  // holds every other action.
-  const [, dispatch, isPending] = useActionState(oauthAction, {
-    clientId: null,
-    clientSecret: null,
-  });
-
-  const prevIsPendingRef = useRef(false);
-  useEffect(() => {
-    if (prevIsPendingRef.current && !isPending) router.refresh();
-    prevIsPendingRef.current = isPending;
-  }, [isPending, router]);
-
   const [prefillOpen, setPrefillOpen] = useState(false);
+
+  function handlePrefillOpenChange(open: boolean) {
+    setPrefillOpen(open);
+    if (!open) router.replace(pathname, { scroll: false });
+  }
+
+  // Only the prefill confirm adds a URI from this list; an app's own page holds
+  // every other change. The dialog stays open until it works, so a refusal
+  // shows where the member is looking.
+  const {
+    run: addPrefill,
+    pending: isPending,
+    result: prefillResult,
+  } = useCommand(async (clientId: string, uri: string) => {
+    const result = await addRedirectUri(clientId, uri);
+    if (result.ok) handlePrefillOpenChange(false);
+    return result;
+  });
 
   useEffect(() => {
     // Intentional: open the prefill UI when a redirect URI arrives via props.
@@ -82,19 +81,9 @@ export default function OAuthCredentialsField({
             ? "at-limit"
             : "ready";
 
-  const handlePrefillConfirm = useCallback(() => {
+  function handlePrefillConfirm() {
     if (!prefillRedirectUri || !soleClient) return;
-    const fd = new FormData();
-    fd.set("intent", "add-uri");
-    fd.set("clientId", soleClient.clientId);
-    fd.set("uri", prefillRedirectUri);
-    dispatch(fd);
-    setPrefillOpen(false);
-  }, [prefillRedirectUri, soleClient, dispatch]);
-
-  function handlePrefillOpenChange(open: boolean) {
-    setPrefillOpen(open);
-    if (!open) router.replace(pathname, { scroll: false });
+    addPrefill(soleClient.clientId, prefillRedirectUri);
   }
 
   const prefill = (title: string, body: ReactNode, confirm?: ReactNode) => (
@@ -154,13 +143,20 @@ export default function OAuthCredentialsField({
               <>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={handlePrefillConfirm}
+                  onClick={(event) => {
+                    // Closing waits for the add to work.
+                    event.preventDefault();
+                    handlePrefillConfirm();
+                  }}
                   disabled={isPending}
                 >
                   Add
                 </AlertDialogAction>
               </>,
             )}
+          {prefillStatus === "ready" && (
+            <CommandFeedback result={prefillResult} />
+          )}
         </AlertDialogContent>
       </AlertDialog>
 

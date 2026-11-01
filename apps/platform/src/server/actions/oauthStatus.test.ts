@@ -130,7 +130,7 @@ describe("setStatus, setAsksForConsent and transferToDevDogs are holder-only", (
 describe("forgetApproval", () => {
   it("lets a member remove their own access", async () => {
     mocks.session = USER;
-    await forgetApproval(APP, USER);
+    expect(await forgetApproval(APP, USER)).toMatchObject({ ok: true });
     expect(mocks.steps.forgetApproval).toHaveBeenCalledWith({
       actorUserId: USER,
       clientId: APP,
@@ -141,25 +141,46 @@ describe("forgetApproval", () => {
   it("lets an app's owner forget one of their own test accounts", async () => {
     mocks.session = OWNER;
     mocks.testAccount = { testUserId: USER };
-    await forgetApproval(APP, USER);
+    expect(await forgetApproval(APP, USER)).toMatchObject({ ok: true });
     expect(mocks.steps.forgetApproval).toHaveBeenCalled();
   });
 
   it("refuses the owner acting on somebody who is not their test account", async () => {
     mocks.session = OWNER;
-    await expect(forgetApproval(APP, USER)).rejects.toThrow(/not found/);
+    expect(await forgetApproval(APP, USER)).toEqual({
+      ok: false,
+      message: "OAuth client not found",
+    });
     expect(mocks.steps.forgetApproval).not.toHaveBeenCalled();
   });
 
   it("refuses a member who is not the app's owner, test account or not", async () => {
     mocks.session = HOLDER;
     mocks.testAccount = { testUserId: USER };
-    await expect(forgetApproval(APP, USER)).rejects.toThrow(/not found/);
+    expect(await forgetApproval(APP, USER)).toEqual({
+      ok: false,
+      message: "OAuth client not found",
+    });
     expect(mocks.steps.forgetApproval).not.toHaveBeenCalled();
   });
 
   it("refuses a malformed id", async () => {
-    await expect(forgetApproval("nope", USER)).rejects.toThrow(/not found/);
+    expect(await forgetApproval("nope", USER)).toEqual({
+      ok: false,
+      message: "OAuth client not found",
+    });
+  });
+
+  it("refuses a signed-out caller without doing anything", async () => {
+    mocks.session = "";
+    expect(await forgetApproval(APP, USER)).toMatchObject({ ok: false });
+    expect(mocks.steps.forgetApproval).not.toHaveBeenCalled();
+  });
+
+  it("lets a failing step that is not a refusal throw", async () => {
+    mocks.session = USER;
+    mocks.steps.forgetApproval.mockRejectedValueOnce(new Error("kill switch"));
+    await expect(forgetApproval(APP, USER)).rejects.toThrow("kill switch");
   });
 });
 

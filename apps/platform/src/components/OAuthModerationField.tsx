@@ -1,26 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { failure } from "~/lib/actionResult";
-import oauthModerationAction, {
+import {
+  enableModeration,
+  rotateModerationSecret,
   saveModerationEndpoint,
-  type OAuthModerationState,
+  sendModerationTest,
 } from "~/server/actions/oauthModeration";
 import type { ClientModeration } from "~/server/loaders/oauthModeration";
 import FormButton from "~/components/FormButton";
 import Input from "~/components/Input";
 import Select from "~/components/Select";
 import Badge from "~/ui/badge";
-import Callout from "~/ui/callout";
 import SettingsField from "~/ui/settings-field";
-
-const INITIAL: OAuthModerationState = {
-  clientId: null,
-  secret: null,
-  message: null,
-  ok: true,
-};
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 const ACTIONS = [
   ["content.hide", "Hide content"],
@@ -50,18 +45,6 @@ export default function OAuthModerationField({
 }: {
   clients: ClientModeration[];
 }) {
-  const router = useRouter();
-  const [state, dispatch, isPending] = useActionState(
-    oauthModerationAction,
-    INITIAL,
-  );
-
-  const wasPending = useRef(false);
-  useEffect(() => {
-    if (wasPending.current && !isPending) router.refresh();
-    wasPending.current = isPending;
-  }, [isPending, router]);
-
   if (clients.length === 0) {
     return (
       <p className="help">
@@ -72,194 +55,193 @@ export default function OAuthModerationField({
 
   return (
     <div className="flex flex-col gap-5">
-      {clients.map((client) => {
-        const mine = state.clientId === client.clientId;
-        const showMessage =
-          state.message !== null &&
-          (mine || (state.clientId === null && !client.production));
-        return (
-          <div key={client.clientId} className="card flat flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-medium text-[var(--text)]">
-                {client.label}
-              </span>
-              <Badge variant={client.production ? "success" : "default"}>
-                {client.production ? "Production app" : "Development"}
-              </Badge>
-            </div>
+      {clients.map((client) => (
+        <ModerationCard key={client.clientId} client={client} />
+      ))}
+    </div>
+  );
+}
 
-            {!client.enabled && client.production ? (
+/**
+ * One client's moderation card. It owns its three Commands, so a refusal and
+ * the one-time secret stay with the client they belong to.
+ */
+function ModerationCard({ client }: { client: ClientModeration }) {
+  const router = useRouter();
+  // Shown once: neither turning on nor rotating can show it a second time.
+  const [secret, setSecret] = useState<string | null>(null);
+  const enable = useCommand(async (formData: FormData) => {
+    const result = await enableModeration(client.clientId, formData);
+    if (result.ok) setSecret(result.data?.secret ?? null);
+    return result;
+  });
+  const rotate = useCommand(async () => {
+    const result = await rotateModerationSecret(client.clientId);
+    if (result.ok) setSecret(result.data?.secret ?? null);
+    return result;
+  });
+  const test = useCommand(async (formData: FormData) => {
+    const result = await sendModerationTest(client.clientId, formData);
+    // A delivery that failed was still recorded, so the list has changed.
+    if (!result.ok) router.refresh();
+    return result;
+  });
+  const isPending = enable.pending || rotate.pending || test.pending;
+
+  return (
+    <div className="card flat flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-medium text-[var(--text)]">{client.label}</span>
+        <Badge variant={client.production ? "success" : "default"}>
+          {client.production ? "Production app" : "Development"}
+        </Badge>
+      </div>
+
+      {!client.enabled && client.production ? (
+        <p className="help">
+          An app In production is turned on by registering it under Apps Outside
+          the Platform on the moderation page of the console. The secret is
+          shown there once, and rotated here if it is lost.
+        </p>
+      ) : !client.enabled ? (
+        <form action={enable.run} className="flex flex-col gap-3">
+          <label className="field">
+            <span className="label">Endpoint URL (optional for now)</span>
+            <Input
+              mono
+              name="endpointUrl"
+              type="url"
+              placeholder="https://your-project.supabase.co/functions/v1/platform-moderation"
+            />
+          </label>
+          <FormButton theme="cyan" type="submit" disabled={isPending}>
+            Turn on moderation
+          </FormButton>
+        </form>
+      ) : (
+        <>
+          {secret && (
+            <div className="flex flex-col gap-1.5">
+              <span className="label">Signing secret</span>
+              <Input mono copy className="max-w-sm" value={secret} />
               <p className="help">
-                An app In production is turned on by registering it under Apps
-                Outside the Platform on the moderation page of the console. The
-                secret is shown there once, and rotated here if it is lost.
+                Shown once. It signs your reports to DevDogs and verifies the
+                decisions DevDogs sends back.
               </p>
-            ) : !client.enabled ? (
-              <form action={dispatch} className="flex flex-col gap-3">
-                <input type="hidden" name="intent" value="enable" />
-                <input type="hidden" name="clientId" value={client.clientId} />
-                <label className="field">
-                  <span className="label">Endpoint URL (optional for now)</span>
-                  <Input
-                    mono
-                    name="endpointUrl"
-                    type="url"
-                    placeholder="https://your-project.supabase.co/functions/v1/platform-moderation"
-                  />
-                </label>
-                <FormButton theme="cyan" type="submit" disabled={isPending}>
-                  Turn on moderation
-                </FormButton>
-              </form>
-            ) : (
-              <>
-                {state.secret && mine && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="label">Signing secret</span>
-                    <Input
-                      mono
-                      copy
-                      className="max-w-sm"
-                      value={state.secret}
-                    />
-                    <p className="help">
-                      Shown once. It signs your reports to DevDogs and verifies
-                      the decisions DevDogs sends back.
-                    </p>
-                  </div>
-                )}
+            </div>
+          )}
 
-                <EndpointField client={client} />
+          <EndpointField client={client} />
 
-                <form action={dispatch}>
-                  <input type="hidden" name="intent" value="rotate-secret" />
-                  <input
-                    type="hidden"
-                    name="clientId"
-                    value={client.clientId}
-                  />
-                  <FormButton
-                    theme="rose"
-                    type="submit"
-                    disabled={isPending}
-                    className="text-sm"
-                  >
-                    Rotate signing secret
-                  </FormButton>
-                </form>
+          <form action={() => rotate.run()}>
+            <FormButton
+              theme="rose"
+              type="submit"
+              disabled={isPending}
+              className="text-sm"
+            >
+              Rotate signing secret
+            </FormButton>
+          </form>
 
-                {!client.production && (
-                  <form action={dispatch} className="flex flex-col gap-2">
-                    <input type="hidden" name="intent" value="send-test" />
-                    <input
-                      type="hidden"
-                      name="clientId"
-                      value={client.clientId}
-                    />
-                    <span className="label">Send test action</span>
-                    <p className="help">
-                      Sends a real signed delivery to your endpoint. The
-                      moderators never see it.
-                    </p>
-                    <Select
-                      name="type"
-                      defaultValue="content.hide"
-                      aria-label="Test action"
-                    >
-                      {ACTIONS.map(([value, label]) => (
-                        <Select.Item key={value} value={value}>
-                          {label}
-                        </Select.Item>
-                      ))}
-                    </Select>
-                    <div className="flex flex-wrap gap-2">
-                      <Input
-                        name="contentType"
-                        placeholder="content type (session)"
-                        className="w-44"
-                      />
-                      <Input
-                        name="contentRef"
-                        placeholder="content id"
-                        className="w-44"
-                      />
-                    </div>
-                    <FormButton
-                      theme="cyan"
-                      type="submit"
-                      disabled={isPending || !client.endpointUrl}
-                    >
-                      Send test action
-                    </FormButton>
-                  </form>
-                )}
-
-                {client.testDeliveries.length > 0 && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="label">Recent test actions</span>
-                    <ul className="flex flex-col gap-1 text-xs text-[var(--text-2)]">
-                      {client.testDeliveries.map((d) => (
-                        <li key={d.id} className="flex flex-wrap gap-2">
-                          <span className="font-mono">{d.type}</span>
-                          <Badge
-                            variant={
-                              d.status === "delivered"
-                                ? "success"
-                                : d.status === "failed"
-                                  ? "danger"
-                                  : "warning"
-                            }
-                          >
-                            {d.status}
-                          </Badge>
-                          {d.lastError && d.status !== "delivered" && (
-                            <span className="text-[var(--text-3)]">
-                              {d.lastError}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-1.5">
-                  <span className="label">Sandbox reports</span>
-                  {client.sandboxReports.length === 0 ? (
-                    <p className="help">
-                      None yet. Reports your backend files with this client
-                      appear here, and only here.
-                    </p>
-                  ) : (
-                    <ul className="flex flex-col gap-1 text-xs text-[var(--text-2)]">
-                      {client.sandboxReports.map((r) => (
-                        <li key={r.id} className="flex flex-wrap gap-2">
-                          <span className="font-mono">
-                            {r.contentType}: {r.contentRef}
-                          </span>
-                          <Badge>{r.reason.replace(/_/g, " ")}</Badge>
-                          <span className="text-[var(--text-3)]">
-                            {new Date(r.createdAt).toLocaleString()}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </>
-            )}
-
-            {showMessage && (
-              <Callout
-                tone={state.ok ? "success" : "critical"}
-                alert={!state.ok}
+          {!client.production && (
+            <form action={test.run} className="flex flex-col gap-2">
+              <span className="label">Send test action</span>
+              <p className="help">
+                Sends a real signed delivery to your endpoint. The moderators
+                never see it.
+              </p>
+              <Select
+                name="type"
+                defaultValue="content.hide"
+                aria-label="Test action"
               >
-                {state.message}
-              </Callout>
+                {ACTIONS.map(([value, label]) => (
+                  <Select.Item key={value} value={value}>
+                    {label}
+                  </Select.Item>
+                ))}
+              </Select>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  name="contentType"
+                  placeholder="content type (session)"
+                  className="w-44"
+                />
+                <Input
+                  name="contentRef"
+                  placeholder="content id"
+                  className="w-44"
+                />
+              </div>
+              <FormButton
+                theme="cyan"
+                type="submit"
+                disabled={isPending || !client.endpointUrl}
+              >
+                Send test action
+              </FormButton>
+            </form>
+          )}
+
+          {client.testDeliveries.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span className="label">Recent test actions</span>
+              <ul className="flex flex-col gap-1 text-xs text-[var(--text-2)]">
+                {client.testDeliveries.map((d) => (
+                  <li key={d.id} className="flex flex-wrap gap-2">
+                    <span className="font-mono">{d.type}</span>
+                    <Badge
+                      variant={
+                        d.status === "delivered"
+                          ? "success"
+                          : d.status === "failed"
+                            ? "danger"
+                            : "warning"
+                      }
+                    >
+                      {d.status}
+                    </Badge>
+                    {d.lastError && d.status !== "delivered" && (
+                      <span className="text-[var(--text-3)]">
+                        {d.lastError}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1.5">
+            <span className="label">Sandbox reports</span>
+            {client.sandboxReports.length === 0 ? (
+              <p className="help">
+                None yet. Reports your backend files with this client appear
+                here, and only here.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1 text-xs text-[var(--text-2)]">
+                {client.sandboxReports.map((r) => (
+                  <li key={r.id} className="flex flex-wrap gap-2">
+                    <span className="font-mono">
+                      {r.contentType}: {r.contentRef}
+                    </span>
+                    <Badge>{r.reason.replace(/_/g, " ")}</Badge>
+                    <span className="text-[var(--text-3)]">
+                      {new Date(r.createdAt).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-        );
-      })}
+        </>
+      )}
+
+      <CommandFeedback result={enable.result} />
+      <CommandFeedback result={rotate.result} />
+      <CommandFeedback result={test.result} />
     </div>
   );
 }

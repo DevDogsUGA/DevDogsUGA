@@ -1,11 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { UploadSimpleIcon } from "@phosphor-icons/react/ssr";
 import CropDialog from "~/components/AvatarField/CropDialog";
 import { env } from "~/env";
-import { toast } from "~/lib/toast";
+import { failure, success } from "~/lib/actionResult";
 import {
   createAppLogoUploadToken,
   saveAppLogo,
@@ -13,6 +12,7 @@ import {
 import { logoLetter } from "~/server/oauth/consentScreen";
 import { createClient } from "~/supabase/client";
 import { Button } from "~/ui/button";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 const LOGO_EDGE = 256;
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,image/avif";
@@ -32,11 +32,9 @@ export default function AppLogoField({
   label: string;
   logoUrl: string | null;
 }) {
-  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pendingSrc, setPendingSrc] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   // The cropped file, shown at once while the refreshed page catches up.
   const [uploadedSrc, setUploadedSrc] = useState<string | null>(null);
   const shown = uploadedSrc ?? logoUrl;
@@ -58,36 +56,32 @@ export default function AppLogoField({
     }
   }
 
-  async function upload(file: File) {
-    setSaving(true);
-    try {
-      const { path, token, maxBytes } =
-        await createAppLogoUploadToken(clientId);
-      if (file.size > maxBytes) {
-        toast.error("That logo is too large. Try a smaller image");
-        return;
-      }
-      const { error } = await createClient()
-        .storage.from(env.NEXT_PUBLIC_AVATARS_BUCKET)
-        .uploadToSignedUrl(path, token, file, {
-          cacheControl: "0, no-cache",
-        });
-      if (error) throw error;
-      const saved = await saveAppLogo(clientId, path);
-      if (!saved.ok) {
-        toast.error(saved.error);
-        return;
-      }
-      setUploadedSrc(URL.createObjectURL(file));
-      close(false);
-      toast.success("Logo updated");
-      router.refresh();
-    } catch {
-      toast.error("Failed to upload the logo");
-    } finally {
-      setSaving(false);
+  // The logo is a flow of three steps (a token, the browser's own upload to
+  // Storage, then recording the path), so it is composed here from two Commands
+  // and one client step, and any step's refusal comes back as the result.
+  const {
+    run: upload,
+    pending: saving,
+    result,
+  } = useCommand(async (file: File) => {
+    const token = await createAppLogoUploadToken(clientId);
+    if (!token.ok || !token.data) return token;
+    const { path, token: uploadToken, maxBytes } = token.data;
+    if (file.size > maxBytes) {
+      return failure("That logo is too large. Try a smaller image");
     }
-  }
+    const { error } = await createClient()
+      .storage.from(env.NEXT_PUBLIC_AVATARS_BUCKET)
+      .uploadToSignedUrl(path, uploadToken, file, {
+        cacheControl: "0, no-cache",
+      });
+    if (error) return failure("Failed to upload the logo");
+    const saved = await saveAppLogo(clientId, path);
+    if (!saved.ok) return saved;
+    setUploadedSrc(URL.createObjectURL(file));
+    close(false);
+    return success(undefined, "Logo updated");
+  });
 
   return (
     <div className="field">
@@ -132,6 +126,7 @@ export default function AppLogoField({
         Square, shown on the consent screen. Uploaded to DevDogs, never linked
         from your server.
       </span>
+      {!open && <CommandFeedback result={result} />}
       <CropDialog
         open={open}
         onOpenChange={close}
@@ -141,8 +136,9 @@ export default function AppLogoField({
         size={LOGO_EDGE}
         fileName="logo.webp"
         isPending={saving}
+        feedback={<CommandFeedback result={result} />}
         onPickAnother={() => inputRef.current?.click()}
-        onConfirm={(file) => void upload(file)}
+        onConfirm={upload}
       />
     </div>
   );

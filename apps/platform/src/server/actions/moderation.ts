@@ -1,5 +1,12 @@
 "use server";
 
+import {
+  expected,
+  ExpectedFailure,
+  failure,
+  success,
+  type ActionResult,
+} from "~/lib/actionResult";
 import { authorize, callerFor, rules } from "~/server/auth/access";
 
 import { and, eq, sql } from "drizzle-orm";
@@ -8,10 +15,28 @@ import { userSuspensions } from "~/server/db/schema";
 
 import { supabaseAdmin } from "~/supabase/admin";
 
+import { raisedMessage } from "~/server/moderation/errors";
 import { queueDeliveriesQuietly } from "~/server/moderation/queue";
+
+const STANDING_FORBIDDEN = "You cannot change a user's standing.";
 
 // 10 years in hours, so a permanent ban through Supabase's own ban field.
 const BAN_DURATION = "87600h";
+
+/**
+ * What the decision functions raise for a report that cannot be decided, as
+ * the refusal the moderator reads. Anything else is a bug and still throws.
+ */
+function reportRefusal(error: unknown): never {
+  const raised = raisedMessage(error);
+  if (raised.includes("has already been decided")) {
+    throw new ExpectedFailure("Someone has already decided this report.");
+  }
+  if (raised.includes("does not exist")) {
+    throw new ExpectedFailure("That report no longer exists.");
+  }
+  throw error;
+}
 
 /** `db` or a transaction on it. */
 type Executor = Pick<typeof db, "insert" | "delete" | "execute">;
@@ -64,7 +89,8 @@ async function unsuspendUser(tx: Executor, userId: string) {
  *
  * Runs as `postgres` through Drizzle, so `has_permission()` inside the function
  * has no `auth.uid()` to read. This action authorizes the caller itself and
- * passes the caller id in.
+ * passes the caller id in. A report someone else already decided comes back as
+ * a failure, not a thrown error.
  */
 export async function resolveReport(
   reportId: string,
@@ -73,21 +99,21 @@ export async function resolveReport(
   contentAction: "quarantine" | "no_action",
   note?: string,
   applyGlobally?: boolean,
-): Promise<void> {
+): Promise<ActionResult> {
   const access = await authorize(rules.moderate);
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
   const moderatorUserId = access.caller.userId;
 
-  const rows = await db.execute<{
-    resolve_report: {
-      bannedUserId: string | null;
-      deliveryIds?: string[];
-    };
-  }>(
-    sql`select "platform".resolve_report_as(
+  return expected(async (): Promise<undefined> => {
+    const rows = await db
+      .execute<{
+        resolve_report: {
+          bannedUserId: string | null;
+          deliveryIds?: string[];
+        };
+      }>(
+        sql`select "platform".resolve_report_as(
           ${moderatorUserId}::uuid,
           ${reportId}::uuid,
           ${subjectAction}::"platform"."subjectAction",
@@ -96,38 +122,42 @@ export async function resolveReport(
           ${note ?? null},
           ${applyGlobally ?? false}
         ) as resolve_report`,
-  );
+      )
+      .catch(reportRefusal);
 
-  const bannedUserId = rows[0]?.resolve_report?.bannedUserId ?? null;
-  if (bannedUserId) {
-    await supabaseAdmin.auth.admin.updateUserById(bannedUserId, {
-      ban_duration: BAN_DURATION,
-    });
-  }
+    const bannedUserId = rows[0]?.resolve_report?.bannedUserId ?? null;
+    if (bannedUserId) {
+      await supabaseAdmin.auth.admin.updateUserById(bannedUserId, {
+        ban_duration: BAN_DURATION,
+      });
+    }
 
-  // A report on an app outside this database leaves signed deliveries behind,
-  // written in the decision's own transaction. Queuing them is best effort:
-  // the 15-minute cron picks up any that did not make it onto the queue.
-  await queueDeliveriesQuietly(rows[0]?.resolve_report?.deliveryIds ?? []);
+    // A report on an app outside this database leaves signed deliveries behind,
+    // written in the decision's own transaction. Queuing them is best effort:
+    // the 15-minute cron picks up any that did not make it onto the queue.
+    await queueDeliveriesQuietly(rows[0]?.resolve_report?.deliveryIds ?? []);
+  }, "Report resolved.");
 }
 
 /** Dismisses an open report without acting against the users or the content. */
 export async function dismissReport(
   reportId: string,
   note?: string,
-): Promise<void> {
+): Promise<ActionResult> {
   const access = await authorize(rules.moderate);
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
 
   const moderatorUserId = access.caller.userId;
 
-  await db.execute(
-    sql`select "platform".dismiss_report_as(
+  return expected(async (): Promise<undefined> => {
+    await db
+      .execute(
+        sql`select "platform".dismiss_report_as(
           ${moderatorUserId}::uuid, ${reportId}::uuid, ${note ?? null}
         )`,
-  );
+      )
+      .catch(reportRefusal);
+  }, "Report dismissed.");
 }
 
 /**
@@ -136,21 +166,21 @@ export async function dismissReport(
  * - `"member"` → clears the suspension and any Supabase ban
  * - `"suspended"` → records a global suspension
  * - `"banned"` → suspension plus Supabase's native ban
+ *
+ * A caller without the permission gets a failure, not a thrown error.
  */
 export async function updateUserRole(
   userId: string,
   role: "member" | "suspended" | "banned",
   reason?: string,
-): Promise<void> {
+): Promise<ActionResult> {
   const access = await authorize(rules.manageSuspensions);
-  if (!access.ok) {
-    throw new Error("Not authorized to change user standing");
-  }
+  if (!access.ok) return failure(STANDING_FORBIDDEN);
 
   const callerUserId = access.caller.userId;
 
   if (!(await callerFor(callerUserId).then(rules.manageSuspensions))) {
-    throw new Error("Not authorized to change user standing");
+    return failure(STANDING_FORBIDDEN);
   }
 
   // The standing change and the deliveries that tell external apps about it
@@ -176,6 +206,14 @@ export async function updateUserRole(
   }
 
   await queueDeliveriesQuietly(deliveryIds);
+  return success(
+    undefined,
+    role === "member"
+      ? "Standing restored."
+      : role === "banned"
+        ? "User banned."
+        : "User suspended.",
+  );
 }
 
 /**

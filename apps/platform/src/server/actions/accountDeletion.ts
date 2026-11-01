@@ -1,5 +1,11 @@
 "use server";
 
+import {
+  expected,
+  ExpectedFailure,
+  failure,
+  type ActionResult,
+} from "~/lib/actionResult";
 import { authorizeSession, authorize, rules } from "~/server/auth/access";
 
 import { revalidatePath } from "next/cache";
@@ -7,30 +13,9 @@ import { redirect } from "next/navigation";
 import { expectSession } from "~/server/auth";
 import {
   cancelAccountDeletion,
-  NO_SUCH_MEMBER,
   NOT_ALLOWED,
   scheduleAccountDeletion,
-  SOLE_PRESIDENT_ERROR,
 } from "~/server/accountDeletion/schedule";
-
-/**
- * What a deletion action answers. A refusal comes back as a value, not a
- * throw: Next replaces the message of an error thrown from a server action
- * with a generic one in production, and "Grant President to someone else
- * first" is exactly the sentence the member needs to read.
- */
-export type DeletionActionResult =
-  { ok: true; scheduledFor?: string } | { ok: false; error: string };
-
-/** The refusals written for a person to read; anything else is a real failure. */
-const REFUSALS = new Set([SOLE_PRESIDENT_ERROR, NOT_ALLOWED, NO_SUCH_MEMBER]);
-
-function refusal(error: unknown): DeletionActionResult {
-  if (error instanceof Error && REFUSALS.has(error.message)) {
-    return { ok: false, error: error.message };
-  }
-  throw error;
-}
 
 const MAX_REASON_LENGTH = 500;
 
@@ -45,70 +30,63 @@ const MAX_REASON_LENGTH = 500;
  * is given. Returns the date as an ISO string, which the caller formats.
  *
  * Refuses the sole holder of President ("Grant President to someone else
- * first"), and an officer without `canDeleteAccounts`. A member who schedules
- * their own deletion is signed out by it, so the caller should send them to
+ * first"), and an officer without `canDeleteAccounts`. A refusal comes back as
+ * a failure, not a throw: Next replaces the message of an error thrown from a
+ * server action with a generic one in production, and that sentence is
+ * exactly what the member needs to read. A member who schedules their own
+ * deletion is signed out by it, so the caller should send them to
  * `/dashboard/deletion` afterwards.
  */
 export async function requestAccountDeletion(
   userId: string,
   reason?: string,
-): Promise<DeletionActionResult> {
+): Promise<ActionResult<{ scheduledFor: string }>> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
   if (access.caller.userId !== userId) {
     const permission = await authorize(rules.deleteAccounts);
-    if (!permission.ok) return { ok: false, error: NOT_ALLOWED };
+    if (!permission.ok) return failure(NOT_ALLOWED);
   }
 
   const actorUserId = access.caller.userId;
   // An empty reason is no reason.
   const sliced = reason?.trim().slice(0, MAX_REASON_LENGTH);
   const trimmedReason = sliced === undefined || sliced === "" ? null : sliced;
-  try {
+  return expected(async () => {
     const result = await scheduleAccountDeletion(userId, actorUserId, {
       reason: trimmedReason,
     });
     revalidatePath("/dashboard/moderation/users/[userId]", "page");
-    return { ok: true, scheduledFor: result.scheduledFor.toISOString() };
-  } catch (error) {
-    return refusal(error);
-  }
+    return { scheduledFor: result.scheduledFor.toISOString() };
+  }, "Account scheduled for deletion.");
 }
 
 /**
  * An officer cancels a member's pending deletion from the console. The
- * member's own route is `keepMyAccount`. Needs `canDeleteAccounts`; `ok` is
- * false with a message when there was nothing to cancel or the job has already
+ * member's own route is `keepMyAccount`. Needs `canDeleteAccounts`; it fails
+ * with a message when there was nothing to cancel or the job has already
  * started.
  */
 export async function cancelMemberDeletion(
   userId: string,
-): Promise<DeletionActionResult> {
+): Promise<ActionResult> {
   const access = await authorizeSession();
-  if (!access.ok) {
-    throw new Error(access.message);
-  }
+  if (!access.ok) return access;
   if (access.caller.userId !== userId) {
     const permission = await authorize(rules.deleteAccounts);
-    if (!permission.ok) return { ok: false, error: NOT_ALLOWED };
+    if (!permission.ok) return failure(NOT_ALLOWED);
   }
 
   const actorUserId = access.caller.userId;
-  try {
+  return expected(async (): Promise<undefined> => {
     const cancelled = await cancelAccountDeletion(userId, actorUserId);
     if (!cancelled) {
-      return {
-        ok: false,
-        error: "There is no pending deletion to cancel, or it has started.",
-      };
+      throw new ExpectedFailure(
+        "There is no pending deletion to cancel, or it has started.",
+      );
     }
     revalidatePath("/dashboard/moderation/users/[userId]", "page");
-    return { ok: true };
-  } catch (error) {
-    return refusal(error);
-  }
+  }, "Deletion cancelled.");
 }
 
 /**

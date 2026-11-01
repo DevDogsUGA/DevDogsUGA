@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import ReactCrop, {
   centerCrop,
   convertToPixelCrop,
@@ -62,6 +62,8 @@ interface CropDialogProps {
   size?: number;
   fileName?: string;
   isPending: boolean;
+  /** A refusal to show above the buttons, inside the dialog the member is in. */
+  feedback?: ReactNode;
   onPickAnother: () => void;
   /** Called with the cropped file once the member confirms. */
   onConfirm: (file: File) => void;
@@ -82,6 +84,7 @@ export default function CropDialog({
   size = 512,
   fileName = "avatar.webp",
   isPending,
+  feedback,
   onPickAnother,
   onConfirm,
 }: CropDialogProps) {
@@ -159,6 +162,8 @@ export default function CropDialog({
           </ReactCrop>
         </div>
       )}
+
+      {feedback}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <button

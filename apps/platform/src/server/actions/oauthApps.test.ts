@@ -243,10 +243,17 @@ describe("saveAppDetails", () => {
   });
 });
 
+/** The signed upload a token Command granted, failing the test when it refused. */
+async function tokenFor(clientId: string) {
+  const result = await createAppLogoUploadToken(clientId);
+  if (!result.ok || !result.data) throw new Error(`refused: ${result.message}`);
+  return result.data;
+}
+
 describe("logo upload", () => {
   it("signs each upload to a fresh path in the app's folder", async () => {
-    const result = await createAppLogoUploadToken(APP);
-    const again = await createAppLogoUploadToken(APP);
+    const result = await tokenFor(APP);
+    const again = await tokenFor(APP);
     expect(result.path).toMatch(
       new RegExp(`^apps/${APP}/[0-9a-f-]{36}\\.webp$`),
     );
@@ -255,19 +262,29 @@ describe("logo upload", () => {
     expect(result.maxBytes).toBe(256 * 1024);
   });
 
-  it("signs nothing for a member who does not own the app", async () => {
+  it("signs nothing for a member who does not own the app, and says it is not found", async () => {
     mocks.session = OTHER;
-    await expect(createAppLogoUploadToken(APP)).rejects.toThrow(
-      "OAuth client not found",
-    );
+    expect(await createAppLogoUploadToken(APP)).toEqual({
+      ok: false,
+      message: "OAuth client not found",
+    });
+    expect(mocks.signedPaths).toEqual([]);
+  });
+
+  it("returns a failure for a signed-out caller", async () => {
+    mocks.session = "";
+    expect(await createAppLogoUploadToken(APP)).toMatchObject({ ok: false });
+    expect(await saveAppLogo(APP, "x")).toMatchObject({ ok: false });
     expect(mocks.signedPaths).toEqual([]);
   });
 
   it("records the path only after the object exists", async () => {
     const path = `apps/${APP}/${LOGO_VERSION}.webp`;
     mocks.objectExists = false;
-    const missing = await saveAppLogo(APP, path);
-    expect(missing.ok).toBe(false);
+    expect(await saveAppLogo(APP, path)).toEqual({
+      ok: false,
+      message: "The logo did not upload. Try again",
+    });
     expect(mocks.updates).toEqual([]);
 
     mocks.objectExists = true;
@@ -288,18 +305,26 @@ describe("logo upload", () => {
 
   it("refuses a logo token and a logo save while the owner's app is published", async () => {
     mocks.app = { userId: OWNER, status: "in_production", label: "Lab" };
-    await expect(createAppLogoUploadToken(APP)).rejects.toThrow(
-      /locked while an app is in production/,
-    );
+    expect(await createAppLogoUploadToken(APP)).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(
+        /locked while an app is in production/,
+      ) as unknown,
+    });
     expect(mocks.signedPaths).toEqual([]);
     const saved = await saveAppLogo(APP, `apps/${APP}/${LOGO_VERSION}.webp`);
-    expect(saved).toMatchObject({ ok: false });
+    expect(saved).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(
+        /locked while an app is in production/,
+      ) as unknown,
+    });
     expect(mocks.updates).toEqual([]);
   });
 
   it("allows both again in Testing", async () => {
     mocks.app = { userId: OWNER, status: "testing", label: "Lab" };
-    const { path } = await createAppLogoUploadToken(APP);
+    const { path } = await tokenFor(APP);
     await expect(saveAppLogo(APP, path)).resolves.toEqual({ ok: true });
   });
 });

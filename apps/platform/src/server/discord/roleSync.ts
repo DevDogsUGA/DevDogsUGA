@@ -1,4 +1,5 @@
 import { eq, isNotNull } from "drizzle-orm";
+import { ExpectedFailure } from "~/lib/actionResult";
 import {
   Routes,
   type APIRole,
@@ -127,7 +128,7 @@ export async function importRoleFromDiscord(
 ): Promise<{ id: string }> {
   const guildRoles = await fetchGuildRoles();
   const discordRole = guildRoles.find((r) => r.id === discordRoleId);
-  if (!discordRole) throw new Error("Discord role not found");
+  if (!discordRole) throw new ExpectedFailure("Discord role not found");
 
   const [row] = await db
     .insert(roles)
@@ -217,7 +218,7 @@ export async function linkRoleToDiscord(
     .from(roles)
     .where(eq(roles.id, roleId))
     .limit(1);
-  if (!role) throw new Error("Role not found");
+  if (!role) throw new ExpectedFailure("Role not found");
 
   await pushRoleToDiscord({ ...role, discordRoleId });
   await applyDiscordLinkSideEffects(roleId, discordRoleId);
@@ -234,9 +235,9 @@ export async function createDiscordRoleFromRole(roleId: string): Promise<void> {
     .from(roles)
     .where(eq(roles.id, roleId))
     .limit(1);
-  if (!role) throw new Error("Role not found");
+  if (!role) throw new ExpectedFailure("Role not found");
   if (role.discordRoleId)
-    throw new Error("Role is already synced with Discord");
+    throw new ExpectedFailure("Role is already synced with Discord");
 
   const created = (await asBot().post(Routes.guildRoles(env.DISCORD_GUILD_ID), {
     body: {

@@ -1,10 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import {
-  registerExternalApp,
-  type RegisterAppState,
-} from "~/server/actions/moderationDeliveries";
+import { registerExternalApp } from "~/server/actions/moderationDeliveries";
 import FormButton from "~/components/FormButton";
 import Badge from "~/ui/badge";
 import Callout from "~/ui/callout";
@@ -12,6 +8,7 @@ import { EmptyState } from "~/ui/empty-state";
 import Field from "~/ui/field";
 import { Input } from "~/ui/input";
 import { Textarea } from "~/ui/textarea";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 export interface ExternalAppEntry {
   id: string;
@@ -21,8 +18,6 @@ export interface ExternalAppEntry {
   endpointUrl: string | null;
   contentTypes: string[];
 }
-
-const INITIAL: RegisterAppState = { ok: true, message: null };
 
 /**
  * The apps whose Report & Block runs outside this database, and the form that
@@ -36,10 +31,7 @@ export default function ExternalAppsField({
   apps: ExternalAppEntry[];
   canRegister: boolean;
 }) {
-  const [state, dispatch, isPending] = useActionState(
-    registerExternalApp,
-    INITIAL,
-  );
+  const { run, pending: isPending, result } = useCommand(registerExternalApp);
 
   return (
     <div className="con-stack">
@@ -78,7 +70,7 @@ export default function ExternalAppsField({
       )}
 
       {canRegister && (
-        <form action={dispatch} className="con-stack">
+        <form action={run} className="con-stack">
           <h3 className="h3" style={{ margin: 0 }}>
             Register an app
           </h3>
@@ -143,13 +135,14 @@ export default function ExternalAppsField({
           >
             Register app
           </FormButton>
-          {state.message && (
-            <Callout tone={state.ok ? "success" : "critical"} alert>
-              {state.message}
-            </Callout>
+          <CommandFeedback result={result} />
+          {/* The once-only secret keeps its instruction beside it: a toast
+              would vanish before the officer has copied it. */}
+          {result?.ok && result.data?.secret && result.message && (
+            <Callout tone="success">{result.message}</Callout>
           )}
-          {state.secret && (
-            <code className="con-code block">{state.secret}</code>
+          {result?.ok && result.data?.secret && (
+            <code className="con-code block">{result.data.secret}</code>
           )}
         </form>
       )}

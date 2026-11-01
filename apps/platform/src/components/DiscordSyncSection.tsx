@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { GameControllerIcon } from "@phosphor-icons/react/ssr";
 import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
 import FormButton from "~/components/FormButton";
 import type { RoleRow } from "~/hooks/useRoles";
 import { unsyncRole } from "~/server/actions/discordRoleSync";
 import type { DiscordSyncCapability } from "~/lib/discordCapability";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 import LinkDiscordRoleDialog from "./LinkDiscordRoleDialog";
 
 interface Props {
@@ -15,12 +15,7 @@ interface Props {
 }
 
 export default function DiscordSyncSection({ role, callerCapability }: Props) {
-  const router = useRouter();
-
-  async function handleUnsync() {
-    await unsyncRole(role.id);
-    router.refresh();
-  }
+  const { run, pending, result } = useCommand(unsyncRole);
 
   return (
     <fieldset className="flex flex-col gap-2">
@@ -51,15 +46,16 @@ export default function DiscordSyncSection({ role, callerCapability }: Props) {
                 Discord role and its members are unaffected.
               </>
             }
-            action={handleUnsync}
+            action={() => run(role.id)}
             submitLabel="Unsync"
           >
-            <FormButton theme="rose" type="submit" size="sm">
+            <FormButton theme="rose" type="submit" size="sm" disabled={pending}>
               Unsync
             </FormButton>
           </ConfirmDestructiveAction>
         </div>
       )}
+      <CommandFeedback result={result} />
     </fieldset>
   );
 }

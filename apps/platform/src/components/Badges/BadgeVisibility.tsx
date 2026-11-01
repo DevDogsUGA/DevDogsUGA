@@ -2,9 +2,10 @@
 
 import "./badges.css";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { setMyBadgeHidden } from "~/server/actions/badges";
 import Toggle from "~/ui/switch";
+import { CommandFeedback, useCommand } from "~/ui/use-command";
 
 export interface VisibilityItem {
   key: string;
@@ -28,28 +29,28 @@ export default function BadgeVisibility({
   const [hidden, setHidden] = useState(
     () => new Map(items.map((item) => [item.key, item.hidden])),
   );
-  const [pending, startTransition] = useTransition();
-  const [failed, setFailed] = useState(false);
+  // The switches keep their own state, so there is no page to refresh.
+  const { run, pending, result } = useCommand(
+    async (item: VisibilityItem, next: boolean) => {
+      const outcome = await setMyBadgeHidden({
+        badgeId: item.badgeId,
+        workshopDefinitionId: item.workshopDefinitionId,
+        hidden: next,
+      });
+      if (outcome.ok) {
+        setHidden((current) => new Map(current).set(item.key, next));
+      }
+      return outcome;
+    },
+    { refresh: false },
+  );
 
   if (items.length === 0) {
     return <p className="bdg-empty">You have no badges yet.</p>;
   }
 
   function flip(item: VisibilityItem) {
-    const next = !hidden.get(item.key);
-    startTransition(async () => {
-      setFailed(false);
-      try {
-        await setMyBadgeHidden({
-          badgeId: item.badgeId,
-          workshopDefinitionId: item.workshopDefinitionId,
-          hidden: next,
-        });
-        setHidden((current) => new Map(current).set(item.key, next));
-      } catch {
-        setFailed(true);
-      }
-    });
+    run(item, !hidden.get(item.key));
   }
 
   return (
@@ -81,11 +82,7 @@ export default function BadgeVisibility({
           );
         })}
       </ul>
-      {failed && (
-        <p className="bdg-status" role="alert">
-          That change did not save. Try again.
-        </p>
-      )}
+      <CommandFeedback result={result} />
     </div>
   );
 }
