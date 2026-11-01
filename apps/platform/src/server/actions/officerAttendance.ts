@@ -2,6 +2,7 @@
 
 import { authorize, rules } from "~/server/auth/access";
 
+import { failure, type ActionResult } from "~/lib/actionResult";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { env } from "~/env";
@@ -27,19 +28,12 @@ import { sendTemplate } from "~/server/email/send";
  * page renders its form.
  */
 
-export type OfficerAttendanceState =
-  | { status: "idle" }
-  | { status: "error"; message: string }
-  | { status: "done"; message: string }
-  /** The address has an account: name it and ask for confirmation. */
+/** The lookup decision stays inline; later Commands perform the chosen step. */
+export type AttendeeLookup =
   | { status: "confirm"; myId: string; name: string }
-  /** No account: the next confirmation emails a claim link. */
   | { status: "invite"; myId: string; email: string };
 
-const NOT_AUTHORIZED: OfficerAttendanceState = {
-  status: "error",
-  message: "Not authorized: canManageAttendance required.",
-};
+const NOT_AUTHORIZED = failure("Not authorized: canManageAttendance required.");
 
 const meetingId = z.string().uuid();
 
@@ -55,9 +49,8 @@ function field(formData: FormData, name: string): string {
 
 /** Step one: what does this MyID resolve to? Writes nothing. */
 export async function findAttendee(
-  _previous: OfficerAttendanceState,
   formData: FormData,
-): Promise<OfficerAttendanceState> {
+): Promise<ActionResult<AttendeeLookup>> {
   const access = await authorize(rules.manageAttendance);
   if (!access.ok) {
     return NOT_AUTHORIZED;
@@ -65,18 +58,21 @@ export async function findAttendee(
 
   if (!access.caller.userId) return NOT_AUTHORIZED;
   const parsed = parseMyId(field(formData, "myId"));
-  if (!parsed.ok) return { status: "error", message: parsed.error };
+  if (!parsed.ok) return { ok: false, message: parsed.error };
   const found = await findAccountByEmail(parsed.email);
   return found.status === "account"
-    ? { status: "confirm", myId: parsed.myId, name: found.name }
-    : { status: "invite", myId: parsed.myId, email: parsed.email };
+    ? {
+        ok: true,
+        data: { status: "confirm", myId: parsed.myId, name: found.name },
+      }
+    : {
+        ok: true,
+        data: { status: "invite", myId: parsed.myId, email: parsed.email },
+      };
 }
 
 /** Step two for an existing account: record them with method officer. */
-export async function addAttendee(
-  _previous: OfficerAttendanceState,
-  formData: FormData,
-): Promise<OfficerAttendanceState> {
+export async function addAttendee(formData: FormData): Promise<ActionResult> {
   const access = await authorize(rules.manageAttendance);
   if (!access.ok) {
     return NOT_AUTHORIZED;
@@ -87,12 +83,12 @@ export async function addAttendee(
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const parsed = parseMyId(field(formData, "myId"));
   if (!meeting.success || !parsed.ok) {
-    return { status: "error", message: "That request was not valid." };
+    return { ok: false, message: "That request was not valid." };
   }
   const found = await findAccountByEmail(parsed.email);
   if (found.status !== "account") {
     return {
-      status: "error",
+      ok: false,
       message:
         "That address has no account yet; look it up again to invite it.",
     };
@@ -105,15 +101,15 @@ export async function addAttendee(
   refresh(meeting.data);
   switch (result.status) {
     case "recorded":
-      return { status: "done", message: `${found.name} is recorded.` };
+      return { ok: true, message: `${found.name} is recorded.` };
     case "duplicate":
       return {
-        status: "done",
+        ok: true,
         message: `${found.name} was already recorded.`,
       };
     case "invalid_meeting":
       return {
-        status: "error",
+        ok: false,
         message:
           "Attendance can only change once a meeting has started, and not for a canceled or removed one.",
       };
@@ -147,9 +143,8 @@ const EMAIL_FAILED =
 
 /** Step two for an address with no account: create the invite and email it. */
 export async function inviteAttendee(
-  _previous: OfficerAttendanceState,
   formData: FormData,
-): Promise<OfficerAttendanceState> {
+): Promise<ActionResult> {
   const access = await authorize(rules.manageAttendance);
   if (!access.ok) {
     return NOT_AUTHORIZED;
@@ -160,7 +155,7 @@ export async function inviteAttendee(
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const parsed = parseMyId(field(formData, "myId"));
   if (!meeting.success || !parsed.ok) {
-    return { status: "error", message: "That request was not valid." };
+    return { ok: false, message: "That request was not valid." };
   }
   const result = await createAttendanceInvite(
     officerId,
@@ -169,13 +164,13 @@ export async function inviteAttendee(
   );
   if (result.status === "has_account") {
     return {
-      status: "error",
+      ok: false,
       message: "That address now has an account; look it up again.",
     };
   }
   if (result.status === "invalid_meeting") {
     return {
-      status: "error",
+      ok: false,
       message:
         "Attendance can only change once a meeting has started, and not for a canceled or removed one.",
     };
@@ -188,14 +183,11 @@ export async function inviteAttendee(
   );
   refresh(meeting.data);
   return sent
-    ? { status: "done", message: `Invite sent to ${parsed.email}.` }
-    : { status: "error", message: EMAIL_FAILED };
+    ? { ok: true, message: `Invite sent to ${parsed.email}.` }
+    : { ok: false, message: EMAIL_FAILED };
 }
 
-export async function resendInvite(
-  _previous: OfficerAttendanceState,
-  formData: FormData,
-): Promise<OfficerAttendanceState> {
+export async function resendInvite(formData: FormData): Promise<ActionResult> {
   const access = await authorize(rules.manageAttendance);
   if (!access.ok) {
     return NOT_AUTHORIZED;
@@ -205,12 +197,12 @@ export async function resendInvite(
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const invite = z.string().uuid().safeParse(field(formData, "inviteId"));
   if (!meeting.success || !invite.success) {
-    return { status: "error", message: "That request was not valid." };
+    return { ok: false, message: "That request was not valid." };
   }
   const result = await resendAttendanceInvite(meeting.data, invite.data);
   if (result.status === "not_found") {
     refresh(meeting.data);
-    return { status: "error", message: "That invite is no longer pending." };
+    return { ok: false, message: "That invite is no longer pending." };
   }
   const sent = await emailInvite(
     meeting.data,
@@ -220,14 +212,11 @@ export async function resendInvite(
   );
   refresh(meeting.data);
   return sent
-    ? { status: "done", message: `Invite resent to ${result.ugaEmail}.` }
-    : { status: "error", message: EMAIL_FAILED };
+    ? { ok: true, message: `Invite resent to ${result.ugaEmail}.` }
+    : { ok: false, message: EMAIL_FAILED };
 }
 
-export async function cancelInvite(
-  _previous: OfficerAttendanceState,
-  formData: FormData,
-): Promise<OfficerAttendanceState> {
+export async function cancelInvite(formData: FormData): Promise<ActionResult> {
   const access = await authorize(rules.manageAttendance);
   if (!access.ok) {
     return NOT_AUTHORIZED;
@@ -237,19 +226,18 @@ export async function cancelInvite(
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
   const invite = z.string().uuid().safeParse(field(formData, "inviteId"));
   if (!meeting.success || !invite.success) {
-    return { status: "error", message: "That request was not valid." };
+    return { ok: false, message: "That request was not valid." };
   }
   const cancelled = await cancelAttendanceInvite(meeting.data, invite.data);
   refresh(meeting.data);
   return cancelled
-    ? { status: "done", message: "Invite canceled; its link no longer works." }
-    : { status: "error", message: "That invite is no longer pending." };
+    ? { ok: true, message: "Invite canceled; its link no longer works." }
+    : { ok: false, message: "That invite is no longer pending." };
 }
 
 export async function removeAttendee(
-  _previous: OfficerAttendanceState,
   formData: FormData,
-): Promise<OfficerAttendanceState> {
+): Promise<ActionResult> {
   const access = await authorize(rules.manageAttendance);
   if (!access.ok) {
     return NOT_AUTHORIZED;
@@ -268,7 +256,7 @@ export async function removeAttendee(
     .safeParse(field(formData, "reason"));
   if (!meeting.success || !attendance.success || !reason.success) {
     return {
-      status: "error",
+      ok: false,
       message: `That request was not valid (a reason can be up to ${MAX_REMOVAL_REASON} characters).`,
     };
   }
@@ -281,12 +269,12 @@ export async function removeAttendee(
   refresh(meeting.data);
   switch (result.status) {
     case "removed":
-      return { status: "done", message: "Removed from this meeting." };
+      return { ok: true, message: "Removed from this meeting." };
     case "not_found":
-      return { status: "error", message: "They are no longer on the list." };
+      return { ok: false, message: "They are no longer on the list." };
     case "invalid_meeting":
       return {
-        status: "error",
+        ok: false,
         message:
           "Attendance can only change once a meeting has started, and not for a canceled or removed one.",
       };

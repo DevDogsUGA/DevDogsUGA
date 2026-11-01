@@ -8,12 +8,15 @@ const mocks = vi.hoisted(() => ({
   setAsksForConsent: vi.fn(),
   transferToDevDogs: vi.fn(),
   refresh: vi.fn(),
+  success: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh }),
 }));
-vi.mock("~/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("~/lib/toast", () => ({
+  toast: { success: mocks.success, error: vi.fn() },
+}));
 vi.mock("~/server/actions/oauthStatus", () => ({
   setStatus: mocks.setStatus,
   setAsksForConsent: mocks.setAsksForConsent,
@@ -75,7 +78,10 @@ describe("ConsoleAppsField", () => {
 
   it("asks before publishing, naming the app and the sign-out; confirming publishes", async () => {
     const user = userEvent.setup();
-    mocks.setStatus.mockResolvedValue({ changed: true, counts: null });
+    mocks.setStatus.mockResolvedValue({
+      ok: true,
+      data: { changed: true, counts: null },
+    });
     render(<ConsoleAppsField apps={[app({ status: "testing" })]} />);
     await user.click(screen.getByRole("button", { name: "Publish Lab" }));
     expect(mocks.setStatus).not.toHaveBeenCalled();
@@ -108,8 +114,11 @@ describe("ConsoleAppsField", () => {
   it("confirms Back to Testing, explains the sign-out and shows the counts after", async () => {
     const user = userEvent.setup();
     mocks.setStatus.mockResolvedValue({
-      changed: true,
-      counts: { consents: 12, sessions: 9, authorizations: 1 },
+      ok: true,
+      data: {
+        changed: true,
+        counts: { consents: 12, sessions: 9, authorizations: 1 },
+      },
     });
     render(<ConsoleAppsField apps={[app({})]} />);
 
@@ -129,14 +138,21 @@ describe("ConsoleAppsField", () => {
         "testing",
       ),
     );
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Removed 12 approvals, 9 sessions and 1 pending sign-ins",
+    await waitFor(() =>
+      expect(mocks.success).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "Removed 12 approvals, 9 sessions and 1 pending sign-ins",
+        ),
+      ),
     );
   });
 
   it("transfers to DevDogs only after a confirm, and only for a member's app", async () => {
     const user = userEvent.setup();
-    mocks.transferToDevDogs.mockResolvedValue({ changed: true });
+    mocks.transferToDevDogs.mockResolvedValue({
+      ok: true,
+      data: { changed: true },
+    });
     render(
       <ConsoleAppsField
         apps={[
@@ -244,4 +260,33 @@ describe("ConsoleAppsField", () => {
       screen.getByRole("button", { name: "Transfer Fresh to DevDogs" }),
     ).toBeInTheDocument();
   });
+});
+
+it("shows a refused authorize inline after confirmation", async () => {
+  mocks.setStatus.mockResolvedValue({
+    ok: false,
+    message: "Not authorized: canManageOAuthApps required",
+  });
+  render(<ConsoleAppsField apps={[app({ status: "testing" })]} />);
+  await userEvent.click(screen.getByRole("button", { name: "Publish Lab" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Publish" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Not authorized: canManageOAuthApps required",
+  );
+  expect(mocks.refresh).not.toHaveBeenCalled();
+});
+it("runs the consent command and reports success", async () => {
+  mocks.setAsksForConsent.mockResolvedValue({
+    ok: true,
+    data: { changed: true },
+  });
+  render(<ConsoleAppsField apps={[app({ isDevDogs: true })]} />);
+  await userEvent.click(screen.getByRole("switch"));
+  await waitFor(() =>
+    expect(mocks.setAsksForConsent).toHaveBeenCalledWith(
+      expect.any(String),
+      false,
+    ),
+  );
+  expect(mocks.success).toHaveBeenCalledWith("Lab no longer asks for consent");
 });
