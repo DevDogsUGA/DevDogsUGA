@@ -10,7 +10,8 @@ description: >-
 # `supabase start` pulls about a dozen images, all chosen by the CLI version
 # (and which services the config enables), so they are cached as one
 # `docker save` archive under exactly that key. A hit is a `docker load` and
-# the CLI finds every image already present.
+# the CLI finds every image already present. PRs restore only: main saves
+# the archive once instead of every PR consuming another ~1.3 GB.
 runs:
   using: composite
   steps:
@@ -36,14 +37,14 @@ runs:
       shell: bash
       run: pnpm exec supabase start
     - name: Save the Supabase images
-      if: steps.images.outputs.cache-hit != 'true'
+      if: steps.images.outputs.cache-hit != 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && (github.event_name == 'push' || github.event_name == 'schedule')
       shell: bash
       run: |
         mkdir -p ~/.cache/supabase-images
         docker save --output ~/.cache/supabase-images/images.tar \
           $(docker ps --format '{{.Image}}' | sort -u)
     - name: Cache the Supabase images
-      if: steps.images.outputs.cache-hit != 'true'
+      if: steps.images.outputs.cache-hit != 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && (github.event_name == 'push' || github.event_name == 'schedule')
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/.cache/supabase-images

@@ -627,6 +627,8 @@ function fakeApi({ timeline, roles }) {
   return async (path) => {
     const [bare] = path.split("?");
     if (bare.endsWith("/timeline")) return timeline;
+    if (bare.endsWith("/files")) return [];
+    if (bare.endsWith("/comments")) return [];
     const match = /collaborators\/([^/]+)\/permission$/.exec(bare);
     if (match) {
       if (!(match[1] in roles)) throw new Error(`404 ${match[1]}`);
@@ -685,62 +687,15 @@ test("the gate rejects a label applied by someone who is not devops", async () =
   );
 });
 
-test("destructive SQL needs the label; harmless SQL does not", async () => {
-  const api = (timeline) => fakeApi({ timeline, roles: {} });
+test("destructive SQL fails closed without a recorded approval; harmless SQL does not", async () => {
+  const api = fakeApi({ timeline: [labeled("x")], roles: { x: "maintain" } });
   assert.equal(
-    (
-      await evaluateNeed({
-        api: api([]),
-        repo: "O/R",
-        pr: 1,
-        destructive: false,
-      })
-    ).pass,
+    (await evaluateNeed({ api, repo: "O/R", pr: 1, destructive: false })).pass,
     true,
   );
   assert.equal(
-    (
-      await evaluateNeed({
-        api: api([]),
-        repo: "O/R",
-        pr: 1,
-        destructive: true,
-      })
-    ).pass,
+    (await evaluateNeed({ api, repo: "O/R", pr: 1, destructive: true })).pass,
     false,
-  );
-  assert.equal(
-    (
-      await evaluateNeed({
-        api: api([labeled("x")]),
-        repo: "O/R",
-        pr: 1,
-        destructive: true,
-      })
-    ).pass,
-    true,
-  );
-  const stale = await evaluateNeed({
-    api: api([labeled("x")]),
-    repo: "O/R",
-    pr: 1,
-    destructive: true,
-    ignoreLabel: true,
-  });
-  assert.equal(stale.pass, false, "a label seen right after a push is stale");
-  assert.match(stale.message, /apply the label again/);
-  assert.equal(
-    (
-      await evaluateNeed({
-        api: api([labeled("x")]),
-        repo: "O/R",
-        pr: 1,
-        destructive: false,
-        ignoreLabel: true,
-      })
-    ).pass,
-    true,
-    "non-destructive SQL never needed it",
   );
 });
 

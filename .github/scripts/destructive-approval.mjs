@@ -4,7 +4,7 @@
  *
  * A change that drops or rewrites data is approved ON THE PULL REQUEST: a
  * `devops` member reads the SQL and applies the `allow-destructive` label
- * (destructive-label.mjs; destructive-gate.yaml clears it on every push). The
+ * (destructive-label.mjs; destructive-gate.yaml binds it to the database fingerprint). The
  * deploy asks nobody a second time. It only checks that the approval is real
  * and that it covers what is about to run:
  *
@@ -223,6 +223,11 @@ export async function approvalOf({ api, repo, number }) {
       problem: `#${number} carries allow-destructive from ${state.actor ?? "an unknown user"}, who is not a devops member.`,
     };
   }
+  // The fingerprint approval is not re-checked here. The deploy only sees
+  // merged pull requests, whose SQL can no longer change, and `need` already
+  // required a matching approval before the merge. Pull requests merged
+  // before approvals were bound to fingerprints carry only the label, and
+  // their migrations must still deploy.
   return { actor: state.actor };
 }
 
