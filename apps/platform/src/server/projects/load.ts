@@ -117,7 +117,10 @@ export interface SubmissionView {
   hackathon: string;
   url: string;
   result: string | null;
+  /** The team's names, for reading. */
   team: string[];
+  /** The same members' ids, for the edit form's checkboxes. */
+  teamUserIds: string[];
 }
 
 export interface ProjectDetail {
@@ -184,12 +187,13 @@ export async function getProjectDetail(
       hackathon: string;
       url: string;
       result: string | null;
-      team: string[] | null;
+      members: { userId: string; name: string | null }[] | null;
     }>(sql`
       select s.id, h.name as hackathon, s.url, s.result,
-        array(select p."preferredName" from platform."submissionMembers" m
+        (select json_agg(json_build_object('userId', m."userId", 'name', p."preferredName") order by p."preferredName")
+          from platform."submissionMembers" m
           join platform.profile p on p."userId" = m."userId"
-          where m."submissionId" = s.id order by p."preferredName") as team
+          where m."submissionId" = s.id) as members
       from platform.submissions s
       join platform.hackathons h on h.id = s."hackathonId"
       where s."projectId" = ${projectId}::uuid
@@ -206,9 +210,10 @@ export async function getProjectDetail(
       lastCheckedAt: repo.lastCheckedAt ? day(repo.lastCheckedAt) : null,
     })),
     owners,
-    submissions: submissions.map(({ team, ...s }) => ({
+    submissions: submissions.map(({ members, ...s }) => ({
       ...s,
-      team: team ?? [],
+      team: (members ?? []).map((member) => member.name ?? "Member"),
+      teamUserIds: (members ?? []).map((member) => member.userId),
     })),
   };
 }
@@ -229,6 +234,72 @@ export async function getRelation(
       ${contributorOf(userId, sql`${projectId}::uuid`)} as "isContributor",
       exists (select 1 from platform.projects p where p.id = ${projectId}::uuid and p."advisorId" = ${userId}::uuid) as "isAdvisor"`);
   return row ?? { isOwner: false, isContributor: false, isAdvisor: false };
+}
+
+/**
+ * Who a Submission's team may be drawn from: the project's owners and every
+ * member whose stored commits are in a repo it links with approval (a
+ * Contributor), by name. Members with no profile are left out, since a team
+ * member must have one.
+ */
+export async function getTeamCandidates(
+  projectId: string,
+): Promise<OwnerView[]> {
+  return db.execute<OwnerView>(sql`
+    select p."userId", p."preferredName" as name, p.handle
+    from platform.profile p
+    where exists (select 1 from platform."projectOwners" o
+        where o."projectId" = ${projectId}::uuid and o."userId" = p."userId")
+      or exists (
+        select 1 from platform.commits c
+        join platform."repoCommits" rc on rc.sha = c.sha
+        join platform."projectRepos" pr
+          on pr."githubRepoId" = rc."githubRepoId" and pr."projectId" = ${projectId}::uuid and pr.approval = 'approved'
+        where c."userId" = p."userId")
+    order by p."preferredName"`);
+}
+
+export interface ShowcaseFields {
+  featured: boolean;
+  inSwitcher: boolean;
+  displayOrder: number;
+  tagline: string | null;
+  yearLabel: string | null;
+  note: string | null;
+  showcaseLabel: string | null;
+  liveUrl: string | null;
+  liveLabel: string | null;
+  switcherUrl: string | null;
+  switcherBlurb: string | null;
+  iconKey: string | null;
+  colorKey: string | null;
+  contributionMode: string | null;
+}
+
+/** A project's showcase fields as stored, for the officers' Showcase panel. */
+export async function getShowcaseFields(
+  projectId: string,
+): Promise<ShowcaseFields | null> {
+  const [row] = await db
+    .select({
+      featured: projects.featured,
+      inSwitcher: projects.inSwitcher,
+      displayOrder: projects.displayOrder,
+      tagline: projects.tagline,
+      yearLabel: projects.yearLabel,
+      note: projects.note,
+      showcaseLabel: projects.showcaseLabel,
+      liveUrl: projects.liveUrl,
+      liveLabel: projects.liveLabel,
+      switcherUrl: projects.switcherUrl,
+      switcherBlurb: projects.switcherBlurb,
+      iconKey: projects.iconKey,
+      colorKey: projects.colorKey,
+      contributionMode: projects.contributionMode,
+    })
+    .from(projects)
+    .where(eq(projects.id, projectId));
+  return row ?? null;
 }
 
 export type MemberMatch = OwnerView & {

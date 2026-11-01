@@ -5,6 +5,7 @@ import type {
   ProjectDetail,
   ProjectRelation,
   ProjectReportView,
+  ShowcaseFields,
 } from "~/server/projects/load";
 
 const mocks = vi.hoisted(() => ({
@@ -15,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   getReviewQueue: vi.fn(),
   getMyReports: vi.fn(),
   searchMembers: vi.fn(),
+  getShowcaseFields: vi.fn(),
+  getTeamCandidates: vi.fn(),
+  getSubmittableHackathons: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({ connection: async () => undefined }));
@@ -39,6 +43,22 @@ vi.mock("~/server/projects/load", () => ({
   getReviewQueue: mocks.getReviewQueue,
   getMyReports: mocks.getMyReports,
   searchMembers: mocks.searchMembers,
+  getShowcaseFields: mocks.getShowcaseFields,
+  getTeamCandidates: mocks.getTeamCandidates,
+}));
+vi.mock("~/server/hackathons/load", () => ({
+  getSubmittableHackathons: mocks.getSubmittableHackathons,
+}));
+vi.mock("~/server/actions/submissions", () => {
+  const action = () => Promise.resolve({ ok: true });
+  return {
+    recordSubmission: action,
+    updateSubmission: action,
+    deleteSubmission: action,
+  };
+});
+vi.mock("~/server/actions/projectShowcase", () => ({
+  setProjectShowcase: () => Promise.resolve({ ok: true }),
 }));
 vi.mock("~/server/actions/projects", () => {
   const action = () => Promise.resolve({ ok: true });
@@ -134,6 +154,32 @@ const queued = (): ProjectReportView => ({
   legacyPullRequests: [],
 });
 
+const showcase = (): ShowcaseFields => ({
+  featured: true,
+  inSwitcher: false,
+  displayOrder: 2,
+  tagline: "Neighborhood lights",
+  yearLabel: null,
+  note: null,
+  showcaseLabel: null,
+  liveUrl: null,
+  liveLabel: null,
+  switcherUrl: null,
+  switcherBlurb: null,
+  iconKey: null,
+  colorKey: null,
+  contributionMode: null,
+});
+
+const submission = () => ({
+  id: "s1",
+  hackathon: "HackGT",
+  url: "https://devpost.com/s1",
+  result: "Winner",
+  team: ["Ada", "Grace"],
+  teamUserIds: ["owner-1", "u-grace"],
+});
+
 async function renderPage(find?: string) {
   render(
     await ProjectPage({
@@ -152,6 +198,14 @@ beforeEach(() => {
   mocks.getReviewQueue.mockResolvedValue([]);
   mocks.getMyReports.mockResolvedValue([]);
   mocks.searchMembers.mockResolvedValue([]);
+  mocks.getShowcaseFields.mockResolvedValue(showcase());
+  mocks.getTeamCandidates.mockResolvedValue([
+    { userId: "owner-1", name: "Ada", handle: "ada" },
+    { userId: "u-grace", name: "Grace", handle: "grace" },
+  ]);
+  mocks.getSubmittableHackathons.mockResolvedValue([
+    { id: "h-1", name: "HackGT", when: null },
+  ]);
 });
 
 const button = (name: string | RegExp) =>
@@ -168,6 +222,7 @@ describe("the project page for a member with no relation", () => {
             url: "https://devpost.com/s1",
             result: "Winner",
             team: ["Ada", "Grace"],
+            teamUserIds: ["owner-1", "u-grace"],
           },
         ],
       }),
@@ -229,7 +284,9 @@ describe("the project page for an owner", () => {
   it("offers the Draft, repo links, owners and lifecycle, but no officer controls", async () => {
     await renderPage();
     expect(screen.getByRole("heading", { name: "Edit project" })).toBeTruthy();
-    expect(screen.getByLabelText("Project name")).toBeTruthy();
+    expect(
+      screen.getByLabelText<HTMLInputElement>("Project name"),
+    ).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Unlink" })).toHaveLength(2);
     expect(button("Link repository")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(2);
@@ -368,7 +425,9 @@ describe("the project page for an officer", () => {
     expect(button("Clear advisor")).toBeTruthy();
     expect(button("Make DevDogs-owned")).toBeTruthy();
     expect(screen.getByText("Waiting for an officer")).toBeTruthy();
-    expect(screen.getByLabelText(/Find a member/)).toBeTruthy();
+    expect(
+      screen.getByLabelText<HTMLInputElement>(/Find a member/),
+    ).toBeTruthy();
     expect(screen.queryByRole("link", { name: "File a report" })).toBeNull();
     // An officer is not an owner of an ordinary project.
     expect(screen.queryByText("Edit project")).toBeNull();
@@ -465,5 +524,111 @@ describe("what a member may not see", () => {
     mocks.getProjectDetail.mockResolvedValue(detail({ status: "archived" }));
     await renderPage();
     expect(screen.getByRole("heading", { name: "Porchlight" })).toBeTruthy();
+  });
+});
+
+describe("the submissions panel", () => {
+  const panel = () =>
+    screen
+      .getByRole("heading", { name: "Hackathon submissions" })
+      .closest("section")!;
+
+  beforeEach(() => {
+    mocks.getProjectDetail.mockResolvedValue(
+      detail({ submissions: [submission()] }),
+    );
+  });
+
+  it("lists the hackathon, link, team and result for anyone, with no controls", async () => {
+    for (const rel of [relation(), relation({ isContributor: true })]) {
+      mocks.getRelation.mockResolvedValue(rel);
+      await renderPage();
+      const here = within(panel());
+      expect(
+        here.getByRole("link", { name: "HackGT" }).getAttribute("href"),
+      ).toBe("https://devpost.com/s1");
+      expect(here.getByText("Winner")).toBeTruthy();
+      expect(here.getByText("Ada, Grace")).toBeTruthy();
+      expect(here.queryByRole("button", { name: "Edit" })).toBeNull();
+      expect(here.queryByRole("button", { name: "Delete" })).toBeNull();
+      expect(
+        here.queryByRole("button", { name: "Record submission" }),
+      ).toBeNull();
+      cleanup();
+    }
+    expect(mocks.getSubmittableHackathons).not.toHaveBeenCalled();
+    expect(mocks.getTeamCandidates).not.toHaveBeenCalled();
+  });
+
+  it("gives an owner the record form and Edit and Delete on each submission", async () => {
+    mocks.getRelation.mockResolvedValue(relation({ isOwner: true }));
+    mocks.getProjectDetail.mockResolvedValue(
+      detail({
+        submissions: [submission(), { ...submission(), id: "s2" }],
+        owners: [{ userId: ME, name: "Me", handle: "me" }],
+      }),
+    );
+    await renderPage();
+    const here = within(panel());
+    expect(
+      here.getByRole("button", { name: "Record submission" }),
+    ).toBeTruthy();
+    expect(here.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+    expect(here.getAllByRole("button", { name: "Delete" })).toHaveLength(2);
+    expect(here.getByRole("checkbox", { name: "Grace" })).toBeTruthy();
+  });
+
+  it("gives an officer the controls on a DevDogs-owned project only", async () => {
+    mocks.caller = caller({ isLeader: true });
+    await renderPage();
+    expect(
+      within(panel()).queryByRole("button", { name: "Record submission" }),
+    ).toBeNull();
+    cleanup();
+
+    mocks.getProjectDetail.mockResolvedValue(
+      detail({ devdogsOwned: true, owners: [], submissions: [submission()] }),
+    );
+    await renderPage();
+    expect(
+      within(panel()).getByRole("button", { name: "Record submission" }),
+    ).toBeTruthy();
+    expect(within(panel()).getByRole("button", { name: "Edit" })).toBeTruthy();
+  });
+});
+
+describe("the showcase panel", () => {
+  const heading = () => screen.queryByRole("heading", { name: "Showcase" });
+
+  it("is for officers: they see the stored values in it", async () => {
+    mocks.caller = caller({ isLeader: true });
+    await renderPage();
+    expect(heading()).toBeTruthy();
+    expect(mocks.getShowcaseFields).toHaveBeenCalledWith(
+      "22222222-2222-4222-8222-222222222222",
+    );
+    expect(
+      screen.getByLabelText<HTMLInputElement>("Featured on the homepage")
+        .checked,
+    ).toBe(true);
+    expect(screen.getByLabelText<HTMLInputElement>(/Display order/).value).toBe(
+      "2",
+    );
+  });
+
+  it("is hidden from owners, reviewers and contributors, and never read for them", async () => {
+    const people = [
+      [caller(), relation({ isOwner: true })],
+      [caller({ canReview: true }), relation({ isAdvisor: true })],
+      [caller(), relation({ isContributor: true })],
+    ] as const;
+    for (const [who, rel] of people) {
+      mocks.caller = who;
+      mocks.getRelation.mockResolvedValue(rel);
+      await renderPage();
+      expect(heading()).toBeNull();
+      cleanup();
+    }
+    expect(mocks.getShowcaseFields).not.toHaveBeenCalled();
   });
 });
