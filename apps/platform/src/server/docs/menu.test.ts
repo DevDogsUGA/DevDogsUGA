@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   rows: vi.fn(),
 }));
 
-vi.mock("./queries", () => ({ getVisibleDocsProjects: mocks.visible }));
+vi.mock("./queries", () => ({ getDocsProjects: mocks.visible }));
 vi.mock("./contribute", () => ({
   PLATFORM_SLUG: "platform",
   getContributeProjects: mocks.rows,
@@ -57,7 +57,7 @@ const PUBLISHED: ContributeProject = {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.visible.mockResolvedValue(ALL);
+  mocks.visible.mockReturnValue(ALL);
   mocks.rows.mockResolvedValue([PLATFORM_ROW]);
 });
 
@@ -97,8 +97,8 @@ describe("the Docs menu", () => {
     expect(ids).not.toContain("schedule-builder");
   });
 
-  it("leaves out a section with nothing live, and a guide whose docs have nothing live", async () => {
-    mocks.visible.mockResolvedValue(
+  it("leaves out a section with no docs, and a guide whose docs are missing", async () => {
+    mocks.visible.mockReturnValue(
       ALL.filter((p) => p.slug !== "workshops" && p.slug !== "platform"),
     );
     const ids = (await getDocsMenu()).map((e) => e.id);
@@ -195,10 +195,5 @@ describe("the docs switcher", () => {
       mark: { kind: "fallback" },
     });
     expect(switcher).toHaveLength(ALL.length);
-  });
-
-  it("asks for the mode it was given", async () => {
-    await getDocsSwitcher("preview");
-    expect(mocks.visible).toHaveBeenCalledWith("preview");
   });
 });

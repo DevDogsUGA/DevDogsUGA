@@ -7,7 +7,6 @@ import { CaretRightIcon, CheckCircleIcon } from "@phosphor-icons/react/ssr";
 import "~/components/Docs/docs.css";
 import { stepKey, useDoneSteps } from "~/components/DocsProgress/store";
 import { DOCS_INDEX_LABEL } from "~/config/docs";
-import DocsScheduled from "~/components/DocsScheduled";
 import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import {
   firstPagePath,
@@ -144,12 +143,7 @@ function Folder({
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
       <CollapsibleTrigger className="docs-tree-row">
-        <span className="docs-tree-label">
-          {folder.name}
-          {folder.publishAt && (
-            <DocsScheduled at={folder.publishAt} className="flex" />
-          )}
-        </span>
+        <span className="docs-tree-label">{folder.name}</span>
         {folder.steps && (
           <span
             aria-label={`${finished} of ${steps.length} done`}
@@ -198,12 +192,7 @@ function Page({
       title={label === page.title ? undefined : page.title}
       className="docs-tree-link"
     >
-      <span className="docs-tree-label">
-        {label}
-        {page.publishAt && (
-          <DocsScheduled at={page.publishAt} className="flex" />
-        )}
-      </span>
+      <span className="docs-tree-label">{label}</span>
       {done && (
         <CheckCircleIcon
           weight="fill"

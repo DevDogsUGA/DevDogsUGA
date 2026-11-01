@@ -74,8 +74,8 @@ documentation fetched from a project's repository. The contract:
   paths, dotfiles and unusual names are refused, as are a `_shared` folder,
   files over the size caps, and more files, pages, bytes or folder depth than
   `DEFAULT_UNTRUSTED_LIMITS`. Files are opened with `O_NOFOLLOW`; the verified
-  bytes are copied into a private temporary directory and compiled from there,
-  so the source tree is not read again after it was checked.
+  bytes are read into memory once and compiled from there, so the source tree
+  is not read again after it was checked.
 - Images must be files inside the docs directory that match their type's
   signature. SVG assets and inline SVG use the same allowlist (no script,
   `foreignObject`, animation, `style`, `image`, external `use`/`href`).
@@ -83,12 +83,49 @@ documentation fetched from a project's repository. The contract:
   pages. External links get `rel="noopener noreferrer nofollow"`. External and
   `data:` images, `class`, `id` (except on elements inside an inline SVG, never
   its root), `style`, forms, iframes, objects and `data:` URLs are refused.
-- It does not run the link check or the `pnpm` command check (the latter
-  shells out) and writes nothing outside a temporary directory it removes.
+- It reports internal links that resolve to nothing (`linkErrors`), because the
+  renderer leaves such a link as written. It does not run the `pnpm` command
+  check (that shells out) and writes nothing to disk.
 
 Fetching a source commit, building candidates and previews, and publishing are
 not in this package; they hand it a directory that was already fetched, with
 no credentials in the environment.
+
+### One policy, three callers
+
+Every rule above is in `src/untrusted-policy.ts`, which reads no files and
+loads no highlighter; the renderer is a parameter. Three things call it:
+
+- **The candidate build** (`compileUntrustedDocs`, `buildCandidate`): reads a
+  fetched directory and renders with Shiki. A candidate's checks are the
+  readiness rules below, and a failing one fails the run.
+- **`devtools docs check`** (`checkDocsDirReadiness`, `src/readiness-dir.ts`):
+  the same folder, the same renderer, run locally.
+- **The platform's live docs preview** (`@devdogsuga/docs-kit/preview`,
+  `src/preview.ts`): files fetched from the GitHub API, compiled inside a
+  Worker. Shiki's Oniguruma engine compiles WebAssembly at run time, which the
+  Workers runtime forbids, so this entry renders code blocks with
+  `src/plain-code.ts`: the same frame, tab, line numbers, terminal prompts and
+  checks on the fence's info string, no token colours. Nothing reachable from
+  `preview.ts` imports Shiki or `node:fs`, and nothing runs at import time that
+  a Worker forbids (`src/preview-graph.test.ts` and `sanitize.test.ts` hold
+  both). The Worker entry bundles to about 1.1 MB minified (300 KB gzipped).
+
+### Readiness
+
+`checkDocsReadiness` (`src/readiness.ts`) turns a docs folder into
+`{ ready, problems[] }`, each problem `{ kind, file, message }`:
+
+- `structure`: the names, file types, sizes, counts and nesting projects may
+  use; an `index.md` overview page; a title and some text on every page.
+- `compile`: every page and image passes the untrusted compiler: the front
+  matter keys, the manifest, and everything the HTML policy blocks (scripts,
+  styles, classes, forms, external images, links out of the folder). Every file
+  or page that fails is listed, not only the first.
+- `link`: every link to another page, and its heading anchor, resolves.
+
+The candidate build calls the same functions for its checks, so a folder that
+is ready here is one the pipeline accepts.
 
 ## Variants
 

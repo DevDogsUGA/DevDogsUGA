@@ -64,10 +64,6 @@ export async function searchDocs(
       -- connection's search_path does not include "platform".
       from platform."docsPages" p
       where p."search" @@ ${tsq}
-        -- A page scheduled for later is not found until its time, to the
-        -- second: now() is read per query, not per deploy. See
-        -- "publishAt" on the table, and docs-kit index.
-        and (p."publishAt" is null or p."publishAt" <= now())
     ),
     "hits" as (
       select * from "matches"

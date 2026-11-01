@@ -19,7 +19,6 @@
  * Nothing is stripped. Elements the author wrote either pass or fail the
  * build. Comments are kept in trusted docs and dropped in untrusted ones.
  */
-import { randomBytes } from "node:crypto";
 import type { Element, Root as HastRoot } from "hast";
 import type { Root as MdastRoot } from "mdast";
 
@@ -41,10 +40,19 @@ import {
 } from "./html-policy.js";
 import type { VariantContext } from "./variants.js";
 
-/** Letters only: hast turns the attribute name back into a property by case. */
-const STAMP = `docsGen${[...randomBytes(12)]
-  .map((byte) => String.fromCharCode(97 + (byte % 26)))
-  .join("")}`;
+let stampName: string | undefined;
+
+/**
+ * The per-process secret attribute name, made on first use rather than when
+ * the module loads: a Worker may not generate random values in global scope.
+ * Letters only: hast turns the attribute name back into a property by case.
+ */
+function stamp(): string {
+  stampName ??= `docsGen${[...crypto.getRandomValues(new Uint8Array(12))]
+    .map((byte) => String.fromCharCode(97 + (byte % 26)))
+    .join("")}`;
+  return stampName;
+}
 
 /** What `render.ts` hands the sanitizer through `file.data.policy`. */
 export interface RenderPolicy {
@@ -63,20 +71,20 @@ function policyOf(file: VFile): RenderPolicy {
 export function rehypeMarkGenerated() {
   return (tree: HastRoot) => {
     visit(tree, "element", (node: Element) => {
-      node.properties[STAMP] = "";
+      node.properties[stamp()] = "";
     });
   };
 }
 
 function isStamped(node: Element): boolean {
   return Object.keys(node.properties).some(
-    (name) => name.toLowerCase() === STAMP.toLowerCase(),
+    (name) => name.toLowerCase() === stamp().toLowerCase(),
   );
 }
 
 function unstamp(node: Element): void {
   for (const name of Object.keys(node.properties)) {
-    if (name.toLowerCase() === STAMP.toLowerCase())
+    if (name.toLowerCase() === stamp().toLowerCase())
       delete node.properties[name];
   }
 }

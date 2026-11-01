@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireDocsPreview } from "~/server/docs/previewAccess";
+import { requireDashboard } from "~/server/auth/access";
 
 export const metadata: Metadata = {
   title: "Docs preview | DevDogs",
@@ -7,20 +7,21 @@ export const metadata: Metadata = {
 };
 
 /**
- * Never cached, and gated once for everything under it: anyone without
- * `canPreviewDocs` gets a 404. The gate reads the session, which is what makes
+ * Never cached, and signed-in only for everything under it. Who may read which
+ * project is decided per project (`server/docs/previewAccess.ts`): an owner or
+ * a contributor sees their own project's docs here, a docs reviewer sees any,
+ * and everyone else gets a 404. The gate reads the session, which is what makes
  * every route below dynamic; `force-dynamic` says so out loud, so a later edit
- * cannot make one of them cacheable by accident. Each page here also sits in
- * the shared cache's blind spot: whatever is cached for one visitor is served
- * to the next, which is exactly what early access cannot be.
+ * cannot make one of them cacheable by accident. Whatever is cached for one
+ * visitor is served to the next, which is exactly what early access cannot be.
  */
 export const dynamic = "force-dynamic";
 
-export default async function PreviewDocsLayout({
+export default async function DocsPreviewLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireDocsPreview();
+  await requireDashboard();
   return <>{children}</>;
 }

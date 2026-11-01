@@ -9,93 +9,18 @@
  * hand-listed set of languages on the JavaScript engine. And the Worker ships
  * finished HTML rather than a markdown pipeline.
  *
- * The plugin list is the one the platform ran, in the same order, so a page
- * renders the same; `remarkVariants`, `remarkDiffs`, `rehypeScrollTables`,
- * `rehypeCopyableCells` (tables.ts) and `rehypeSanitizeHtml` (sanitize.ts) are
- * the only additions.
+ * This is the highlighted renderer: build, CI and `docs-kit check`. The
+ * plugin list around the highlighter is in `render-pipeline.ts`, shared with
+ * the plain renderer the Worker uses (`render-plain.ts`), because Shiki's
+ * Oniguruma engine is exactly what a Worker cannot run.
  */
 import rehypeShiki from "@shikijs/rehype";
-import type { Element, Root as HastRoot } from "hast";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
-import rehypeSlug from "rehype-slug";
-import rehypeStringify from "rehype-stringify";
-import rehypeUnwrapImages from "rehype-unwrap-images";
-import remarkDirective from "remark-directive";
-import remarkEmoji from "remark-emoji";
-import remarkGfm from "remark-gfm";
-import { remarkAlert } from "remark-github-blockquote-alert";
-import remarkMath from "remark-math";
-import remarkParse from "remark-parse";
-import remarkRehype from "remark-rehype";
-import remarkSmartypants from "remark-smartypants";
-import { unified } from "unified";
-import { visit } from "unist-util-visit";
-import { VFile } from "vfile";
-import { docsCodeBlocks, remarkKeepMeta } from "./codeblocks.js";
-import { remarkDiffs } from "./diffs.js";
-import { remarkRewriteLinks, type LinkSource } from "./links.js";
-import {
-  rehypeExternalLinks,
-  rehypeMarkGenerated,
-  rehypePrefixIds,
-  rehypeSanitizeHtml,
-  remarkCheckFenceLinks,
-  type RenderPolicy,
-} from "./sanitize.js";
-import { rehypeCopyableCells } from "./tables.js";
-import { remarkVariants, type VariantContext } from "./variants.js";
+import { docsCodeBlocks } from "./codeblocks.js";
+import { createBodyRenderer, type BodyRenderer } from "./render-pipeline.js";
 
-/**
- * Tables render at their natural width, which on a phone can exceed the
- * article column. Each one scrolls inside its own container rather than
- * stretching the page sideways.
- */
-function rehypeScrollTables() {
-  return (tree: HastRoot) => {
-    visit(tree, "element", (node: Element, index, parent) => {
-      if (node.tagName !== "table" || !parent || index === undefined) return;
-      parent.children[index] = {
-        type: "element",
-        tagName: "div",
-        properties: { className: ["overflow-x-auto"] },
-        children: [node],
-      };
-      return index + 1;
-    });
-  };
-}
-
-const processor = unified()
-  .use(remarkParse)
-  .use(remarkDirective)
-  .use(remarkGfm)
-  .use(remarkMath)
-  // Before remark-emoji: it puts back the `:word` text directives an emoji
-  // shortcode parses as, which remark-emoji then needs to see as text.
-  .use(remarkVariants)
-  // Content links pages by relative file path (links.ts); the site wants URLs.
-  .use(remarkRewriteLinks)
-  // After the variants, so a diff inside a resolved variant is still nested
-  // (and left alone), and before Shiki could ever see the block.
-  .use(remarkCheckFenceLinks)
-  .use(remarkDiffs)
-  .use(remarkKeepMeta)
-  .use(remarkSmartypants)
-  .use(remarkEmoji)
-  .use(remarkAlert)
-  .use(remarkRehype, { allowDangerousHtml: true })
-  .use(rehypeMarkGenerated)
-  .use(rehypeRaw)
-  .use(rehypeSanitizeHtml)
-  .use(rehypeExternalLinks)
-  .use(rehypeSlug)
-  // Untrusted docs only: ids get a per-project prefix before the heading links are built.
-  .use(rehypePrefixIds)
-  .use(rehypeAutolinkHeadings, { behavior: "wrap" })
-  .use(rehypeUnwrapImages)
-  .use(rehypeShiki, {
+const render: BodyRenderer = createBodyRenderer([
+  rehypeShiki,
+  {
     // `rose-pine-moon` because its base hues are the same muted violet family
     // as the site's mauve palette. Registered as a *named* theme with
     // `defaultColor: false` so Shiki writes `--shiki-dark` custom properties
@@ -107,29 +32,12 @@ const processor = unified()
     fallbackLanguage: "text",
     // The frame, line numbers and terminal prompts (codeblocks.ts).
     transformers: [docsCodeBlocks()],
-  })
-  .use(rehypeKatex)
-  // Shiki's frame adds the fence's GitHub link; it gets the same rel.
-  // A distinct function: unified folds a repeated plugin into its first use.
-  .use(() => rehypeExternalLinks())
-  .use(rehypeCopyableCells)
-  .use(rehypeScrollTables)
-  .use(rehypeStringify);
+  },
+]);
 
 /**
  * One emitted copy's body as HTML, variants resolved for its project and
  * relative page links rewritten to site URLs. `from` is where the page's
  * links are resolved from; a body with no internal links can leave it out.
  */
-export async function renderBody(
-  content: string,
-  ctx: VariantContext,
-  from: LinkSource = { project: ctx.project, source: `${ctx.project}/index` },
-  policy?: RenderPolicy,
-): Promise<string> {
-  const file = new VFile({
-    value: content,
-    data: { variants: ctx, link: from, ...(policy ? { policy } : {}) },
-  });
-  return String(await processor.process(file));
-}
+export const renderBody: BodyRenderer = render;

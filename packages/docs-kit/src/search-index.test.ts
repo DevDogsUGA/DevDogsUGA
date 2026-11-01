@@ -14,7 +14,6 @@ const page: IndexedPage = {
   title: "Platform",
   description: null,
   plainText: "text",
-  publishAt: null,
 };
 
 function fakeClient(result: {
@@ -75,7 +74,6 @@ describe("loadIndexedPages", () => {
         title: "T",
         description: null,
         plainText: "p",
-        publishAt: null,
       },
     ]);
   });

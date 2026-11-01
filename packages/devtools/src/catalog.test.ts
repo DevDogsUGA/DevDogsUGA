@@ -218,6 +218,7 @@ describe("coverage of what the CLI dispatches", () => {
    */
   const DISPATCHED = [
     "completions",
+    "docs",
     "check",
     "doctor",
     "roles",
@@ -249,6 +250,7 @@ describe("coverage of what the CLI dispatches", () => {
   });
 
   it("declares the subcommands each group dispatches", () => {
+    expect(subcommandNames(["docs"])).toEqual(["check"]);
     expect(subcommandNames(["env"])).toEqual(["init", "example", "reset"]);
     expect(subcommandNames(["jobs"])).toEqual(["run", "list", "serve"]);
     expect(subcommandNames(["check"])).toEqual([
@@ -278,7 +280,8 @@ describe("coverage of what the CLI dispatches", () => {
       // Not `moderation`: the old one (report and resolve from the terminal)
       // is gone, and a new one with a different job replaced it. `moderation
       // send` and `samples` exercise a receiver; nothing here moderates.
-      ["docs"],
+      // Nor `docs`: the old one (`docs index`) moved to docs-kit, and the new
+      // one only checks a project's docs folder.
       ["db"],
       ["cf"],
       ["gen"],

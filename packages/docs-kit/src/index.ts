@@ -45,3 +45,19 @@ export {
   type CandidateSource,
   type ChangeSummary,
 } from "./candidate.js";
+export {
+  checkDocsDirReadiness,
+  type DirReadinessOptions,
+} from "./readiness-dir.js";
+export {
+  checkDocsReadiness,
+  linkProblems,
+  OVERVIEW_FILE,
+  overviewProblem,
+  pageContentProblems,
+  type DocsTree,
+  type Readiness,
+  type ReadinessKind,
+  type ReadinessOptions,
+  type ReadinessProblem,
+} from "./readiness.js";

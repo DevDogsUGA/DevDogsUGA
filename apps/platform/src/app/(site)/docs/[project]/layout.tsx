@@ -6,7 +6,7 @@ export default async function DocsLayout({
 }: LayoutProps<"/docs/[project]">) {
   const { project } = await params;
   return (
-    <DocsProjectLayout project={decodeURIComponent(project)} mode="public">
+    <DocsProjectLayout project={decodeURIComponent(project)}>
       {children}
     </DocsProjectLayout>
   );

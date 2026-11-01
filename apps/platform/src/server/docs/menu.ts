@@ -6,11 +6,7 @@ import {
   type DocsMenuItem,
 } from "~/config/docs";
 import { getContributeProjects, PLATFORM_SLUG } from "./contribute";
-import {
-  getVisibleDocsProjects,
-  type DocsMode,
-  type DocsProject,
-} from "./queries";
+import { getDocsProjects, type DocsProject } from "./queries";
 
 /**
  * The two navbar menus, as data: **Docs** (platform-authored documentation:
@@ -42,11 +38,9 @@ function projectOf(href: string): string | null {
   return docs === "docs" && project ? project : null;
 }
 
-/** The Docs menu: only rows whose docs have something live to read. */
+/** The Docs menu: only rows whose docs have something to read. */
 export async function getDocsMenu(): Promise<DocsMenuEntry[]> {
-  const visible = new Map(
-    (await getVisibleDocsProjects()).map((p) => [p.slug, p]),
-  );
+  const visible = new Map(getDocsProjects().map((p) => [p.slug, p]));
   return DOCS_MENU.flatMap((item): DocsMenuEntry[] => {
     if (item.project) {
       const project = visible.get(item.project);
@@ -84,10 +78,8 @@ export async function getDocsMenu(): Promise<DocsMenuEntry[]> {
  * then the Projects that publish their own, in the order their showcase gives.
  */
 export async function getContributeMenu(): Promise<DocsMenuEntry[]> {
-  const [visible, rows] = await Promise.all([
-    getVisibleDocsProjects(),
-    getContributeProjects(),
-  ]);
+  const visible = getDocsProjects();
+  const rows = await getContributeProjects();
   const byRow = new Map(rows.map((row) => [row.slug, row]));
   const bundled = visible.filter((p) => !DOCS_MENU_PROJECTS.has(p.slug));
   const bundledSlugs = new Set(bundled.map((p) => p.slug));
@@ -120,7 +112,7 @@ export async function getContributeMenu(): Promise<DocsMenuEntry[]> {
   ];
 }
 
-/** One project in the docs sidebar's switcher, or a tile on the preview. */
+/** One project in the docs sidebar's switcher. */
 export interface DocsSwitcherEntry {
   slug: string;
   name: string;
@@ -132,13 +124,9 @@ export interface DocsSwitcherEntry {
  * Every bundled docs project a reader can open, named and marked as the menus
  * name and mark it: a Docs section by its own docs, a Project by its row.
  */
-export async function getDocsSwitcher(
-  mode: DocsMode = "public",
-): Promise<DocsSwitcherEntry[]> {
-  const [visible, contribute] = await Promise.all([
-    getVisibleDocsProjects(mode),
-    getContributeMenu(),
-  ]);
+export async function getDocsSwitcher(): Promise<DocsSwitcherEntry[]> {
+  const visible = getDocsProjects();
+  const contribute = await getContributeMenu();
   const contributeBySlug = new Map(
     contribute.flatMap((e) => (e.project ? [[e.project, e] as const] : [])),
   );

@@ -3,7 +3,6 @@ import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
 import { Mark } from "~/components/DocsProjectMark";
 import "~/components/Docs/docs.css";
 import DocsTileGrid from "~/components/DocsTileGrid";
-import DocsScheduled from "~/components/DocsScheduled";
 import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import type { DocsFolderEntry } from "~/server/docs/queries";
 
@@ -49,7 +48,6 @@ export default function DocsFolderContents({
               href: docsHref(project, entry.path.split("/"), base),
               title: entry.title,
               description: entry.description,
-              note: entry.publishAt && <DocsScheduled at={entry.publishAt} />,
               mark: (
                 <Mark
                   icon={entry.kind === "folder" ? FolderIcon : FileTextIcon}

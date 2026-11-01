@@ -10,20 +10,13 @@ import DocsTileGrid, { type DocsTile } from "~/components/DocsTileGrid";
 import type { DocsMenuEntry } from "~/config/docs";
 import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import type { DocsTreeNode } from "~/lib/docsTree";
-import { formatEventShortDate } from "~/lib/eventTime";
 import "~/components/Docs/docs.css";
 import { getContributeMenu, getDocsMenu } from "~/server/docs/menu";
-import {
-  getDocsUpcoming,
-  getDocsTree,
-  getVisibleDocsProjects,
-} from "~/server/docs/queries";
+import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
 
 /**
  * The Docs half is built from `docs/` at build time, so it can't change until
- * the next deploy, apart from what is scheduled: `getDocsUpcoming` and
- * `getVisibleDocsProjects` carry the next reveal into this page's cache
- * lifetime, so it refreshes when something goes live. The Contribute half is
+ * the next deploy. The Contribute half is
  * read from the Projects (`getContributeMenu`), whose cache is tagged, so a
  * project's first publication or an edit to its name refreshes the page.
  */
@@ -77,14 +70,11 @@ function coursesIn(
 }
 
 export default async function DocsLandingPage() {
-  const [projects, docs, contribute] = await Promise.all([
-    getVisibleDocsProjects(),
+  const projects = getDocsProjects();
+  const [docs, contribute] = await Promise.all([
     getDocsMenu(),
     getContributeMenu(),
   ]);
-  const upcoming = [...(await getDocsUpcoming()).values()]
-    .flat()
-    .sort((a, b) => a.publishAt.localeCompare(b.publishAt));
   const workshops = docs.filter((entry) => entry.project === "workshops");
   const courses =
     workshops.length > 0
@@ -146,20 +136,6 @@ export default async function DocsLandingPage() {
               projects themselves. The code is public under BSD-3.
             </p>
             <DocsTileGrid tiles={contribute.map((entry) => tile(entry))} />
-          </section>
-        )}
-
-        {/* Named, dated, and not linked: there is nothing to open yet. */}
-        {upcoming.length > 0 && (
-          <section className="docs-group" aria-labelledby="docs-h-soon">
-            <h2 id="docs-h-soon">Coming soon</h2>
-            <ul className="muted small">
-              {upcoming.map((item) => (
-                <li key={`${item.name}:${item.publishAt}`}>
-                  {item.name}: {formatEventShortDate(item.publishAt)}
-                </li>
-              ))}
-            </ul>
           </section>
         )}
 
