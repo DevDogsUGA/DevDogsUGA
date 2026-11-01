@@ -10,9 +10,9 @@ import {
  *
  * Weeks run Monday to Sunday in Athens time, each named by its Monday. A week
  * QUALIFIES (lights) when the member either attended a meeting that links a
- * workshop definition or had a pull request merged in it. Nothing else counts:
- * not a plain meeting (Merge Monday, a social), and not EL evidence or a
- * reflection.
+ * workshop definition or authored a commit in it (on the default branch of a
+ * repository the platform syncs). Nothing else counts: not a plain meeting
+ * (Merge Monday, a social), and not EL evidence or a reflection.
  *
  * Monday is the grace day. Activity on the Monday that follows a week may
  * count for that week, until 11:59 PM that Monday (Athens time). Each piece of
@@ -21,9 +21,8 @@ import {
  * the week it happened in.
  *
  * Streak Freeze is automatic. A week with no meetings is frozen: it neither
- * extends a streak nor breaks one, and asks nothing of the member. A merged
- * pull request in such a week still lights it (and, being lit, extends the
- * streak by one).
+ * extends a streak nor breaks one, and asks nothing of the member. A commit in
+ * such a week still lights it (and, being lit, extends the streak by one).
  */
 
 /**
@@ -40,7 +39,7 @@ export interface WeeklyStreakInput {
   meetings: readonly Date[];
   /**
    * Qualifying activity: the start of each workshop meeting attended, and the
-   * merge time of each merged pull request.
+   * commit time of each default-branch commit.
    */
   activity: readonly Date[];
   now: Date;

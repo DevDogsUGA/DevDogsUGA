@@ -66,7 +66,7 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 
 REVOKE ALL ON TABLE "platform"."badgeAwards" FROM "anon", "authenticated";
 
-COMMENT ON TABLE "platform"."badgeAwards" IS 'Server-only. One dated award of a badge defined in badges.json (@devdogsuga/events). Automatic awards (Workshop completed, First Merge) are written by the triggers on attendance, reflections and contributions in the same transaction as the evidence; manual ones by an officer, with a required public citation. A one-time badge has one live row per (member, badge, workshop); a repeatable one many. "withdrawnAt" retires an award whose evidence went (or that an officer withdrew) and keeps the row for the record; "hidden" is the member hiding it from their public profile, which hides the citation too. Public reads go only through the public-profile loaders. Account deletion: the member''s awards are deleted with the account (ON DELETE CASCADE); a badge awarded BY a deleted officer stays with "awardedBy" set to null and is shown as awarded by "Deleted member".';
+COMMENT ON TABLE "platform"."badgeAwards" IS 'Server-only. One dated award of a badge defined in badges.json (@devdogsuga/events). Automatic awards (Workshop completed, First Commit) are written by the triggers on attendance, reflections and commits in the same transaction as the evidence; manual ones by an officer, with a required public citation. A one-time badge has one live row per (member, badge, workshop); a repeatable one many. "withdrawnAt" retires an award whose evidence went (or that an officer withdrew) and keeps the row for the record; "hidden" is the member hiding it from their public profile, which hides the citation too. Public reads go only through the public-profile loaders. Account deletion: the member''s awards are deleted with the account (ON DELETE CASCADE); a badge awarded BY a deleted officer stays with "awardedBy" set to null and is shown as awarded by "Deleted member".';
 
 COMMENT ON COLUMN "platform"."badgeAwards"."badgeId" IS 'The badge definition id from badges.json. Not a foreign key: the definitions are config, and an award whose badge was later removed still renders under its raw id.';
 
@@ -76,7 +76,9 @@ COMMENT ON COLUMN "platform"."badgeAwards"."repeatable" IS 'Copied from the badg
 
 COMMENT ON COLUMN "platform"."badgeAwards"."meetingId" IS 'Evidence for Workshop completed: the meeting whose attendance and submitted reflection support it. Re-pointed to another qualifying night when that one is removed; set null if the meeting row is ever deleted.';
 
-COMMENT ON COLUMN "platform"."badgeAwards"."contributionId" IS 'Evidence for First Merge: the member''s earliest matched merged pull request.';
+COMMENT ON COLUMN "platform"."badgeAwards"."contributionId" IS 'Legacy evidence for the retired First Merge badge (a merged pull request). Nothing writes or reads it; dropped with platform.contributions.';
+
+COMMENT ON COLUMN "platform"."badgeAwards"."commitSha" IS 'Evidence for First Commit: the member''s earliest stored default-branch commit. A later backfill that finds an older commit moves this pointer without a second award; set null if the commit is ever deleted.';
 
 COMMENT ON COLUMN "platform"."badgeAwards"."citation" IS 'Manual badges only: the short public explanation of the achievement, shown beside the badge (and hidden with it).';
 

@@ -14,7 +14,7 @@ describe("badges.json", () => {
   it("defines the six initial badges", () => {
     expect(config.badges.map((b) => b.id)).toEqual([
       "workshop-completed",
-      "first-merge",
+      "first-commit",
       "workshop-host",
       "guide-author",
       "mentor",
@@ -60,8 +60,8 @@ describe("validateBadges", () => {
         perWorkshop: true,
       },
       {
-        id: "first-merge",
-        name: "First Merge",
+        id: "first-commit",
+        name: "First Commit",
         description: "d",
         kind: "automatic",
         repeatable: false,
@@ -85,7 +85,7 @@ describe("validateBadges", () => {
 
   it("refuses a missing platform-awarded badge", () => {
     expect(() => parseBadges({ badges: [base.badges[0]] })).toThrow(
-      /first-merge/,
+      /first-commit/,
     );
   });
 

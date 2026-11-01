@@ -12,7 +12,7 @@ export const badgesImport: CommandNode = {
   envFree: true,
   dryRun: "handled",
   summary:
-    "Award Workshop completed and First Merge for evidence that predates the badge triggers.",
+    "Award Workshop completed and First Commit for evidence that predates the badge triggers.",
   hint: "previews, then asks",
   options: [DRY_RUN, YES],
 };

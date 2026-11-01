@@ -4,10 +4,7 @@ import { cache } from "react";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { profileLinks, publicProfiles } from "~/server/db/schema";
-import {
-  getContributionsForUser,
-  type ContributionItem,
-} from "./contributions";
+import { getCommitsForUser, type CommitItem } from "./commits";
 import {
   DIRECTORY_PAGE_SIZE,
   escapeLike,
@@ -301,8 +298,11 @@ export interface PublicProfileActivity {
    * repository, only which weeks lit.
    */
   weekly: WeeklyParticipation;
-  /** Merged pull requests in public DevDogs repositories, newest first. */
-  contributions: ContributionItem[] | null;
+  /**
+   * Default-branch commits in repositories that are still available, newest
+   * first; commits in an unavailable repository are left out.
+   */
+  contributions: CommitItem[] | null;
   /**
    * Live badges the member has not hidden (Q89), each with its dated awards.
    * Public whenever the profile is: there is no section switch, only the
@@ -312,8 +312,8 @@ export interface PublicProfileActivity {
 }
 
 /**
- * Links, merged pull requests, badges and the weekly streak for a public
- * profile; links and pull requests are each gated on their own visibility
+ * Links, commits, badges and the weekly streak for a public
+ * profile; links and commits are each gated on their own visibility
  * flag. Null when the handle is not a public profile (resolved through the
  * view, so the visibility rule is not repeated).
  *
@@ -343,7 +343,7 @@ export const getPublicProfileActivity = cache(
         : null,
       getWeeklyParticipation(userId),
       member.showContributions
-        ? getContributionsForUser(userId, { publicOnly: true })
+        ? getCommitsForUser(userId, { publicOnly: true })
         : null,
       getPublicBadges(userId),
     ]);
