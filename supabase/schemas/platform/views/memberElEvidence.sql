@@ -33,9 +33,11 @@ UNION ALL
     platform.word_count(pr.content) AS words
    FROM (platform."projectReports" pr
      JOIN platform.projects p ON ((p.id = pr."projectId")))
-  WHERE ((pr.status = 'approved'::text) AND (pr."approvedHours" IS NOT NULL));
+  WHERE ((pr.status = 'approved'::text) AND (pr."approvedHours" IS NOT NULL) AND (EXISTS ( SELECT 1
+           FROM platform."projectReportCommits" c
+          WHERE (c."reportId" = pr.id))));
 
-COMMENT ON VIEW "platform"."memberElEvidence" IS 'Server-only. The EL (experiential learning) evidence the club can vouch for, one row per item: a workshop (the member attended a meeting that ran it, submitted a qualifying reflection naming it, at least 100 words and inside a window of at least one week (never less, whatever the setting) from when attendance was recorded or the meeting ended, whichever is later; hours are the workshop definition''s elHours copied onto platform.workshops) or an approved project report (hours the reviewer confirmed). A workshop counts once per member even if it ran on several nights. Read by the /attendance summary and by the officers'' EL evidence export, so both agree on what is verified. Account deletion: the view holds nothing of its own; it empties as the member''s reflections, attendance and reports go.';
+COMMENT ON VIEW "platform"."memberElEvidence" IS 'Server-only. The EL (experiential learning) evidence the club can vouch for, one row per item: a workshop (the member attended a meeting that ran it, submitted a qualifying reflection naming it, at least 100 words and inside a window of at least one week (never less, whatever the setting) from when attendance was recorded or the meeting ended, whichever is later; hours are the workshop definition''s elHours copied onto platform.workshops) or an approved project report that cites at least one commit (hours the reviewer confirmed; a report from before commit citations has none and is not counted). A workshop counts once per member even if it ran on several nights. Read by the /attendance summary and by the officers'' EL evidence export, so both agree on what is verified. Account deletion: the view holds nothing of its own; it empties as the member''s reflections, attendance and reports go.';
 
 REVOKE ALL ON TABLE "platform"."memberElEvidence" FROM "anon", "authenticated";
 

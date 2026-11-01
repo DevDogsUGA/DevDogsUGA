@@ -81,9 +81,9 @@ async function cleanup() {
     await tx.execute(sql`set local session_replication_role = replica`);
     for (const text of [
       `delete from platform."auditEvents" where "actorUserId" in ('${OFFICER}','${MEMBER}')`,
-      `delete from platform."projectRepos" where "githubRepoId" = ${REPO}`,
+      `delete from platform."projectRepos" where "githubRepoId" in (${REPO}, ${REPO + 1})`,
       `delete from platform.projects where name like 'D6 %'`,
-      `delete from platform."githubRepos" where "githubRepoId" = ${REPO}`,
+      `delete from platform."githubRepos" where "githubRepoId" in (${REPO}, ${REPO + 1})`,
       `delete from platform."userRoles" where "roleId" = '${ROLE}'`,
       `delete from platform.roles where id = '${ROLE}'`,
     ])
@@ -108,24 +108,37 @@ beforeEach(async () => {
     insert into platform."githubRepos"
       ("githubRepoId", "ownerId", owner, name, "ownerType", "defaultBranch", "isDevdogsOrg")
     values (${REPO}, 168223232, 'DevDogsUGA', 'd6-open', 'Organization', 'main', true)`);
-  // Three featured projects out of order, one archived, one never featured.
-  for (const [project, name, order, status, featured] of [
-    [OPEN, "D6 Open", -20, "active", true],
-    [LATER, "D6 Later", -10, "active", true],
-    [ARCHIVED, "D6 Archived", -30, "archived", true],
-    [PLAIN, "D6 Plain", -40, "active", false],
-  ] as const) {
-    await db.execute(sql`
+  await db.execute(sql`
+    insert into platform."githubRepos"
+      ("githubRepoId", "ownerId", owner, name, "ownerType", health, "unavailableSince")
+    values (${REPO + 1}, 168223232, 'DevDogsUGA', 'd6-unavailable', 'Organization', 'unavailable', now())`);
+  // D7 checks approved links at commit, including fixtures with no public URL.
+  await db.transaction(async (tx) => {
+    // Three featured projects out of order, one archived, one never featured.
+    for (const [project, name, order, status, featured] of [
+      [OPEN, "D6 Open", -20, "active", true],
+      [LATER, "D6 Later", -10, "active", true],
+      [ARCHIVED, "D6 Archived", -30, "archived", true],
+      [PLAIN, "D6 Plain", -40, "active", false],
+    ] as const) {
+      await tx.execute(sql`
       insert into platform.projects
         (id, slug, name, status, featured, "inSwitcher", "displayOrder",
          "contributionMode", "switcherUrl", "showcaseLabel", "switcherBlurb")
       values (${project}::uuid, ${`d6-${name.slice(3).toLowerCase()}`}, ${name}, ${status},
               ${featured}, ${featured}, ${order}, 'open', 'https://d6.example.com', 'Beta', 'A thing')`);
-  }
-  await db.execute(sql`
+      if (status === "active") {
+        await tx.execute(sql`
+        insert into platform."projectRepos"
+          ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId", "decidedAt")
+        values (${project}::uuid, ${REPO + 1}, 'approved', 'devdogs-write', 168223232, now())`);
+      }
+    }
+    await tx.execute(sql`
     insert into platform."projectRepos"
       ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId", "decidedAt")
     values (${OPEN}::uuid, ${REPO}, 'approved', 'devdogs-write', 168223232, now())`);
+  });
 });
 
 const officer = () => callerFor(OFFICER);
@@ -293,6 +306,10 @@ describe("migration 82 and the seeded platform project", () => {
         sql`delete from platform.projects where slug = 'dogdays'`,
       );
       await tx.execute(sql`set local session_replication_role = origin`);
+      // Recreate the pre-cutover shape only inside this rolled-back transaction.
+      await tx.execute(
+        sql`alter table platform.projects alter column slug drop not null`,
+      );
       await tx.execute(sql`
         insert into platform.projects (id, name, status, description)
         values (${id(50)}::uuid, 'dogdays ', 'active', 'Written by a member')`);

@@ -50,8 +50,10 @@ beforeEach(async () => {
   await cleanup();
   await insertMember({ id: MEMBER, github: null });
   await insertMember({ id: ACTOR, github: null });
+  // Archived: an active project needs an approved repository link by commit
+  // (require_approved_repo), and several tests here start with no link.
   await query(
-    `insert into platform.projects (id, name) values ('${PROJECT}', 'D178 schema fixture')`,
+    `insert into platform.projects (id, name, slug, status) values ('${PROJECT}', 'D178 schema fixture', 'd178-fixture', 'archived')`,
   );
   await query(
     `insert into platform."githubRepos" ("githubRepoId", "ownerId", owner, name, "ownerType") select n, 178, 'fixture', 'repo-' || n, 'User' from generate_series(${REPO}, ${REPO + 20}) n`,
@@ -62,9 +64,14 @@ async function link(repo = REPO) {
     `insert into platform."projectRepos" ("projectId", "githubRepoId", approval, "approvalBasis", "approvalOwnerId", "decidedAt", "linkedBy", "approvedBy") values ('${PROJECT}', ${repo}, 'approved', 'personal', 178, now(), '${ACTOR}', '${ACTOR}')`,
   );
 }
+/**
+ * A report exempt from the citation minimum (`legacyEvidence`): these tests
+ * are about the citation rules themselves, which cite after the report exists.
+ * The minimum has its own file, cutover.db-test.ts.
+ */
 async function report(reportId = REPORT, user = MEMBER) {
-  await db.execute(sql`insert into platform."projectReports" (id, "projectId", "userId", "startDate", "endDate", hours, content)
-    values (${reportId}::uuid, ${PROJECT}::uuid, ${user}::uuid, '2026-10-30', '2026-10-30', 1, ${"word ".repeat(100)})`);
+  await db.execute(sql`insert into platform."projectReports" (id, "projectId", "userId", "startDate", "endDate", hours, content, "legacyEvidence")
+    values (${reportId}::uuid, ${PROJECT}::uuid, ${user}::uuid, '2026-10-30', '2026-10-30', 1, ${"word ".repeat(100)}, true)`);
 }
 async function commit(
   user: string | null = MEMBER,
@@ -98,19 +105,16 @@ async function submission() {
   );
 }
 
-describe("D1 expand compatibility and structure", () => {
-  it("keeps old-style inserts, edits and archival working without new fields", async () => {
+describe("D1 structure", () => {
+  it("keeps plain edits working and the new fields defaulted", async () => {
     await query(
-      `update platform.projects set name = 'D178 renamed', description = 'Legacy description', status = 'active', repos = ARRAY['fixture/repo'], "advisorId" = '${ACTOR}' where id = '${PROJECT}'`,
-    );
-    await query(
-      `update platform.projects set status = 'archived' where id = '${PROJECT}'`,
+      `update platform.projects set name = 'D178 renamed', description = 'A description', repos = ARRAY['fixture/repo'], "advisorId" = '${ACTOR}' where id = '${PROJECT}'`,
     );
     const rows = await query(
       `select slug, featured, "inSwitcher", "devdogsOwned", status, repos, "advisorId" from platform.projects where id = '${PROJECT}'`,
     );
     expect(rows[0]).toMatchObject({
-      slug: null,
+      slug: "d178-fixture",
       featured: false,
       inSwitcher: false,
       devdogsOwned: false,
@@ -154,13 +158,13 @@ describe("D1 expand compatibility and structure", () => {
       ),
     ).rejects.toThrow();
   });
-  it("allows unpublished slug edits and null slugs", async () => {
+  it("allows unpublished slug edits, never a null slug", async () => {
     await query(
       `update platform.projects set slug = 'd178-project' where id = '${PROJECT}'`,
     );
-    await query(
-      `update platform.projects set slug = null where id = '${PROJECT}'`,
-    );
+    await expect(
+      query(`update platform.projects set slug = null where id = '${PROJECT}'`),
+    ).rejects.toMatchObject({ cause: { code: "23502" } });
   });
   it("makes DevDogs ownership irreversible and prevents deletion", async () => {
     await query(

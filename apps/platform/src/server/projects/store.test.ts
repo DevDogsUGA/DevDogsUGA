@@ -311,12 +311,7 @@ describe("editing a project", () => {
       ok: false,
     });
   });
-  it("refuses a legacy row and a missing project", async () => {
-    use({ project: row({ status: "proposed" }) });
-    expect(await updateProject(caller(OWNER), PROJECT, values)).toMatchObject({
-      ok: false,
-      message: expect.stringContaining("predates"),
-    });
+  it("refuses a missing project", async () => {
     use({ project: null });
     expect(await updateProject(caller(OWNER), PROJECT, values)).toEqual({
       ok: false,

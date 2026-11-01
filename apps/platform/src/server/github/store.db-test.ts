@@ -75,7 +75,7 @@ describe("commit store", () => {
   });
   it("pauses docs on owner login change, but not a repo rename", async () => {
     await db.execute(
-      sql`insert into platform.projects (id,name) values (${PROJECT}::uuid,'D2 docs fixture')`,
+      sql`insert into platform.projects (id,name,slug,status) values (${PROJECT}::uuid,'D2 docs fixture','d2-docs-fixture','archived')`,
     );
     await db.execute(
       sql`insert into platform."projectRepos" ("projectId","githubRepoId",approval,"approvalBasis","approvalOwnerId","decidedAt") values (${PROJECT}::uuid,${ID}::bigint,'approved','personal',182,now())`,
@@ -285,7 +285,7 @@ describe("commit store", () => {
   });
   it("scopes the sweep to public org repos and approved links, not pending ones", async () => {
     await db.execute(
-      sql`insert into platform.projects (id,name) values (${PROJECT}::uuid,'D2 scope fixture')`,
+      sql`insert into platform.projects (id,name,slug,status) values (${PROJECT}::uuid,'D2 scope fixture','d2-scope-fixture','archived')`,
     );
     const linked = async (approval: string) => {
       await db.execute(

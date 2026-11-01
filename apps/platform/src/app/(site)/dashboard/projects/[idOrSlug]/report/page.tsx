@@ -44,7 +44,7 @@ export default async function ProjectReportPage({
   const projectId = await findProjectId(idOrSlug);
   if (!projectId) notFound();
   const project = await getProjectDetail(projectId);
-  if (!project || project.legacy) notFound();
+  if (!project) notFound();
 
   const relation = await getRelation(caller.userId, projectId);
   const verdict = fileVerdict({

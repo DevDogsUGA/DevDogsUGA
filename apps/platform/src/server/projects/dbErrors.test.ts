@@ -54,6 +54,8 @@ describe("guardMessage", () => {
       "At most ten project repository links",
       "Repository link supports report citations",
       "Project cannot be deleted",
+      "An active project needs at least one approved repository link",
+      "A report needs at least one cited commit",
       "Commit author, provenance, approved project link or Eastern date is ineligible",
     ]) {
       const error = Object.assign(new Error(raised), { code: "P0001" });

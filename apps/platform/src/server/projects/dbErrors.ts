@@ -89,6 +89,14 @@ const GUARD_MESSAGES: ReadonlyArray<readonly [string, string]> = [
   ],
   ["DevDogs ownership is irreversible", "DevDogs ownership cannot be undone."],
   [
+    "An active project needs at least one approved repository link",
+    "A project needs at least one approved repository before it can be active.",
+  ],
+  [
+    "A report needs at least one cited commit",
+    "A report needs at least one cited commit.",
+  ],
+  [
     "Commit author, provenance, approved project link or Eastern date is ineligible",
     "One of the cited commits is not yours, not in this project's repositories, or outside your date range.",
   ],

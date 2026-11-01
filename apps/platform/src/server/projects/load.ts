@@ -16,8 +16,7 @@ import { PROJECT_ID_REGEX } from "./slug";
  * `records.ts`.
  */
 
-/** `proposed` and `declined` exist only on rows from before the redesign. */
-export type ProjectStatus = "proposed" | "active" | "declined" | "archived";
+export type ProjectStatus = "active" | "archived";
 export type ReportStatus = "submitted" | "approved" | "returned";
 
 const day = (value: unknown) => new Date(value as string | Date);
@@ -31,7 +30,7 @@ const name = (userId: ReturnType<typeof sql>) =>
 
 export type ProjectSummary = {
   id: string;
-  slug: string | null;
+  slug: string;
   name: string;
   description: string | null;
   status: ProjectStatus;
@@ -76,7 +75,7 @@ export async function getMyProjects(userId: string): Promise<ProjectSummary[]> {
 
 export type OfficerProjectRow = {
   id: string;
-  slug: string | null;
+  slug: string;
   name: string;
   status: ProjectStatus;
   devdogsOwned: boolean;
@@ -123,7 +122,7 @@ export interface SubmissionView {
 
 export interface ProjectDetail {
   id: string;
-  slug: string | null;
+  slug: string;
   name: string;
   description: string | null;
   tags: string[];
@@ -131,14 +130,12 @@ export interface ProjectDetail {
   devdogsOwned: boolean;
   advisorId: string | null;
   advisorName: string | null;
-  /** A row from before the redesign: no repos or owners until the cutover. */
-  legacy: boolean;
   repos: RepoView[];
   owners: OwnerView[];
   submissions: SubmissionView[];
 }
 
-/** The project a route segment names: its slug, or a legacy row's UUID. */
+/** The project a route segment names: its slug, or its UUID (links from before slugs). */
 export async function findProjectId(ref: string): Promise<string | null> {
   const lookup = PROJECT_ID_REGEX.test(ref)
     ? eq(projects.id, ref.toLowerCase())
@@ -201,7 +198,6 @@ export async function getProjectDetail(
   return {
     ...row,
     status: row.status as ProjectStatus,
-    legacy: row.status !== "active" && row.status !== "archived",
     repos: repos.map((repo) => ({
       ...repo,
       unavailableSince: repo.unavailableSince
@@ -279,7 +275,7 @@ export interface ProjectReportView {
   id: string;
   projectId: string;
   projectName: string;
-  projectSlug: string | null;
+  projectSlug: string;
   authorId: string;
   authorName: string | null;
   startDate: string;
