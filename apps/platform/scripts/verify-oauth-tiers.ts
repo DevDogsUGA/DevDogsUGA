@@ -462,7 +462,7 @@ async function consentPage(authorizationId: string | null, cookie?: string) {
 }
 
 async function accountPage(cookie: string) {
-  const response = await fetch(`${BASE_URL}/account`, {
+  const response = await fetch(`${BASE_URL}/dashboard/profile`, {
     redirect: "manual",
     headers: {
       "user-agent": "Mozilla/5.0 (verify-oauth-tiers)",

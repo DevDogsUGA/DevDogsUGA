@@ -163,7 +163,7 @@ The time needs a timezone (`Z` or an offset). A bad one, or a page earlier than 
 
 Until the time passes, everything about the page is hidden and its URL returns 404: the sidebar, the course pager, folder listings, the top-nav menu, search, the sitemap and the link card. The one exception is the docs landing page, which lists what is coming ("Workshop: Supabase: Oct 5") without a link. Search picks the time up from `devtools docs index`, so re-index after changing one.
 
-Anyone with the **Preview docs** permission can read scheduled pages early at `/preview/docs/<project>/…`, where they are marked with the time they go live. It is linked from the console, is never cached, and returns 404 to everyone else.
+Anyone with the **Preview docs** permission can read scheduled pages early at `/dashboard/docs-preview/<project>/…`, where they are marked with the time they go live. It is linked from the console, is never cached, and returns 404 to everyone else.
 
 </details>
 

@@ -99,7 +99,7 @@ describe("DeleteAccountDialog", () => {
     );
 
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith("/account/deletion"),
+      expect(navigate).toHaveBeenCalledWith("/dashboard/deletion"),
     );
     expect(request).toHaveBeenCalledWith("member-1");
   });

@@ -115,7 +115,7 @@ export default function ExportsWorkspace({
     setBusy(true);
     setResponse(null);
     try {
-      const res = await fetch("/console/data/exports/prepare", {
+      const res = await fetch("/dashboard/data/exports/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

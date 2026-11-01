@@ -34,14 +34,14 @@ const MESSAGES = {
 } as const;
 
 async function revalidateMember(userId: string) {
-  revalidatePath("/console/badges");
-  revalidatePath(`/console/badges/${userId}`);
+  revalidatePath("/dashboard/badges");
+  revalidatePath(`/dashboard/badges/${userId}`);
   const [row] = await db
     .select({ handle: profiles.handle })
     .from(profiles)
     .where(eq(profiles.userId, userId));
   if (row?.handle) revalidatePath(profilePath(row.handle));
-  revalidatePath("/settings/profile");
+  revalidatePath("/dashboard/profile");
 }
 
 const awardSchema = z.object({

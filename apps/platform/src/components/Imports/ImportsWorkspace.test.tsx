@@ -80,7 +80,7 @@ describe("ImportsWorkspace", () => {
         screen.getByRole("button", { name: /Confirm and import/ }),
       ).toBeTruthy(),
     );
-    expect(sent[0]!.url).toBe("/console/data/imports/preview");
+    expect(sent[0]!.url).toBe("/dashboard/data/imports/preview");
     expect(sent[0]!.body.get("meetingId")).toBe("m1");
     expect(sent[0]!.body.get("kind")).toBe("attendance");
   });
@@ -163,7 +163,7 @@ describe("ImportsWorkspace", () => {
     );
 
     await screen.findByText(/since you previewed this file/);
-    expect(sent[1]!.url).toBe("/console/data/imports/confirm");
+    expect(sent[1]!.url).toBe("/dashboard/data/imports/confirm");
     expect(sent[1]!.body.get("fingerprint")).toBe("a".repeat(64));
     // Still asking: confirming again is a new, explicit step.
     expect(

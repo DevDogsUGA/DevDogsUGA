@@ -43,7 +43,7 @@ export default function ReportListItem({
 
   return (
     <Link
-      href={`/console/moderation/${id}`}
+      href={`/dashboard/moderation/${id}`}
       className={`con-report ${isCompact ? "compact" : ""}`}
     >
       <span className="con-report-main">

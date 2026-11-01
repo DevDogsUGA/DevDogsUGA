@@ -11,7 +11,7 @@ export const qrCommand: CommandNode = {
   dryRun: "handled",
   envFree: true,
   summary: "Make a QR code: any size, colour, logo and format.",
-  hint: "same options as /console/qr; svg, png, jpg, webp, avif, tiff",
+  hint: "same options as /dashboard/qr; svg, png, jpg, webp, avif, tiff",
   // The command asks for the text itself when it is missing, so the outer
   // wizard dispatches bare `qr`; the options remain for help and scripts.
   options: [

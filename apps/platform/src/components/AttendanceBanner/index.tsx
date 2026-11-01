@@ -12,14 +12,7 @@ import {
 import { buttonVariants } from "~/ui/button";
 import { dismiss, isDismissed, subscribeToDismissal } from "./dismissal";
 
-const HIDDEN_PREFIXES = [
-  "/account",
-  "/settings",
-  "/attendance",
-  "/console",
-  "/oauth",
-  "/tools",
-];
+const HIDDEN_PREFIXES = ["/settings", "/dashboard", "/oauth", "/tools"];
 
 export const ONGOING_MEETING_QUERY_KEY = ["attendance", "ongoing"] as const;
 
@@ -106,7 +99,7 @@ export function AttendanceBannerView({
           </p>
         </div>
         <Link
-          href={`/attendance?meeting=${meetingId}`}
+          href={`/dashboard/attendance?meeting=${meetingId}`}
           className={buttonVariants({ variant: "default", size: "sm" })}
         >
           Attendance <ArrowRightIcon />

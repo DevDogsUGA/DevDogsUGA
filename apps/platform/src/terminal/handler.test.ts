@@ -43,7 +43,7 @@ describe("terminal responses", () => {
     expect(await response.text()).toContain("No such page: /nope");
   });
 
-  it.each(["/console/graphics", "/console/attendance/abc/graphics"])(
+  it.each(["/dashboard/graphics", "/dashboard/meetings/abc/graphics"])(
     "points %s at the browser rather than rendering a gallery",
     async (path) => {
       const response = await get(path);

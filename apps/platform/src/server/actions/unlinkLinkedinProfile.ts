@@ -10,13 +10,13 @@ export default async function unlinkLinkedinProfile() {
   const access = await authorizeSession();
   if (!access.ok) {
     await expectSession().catch(() =>
-      authenticate("google", "/settings/accounts"),
+      authenticate("google", "/dashboard/accounts"),
     );
     throw new Error(access.message);
   }
 
   await expectSession().catch(() =>
-    authenticate("google", "/settings/accounts"),
+    authenticate("google", "/dashboard/accounts"),
   );
   await unlinkProfile();
   refresh();

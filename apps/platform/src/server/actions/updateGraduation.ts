@@ -22,13 +22,13 @@ export default async function updateGraduation(
   const access = await authorizeSession();
   if (!access.ok) {
     await expectSession().catch(() =>
-      authenticate("google", "/settings/profile"),
+      authenticate("google", "/dashboard/profile"),
     );
     throw new Error(access.message);
   }
 
   const userId = await expectSession().catch(() =>
-    authenticate("google", "/settings/profile"),
+    authenticate("google", "/dashboard/profile"),
   );
 
   const error = validateGraduation(semester, year);

@@ -178,7 +178,7 @@ export default async function DocsLandingPage() {
             Discord
           </a>
           . Want to register an app that signs in with DevDogs? See{" "}
-          <Link className="textlink" href="/settings/oauth">
+          <Link className="textlink" href="/dashboard/oauth">
             OAuth apps
           </Link>
           .

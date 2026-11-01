@@ -5,7 +5,7 @@ import { ANNOUNCEMENT, showsAnnouncement } from "./announcement";
  * The banner lives in the `(site)` layout, which wraps the public pages and the
  * signed-in console/account pages. `showsAnnouncement` is the only thing keeping
  * a club-wide notice off the signed-in ones. That includes the sibling-prefix
- * case (`/accounts` is not `/account`) that a bare `startsWith` gets wrong.
+ * case (`/dashboard-log` is not `/dashboard`) that a bare `startsWith` gets wrong.
  */
 describe("showsAnnouncement", () => {
   const whileActive = new Date("2026-09-16T12:00:00-04:00");
@@ -22,11 +22,10 @@ describe("showsAnnouncement", () => {
   ];
 
   const appPaths = [
-    "/account",
-    "/settings/profile",
-    "/console",
-    "/console/permissions",
-    "/settings/oauth",
+    "/dashboard/profile",
+    "/dashboard",
+    "/dashboard/permissions",
+    "/dashboard/oauth",
     "/oauth/consent",
   ];
 
@@ -40,7 +39,7 @@ describe("showsAnnouncement", () => {
 
   it("does not mistake a sibling route for a hidden prefix", () => {
     expect(showsAnnouncement("/accounts", whileActive)).toBe(true);
-    expect(showsAnnouncement("/console-log", whileActive)).toBe(true);
+    expect(showsAnnouncement("/dashboard-log", whileActive)).toBe(true);
   });
 
   it("shows when the router has not resolved a pathname yet", () => {
@@ -69,7 +68,7 @@ describe("showsAnnouncement", () => {
  * Add the route below when you add a `<SettingsSaveBar />` to a page.
  */
 describe("the announcement stays off pages with a settings save bar", () => {
-  const saveBarPaths = ["/account", "/settings/profile"];
+  const saveBarPaths = ["/dashboard/profile"];
 
   it.each(saveBarPaths)("stays off %s", (pathname) => {
     expect(

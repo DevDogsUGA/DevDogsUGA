@@ -12,7 +12,7 @@ async function request(
 ): Promise<Request> {
   const encoded = new Response(form);
   const body = await encoded.arrayBuffer();
-  return new Request("http://localhost/console/data/imports/preview", {
+  return new Request("http://localhost/dashboard/data/imports/preview", {
     method: "POST",
     body,
     headers: {

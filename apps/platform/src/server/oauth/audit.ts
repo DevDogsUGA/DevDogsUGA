@@ -1,7 +1,7 @@
 import type { auditEvents } from "~/server/db/schema";
 
 /**
- * Audit entries for OAuth apps (`/console/audit-log`).
+ * Audit entries for OAuth apps (`/dashboard/audit-log`).
  *
  * An app that is In production (or a DevDogs app) is a credential real members
  * sign in with, so rolling its secret, changing where it may send people and

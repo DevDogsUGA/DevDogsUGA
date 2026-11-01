@@ -193,7 +193,7 @@ export async function getCurrentOfficers(): Promise<LeaderProfile[]> {
     titles: row.titles,
     // The `avatars` bucket is keyed by the bare user id, the same URL
     // `useAvatarSrc` builds, so an officer who changes their avatar from
-    // /account changes their card. Missing objects 404 and the card falls back
+    // /dashboard/profile changes their card. Missing objects 404 and the card falls back
     // to initials.
     imageSrc: `${env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${env.NEXT_PUBLIC_AVATARS_BUCKET}/${row.userId}`,
     // Stored as an array of the words, ["he","him"], and printed the way it is

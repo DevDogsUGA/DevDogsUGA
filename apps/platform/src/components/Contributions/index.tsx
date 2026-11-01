@@ -8,7 +8,7 @@ import { contributionRows } from "./view";
 /**
  * Merged pull requests, newest first, each linked to its pull request on
  * GitHub. Whoever renders it decides who may see the list: the public profile
- * passes only a public member's public-repository PRs, /attendance passes the
+ * passes only a public member's public-repository PRs, /dashboard/attendance passes the
  * signed-in member's own.
  */
 export default function ContributionList({

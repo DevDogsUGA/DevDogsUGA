@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 /**
  * A named place on a settings page that search can land on
- * (`/settings/accounts#github`). It renders only the anchor: the content
+ * (`/dashboard/accounts#github`). It renders only the anchor: the content
  * already carries its own heading, so `label` and `description` exist for
  * `config/pageSections.ts`, whose test reads them back out of the page source.
  */

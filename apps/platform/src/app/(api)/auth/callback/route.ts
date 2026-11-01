@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     // A member who signed in while their account is scheduled for deletion
     // lands on the page that says so, with Keep my account, wherever they were
     // headed (account-deletion Q4).
-    if (await getPendingDeletion(user.id)) redirect("/account/deletion");
+    if (await getPendingDeletion(user.id)) redirect("/dashboard/deletion");
     redirect(callbackPath);
   }
 

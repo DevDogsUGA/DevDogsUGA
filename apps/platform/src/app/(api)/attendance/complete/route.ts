@@ -95,7 +95,7 @@ function attendanceUrl(
   meetingId?: string,
   recordedAt?: Date,
 ): URL {
-  const url = new URL("/attendance", request.url);
+  const url = new URL("/dashboard/attendance", request.url);
   url.searchParams.set("status", status);
   if (meetingId) url.searchParams.set("meeting", meetingId);
   if (recordedAt) url.searchParams.set("recordedAt", recordedAt.toISOString());

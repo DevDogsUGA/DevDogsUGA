@@ -106,7 +106,7 @@ function formText(formData: FormData, name: string): string {
 }
 
 /**
- * `/settings/oauth`'s manual client management.
+ * `/dashboard/oauth`'s manual client management.
  *
  * Every client a member creates is their own Testing app that asks for consent
  * (one per project, migration 32; the one-click `devtools oauth` connect flow,
@@ -120,13 +120,13 @@ export default async function oauthAction(
   formData: FormData,
 ): Promise<OAuthState> {
   const access = await authorizeSession();
-  if (!access.ok) return authenticate("google", "/settings/oauth");
+  if (!access.ok) return authenticate("google", "/dashboard/oauth");
 
   const intent = formText(formData, "intent");
 
   const user = await expectUserWith({
     githubIdentity: { columns: { id: true } },
-  }).catch(() => authenticate("google", "/settings/oauth"));
+  }).catch(() => authenticate("google", "/dashboard/oauth"));
 
   switch (intent) {
     case "create-client": {

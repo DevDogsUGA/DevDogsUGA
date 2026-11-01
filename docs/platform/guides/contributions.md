@@ -43,7 +43,7 @@ profile.
   a Contributions section while the member's "show contributions" switch is on.
   It lists only public repositories, newest first, each linked to its pull
   request.
-- `/attendance` shows the signed-in member their own list, private repositories
+- `/dashboard/attendance` shows the signed-in member their own list, private repositories
   included.
 - `platform.contributions` is server-only: no browser role can read or write it.
   Public reads go through the profile loaders, which resolve the member through

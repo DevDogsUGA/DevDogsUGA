@@ -57,13 +57,7 @@ export const ANNOUNCEMENT_STORAGE_KEY = "devdogs:announcementDismissed";
  * club-wide notice is noise stacked on top of a working tool. `/oauth` is a
  * third-party consent screen, and nothing of ours belongs in that frame.
  */
-const NON_PUBLIC_PREFIXES = [
-  "/account",
-  "/console",
-  "/oauth",
-  "/settings",
-  "/tools",
-];
+const NON_PUBLIC_PREFIXES = ["/dashboard", "/oauth", "/settings", "/tools"];
 
 /**
  * The live notice, or `null` for none.

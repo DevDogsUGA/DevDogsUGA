@@ -65,7 +65,7 @@ export default function OAuthNewClient({
             </div>
           )}
           <div style={{ marginTop: 24 }}>
-            <Link href="/settings/oauth" className={buttonVariants()}>
+            <Link href="/dashboard/oauth" className={buttonVariants()}>
               <CheckIcon aria-hidden />
               Done
             </Link>
@@ -123,7 +123,7 @@ export default function OAuthNewClient({
           </div>
         </div>
         <div className="row" style={{ marginTop: 28 }}>
-          <Link href="/settings/oauth" className="btn ghost">
+          <Link href="/dashboard/oauth" className="btn ghost">
             Cancel
           </Link>
           <FormButton theme="cyan" type="submit" disabled={isPending}>

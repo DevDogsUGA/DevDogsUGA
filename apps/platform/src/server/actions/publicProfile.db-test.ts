@@ -63,7 +63,7 @@ describe("setPublicProfileField", () => {
       expect.arrayContaining([
         "/community",
         "/community/@ppact-a",
-        "/settings/profile",
+        "/dashboard/profile",
       ]),
     );
 
@@ -85,7 +85,7 @@ describe("setPublicProfileField", () => {
     expect(await setPublicProfileField("showContributions", false)).toEqual({
       status: "set",
     });
-    expect(revalidated).toEqual(["/community", "/settings/profile"]);
+    expect(revalidated).toEqual(["/community", "/dashboard/profile"]);
   });
 
   it("only touches the session's own profile", async () => {
