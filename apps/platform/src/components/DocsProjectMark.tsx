@@ -3,27 +3,12 @@ import { cn } from "~/lib/cn";
 import type { ComponentType } from "react";
 import devdog from "~/assets/devdog.svg";
 import * as icons from "~/config/icons";
-import { docsProjectMark } from "~/config/docs";
+import type { DocsMark } from "~/config/docs";
+import { showcaseColor, showcaseIcon } from "~/config/showcaseKeys";
 import type { EventCategory } from "~/lib/eventKind";
 import "~/components/Docs/docs.css";
 
 type MarkSize = "sm" | "lg";
-
-/** `.pm` hue per documented project; unlisted projects wear the club red. */
-const PROJECT_KIND: Record<string, EventCategory | undefined> = {
-  toolkit: "build",
-  workshops: "workshop",
-};
-
-/** The category hue a project's docs wear (tiles, headings, active rows). */
-export function docsProjectKind(slug: string): EventCategory | undefined {
-  return PROJECT_KIND[slug];
-}
-
-/** Projects with an app mark of their own (DogDays), drawn bare in the tile. */
-const PROJECT_IMAGE: Record<string, string> = {
-  "schedule-builder": "/cosmic/a/dogdays.png",
-};
 
 interface MarkProps {
   icon: ComponentType<{ className?: string; weight?: "bold" | "fill" }>;
@@ -48,36 +33,46 @@ export function Mark({ icon: Icon, kind, size = "sm", iconBg }: MarkProps) {
 }
 
 /**
- * A documented project's mark: the mascot for the platform, DogDays' own mark
- * for the schedule builder, else a glyph on a tile (see DOCS_PROJECT_MARKS).
+ * A docs project's mark, drawn from what names it (`DocsMark` in `~/config/docs`):
+ *
+ * - a Project's own icon and color keys, through the showcase registry: the
+ *   DevDogs mascot on its tile for the platform, otherwise the bare glyph in
+ *   the Project's color, as the homepage and the app switcher draw it;
+ * - a Docs section's glyph on a tile in its hue;
+ * - a generic book for a documented project with no showcase fields.
  */
 export default function DocsProjectMark({
-  slug,
+  mark,
   size,
 }: {
-  /** The docs slug, i.e. the project's workspace directory name. */
-  slug: string;
+  mark: DocsMark;
   size?: MarkSize;
 }) {
-  const { kind, icon } = docsProjectMark(slug);
-  const image = PROJECT_IMAGE[slug];
-  const tileKind = PROJECT_KIND[slug];
+  if (mark.kind === "section") {
+    return <Mark icon={icons[mark.icon]} kind={mark.hue} size={size} />;
+  }
+  if (mark.kind === "fallback") {
+    return <Mark icon={icons.BookOpenIcon} size={size} />;
+  }
 
-  if (kind === "logo" || image) {
+  const { Icon, logo } = showcaseIcon(mark.iconKey);
+  if (logo) {
     return (
-      <span
-        aria-hidden
-        data-kind={tileKind}
-        className={size === "lg" ? "docs-pm lg" : "docs-pm"}
-      >
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element -- a 40px static mark
-          <img src={image} alt="" />
-        ) : (
-          <Image alt="" src={devdog} sizes="32px" />
-        )}
+      <span aria-hidden className={size === "lg" ? "docs-pm lg" : "docs-pm"}>
+        <Image alt="" src={devdog} sizes="32px" />
       </span>
     );
   }
-  return <Mark icon={icons[icon]} kind={tileKind} size={size} />;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex shrink-0 items-center justify-center",
+        size === "lg" ? "size-11 text-[34px]" : "size-8 text-[26px]",
+        showcaseColor(mark.colorKey),
+      )}
+    >
+      <Icon weight="fill" />
+    </span>
+  );
 }

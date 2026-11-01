@@ -5,12 +5,15 @@ name: Docs candidate
 # devdogs-plan/project-documentation-decisions.md).
 #
 #   candidate  Trigger: `workflow_dispatch` (a person) or `repository_dispatch`
-#              of type `docs-candidate` with { project, sha } (the platform's
-#              GitHub webhook, on a merge in the project repository; stage D1).
-#              Checks the project is in .github/docs-projects.json and the sha is
-#              on the mapped branch, fetches ONLY the docs directory of that exact
-#              commit with a read-only token (no scripts, no installs, no
-#              submodules, no LFS, no plugins), compiles it with this
+#              of type `docs-candidate` with { project, sha } (nothing sends one
+#              yet; the platform no longer receives GitHub webhooks).
+#              Checks the project is in .github/docs-projects.json (version 2,
+#              keyed by slug), finds its repository by numeric id, refuses a
+#              repository whose owner is no longer the one an officer
+#              confirmed (the transfer pause), checks the sha is on the
+#              repository's default branch, fetches ONLY the docs/ directory of
+#              that exact commit with a read-only token (no scripts, no
+#              installs, no submodules, no LFS, no plugins), compiles it with this
 #              repository's pinned docs-kit under the untrusted policy, and
 #              uploads the candidate: an immutable artifact to publish, a
 #              preview, and a run summary with the change summary against the
@@ -18,14 +21,16 @@ name: Docs candidate
 #              credential, and the source token is visible only to the two steps
 #              that talk to the project's repository.
 #   publish    `needs: candidate`, in the `docs-publishing` environment
-#              (required reviewers). Downloads that artifact, verifies every
-#              file against the manifest and the digest the first job reported,
-#              and uploads exactly it with a credential that can write only to
-#              the docs content bucket. The pointer is written last, so a failed
+#              (required reviewers). Once approved, it reads the map from `main`
+#              again and re-checks the repository's owner (a candidate can wait
+#              days, and docs may have been disabled or paused meanwhile), then
+#              downloads that artifact, verifies every file against the manifest
+#              and the digest the first job reported, and uploads exactly it
+#              with a credential that can write only to the docs content bucket. The pointer is written last, so a failed
 #              upload, a failed build or a rejected approval leaves the last good
 #              version live.
 #
-# Sending the dispatch (stage D1 does this from the platform's webhook handler):
+# Sending the dispatch (not built yet):
 #   POST /repos/DevDogsUGA/DevDogsUGA/dispatches
 #   { "event_type": "docs-candidate",
 #     "client_payload": { "project": "<slug>", "sha": "<40-char merge commit>" } }
@@ -50,7 +55,7 @@ on:
         required: true
         type: string
       sha:
-        description: Full commit id on the project's mapped branch
+        description: Full commit id on the project's default branch
         required: true
         type: string
   repository_dispatch:
@@ -81,7 +86,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
 
-      - name: Check the project and the commit against the central map
+      - name: Check the project, its repository's owner and the commit against the central map
         id: resolve
         env:
           PROJECT: ${{ inputs.project || github.event.client_payload.project }}
@@ -219,6 +224,17 @@ jobs:
         with:
           name: ${{ needs.candidate.outputs.artifact }}
           path: ${{ runner.temp }}/candidate
+      # The second place the transfer pause is enforced, after the approval and
+      # before anything is uploaded. It reads the map from main as it is now and
+      # looks the repository up by id again, with this job's own token: this
+      # job has no source token, and only public repositories publish. A
+      # project that left the map, or whose owner is no longer the confirmed
+      # one, fails here and the last good version stays live.
+      - name: Re-check the map and the repository's owner
+        env:
+          PROJECT: ${{ needs.candidate.outputs.project }}
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/docs-projects.mjs recheck
       - name: Publish exactly that candidate
         env:
           PROJECT: ${{ needs.candidate.outputs.project }}

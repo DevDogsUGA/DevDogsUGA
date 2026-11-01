@@ -1,5 +1,5 @@
 {
-  "$comment": "Approved project documentation sources. Reviewed in DevDogsUGA pull requests; a project repository cannot edit it. Add an entry like { \"slug\": \"example\", \"repository\": \"DevDogsUGA/example\", \"branch\": \"main\", \"directory\": \"docs\", \"destination\": \"/docs/example\" }. See docs/operations/project-docs.md.",
-  "version": 1,
-  "projects": []
+  "$comment": "Projects whose docs are published from their own repository, keyed by project slug. Written by the dashboard's Docs toggle as a reviewed pull request; a project repository cannot edit it. Each entry names the repository by its numeric GitHub id and the owner an officer confirmed: a repository that changes owner is paused until an officer confirms the new one. Docs always come from the default branch's docs/ folder. See docs/operations/project-docs.md.",
+  "version": 2,
+  "projects": {}
 }

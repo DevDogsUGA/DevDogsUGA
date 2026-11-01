@@ -3,9 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavigationMenu } from "radix-ui";
-import { PUBLIC_LINKS } from "~/config/nav";
+import type { DocsMenuEntry } from "~/config/docs";
+import { CONTRIBUTE_HREF, PUBLIC_LINKS } from "~/config/nav";
+import { docsSectionOf, docsSlugOf } from "~/lib/docsSection";
 import "./topnav.css";
-import DocsMenu, { type DocsProjectLink } from "./DocsMenu";
+import DocsMenu from "./DocsMenu";
+import { CONTRIBUTE_MENU, DOCS_MENU } from "./NavShell";
+
+/** The two docs menus' rows, as the server resolved them. */
+export interface DocsMenus {
+  docs: DocsMenuEntry[];
+  contribute: DocsMenuEntry[];
+}
 
 /**
  * The kit's `.topnav nav a` look (600 15, `--text-2`, a 4px bar on the current
@@ -18,13 +27,6 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-/** The project being read, from a /docs/[project] pathname. */
-function activeDocsSlug(pathname: string | null) {
-  if (pathname === null) return null;
-  const [, first, second] = pathname.split("/");
-  return first === "docs" && second ? decodeURIComponent(second) : null;
-}
-
 /**
  * The left-hand links, as items of the navbar's single list.
  *
@@ -35,28 +37,49 @@ function activeDocsSlug(pathname: string | null) {
  */
 function Nav({
   pathname,
-  docsProjects,
+  menus,
 }: {
   pathname: string | null;
-  docsProjects: DocsProjectLink[];
+  menus: DocsMenus;
 }) {
+  const section = docsSectionOf(pathname, menus.contribute);
   return (
     <>
       {PUBLIC_LINKS.map((link) => {
-        const active = pathname !== null && isActive(pathname, link.href);
+        const menu =
+          link.href === "/docs"
+            ? ({ value: DOCS_MENU, entries: menus.docs, key: "docs" } as const)
+            : link.href === CONTRIBUTE_HREF
+              ? ({
+                  value: CONTRIBUTE_MENU,
+                  entries: menus.contribute,
+                  key: "contribute",
+                } as const)
+              : null;
+        const active =
+          menu !== null
+            ? section === menu.key
+            : pathname !== null && isActive(pathname, link.href);
 
-        if (link.href === "/docs" && docsProjects.length > 0) {
+        if (menu !== null && menu.entries.length > 0) {
           return (
             <DocsMenu
               key={link.href}
+              value={menu.value}
               label={link.label}
               active={active}
-              activeSlug={activeDocsSlug(pathname)}
-              projects={docsProjects}
+              activeSlug={docsSlugOf(pathname)}
+              pathname={pathname}
+              entries={menu.entries}
               className={LINK_CLASS}
             />
           );
         }
+
+        // A menu with no rows is not worth opening. Docs stays a link to the
+        // landing page; Contribute has nothing of its own to open, so it
+        // leaves the bar until a project's docs exist.
+        if (menu?.key === "contribute") return null;
 
         return (
           <NavigationMenu.Item
@@ -87,19 +110,11 @@ function Nav({
  * renders the same links without active-state highlighting until the client
  * resolves the pathname.
  */
-export function NavLinksFallback({
-  docsProjects,
-}: {
-  docsProjects: DocsProjectLink[];
-}) {
-  return <Nav pathname={null} docsProjects={docsProjects} />;
+export function NavLinksFallback({ menus }: { menus: DocsMenus }) {
+  return <Nav pathname={null} menus={menus} />;
 }
 
-export default function NavLinks({
-  docsProjects,
-}: {
-  docsProjects: DocsProjectLink[];
-}) {
+export default function NavLinks({ menus }: { menus: DocsMenus }) {
   const pathname = usePathname();
-  return <Nav pathname={pathname} docsProjects={docsProjects} />;
+  return <Nav pathname={pathname} menus={menus} />;
 }
