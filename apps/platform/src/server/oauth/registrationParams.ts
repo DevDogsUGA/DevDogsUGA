@@ -13,7 +13,7 @@ export type RegistrationParamsResult =
 /**
  * The `label`/`callback_uri` validation shared by both `devtools oauth`
  * handoffs: the loopback connect flow's `~/server/oauth/connectParams` and
- * the device-code flow's `POST /tools/oauth/device/code`. Split out so
+ * the device-code flow's `POST /oauth/device/code`. Split out so
  * "what a valid label or callback URI looks like" is defined once instead
  * of copied between the two. The address rule is the one every client
  * shares (`./redirectRule`).

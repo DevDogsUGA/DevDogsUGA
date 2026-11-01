@@ -1,5 +1,5 @@
 /**
- * The chrome-free ground for the OAuth approval step.
+ * The chrome-free ground for the OAuth approval steps.
  *
  * No TopNav, no announcement banner, no Footer, deliberately. The consent
  * screen is an interstitial handed to someone in the middle of authorizing a
@@ -9,7 +9,7 @@
  * It is its own route group rather than a page-level override because the
  * (site) layout owns `<main>`, and nesting a second one inside it was the
  * other half of the bug. A route group adds no URL segment, so the page
- * underneath keeps its exact `/oauth/consent` path.
+ * underneath has an `/oauth/*` path.
  */
 export default function AuthLayout({
   children,

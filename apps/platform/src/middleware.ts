@@ -10,21 +10,9 @@ export async function middleware(request: NextRequest) {
   // Worker entry stamps a fresh one onto every response at the edge
   // (`cloudflare/nonce.ts`).
   //
-  // The one header it does add is for `/tools`, which is signed-in only and
-  // never cached. A layout (unlike a page) receives no `searchParams`, and
-  // there is no public API to ask Next for the request it is rendering inside
-  // of. `(site)/tools/layout.tsx` reads this to build a `callbackPath` that
-  // survives a sign-in redirect with the query string intact (e.g.
-  // `/tools/oauth/connect?redirect_uri=...`), rather than dropping straight to
-  // a bare `/auth`. Setting it mutates the live Headers instance on `request`,
-  // and `forwardRequest` makes `updateSession` pass it on as the middleware
-  // request-header override vinext decodes server-side to rebuild the
-  // `headers()` context.
-  // `/console` gets it too: the access-denied card (`forbidden.tsx`) takes no
-  // props, so it reads this to say which section was refused.
-  const wantsRequestPath = /^\/(tools|console)(\/|$)/.test(
-    request.nextUrl.pathname,
-  );
+  // The console access-denied card receives no props, so it reads this
+  // header to identify the refused section. Console pages are never cached.
+  const wantsRequestPath = /^\/console(\/|$)/.test(request.nextUrl.pathname);
   if (wantsRequestPath) {
     request.headers.set(
       "x-request-path",

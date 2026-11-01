@@ -11,9 +11,9 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 describe("requestDeviceCode", () => {
-  it("posts to /tools/oauth/device/code and returns the device code fields", async () => {
+  it("posts to /oauth/device/code and returns the device code fields", async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
-      expect(url).toBe("https://devdogsuga.org/tools/oauth/device/code");
+      expect(url).toBe("https://devdogsuga.org/oauth/device/code");
       expect(init?.method).toBe("POST");
       expect(JSON.parse(init?.body as string)).toEqual({
         label: "my-project",
@@ -147,7 +147,7 @@ const baseArgs = {
 describe("pollForToken", () => {
   it("returns the credentials on an immediate 200", async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
-      expect(url).toBe("https://devdogsuga.org/tools/oauth/device/token");
+      expect(url).toBe("https://devdogsuga.org/oauth/device/token");
       expect(JSON.parse(init?.body as string)).toEqual({
         device_code: "devcode-1",
       });

@@ -3,8 +3,6 @@ import { permanentRedirect } from "next/navigation";
 /**
  * `/tools/oauth` became `/settings/oauth`. The query string rides along:
  * `devtools oauth` prints `?add_redirect_uri=…` links that the new page reads.
- * `connect` and `device` beside this file stay where they are; CLIs and docs
- * print their URLs.
  */
 export default async function OAuthRedirect({
   searchParams,

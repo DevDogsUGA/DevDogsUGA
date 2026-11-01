@@ -718,7 +718,7 @@ export default function CommandSection() {
           <TerminalBlock kind="build">
             <TermPrompt>$</TermPrompt> <TermPrompt>pnpm</TermPrompt> dlx
             @devdogsuga/backstage login{"\n"}
-            <TermComment># opens devdogsuga.org/tools/oauth/device</TermComment>
+            <TermComment># opens devdogsuga.org/oauth/device</TermComment>
             {"\n"}
             <TermString>✓</TermString> Signed in as{" "}
             <TermKeyword>@sloan</TermKeyword>

@@ -10,7 +10,7 @@ let cached: { issuer: string; fetchedAt: number } | null = null;
  * The platform Supabase's own OIDC issuer, fetched (and cached) on demand.
  * Shared by every `devtools oauth` endpoint that hands a client its
  * credentials back -- the loopback connect exchange and the device-code
- * token endpoint -- and by the `/tools/oauth` page, so all of them report
+ * token endpoint -- and by the `/settings/oauth` page, so all of them report
  * exactly the same issuer without each fetching it independently.
  *
  * It is read from discovery at `API_URL` and never written down: GoTrue

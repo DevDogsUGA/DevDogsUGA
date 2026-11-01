@@ -41,6 +41,16 @@ export const TERMINAL_PATHS = [
   },
 
   {
+    pattern: "/oauth/connect",
+    regex: /^\/oauth\/connect\/?$/,
+    page: "(auth)/oauth/connect/page.tsx",
+  },
+  {
+    pattern: "/oauth/device",
+    regex: /^\/oauth\/device\/?$/,
+    page: "(auth)/oauth/device/page.tsx",
+  },
+  {
     pattern: "/changelog",
     regex: /^\/changelog\/?$/,
     page: "(site)/changelog/page.tsx",

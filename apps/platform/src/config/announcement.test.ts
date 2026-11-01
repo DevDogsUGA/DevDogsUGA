@@ -26,7 +26,7 @@ describe("showsAnnouncement", () => {
     "/settings/profile",
     "/console",
     "/console/permissions",
-    "/tools/oauth",
+    "/settings/oauth",
     "/oauth/consent",
   ];
 
