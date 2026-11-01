@@ -46,8 +46,8 @@ remove commits already stored.
 ## Where it shows
 
 - A public profile (`/community/@handle`, behind `publicProfilesEnabled`) shows
-  a Contributions section while the member's "show contributions" switch is on
-  (Dashboard, Profile). It lists commits newest first, each linked to its commit
+  a Contributions section whenever the profile is public. It lists commits
+  newest first, each linked to its commit
   on GitHub, and **only commits in repositories that are still available**. A
   repository that turned private or went away is unavailable, and a public
   profile never names it. The streak is the same: a week lit by such a commit
