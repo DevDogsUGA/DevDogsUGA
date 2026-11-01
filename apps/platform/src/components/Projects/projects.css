@@ -113,6 +113,18 @@
   .cosmic .prj-status.bad {
     color: var(--bad, inherit);
   }
+  .cosmic .prj-command {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    align-items: center;
+  }
+  .cosmic .prj-legacy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
   .cosmic .prj-el {
     display: flex;
     flex-wrap: wrap;

@@ -68,7 +68,8 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     id: "projects",
     label: "Projects",
     icon: "FolderSimpleIcon",
-    description: "Your projects and reports.",
+    description:
+      "Create projects and manage the ones you own, contribute to or report on.",
     group: "Projects",
     href: "/dashboard/projects",
     access: "member",
@@ -85,15 +86,15 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     access: "member",
     refusal: "forbidden",
   },
-  // TODO(D3): reveal the review queue to advisors and report reviewers.
   {
     id: "reviews",
     label: "Review queue",
     icon: "FolderSimpleIcon",
-    description: "Review project proposals and reports.",
+    description:
+      "Read members' EL project reports with their cited commits, then approve or return them. A project's advisor reviews from its own page.",
     group: "Projects",
     href: "/dashboard/reviews",
-    access: "officer",
+    access: "reviewProjectReports",
     refusal: "forbidden",
   },
   {

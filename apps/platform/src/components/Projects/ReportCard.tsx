@@ -22,11 +22,32 @@ const DAY = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const COMMIT_DAY = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
 function day(value: string): string {
   return DAY.format(new Date(`${value}T00:00:00Z`));
 }
 
-/** One project report: range, hours, evidence and the reflection, with the caller's own actions below. */
+/** The size of a commit as GitHub reports it, or nothing while it is still being counted. */
+export function commitSize(commit: {
+  files: number | null;
+  additions: number | null;
+  deletions: number | null;
+}): string | null {
+  if (commit.additions === null || commit.deletions === null) return null;
+  const files =
+    commit.files === null
+      ? ""
+      : `${commit.files} ${commit.files === 1 ? "file" : "files"}, `;
+  return `${files}+${commit.additions} −${commit.deletions}`;
+}
+
+/** One EL report: range, hours, cited commits and the reflection, with the caller's own actions below. */
 export default function ReportCard({
   report,
   showAuthor = false,
@@ -53,17 +74,36 @@ export default function ReportCard({
         · {reflectionWordCount(report.content)} words
       </p>
       <p className="prj-text">{report.content}</p>
-      {report.pullRequests.length > 0 && (
-        <ul className="prj-prs" aria-label="Pull requests cited">
-          {report.pullRequests.map((pr) => (
-            <li key={pr.id} className="prj-pr">
-              <TextLink href={pr.url} target="_blank" rel="noreferrer">
-                {pr.repo}#{pr.number}
+      {report.commits.length > 0 && (
+        <ul className="prj-prs" aria-label="Commits cited">
+          {report.commits.map((commit) => (
+            <li key={commit.sha} className="prj-pr">
+              <TextLink href={commit.url} target="_blank" rel="noreferrer">
+                {commit.sha.slice(0, 7)}
               </TextLink>
-              <span>{pr.title}</span>
+              <span>{commit.title}</span>
+              <span className="prj-meta">
+                {COMMIT_DAY.format(commit.committedAt)}
+                {commitSize(commit) ? ` · ${commitSize(commit)}` : ""}
+              </span>
             </li>
           ))}
         </ul>
+      )}
+      {report.legacyPullRequests.length > 0 && (
+        <div className="prj-legacy">
+          <Badge>Legacy evidence</Badge>
+          <ul className="prj-prs" aria-label="Pull requests cited">
+            {report.legacyPullRequests.map((pr) => (
+              <li key={pr.id} className="prj-pr">
+                <TextLink href={pr.url} target="_blank" rel="noreferrer">
+                  {pr.repo}#{pr.number}
+                </TextLink>
+                <span>{pr.title}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {report.reviewNote && report.status === "returned" && (
         <p className="prj-note">
