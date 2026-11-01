@@ -734,16 +734,16 @@ describe("getPublicProfileActivity", () => {
     expect(activity?.contributions).toEqual([]);
   });
 
-  it("returns null for each section its flag hides, and the streak regardless", async () => {
+  it("hides links while keeping contributions, badges and the streak", async () => {
     await seedActivity();
     await db.execute(sql`
       update platform.profile
-      set "showLinks" = false, "showContributions" = false
+      set "showLinks" = false
       where "userId" = ${A}::uuid
     `);
     expect(await getPublicProfileActivity("ppdb-active")).toMatchObject({
       links: null,
-      contributions: null,
+      contributions: [],
       badges: [],
     });
   });
