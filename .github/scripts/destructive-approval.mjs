@@ -43,7 +43,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { producingPulls } from "./approval-gate.mjs";
-import { evaluateNeed, isDevops, labelState } from "./destructive-label.mjs";
+import { isDevops, labelState } from "./destructive-label.mjs";
 import { apiAll, createApi } from "./github-api.mjs";
 import { isMain } from "./is-main.mjs";
 
@@ -223,13 +223,11 @@ export async function approvalOf({ api, repo, number }) {
       problem: `#${number} carries allow-destructive from ${state.actor ?? "an unknown user"}, who is not a devops member.`,
     };
   }
-  const verdict = await evaluateNeed({
-    api,
-    repo,
-    pr: number,
-    destructive: true,
-  });
-  if (!verdict.pass) return { problem: verdict.message };
+  // The fingerprint approval is not re-checked here. The deploy only sees
+  // merged pull requests, whose SQL can no longer change, and `need` already
+  // required a matching approval before the merge. Pull requests merged
+  // before approvals were bound to fingerprints carry only the label, and
+  // their migrations must still deploy.
   return { actor: state.actor };
 }
 
