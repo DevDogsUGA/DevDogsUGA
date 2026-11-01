@@ -313,9 +313,9 @@ export interface PublicProfileActivity {
 
 /**
  * Links, commits, badges and the weekly streak for a public
- * profile; links are gated on their visibility flag. Null when the handle is
- * not a public profile (resolved through the view, so the visibility rule is
- * not repeated).
+ * profile; links and commits are each gated on their own visibility
+ * flag. Null when the handle is not a public profile (resolved through the
+ * view, so the visibility rule is not repeated).
  *
  * The streak is the only attendance-derived thing read here, and only as lit
  * or unlit weeks. Meetings attended, reflections and hours are never read.
@@ -326,6 +326,7 @@ export const getPublicProfileActivity = cache(
       .select({
         userId: publicProfiles.userId,
         showLinks: publicProfiles.showLinks,
+        showContributions: publicProfiles.showContributions,
       })
       .from(publicProfiles)
       .where(eq(publicProfiles.handle, handle.trim().toLowerCase()));
@@ -341,7 +342,9 @@ export const getPublicProfileActivity = cache(
             .orderBy(asc(profileLinks.sortOrder))
         : null,
       getWeeklyParticipation(userId),
-      getCommitsForUser(userId, { publicOnly: true }),
+      member.showContributions
+        ? getCommitsForUser(userId, { publicOnly: true })
+        : null,
       getPublicBadges(userId),
     ]);
 

@@ -352,6 +352,7 @@ describe("platform public profiles", () => {
         showAvatar: false,
         showBio: false,
         showLinks: false,
+        showContributions: false,
         showStars: false,
       })
       .eq("userId", member.userId);

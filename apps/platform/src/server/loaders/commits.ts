@@ -8,7 +8,7 @@ import { commits, githubRepos, repoCommits } from "~/server/db/schema";
  *
  * The tables are server-only and these are the readers. The public profile
  * reaches `getCommitsForUser` only after resolving the member through the
- * `publicProfiles` view (see
+ * `publicProfiles` view and checking `showContributions` (see
  * `getPublicProfileActivity`); the member's own pages pass their session id.
  *
  * A commit is stored only for a linked member and only once its default-branch

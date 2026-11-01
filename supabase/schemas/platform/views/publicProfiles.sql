@@ -37,6 +37,7 @@ CREATE VIEW "platform"."publicProfiles" AS  SELECT p."userId",
     p."showAvatar",
     p."showBio",
     p."showLinks",
+    p."showContributions",
     p."showStars",
     p."graduationYear",
     ARRAY( SELECT m.name

@@ -85,6 +85,7 @@ export async function getPublicProfileSettings(): Promise<PublicProfileSettings 
         showAvatar: profiles.showAvatar,
         showBio: profiles.showBio,
         showLinks: profiles.showLinks,
+        showContributions: profiles.showContributions,
       })
       .from(profiles)
       .where(eq(profiles.userId, userId)),
@@ -98,6 +99,7 @@ export async function getPublicProfileSettings(): Promise<PublicProfileSettings 
       showAvatar: true,
       showBio: true,
       showLinks: true,
+      showContributions: true,
     },
   };
 }

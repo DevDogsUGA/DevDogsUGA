@@ -21,8 +21,8 @@
 --   1. memberStars loses its competition branch, so the columns that existed
 --      only for it ("competitionId", "won") go too. A view can't lose columns
 --      in place, so it is dropped and created again with the same ACL.
---   2. publicProfiles loses "showCompetitions" and "showContributions".
---   3. profile loses those two columns (and their column grants with them).
+--   2. publicProfiles loses "showCompetitions".
+--   3. profile loses that column (and its column grants with it).
 --   4. reflections and reflectionRevisions lose "competitionId", and the
 --      "exactly one activity" check becomes "meetingId is not null".
 --   5. The five tables, then the helper function their policy used, then the
@@ -46,7 +46,7 @@ REVOKE ALL ON TABLE "platform"."memberStars" FROM "anon", "authenticated";
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE "platform"."memberStars" TO "postgres", "service_role";
 
--- 2. publicProfiles: without the two retired switches.
+-- 2. publicProfiles: without the retired competitions switch.
 drop view "platform"."publicProfiles";
 
 CREATE VIEW "platform"."publicProfiles" AS  SELECT p."userId",
@@ -88,6 +88,7 @@ CREATE VIEW "platform"."publicProfiles" AS  SELECT p."userId",
     p."showAvatar",
     p."showBio",
     p."showLinks",
+    p."showContributions",
     p."showStars",
     p."graduationYear",
     ARRAY( SELECT m.name
@@ -114,10 +115,9 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 
 COMMENT ON VIEW "platform"."publicProfiles" IS 'The one definition of a public member profile. Server-only (no anon/authenticated grant). Hidden fields are NULL. Never add legal/involvement names, emails or attendance. graduationYear and majors (major categories only, never minors or certificates) are public whenever the profile is (Q103).';
 
--- 3. profile: the retired switches.
+-- 3. profile: the retired competitions switch.
 alter table "platform"."profile"
-  drop column "showCompetitions",
-  drop column "showContributions";
+  drop column "showCompetitions";
 
 -- 4. reflections: meetings only.
 alter table "platform"."reflections"

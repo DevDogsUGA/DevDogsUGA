@@ -15,6 +15,7 @@ export const PUBLIC_PROFILE_FIELDS = [
   "showAvatar",
   "showBio",
   "showLinks",
+  "showContributions",
 ] as const;
 
 export type PublicProfileField = (typeof PUBLIC_PROFILE_FIELDS)[number];
@@ -46,6 +47,12 @@ export const PUBLIC_PROFILE_FIELD_OPTIONS: ReadonlyArray<{
     field: "showLinks",
     label: "Links",
     description: "The links you added to your profile.",
+  },
+  {
+    field: "showContributions",
+    label: "Contributions",
+    description:
+      "Commits you authored on the default branch of public repositories that DevDogs syncs: DevDogs organization repositories and linked project repositories.",
   },
 ];
 

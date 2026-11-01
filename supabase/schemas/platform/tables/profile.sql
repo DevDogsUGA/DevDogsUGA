@@ -23,6 +23,7 @@ CREATE TABLE "platform"."profile" (
   "showAvatar"            boolean                     NOT NULL DEFAULT true,
   "showBio"               boolean                     NOT NULL DEFAULT true,
   "showLinks"             boolean                     NOT NULL DEFAULT true,
+  "showContributions"     boolean                     NOT NULL DEFAULT true,
   "showStars"             boolean                     NOT NULL DEFAULT true,
   "handle"                text,
   CONSTRAINT "profile_handle_format"
@@ -136,6 +137,11 @@ GRANT UPDATE ("showAvatar") ON TABLE "platform"."profile" TO "authenticated";
 REVOKE ALL ("showBio") ON TABLE "platform"."profile" FROM "authenticated";
 
 GRANT UPDATE ("showBio") ON TABLE "platform"."profile" TO "authenticated";
+
+
+REVOKE ALL ("showContributions") ON TABLE "platform"."profile" FROM "authenticated";
+
+GRANT UPDATE ("showContributions") ON TABLE "platform"."profile" TO "authenticated";
 
 REVOKE ALL ("showDiscord") ON TABLE "platform"."profile" FROM "authenticated";
 

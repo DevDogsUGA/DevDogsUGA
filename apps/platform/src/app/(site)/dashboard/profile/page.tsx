@@ -165,6 +165,7 @@ async function ProfileContent() {
                   showAvatar: data.profile.showAvatar,
                   showBio: data.profile.showBio,
                   showLinks: data.profile.showLinks,
+                  showContributions: data.profile.showContributions,
                 },
               }}
               accounts={[
