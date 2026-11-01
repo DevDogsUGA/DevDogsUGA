@@ -7,10 +7,8 @@ import {
   SpinnerGapIcon,
 } from "@phosphor-icons/react/ssr";
 import { getUserResolvedPermissions } from "~/server/actions/permissions";
-import type {
-  RoleSummary,
-  ResolvedPermissions,
-} from "~/server/actions/permissions";
+import type { RoleSummary } from "~/server/actions/permissions";
+import type { ResolvedPermissions } from "~/server/auth/permissions";
 
 const PERMISSION_LABELS: Record<string, string> = {
   canModerate: "Moderate reports",

@@ -4,7 +4,7 @@ const expectSession = vi.hoisted(() => vi.fn());
 const getCallerContext = vi.hoisted(() => vi.fn());
 const getHeader = vi.hoisted(() => vi.fn());
 vi.mock("~/server/auth", () => ({ expectSession }));
-vi.mock("~/server/actions/permissions", () => ({ getCallerContext }));
+vi.mock("~/server/auth/permissions", () => ({ getCallerContext }));
 vi.mock("next/headers", () => ({
   headers: async () => ({ get: getHeader }),
 }));

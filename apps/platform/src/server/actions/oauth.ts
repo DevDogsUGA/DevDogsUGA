@@ -13,7 +13,7 @@ import {
 } from "../oauth/ownedClients";
 import { createOauthClientAndRegister } from "../oauth/registerClient";
 import { redirectUriError } from "../oauth/redirectRule";
-import { canUserManageOAuthApps } from "./permissions";
+import { canUserManageOAuthApps } from "~/server/auth/permissions";
 
 const MAX_REDIRECT_URIS = 5;
 const MAX_LABEL_LENGTH = 100;

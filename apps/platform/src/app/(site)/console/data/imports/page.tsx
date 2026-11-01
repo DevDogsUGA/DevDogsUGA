@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import ImportsWorkspace from "~/components/Imports/ImportsWorkspace";
 import { formatEventShortDate } from "~/lib/eventTime";
-import { canUserManageAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { listImportableMeetings } from "~/server/imports/deps";
 import { PageHeading } from "~/ui/app-shell";

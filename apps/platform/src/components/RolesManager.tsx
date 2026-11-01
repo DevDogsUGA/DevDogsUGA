@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useState } from "react";
 import { useRoles, type RoleRow } from "~/hooks/useRoles";
-import type { ResolvedPermissions } from "~/server/actions/permissions";
+import type { ResolvedPermissions } from "~/server/auth/permissions";
 import type { DiscordSyncCapability } from "~/lib/discordCapability";
 import Callout from "~/ui/callout";
 import { EmptyState } from "~/ui/empty-state";

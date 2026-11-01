@@ -6,7 +6,7 @@ const session = vi.fn<() => Promise<string>>();
 const allowed = vi.fn<(id: string) => Promise<boolean>>();
 const prepare = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 vi.mock("~/server/auth", () => ({ expectSession: () => session() }));
-vi.mock("~/server/actions/permissions", () => ({
+vi.mock("~/server/auth/permissions", () => ({
   canUserManageAttendance: (id: string) => allowed(id),
 }));
 vi.mock("~/server/exports/deps", () => ({ exportDeps: {} }));

@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { visibleConsoleItems } from "~/config/nav";
 import { consoleSectionFor } from "~/lib/consoleSection";
-import { getCallerContext } from "~/server/actions/permissions";
+import { getCallerContext } from "~/server/auth/permissions";
 import { expectSession } from "~/server/auth";
 import AccessDenied from "./AccessDenied";
 import NotFoundPage from "./NotFoundPage";

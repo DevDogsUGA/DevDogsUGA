@@ -5,7 +5,7 @@ import ConsoleShell from "~/components/Console/ConsoleShell";
 import { TableSkeleton } from "~/components/Skeletons";
 import { PageHeading } from "~/ui/app-shell";
 import { parseAuditSource } from "~/lib/audit";
-import { canUserViewAuditLog } from "~/server/actions/permissions";
+import { canUserViewAuditLog } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import {
   getAuditLogPageData,

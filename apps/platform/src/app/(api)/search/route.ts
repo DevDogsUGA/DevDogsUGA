@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCallerContext } from "~/server/actions/permissions";
+import { getCallerContext } from "~/server/auth/permissions";
 import { expectSession } from "~/server/auth";
 import { buildAppSearchEntries } from "~/server/search/appEntries";
 import { searchDocs } from "~/server/search/docsSearch";

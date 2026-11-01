@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("~/env", () => ({ env: mocks.env }));
-vi.mock("~/server/actions/permissions", () => ({ isOfficer: mocks.isOfficer }));
+vi.mock("~/server/auth/permissions", () => ({ isOfficer: mocks.isOfficer }));
 vi.mock("./editsStore", () => ({ listEdits: mocks.listEdits }));
 vi.mock("~/server/rateLimit", () => ({ consumeRateLimit: mocks.consume }));
 vi.mock("~/server/db", () => ({

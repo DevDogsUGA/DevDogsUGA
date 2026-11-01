@@ -15,7 +15,7 @@ const fake = vi.hoisted(() => ({
 vi.mock("~/server/auth", () => ({
   expectSession: () => Promise.resolve("viewer-1"),
 }));
-vi.mock("~/server/actions/permissions", () => ({
+vi.mock("~/server/auth/permissions", () => ({
   canUserDeleteAccounts: () => Promise.resolve(fake.canDelete),
 }));
 vi.mock("~/server/accountDeletion/schedule", () => ({

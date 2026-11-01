@@ -8,7 +8,7 @@ import {
 } from "~/components/Badges/BadgeAwardForm";
 import BadgeList from "~/components/Badges/BadgeList";
 import ConsoleShell from "~/components/Console/ConsoleShell";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { getBadgesForOfficer, getMemberName } from "~/server/loaders/badges";
 import { PageHeading, Panel } from "~/ui/app-shell";

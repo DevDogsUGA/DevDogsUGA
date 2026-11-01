@@ -6,7 +6,7 @@ import { z } from "zod";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
 import { auditEvents, reflectionSettings } from "~/server/db/schema";
-import { canUserManageAttendance } from "./permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 
 export interface ReflectionSettingsActionState {
   ok: boolean;

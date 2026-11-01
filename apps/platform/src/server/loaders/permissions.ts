@@ -8,7 +8,7 @@ import { roles } from "~/server/db/schema";
 import {
   getCallerContext,
   type ResolvedPermissions,
-} from "~/server/actions/permissions";
+} from "~/server/auth/permissions";
 import {
   getDiscordSyncCapability,
   type DiscordSyncCapability,

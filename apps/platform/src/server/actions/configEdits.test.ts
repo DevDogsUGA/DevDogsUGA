@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 vi.mock("~/server/auth", () => ({ expectSession: mocks.expectSession }));
-vi.mock("~/server/actions/permissions", () => ({ isOfficer: mocks.isOfficer }));
+vi.mock("~/server/auth/permissions", () => ({ isOfficer: mocks.isOfficer }));
 vi.mock("~/server/config/editsStore", () => ({
   saveEdit: mocks.saveEdit,
   resetEdit: mocks.resetEdit,

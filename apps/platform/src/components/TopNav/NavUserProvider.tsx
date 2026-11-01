@@ -12,7 +12,7 @@ import {
 import type { ReactNode } from "react";
 import VerificationDialog from "~/components/VerificationDialog";
 import type { ConsoleItem } from "~/config/nav";
-import type { HighestRankingRole } from "~/server/actions/permissions";
+import type { HighestRankingRole } from "~/server/auth/permissions";
 import type { profiles } from "~/server/db/schema";
 import { isSessionCookieName } from "~/supabase/sessionCookie";
 

@@ -58,7 +58,7 @@ vi.mock("~/server/email/send", () => ({
     return Promise.resolve(fake.emailResult ?? { ok: true });
   },
 }));
-vi.mock("~/server/actions/permissions", () => ({
+vi.mock("~/server/auth/permissions", () => ({
   canUserDeleteAccounts: (id: string) => Promise.resolve(fake.officers.has(id)),
 }));
 vi.mock("~/server/moderation/queue", () => ({

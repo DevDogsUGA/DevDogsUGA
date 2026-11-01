@@ -15,7 +15,7 @@ import {
   moderationDeliveries,
 } from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
-import { canUserManageOAuthApps } from "~/server/actions/permissions";
+import { canUserManageOAuthApps } from "~/server/auth/permissions";
 import { oauthAuditEvent } from "~/server/oauth/audit";
 import { attemptDelivery } from "~/server/moderation/delivery";
 import { databaseDeliveryStore } from "~/server/moderation/deliveryStore";

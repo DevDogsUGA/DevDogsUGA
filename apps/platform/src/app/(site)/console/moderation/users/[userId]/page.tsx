@@ -6,7 +6,7 @@ import { StandingBadge, standingOf } from "~/components/StatusBadges";
 import UserRoleForm from "~/components/UserRoleForm";
 import { formatDeletionDate } from "~/server/accountDeletion/dates";
 import { getPendingDeletion } from "~/server/accountDeletion/schedule";
-import { canUserDeleteAccounts } from "~/server/actions/permissions";
+import { canUserDeleteAccounts } from "~/server/auth/permissions";
 import { expectSession } from "~/server/auth";
 import { getUserModerationData } from "~/server/loaders/moderation";
 import { PageHeading, Panel } from "~/ui/app-shell";

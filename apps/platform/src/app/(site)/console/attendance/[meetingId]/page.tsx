@@ -14,7 +14,7 @@ import { formatAttendanceCount } from "~/lib/attendanceCount";
 import { isMeetingEditable } from "~/lib/attendanceInvite";
 import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
-import { canUserManageAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 import { getOfficerAttendanceMeeting } from "~/server/attendance/getOfficerMeeting";
 import {
   getMeetingDetail,

@@ -5,7 +5,7 @@ import {
   createManualCode,
   createQrChallenge,
 } from "~/lib/attendanceChallenge";
-import { canUserManageAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { getOfficerAttendanceMeeting } from "~/server/attendance/getOfficerMeeting";
 

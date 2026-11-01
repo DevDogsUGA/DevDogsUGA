@@ -31,7 +31,7 @@ vi.mock("~/env", () => ({ env: { NEXT_PUBLIC_AVATARS_BUCKET: "avatars" } }));
 vi.mock("../auth", () => ({
   expectSession: () => Promise.resolve(mocks.session),
 }));
-vi.mock("./permissions", () => ({
+vi.mock("~/server/auth/permissions", () => ({
   canUserManageOAuthApps: (id: string) =>
     Promise.resolve(mocks.holders.has(id)),
 }));

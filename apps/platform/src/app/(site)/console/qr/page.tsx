@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import QrGenerator from "~/components/QrGenerator";
-import { canUserManageAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { PageHeading } from "~/ui/app-shell";
 import Callout from "~/ui/callout";

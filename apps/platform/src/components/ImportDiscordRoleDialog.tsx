@@ -10,7 +10,7 @@ import { Checkbox } from "~/ui/checkbox";
 import Field from "~/ui/field";
 import { Input } from "~/ui/input";
 import { Textarea } from "~/ui/textarea";
-import type { ResolvedPermissions } from "~/server/actions/permissions";
+import type { ResolvedPermissions } from "~/server/auth/permissions";
 import {
   importRoleFromDiscord,
   listImportableDiscordRoles,

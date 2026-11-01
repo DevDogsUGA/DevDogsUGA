@@ -1,7 +1,7 @@
 import { getAuthoredFiles, validateConfigFiles } from "@devdogsuga/events";
 import { sql } from "drizzle-orm";
 import { env } from "~/env";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import { db } from "~/server/db";
 import { auditEvents, profiles } from "~/server/db/schema";
 import { consumeRateLimit } from "~/server/rateLimit";

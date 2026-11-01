@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import ChangeList from "~/components/ConfigEditor/ChangeList";
 import ConfigItemForm from "~/components/ConfigEditor/ConfigItemForm";
 import ConsoleShell from "~/components/Console/ConsoleShell";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import {
   COLLECTION_LABELS,

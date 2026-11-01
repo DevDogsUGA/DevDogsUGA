@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("~/server/auth/require", () => ({
   requirePermission: mocks.requirePermission,
 }));
-vi.mock("~/server/actions/permissions", () => ({
+vi.mock("~/server/auth/permissions", () => ({
   canUserManageOAuthApps: mocks.canManage,
 }));
 vi.mock("~/server/loaders/oauthApps", () => ({ getConsoleApps: vi.fn() }));

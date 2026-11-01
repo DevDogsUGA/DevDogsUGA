@@ -12,7 +12,7 @@ const caller = vi.hoisted(() => ({
 const meetingLoader = vi.hoisted(() => vi.fn());
 const drawn = vi.hoisted(() => ({ calls: 0 }));
 
-vi.mock("~/server/actions/permissions", () => ({
+vi.mock("~/server/auth/permissions", () => ({
   getCallerContext: async () => caller.value,
 }));
 // The real gate (`requirePermission`) bounces to sign-in or 404s; what matters

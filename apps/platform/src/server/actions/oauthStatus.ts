@@ -13,7 +13,7 @@ import {
 } from "../oauth/appStatus";
 import type { OAuthStatus } from "../oauth/status";
 import { parseStatus } from "../oauth/status";
-import { canUserManageOAuthApps } from "./permissions";
+import { canUserManageOAuthApps } from "~/server/auth/permissions";
 
 /**
  * The status and consent actions for OAuth apps (oauth-consent Q155–Q164).

@@ -1,5 +1,5 @@
 import { and, count, eq, inArray, sql } from "drizzle-orm";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import { db } from "~/server/db";
 import {
   auditEvents,

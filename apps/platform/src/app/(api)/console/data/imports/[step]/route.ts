@@ -1,5 +1,5 @@
 import { isOwnScript } from "~/lib/isOwnScript";
-import { canUserManageAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/auth/permissions";
 import { expectSession } from "~/server/auth";
 import { importDeps } from "~/server/imports/deps";
 import { confirmImport, previewImport } from "~/server/imports/run";

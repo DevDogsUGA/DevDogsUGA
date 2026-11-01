@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import ConsoleAppsField from "~/components/Console/ConsoleAppsField";
 import ConsoleShell from "~/components/Console/ConsoleShell";
 import { TableSkeleton } from "~/components/Skeletons";
-import { canUserManageOAuthApps } from "~/server/actions/permissions";
+import { canUserManageOAuthApps } from "~/server/auth/permissions";
 import { requirePermission } from "~/server/auth/require";
 import { getConsoleApps } from "~/server/loaders/oauthApps";
 import { PageHeading, Panel } from "~/ui/app-shell";

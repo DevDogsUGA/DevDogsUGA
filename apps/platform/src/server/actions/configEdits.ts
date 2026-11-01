@@ -8,7 +8,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { expectSession } from "~/server/auth";
-import { isOfficer } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/auth/permissions";
 import {
   FIELDS,
   isCollection,

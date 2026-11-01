@@ -1,5 +1,5 @@
 import { mayUseGraphics } from "~/lib/graphicsAccess";
-import { getCallerContext } from "~/server/actions/permissions";
+import { getCallerContext } from "~/server/auth/permissions";
 
 /**
  * Who may use the console's graphics: meeting graphics and the brand assets.
