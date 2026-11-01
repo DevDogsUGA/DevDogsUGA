@@ -779,7 +779,7 @@ describe("filing a report (Q119 to Q121)", () => {
   });
 
   it("counts a commit toward a repo only through an approved link", async () => {
-    const mine = await project("D3 Pending Repo", { repos: [], pending: [4] });
+    const mine = await project("D3 Pending Repo", { repos: [1], pending: [4] });
     await commit(MEMBER, 4, "2026-10-10T16:00:00Z", 4);
     expect(
       await fileReport(
