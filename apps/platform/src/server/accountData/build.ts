@@ -283,28 +283,14 @@ export async function buildMemberDataExport(userId: string) {
     ].map((r) => r.row);
   }
 
-  const teamMembershipRequests = [
-    ...(await db.execute<Record<string, unknown>>(
-      sql`select "id", "teamId", "direction", "status",
-                 case when "createdBy" = ${userId}::uuid then "message" end as "message",
-                 "createdAt", "respondedAt"
-          from "platform"."teamMembershipRequests"
-          where "userId" = ${userId}::uuid order by "createdAt"`,
-    )),
-  ];
+  // Teams history lives in archive/, so this export no longer reads the retired
+  // tables. Deploy this reader removal before migration 85 drops them.
   // Reports filed from OAuth apps: the author, the reference and the snapshot describe someone else.
   const sandboxReportsFiled = [
     ...(await db.execute<Record<string, unknown>>(
       sql`select "id", "clientId", "contentType", "reason", "description", "createdAt"
           from "platform"."sandboxReports"
           where "reporterUserId" = ${userId}::uuid order by "createdAt"`,
-    )),
-  ];
-
-  const teamMemberships = [
-    ...(await db.execute<Record<string, unknown>>(
-      sql`select "teamId", "role", "joinedAt", "leftAt" from "platform"."teamMembers"
-          where "userId" = ${userId}::uuid order by "joinedAt"`,
     )),
   ];
 
@@ -323,8 +309,6 @@ export async function buildMemberDataExport(userId: string) {
     roles: memberRoles,
     discordRoleMemberships: discordRoles,
     suspensions,
-    teamMemberships,
-    teamMembershipRequests,
     attendance: attendanceRows,
     reflections: reflectionRows,
     reflectionRevisions: reflectionRevisionRows.map((r) =>
