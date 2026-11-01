@@ -1,11 +1,6 @@
-import { asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "~/server/db";
-import {
-  contributions,
-  projectReportContributions,
-  projectReports,
-  projects,
-} from "~/server/db/schema";
+import { projectReports, projects } from "~/server/db/schema";
 import { commitTitle } from "./policy";
 import { PROJECT_ID_REGEX } from "./slug";
 
@@ -333,15 +328,6 @@ export interface CommitView {
   url: string;
 }
 
-export interface LegacyPullRequest {
-  id: string;
-  repo: string;
-  number: number;
-  title: string;
-  url: string;
-  mergedAt: Date;
-}
-
 export interface ProjectReportView {
   id: string;
   projectId: string;
@@ -359,8 +345,6 @@ export interface ProjectReportView {
   reviewedByName: string | null;
   submittedAt: Date;
   commits: CommitView[];
-  /** Reports from before commit evidence keep their PRs, read-only. */
-  legacyPullRequests: LegacyPullRequest[];
 }
 
 const reportColumns = {
@@ -393,7 +377,7 @@ function asReport(row: ReportRow) {
   return {
     ...(rest as unknown as Omit<
       ProjectReportView,
-      "commits" | "legacyPullRequests" | "hours" | "approvedHours"
+      "commits" | "hours" | "approvedHours"
     >),
     hours: Number(hoursText),
     approvedHours: approvedText === null ? null : Number(approvedText),
@@ -437,46 +421,19 @@ async function withEvidence(
     rows.map((row) => sql`${row.id}::uuid`),
     sql`, `,
   );
-  const [commits, legacy] = await Promise.all([
-    db.execute<CommitRow>(sql`
-      select pc."reportId", c.sha, c.message, c."committedAt", c.files, c.additions, c.deletions,
-        g.owner, g.name as repo
-      from platform."projectReportCommits" pc
-      join platform.commits c on c.sha = pc.sha
-      join platform."githubRepos" g on g."githubRepoId" = pc."githubRepoId"
-      where pc."reportId" in (${ids})
-      order by c."committedAt"`),
-    db
-      .select({
-        reportId: projectReportContributions.reportId,
-        id: contributions.id,
-        repo: contributions.repo,
-        number: contributions.prNumber,
-        title: contributions.title,
-        url: contributions.url,
-        mergedAt: contributions.mergedAt,
-      })
-      .from(projectReportContributions)
-      .innerJoin(
-        contributions,
-        eq(contributions.id, projectReportContributions.contributionId),
-      )
-      .where(
-        inArray(
-          projectReportContributions.reportId,
-          rows.map((row) => row.id),
-        ),
-      )
-      .orderBy(asc(contributions.mergedAt)),
-  ]);
+  const commits = await db.execute<CommitRow>(sql`
+    select pc."reportId", c.sha, c.message, c."committedAt", c.files, c.additions, c.deletions,
+      g.owner, g.name as repo
+    from platform."projectReportCommits" pc
+    join platform.commits c on c.sha = pc.sha
+    join platform."githubRepos" g on g."githubRepoId" = pc."githubRepoId"
+    where pc."reportId" in (${ids})
+    order by c."committedAt"`);
   return rows.map((row) => ({
     ...row,
     commits: commits
       .filter((c) => c.reportId === row.id)
       .map(({ reportId: _reportId, ...c }) => asCommit(c)),
-    legacyPullRequests: legacy
-      .filter((l) => l.reportId === row.id)
-      .map(({ reportId: _reportId, ...pr }) => pr),
   }));
 }
 

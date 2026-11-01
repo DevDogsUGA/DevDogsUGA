@@ -63,10 +63,9 @@ export default async function ProjectReportPage({
       ? existing
       : null;
   const locked = editing?.status === "approved";
-  const legacyEvidence = (editing?.legacyPullRequests.length ?? 0) > 0;
   const path = projectPath(project);
   const commits =
-    verdict === "yes" && !locked && !legacyEvidence
+    verdict === "yes" && !locked
       ? await getEligibleCommits(caller.userId, projectId, editing?.id ?? null)
       : [];
 
@@ -88,10 +87,6 @@ export default async function ProjectReportPage({
       ) : locked ? (
         <Callout tone="success" title="Approved">
           This report is approved and can no longer be changed.
-        </Callout>
-      ) : legacyEvidence ? (
-        <Callout tone="warning" title="This report cites pull requests">
-          It was filed before commit evidence, so it stays as it is.
         </Callout>
       ) : (
         <ReportForm

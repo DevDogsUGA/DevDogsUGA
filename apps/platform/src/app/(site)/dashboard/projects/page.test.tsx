@@ -76,7 +76,6 @@ const report = (over: Record<string, unknown> = {}) => ({
   reviewedByName: "Grace",
   submittedAt: new Date("2026-10-15T12:00:00Z"),
   commits: [],
-  legacyPullRequests: [],
   ...over,
 });
 

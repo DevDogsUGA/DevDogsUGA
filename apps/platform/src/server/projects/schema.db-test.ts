@@ -108,10 +108,10 @@ async function submission() {
 describe("D1 structure", () => {
   it("keeps plain edits working and the new fields defaulted", async () => {
     await query(
-      `update platform.projects set name = 'D178 renamed', description = 'A description', repos = ARRAY['fixture/repo'], "advisorId" = '${ACTOR}' where id = '${PROJECT}'`,
+      `update platform.projects set name = 'D178 renamed', description = 'A description', "advisorId" = '${ACTOR}' where id = '${PROJECT}'`,
     );
     const rows = await query(
-      `select slug, featured, "inSwitcher", "devdogsOwned", status, repos, "advisorId" from platform.projects where id = '${PROJECT}'`,
+      `select slug, featured, "inSwitcher", "devdogsOwned", status, "advisorId" from platform.projects where id = '${PROJECT}'`,
     );
     expect(rows[0]).toMatchObject({
       slug: "d178-fixture",
@@ -119,7 +119,6 @@ describe("D1 structure", () => {
       inSwitcher: false,
       devdogsOwned: false,
       status: "archived",
-      repos: ["fixture/repo"],
       advisorId: ACTOR,
     });
   });
@@ -419,7 +418,7 @@ describe("identity linking, awards and member erasure", () => {
       `insert into platform."projectDocsProposals" ("projectId", "requestedBy", enable, "githubRepoId", "ownerId", slug, "baseSha", state) values ('${PROJECT}', '${ACTOR}', true, ${REPO}, 178, 'd178-project', '${SHA}', 'open')`,
     );
     await query(
-      `update platform.projects set "proposedBy" = '${ACTOR}', "approvedBy" = '${ACTOR}', "advisorId" = '${ACTOR}', "docsConfirmedBy" = '${ACTOR}', "docsConfirmedAt" = now() where id = '${PROJECT}'`,
+      `update platform.projects set "advisorId" = '${ACTOR}', "docsConfirmedBy" = '${ACTOR}', "docsConfirmedAt" = now() where id = '${PROJECT}'`,
     );
     await query(
       `update platform."projectReports" set "reviewedBy" = '${ACTOR}' where id = '${REPORT}'`,
@@ -429,11 +428,7 @@ describe("identity linking, awards and member erasure", () => {
     );
     await deleteMembers([ACTOR]);
     for (const [table, columns, where] of [
-      [
-        "projects",
-        ["advisorId", "proposedBy", "approvedBy", "docsConfirmedBy"],
-        `id = '${PROJECT}'`,
-      ],
+      ["projects", ["advisorId", "docsConfirmedBy"], `id = '${PROJECT}'`],
       ["projectOwners", ["addedBy"], `"projectId" = '${PROJECT}'`],
       [
         "projectRepos",
