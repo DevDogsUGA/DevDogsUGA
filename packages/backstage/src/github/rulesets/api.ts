@@ -28,11 +28,55 @@ const MAX_BUFFER = 16 * 1024 * 1024;
 
 export class GhRulesetsError extends Error {}
 
-function describe(err: unknown): string {
-  const e = err as { stderr?: string; message?: string };
+function describe(err: unknown, includeDetails = false): string {
+  const e = err as { stdout?: string; stderr?: string; message?: string };
   const stderr = (e.stderr ?? "").trim();
   const message = e.message ?? "";
-  return stderr || message || "gh failed with no output.";
+  const summary = stderr || message || "gh failed with no output.";
+  // Read callers classify missing resources from the transport summary.
+  // Free-form API details must not change that classification.
+  if (!includeDetails) return summary;
+  // gh writes the API response to stdout even on a failed request. Only
+  // retain diagnostic fields: never dump the response, request or headers.
+  let response: unknown;
+  try {
+    response = JSON.parse(e.stdout ?? "");
+  } catch {
+    return summary;
+  }
+  if (!response || typeof response !== "object") return summary;
+  const data = response as { message?: unknown; errors?: unknown };
+  const clean = (value: unknown): string =>
+    typeof value === "string"
+      ? value.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ").trim()
+      : "";
+  const details: string[] = [];
+  const responseMessage = clean(data.message);
+  if (responseMessage && !summary.includes(responseMessage)) {
+    details.push(responseMessage);
+  }
+  const errors = Array.isArray(data.errors) ? data.errors : [data.errors];
+  for (const error of errors) {
+    if (typeof error === "string") {
+      const detail = clean(error);
+      if (detail) details.push(detail);
+    } else if (error && typeof error === "object") {
+      const entry = error as {
+        field?: unknown;
+        code?: unknown;
+        message?: unknown;
+      };
+      const detail = ["field", "code", "message"]
+        .map((key) => {
+          const value = clean(entry[key as keyof typeof entry]);
+          return value ? `${key}: ${value}` : "";
+        })
+        .filter(Boolean)
+        .join(", ");
+      if (detail) details.push(detail);
+    }
+  }
+  return [summary, ...details].join("\n");
 }
 
 /** `owner/repo`, e.g. `DevDogsUGA/DevDogsUGA`. */
@@ -125,7 +169,7 @@ async function writeJson(
     child.on("error", (err) => reject(new GhRulesetsError(describe(err))));
     child.on("close", (code) => {
       if (code !== 0) {
-        reject(new GhRulesetsError(describe({ stderr })));
+        reject(new GhRulesetsError(describe({ stdout, stderr }, true)));
         return;
       }
       const trimmed = stdout.trim();
