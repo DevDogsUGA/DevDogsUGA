@@ -19,8 +19,9 @@ runs:
     - name: Enable corepack (pnpm)
       run: corepack enable
       shell: bash
-    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
       with:
+        package-manager-cache: false # cache-pnpm caches, from main only
         node-version-file: .nvmrc
     - uses: ./.github/actions/cache-pnpm
     - name: Install dependencies
