@@ -81,7 +81,7 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
       artifact: ${{ steps.name.outputs.candidate }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
@@ -216,7 +216,7 @@ jobs:
       name: docs-publishing
     steps:
       # Only the publish scripts: no install, no project code, no compiler.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
           sparse-checkout: .github/scripts

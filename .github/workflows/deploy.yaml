@@ -114,7 +114,7 @@ jobs:
       production_catalog: ${{ steps.needed.outputs.production_catalog }}
     steps:
       # Full history: deploy-needed diffs against each tier's last deploy.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - name: Summarize the deploy source
@@ -197,7 +197,7 @@ jobs:
     outputs:
       paused: ${{ steps.probe.outputs.paused }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-workspace
       - uses: ./.github/actions/backstage-cli
       - name: Classify the staging Supabase project
@@ -239,7 +239,7 @@ jobs:
     timeout-minutes: 10
     environment: staging
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-workspace
       - uses: ./.github/actions/backstage-cli
       - name: Upload new seeded headshots
@@ -615,7 +615,7 @@ jobs:
     timeout-minutes: 15
     environment: production
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-workspace
       - uses: ./.github/actions/backstage-cli
       - name: Prune orphaned Worker secrets

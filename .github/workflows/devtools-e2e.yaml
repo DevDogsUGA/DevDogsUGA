@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Enable corepack (pnpm)
         run: corepack enable
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -109,7 +109,7 @@ jobs:
     steps:
       # The product's own main, at the workspace root, so its setup actions and
       # the script that runs its docs' steps are the ones it ships.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: DevDogsUGA/${{ matrix.product }}
           ref: main
@@ -139,7 +139,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: DevDogsUGA/${{ matrix.product }}
           ref: main
@@ -148,7 +148,7 @@ jobs:
           name: devtools-tarball
           path: ${{ runner.temp }}/devtools
       # This repository's scripts, beside the product.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           path: devdogsuga
           sparse-checkout: .github/scripts
@@ -186,7 +186,7 @@ jobs:
       DEVDOGS_OAUTH_BASE_URL: ${{ vars.E2E_OAUTH_BASE_URL }}
       DEVTOOLS_TELEMETRY: "0"
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: DevDogsUGA/${{ matrix.product }}
           ref: main
