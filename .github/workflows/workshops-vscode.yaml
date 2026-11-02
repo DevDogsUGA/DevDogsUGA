@@ -64,7 +64,7 @@ jobs:
       # src/vscode-test/run.ts, so the cache key follows that file.
       - name: Restore the VS Code download
         id: vscode-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: apps/workshops-vscode/.vscode-test
           key: vscode-test-${{ runner.os }}-${{ hashFiles('apps/workshops-vscode/src/vscode-test/run.ts') }}
@@ -73,7 +73,7 @@ jobs:
       # Keep the large download in main's namespace, shared by every PR.
       - name: Save the VS Code download
         if: steps.vscode-cache.outputs.cache-hit != 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && (github.event_name == 'push' || github.event_name == 'schedule')
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: apps/workshops-vscode/.vscode-test
           key: ${{ steps.vscode-cache.outputs.cache-primary-key }}
