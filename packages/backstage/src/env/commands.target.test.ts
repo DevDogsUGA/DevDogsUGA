@@ -124,7 +124,13 @@ vi.mock("./cloudflare.js", () => ({
   })),
 }));
 
-import { projectIdFor } from "../bws/client.js";
+import {
+  projectIdFor,
+  listSecrets as listBwsSecrets,
+  createSecret,
+  updateSecret,
+} from "../bws/client.js";
+import { log, note } from "@clack/prompts";
 import { NoVaultProjectError } from "../bws/environments.js";
 import {
   findRepoRoot,
@@ -306,5 +312,83 @@ describe("the file default, across subcommands", () => {
       seen.push(pathsRead()[0]!);
     }
     expect(new Set(seen)).toEqual(new Set([at(".env.staging")]));
+  });
+});
+
+const mixedTierSecrets = () => [
+  {
+    id: "platform",
+    key: "DEMO_TOKEN",
+    value: "remote",
+    note: "",
+    projectId: "id-of-staging",
+  },
+  ...[
+    "dogdays/DEMO_TOKEN",
+    "dogpack/DEMO_TOKEN",
+    "unknown/KEY",
+    "/KEY",
+    "nested/path/KEY",
+  ].map((key) => ({
+    id: key,
+    key,
+    value: "unrelated",
+    note: "",
+    projectId: "id-of-staging",
+  })),
+];
+
+describe("platform isolation in a shared tier project", () => {
+  it("pulls only keys without a slash", async () => {
+    vi.mocked(listBwsSecrets).mockResolvedValueOnce(mixedTierSecrets());
+    await runEnvPull({ target: "staging", yes: true });
+    expect(writeFile).toHaveBeenCalled();
+    const written = String(writeFile.mock.calls[0]?.[1]);
+    expect(written).toContain('DEMO_TOKEN="remote"');
+    expect(written).not.toMatch(/unrelated|dogdays|dogpack|nested|unknown/);
+  });
+
+  it("updates platform keys without treating any namespaced key as an orphan", async () => {
+    vi.mocked(listBwsSecrets).mockResolvedValueOnce(mixedTierSecrets());
+    vi.mocked(createSecret).mockClear();
+    vi.mocked(updateSecret).mockClear();
+    vi.mocked(log.warn).mockClear();
+    vi.mocked(note).mockClear();
+    await runEnvPush({ target: "staging", yes: true });
+    expect(updateSecret).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "platform", key: "DEMO_TOKEN" }),
+      "local",
+      expect.any(String),
+    );
+    expect(vi.mocked(createSecret).mock.calls.map((call) => call[1])).toEqual([
+      "DEMO_NARROWED_SECRET",
+    ]);
+    expect(
+      [...vi.mocked(note).mock.calls, ...vi.mocked(log.warn).mock.calls]
+        .flat()
+        .filter((value): value is string => typeof value === "string")
+        .join("\n"),
+    ).not.toMatch(/dogdays|dogpack|nested|unknown/);
+  });
+
+  it("produces the same platform audit with or without namespaced keys", async () => {
+    vi.mocked(listBwsSecrets).mockResolvedValueOnce(
+      mixedTierSecrets().slice(0, 1),
+    );
+    vi.mocked(note).mockClear();
+    await runEnvAudit({
+      accessToken: "fake-token",
+      target: "staging",
+      yes: true,
+    });
+    const baseline = vi.mocked(note).mock.calls.map((call) => [...call]);
+    vi.mocked(listBwsSecrets).mockResolvedValueOnce(mixedTierSecrets());
+    vi.mocked(note).mockClear();
+    await runEnvAudit({
+      accessToken: "fake-token",
+      target: "staging",
+      yes: true,
+    });
+    expect(vi.mocked(note).mock.calls).toEqual(baseline);
   });
 });

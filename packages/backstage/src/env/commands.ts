@@ -267,7 +267,10 @@ export async function runEnvPull(options: EnvOptions): Promise<void> {
 
   const projectId = await projectIdFor(spec.project);
   const refused = neverStore();
-  const all = await listBwsSecrets(projectId);
+  // Product credentials share this project; the platform owns only bare keys.
+  const all = (await listBwsSecrets(projectId)).filter(
+    (s) => !s.key.includes("/"),
+  );
 
   // If one of these is in the project it should not be, and writing it into the
   // file people run `pnpm dev` against would spread it further. The audit says
@@ -408,7 +411,9 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
   }
 
   const projectId = await projectIdFor(spec.project);
-  const existing = await listBwsSecrets(projectId);
+  const existing = (await listBwsSecrets(projectId)).filter(
+    (s) => !s.key.includes("/"),
+  );
   const index = byKey(existing);
 
   const created: string[] = [];
@@ -663,7 +668,9 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
   const doc = await readDocument(path);
 
   const projectId = await projectIdFor(spec.project);
-  const bwsSecrets = await listBwsSecrets(projectId);
+  const bwsSecrets = (await listBwsSecrets(projectId)).filter(
+    (s) => !s.key.includes("/"),
+  );
 
   // Every GitHub environment this project feeds, so that a key sitting in the
   // WRONG one is visible rather than merely absent from the right one. Both
@@ -1069,7 +1076,7 @@ async function runProductEnvCommand(
       "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
       "then your Bitwarden vault, and finally by asking.",
       "`gh auth status` shows whether the GitHub CLI is signed in.",
-      `A missing project is created by hand in Secrets Manager: ${product}-<target>.`,
+      `Check that your machine account can access the existing Secrets Manager project "${target}"; product keys use "${product}/<KEY>".`,
     ]);
     process.exitCode = 1;
   }
