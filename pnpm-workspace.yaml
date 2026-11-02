@@ -1,16 +1,3 @@
-# Which dependencies' install scripts may run — pnpm 11's per-dep decision
-# map (it migrated the four `true`s from onlyBuiltDependencies below and
-# inserted the core-js placeholder itself). `false` is a decision, not an
-# omission: core-js (via @bitwarden/cli) postinstalls a funding banner and
-# nothing the package needs to work. supabase is `true` here for the same
-# reason it is in the older list — its postinstall fetches the CLI binary.
-#
-# None of this reaches `pnpm devtools` or `pnpm backstage`: their `pnpm dlx`
-# installs into a throwaway project that ignores this file and prompts for
-# every build script (core-js, esbuild). The root package.json's scripts for
-# them skip them all with ignore-scripts instead. Neither needs any: esbuild
-# finds its prebuilt @esbuild/<platform> binary without its postinstall, and
-# sharp, resvg and the Bitwarden SDK ship prebuilt too.
 allowBuilds:
   '@sentry/cli': true
   core-js: false
@@ -48,7 +35,7 @@ overrides:
 # package stay as literal ranges in that package's package.json.
 catalog:
   # --- Framework / runtime ---
-  next: 16.3.8
+  next: 16.4.1
   react: ^19.3.0
   react-dom: ^19.3.0
 
