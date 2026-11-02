@@ -137,15 +137,18 @@ describe("reads", () => {
     await expect(listRulesets(repo)).rejects.toBeInstanceOf(GhRulesetsError);
   });
 
-  it.each(["Invalid identifier 404", "Related object Not Found"])("keeps read classification independent of details: %s", async (detail) => {
-    fake.state.execResult = Object.assign(new Error("gh failed"), {
-      stderr: "gh: Validation Failed (HTTP 422)",
-      stdout: JSON.stringify({ errors: [detail] }),
-    });
-    await expect(getRuleset(repo, 42)).rejects.toThrow(
-      "gh: Validation Failed (HTTP 422)",
-    );
-  });
+  it.each(["Invalid identifier 404", "Related object Not Found"])(
+    "keeps read classification independent of details: %s",
+    async (detail) => {
+      fake.state.execResult = Object.assign(new Error("gh failed"), {
+        stderr: "gh: Validation Failed (HTTP 422)",
+        stdout: JSON.stringify({ errors: [detail] }),
+      });
+      await expect(getRuleset(repo, 42)).rejects.toThrow(
+        "gh: Validation Failed (HTTP 422)",
+      );
+    },
+  );
 });
 
 const desired: DesiredRuleset = {
