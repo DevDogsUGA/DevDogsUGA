@@ -62,7 +62,7 @@ jobs:
       PLATFORM_SENTRY_DSN: ${{ vars.PLATFORM_SENTRY_DSN }}
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-workspace
       # GitHub hands a missing variable to a workflow as an empty string. An
       # empty API_URL would build a Worker that fails on its first request, not

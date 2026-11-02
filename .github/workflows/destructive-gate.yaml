@@ -55,8 +55,8 @@ jobs:
     steps:
       # The base branch's copy of the script. No `ref:`: this event checks out
       # the base, not the pull request.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: inputs.shared_ref != ''
         with:
           repository: DevDogsUGA/DevDogsUGA
