@@ -85,15 +85,8 @@
             "description": "An HTTPS RSVP event page, such as Bevy or the Involvement Network."
           },
           "cancelledAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "When it was cancelled; null while it is on."
+            "description": "When it was cancelled; null while it is on.",
+            "type": ["string", "null"]
           },
           "cancellationReason": {
             "anyOf": [
