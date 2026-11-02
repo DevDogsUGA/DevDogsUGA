@@ -127,7 +127,7 @@ catalog:
   # Backstage bump, say) would quietly move the CLI too. Its releases are
   # frequent and it has no lockstep with the runtime SDKs (@supabase/* above);
   # bump it by hand here when a new CLI is wanted.
-  supabase: 2.117.0
+  supabase: 2.122.0
   tsx: ^4.23.12
   typescript: ^6.0.3
   # Bumped off 4.133.0 (vinext Phase 0 spike, schedule-builder): the

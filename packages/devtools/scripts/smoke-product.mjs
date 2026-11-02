@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const bin = fileURLToPath(new URL("../bin/devtools.mjs", import.meta.url));
-const PIN = "2.117.0";
+const PIN = "2.122.0";
 
 const product = mkdtempSync(join(tmpdir(), "devtools-smoke-product-"));
 const nowhere = mkdtempSync(join(tmpdir(), "devtools-smoke-empty-"));
