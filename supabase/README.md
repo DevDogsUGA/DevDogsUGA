@@ -32,7 +32,7 @@ the commands on.
 
 ## What was edited by hand after the export
 
-The CLI pinned here (2.117.0) exports two things that do not round-trip, and the
+The CLI pinned here (2.122.0) exports two things that do not round-trip, and the
 tree carries the fix so that the invariant holds:
 
 - **Views.** `platform.memberStars` and `platform.publicProfiles` are server-only
