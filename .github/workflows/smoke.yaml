@@ -43,8 +43,9 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
+          package-manager-cache: false # cache-pnpm caches, from main only
           node-version-file: .nvmrc
       - name: Q39 checks (staging)
         env:
@@ -66,8 +67,9 @@ jobs:
     environment: production-build
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
+          package-manager-cache: false # cache-pnpm caches, from main only
           node-version-file: .nvmrc
       - name: Q39 checks (production, read-only)
         env:
