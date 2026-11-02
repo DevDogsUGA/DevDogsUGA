@@ -222,7 +222,7 @@ describe("--repo DogDays, DogPack and all", () => {
       expect(printed).toContain(`+ create   "${name}"`);
     }
     expect(printed).toContain("does not exist yet");
-    expect(printed).toContain("required_signatures");
+    expect(printed).toContain("non_fast_forward");
 
     expect(
       await runGithubRulesets(["--repo", "DogDays", "--apply", "--yes"]),

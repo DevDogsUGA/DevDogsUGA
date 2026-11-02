@@ -16,7 +16,6 @@ One shared preset, `renovate/default.json` in DevDogsUGA, configures Renovate fo
 - **Majors** arrive one at a time, on any day, labelled `needs-officer`, and are never merged automatically.
 - **`@devdogsuga/*` and `devdogsuga_sdk`** bump as soon as they publish and merge by themselves in the product repositories; there is no release-age wait for our own packages.
 - **Vulnerability alerts** open at any time with the `security` label, and are never held back by the age gate. They do not auto-merge: read them.
-- Commits are signed through GitHub's API, so they satisfy the [signed-commits rule](./rulesets.md).
 
 ## The Supabase CLI is special
 
@@ -35,7 +34,6 @@ It used to be Mend's hosted Renovate app. Mend's runners have a fixed memory lim
 Renovate signs in as the `devdogs-renovate` GitHub App, owned by the organization. Using an App rather than the workflow's own token means:
 
 - its pull requests trigger CI (pull requests opened with the workflow token do not);
-- its commits are signed by GitHub, so they pass the signed-commits rule;
 - the rulesets can name it: `main-reviews` lets it open pull requests without a review, never push.
 
 The App needs these repository permissions: Administration (read), Checks, Commit statuses, Contents, Issues, Pull requests and Workflows (read and write), and Dependabot alerts (read); plus Members (read) for the organization. An organization owner installs it on DevDogsUGA, DogDays and DogPack ([Owner-only actions](./owner-actions.md)); a repository it cannot see is skipped, and `backstage github rulesets --apply` fails on it. The workflow reads the App's client ID from the `renovate` environment's `RENOVATE_APP_CLIENT_ID` variable and its private key from the `RENOVATE_APP_PRIVATE_KEY` secret, which holds the whole `.pem` file. The environment has no reviewers, since a scheduled job cannot wait for one, and only `main` may use it.

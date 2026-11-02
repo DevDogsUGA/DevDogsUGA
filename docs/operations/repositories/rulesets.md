@@ -1,13 +1,13 @@
 ---
-name: Rulesets and signed commits
-description: The branch rules on DevDogsUGA, DogDays and DogPack - signed commits, merge queue, squash only - how to preview and apply them, and how to set up a signing key.
+name: Rulesets
+description: The branch rules on DevDogsUGA, DogDays and DogPack - merge queue, squash only, required checks - and how to preview and apply them.
 order: 1
 section: infrastructure
 ---
 
-# Rulesets and signed commits
+# Rulesets
 
-All three repositories carry the same four rulesets on `main` (built by one function, `mainRulesets` in `desired.ts`; only the required checks differ): **signed commits**, a **merge queue**, **squash merges only**, one code-owner review, and the required checks including the [destructive gate](../deploys/destructive-changes.md). The rules are code, in `packages/backstage/src/github/rulesets/`, and applying them is a deliberate step by an organization admin.
+All three repositories carry the same four rulesets on `main` (built by one function, `mainRulesets` in `desired.ts`; only the required checks differ): a **merge queue**, **squash merges only**, one code-owner review, and the required checks including the [destructive gate](../deploys/destructive-changes.md). The rules are code, in `packages/backstage/src/github/rulesets/`, and applying them is a deliberate step by an organization admin.
 
 ## Preview, then apply
 
@@ -31,7 +31,7 @@ Nothing restricts updating `main` itself or creating, updating and deleting any 
 
 | Ruleset            | Purpose                                                                                                                                                                                                                                                         |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main-integrity`   | No deleting or force-pushing `main`, and **signed commits only**. No bypass for anyone.                                                                                                                                                                         |
+| `main-integrity`   | No deleting or force-pushing `main`. No bypass for anyone. (Signed commits were required here until 11-02.)                                                                                                                                                     |
 | `main-reviews`     | Pull requests only; squash only; one code-owner approval; threads resolved. Admins bypass; Renovate may open its own pull requests but not push.                                                                                                                |
 | `main-ci`          | Required checks: `validate`, `database`, `toolchain` and `dart-sdk` in DevDogsUGA, `flutter` in DogPack, `destructive-sql` and `destructive-gate` (in the product repositories `destructive-gate / destructive-sql` and `destructive-gate / destructive-gate`). |
 | `main-merge-queue` | Squash, up to five entries built and merged together, all checks green.                                                                                                                                                                                         |
@@ -47,17 +47,6 @@ node packages/backstage/bin/backstage.mjs github rulesets --repo DevDogsUGA --ap
 ```
 
 A bypass actor bypasses **every** rule in its ruleset, which is why they are split: letting admins push directly past the review rule must not also let them force-push.
-
-## Signed commits
-
-Merges made by the merge queue are signed by GitHub. A **direct push** to `main` (an admin, in an emergency) needs the pusher's own signing key, or it is refused. Set yours up before you need it:
-
-1. Create an SSH signing key: `ssh-keygen -t ed25519 -C "you@example.org" -f ~/.ssh/id_signing`.
-2. Add the public key on GitHub under **Settings, SSH and GPG keys**, as a **Signing Key** (not an authentication key).
-3. Tell git: `git config --global gpg.format ssh`, `git config --global user.signingkey ~/.ssh/id_signing.pub`, `git config --global commit.gpgsign true`.
-4. Push a commit anywhere and confirm GitHub shows **Verified**.
-
-Renovate signs its commits through GitHub's API (`platformCommit` in the shared preset), so its pull requests pass.
 
 ## When a check name changes
 

@@ -33,7 +33,7 @@ Everyone else works from a fork. Nobody but the people above, and the `team-*` t
 
 **Repositories**
 
-- [Rulesets and signed commits](./repositories/rulesets.md)
+- [Rulesets](./repositories/rulesets.md)
 - [Renovate](./repositories/renovate.md)
 - [Product repository CI](./repositories/product-ci.md): the caller job names the product rulesets require.
 - [Owner-only actions](./repositories/owner-actions.md)

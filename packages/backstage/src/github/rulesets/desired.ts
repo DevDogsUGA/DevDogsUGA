@@ -148,9 +148,8 @@ export function buildDesiredRulesets(
  * TASK-334, TASK-342); only the required checks differ.
  *
  * - `main-integrity` has no bypass actor, so nobody can delete `main`,
- *   force-push it, or push an unsigned commit to it. An owner who pushes
- *   directly needs a signing key (the runbook says how). The merge queue's
- *   squash commits are signed by GitHub.
+ *   or force-push it. Signed commits were required until 11-02; the rule
+ *   was dropped from every repository.
  * - `main-reviews`: pull requests only, one approving review from a code
  *   owner, squash merges only. Renovate may open its own pull requests past
  *   the review count (`pull_request`, never a push); admins always bypass.
@@ -172,11 +171,7 @@ function mainRulesets(
       enforcement: "active",
       conditions: main,
       bypass_actors: [],
-      rules: [
-        { type: "deletion" },
-        { type: "non_fast_forward" },
-        { type: "required_signatures" },
-      ],
+      rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
     },
     {
       name: "main-reviews",

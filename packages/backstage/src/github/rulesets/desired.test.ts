@@ -31,11 +31,7 @@ describe("buildDesiredRulesets", () => {
       desired.find((rule) => rule.name === "main-integrity"),
     ).toMatchObject({
       bypass_actors: [],
-      rules: [
-        { type: "deletion" },
-        { type: "non_fast_forward" },
-        { type: "required_signatures" },
-      ],
+      rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
     });
   });
 
@@ -302,18 +298,9 @@ describe("buildDesiredRulesets for Backstage", () => {
 
   it("matches DevDogsUGA's main-integrity and main-reviews", () => {
     const dd = buildDesiredRulesets(actors);
-    // Backstage is archived by the fold-back, so it never gained signed
-    // commits: the one difference from DevDogsUGA's `main-integrity`.
-    const integrity = (rules: typeof dd) =>
-      rules
-        .find((r) => r.name === "main-integrity")!
-        .rules.map((rule) => rule.type);
-    expect(integrity(without)).toEqual(["deletion", "non_fast_forward"]);
-    expect(integrity(dd)).toEqual([
-      "deletion",
-      "non_fast_forward",
-      "required_signatures",
-    ]);
+    expect(without.find((r) => r.name === "main-integrity")).toEqual(
+      dd.find((r) => r.name === "main-integrity"),
+    );
     expect(without.find((r) => r.name === "main-reviews")).toEqual(
       dd.find((r) => r.name === "main-reviews"),
     );
@@ -398,14 +385,10 @@ describe("buildDesiredRulesets for the product repositories", () => {
         ]);
       });
 
-      it("requires signed commits with no bypass at all", () => {
+      it("blocks deleting and force-pushing main, with no bypass at all", () => {
         expect(named("main-integrity")).toMatchObject({
           bypass_actors: [],
-          rules: [
-            { type: "deletion" },
-            { type: "non_fast_forward" },
-            { type: "required_signatures" },
-          ],
+          rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
         });
       });
 
