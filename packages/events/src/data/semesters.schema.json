@@ -74,7 +74,10 @@
                         "minimum": 1,
                         "maximum": 9007199254740991
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
                   }
                 },
                 "description": "Week (its Monday) to the runs of characters that week lights, as [line, column, length]."
