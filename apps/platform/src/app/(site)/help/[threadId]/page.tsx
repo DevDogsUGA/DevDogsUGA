@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import PageShell from "~/components/PageShell";
-import AnsweredQuestion from "~/components/SupportWidget/AnsweredQuestion";
+import PageShell from "~/classic/components/PageShell";
+import AnsweredQuestion from "~/classic/components/SupportWidget/AnsweredQuestion";
 import { getPublishedFaqPost } from "~/server/support/forumIndex";
 
 /**

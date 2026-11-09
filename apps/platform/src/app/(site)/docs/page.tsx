@@ -1,25 +1,15 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import DocsProjectMark from "~/components/DocsProjectMark";
+import PageShell from "~/classic/components/PageShell";
+import DocsProjectMark from "~/classic/components/DocsProjectMark";
+import DocsTileGrid, { type DocsTile } from "~/classic/components/DocsTileGrid";
 import {
-  CourseStatus,
-  ContinueStrip,
-  type HubCourse,
-} from "~/components/DocsProgress/HubProgress";
-import DocsTileGrid, { type DocsTile } from "~/components/DocsTileGrid";
-import type { DocsMenuEntry } from "~/config/docs";
-import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
-import type { DocsTreeNode } from "~/lib/docsTree";
-import "~/components/Docs/docs.css";
-import { getContributeMenu, getDocsMenu } from "~/server/docs/menu";
-import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
+  DOCS_LANDING_LARGE,
+  DOCS_LANDING_SMALL,
+  DOCS_LANDING_WORKSHOPS,
+} from "~/classic/config/docs";
+import { getDocsProjects, type DocsProject } from "~/server/docs/queries";
 
-/**
- * The Docs half is built from `docs/` at build time, so it can't change until
- * the next deploy. The Contribute half is
- * read from the Projects (`getContributeMenu`), whose cache is tagged, so a
- * project's first publication or an edit to its name refreshes the page.
- */
+/** Built from `docs/` at build time, so it can't change until the next deploy. */
 export const revalidate = false;
 
 export const metadata: Metadata = {
@@ -27,136 +17,89 @@ export const metadata: Metadata = {
   description: "Documentation for DevDogs projects.",
 };
 
-function tile(entry: DocsMenuEntry): DocsTile {
+function tile(project: DocsProject, size: "sm" | "lg"): DocsTile {
   return {
-    href: entry.href,
-    title: entry.name,
-    description: entry.description,
-    mark: <DocsProjectMark mark={entry.mark} size="lg" />,
+    href: `/docs/${encodeURIComponent(project.slug)}`,
+    title: project.name,
+    description: project.description,
+    mark: <DocsProjectMark slug={project.slug} size={size} />,
   };
 }
 
-/** Every `steps: true` folder under a project, as a course. A course's steps are its direct pages. */
-function coursesIn(
-  project: string,
-  nodes: DocsTreeNode[],
-  trail: string[] = [],
-): HubCourse[] {
-  return nodes.flatMap((node): HubCourse[] => {
-    if (node.type !== "folder") return [];
-    if (!node.steps)
-      return coursesIn(project, node.children, [...trail, node.name]);
-    const steps = node.children.flatMap((child) =>
-      child.type === "page"
-        ? [
-            {
-              path: child.path,
-              title: child.title,
-              href: docsHref(project, child.path.split("/"), DOCS_BASE),
-            },
-          ]
-        : [],
-    );
-    if (steps.length === 0) return [];
-    return [
-      {
-        project,
-        name: [...trail.slice(-1), node.name].join(" · "),
-        href: docsHref(project, node.path.split("/"), DOCS_BASE),
-        steps,
-      },
-    ];
-  });
+/** `slugs` in listing order, keeping only the projects that actually exist —
+ * a slug named here with no matching `docs/<slug>/index.md` drops silently
+ * rather than throwing: documenting a project must never break this page. */
+function projectsFor(
+  projects: DocsProject[],
+  slugs: readonly string[],
+): DocsProject[] {
+  return slugs
+    .map((slug) => projects.find((project) => project.slug === slug))
+    .filter((project): project is DocsProject => project != null);
 }
 
 export default async function DocsLandingPage() {
   const projects = getDocsProjects();
-  const [docs, contribute] = await Promise.all([
-    getDocsMenu(),
-    getContributeMenu(),
-  ]);
-  const workshops = docs.filter((entry) => entry.project === "workshops");
-  const courses =
-    workshops.length > 0
-      ? coursesIn("workshops", await getDocsTree("workshops"))
-      : [];
-  // Everything the Docs menu lists except the workshops, which have their own
-  // group of courses above.
-  const guides = docs.filter((entry) => entry.project !== "workshops");
+  const large = projectsFor(projects, DOCS_LANDING_LARGE);
+  const small = projectsFor(projects, DOCS_LANDING_SMALL);
+  const workshops = projectsFor(projects, DOCS_LANDING_WORKSHOPS);
 
   return (
-    <div className="wrap">
-      <div className="docs-hub">
-        <h1>Docs</h1>
-        <p className="docs-hub-lead">
-          Follow a workshop course one step at a time, or read how a DevDogs
-          project works. Everything here is free and open source.
-        </p>
+    <PageShell
+      accent="cyan"
+      title="Documentation"
+      description="Guides and references for DevDogs projects, published straight from the monorepo."
+    >
+      <div className="flex flex-col gap-8">
+        {/* The front door: which product a new contributor is actually
+            choosing between. Large marks, because this is the one
+            place in the docs a reader is picking a destination rather than
+            looking something up. */}
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
+            Which project are you working on?
+          </h2>
+          <DocsTileGrid tiles={large.map((project) => tile(project, "lg"))} />
+          <p className="text-sm text-mauve-400">
+            Not on a project yet?{" "}
+            <a
+              href="/discord"
+              className="font-medium text-mauve-200 underline-offset-4 hover:text-white hover:underline"
+            >
+              Ask in Discord
+            </a>
+            .
+          </p>
+        </section>
 
-        <ContinueStrip courses={courses} />
-
-        {(courses.length > 0 || workshops.length > 0) && (
-          <section className="docs-group" aria-labelledby="docs-h-courses">
-            <h2 id="docs-h-courses">Workshop courses</h2>
-            <p>
-              Step-by-step courses from our workshops. A new step opens after
-              each workshop.
-            </p>
+        {workshops.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
+              Missed a workshop?
+            </h2>
             <DocsTileGrid
-              tiles={[
-                ...courses.map((course): DocsTile => ({
-                  href: course.href,
-                  title: course.name,
-                  description: `${course.steps.length} steps`,
-                  status: <CourseStatus course={course} />,
-                  mark: <DocsProjectMark mark={workshops[0]!.mark} size="lg" />,
-                })),
-                ...workshops.map((entry) => tile(entry)),
-              ]}
+              tiles={workshops.map((project) => tile(project, "sm"))}
             />
           </section>
         )}
 
-        {guides.length > 0 && (
-          <section className="docs-group" aria-labelledby="docs-h-docs">
-            <h2 id="docs-h-docs">Tooling and guides</h2>
-            <p>
-              The shared tooling, how the club runs it, and the guides for
-              building on DevDogs.
-            </p>
-            <DocsTileGrid tiles={guides.map((entry) => tile(entry))} />
+        {/* Everyone touches these two whichever product they pick, so they stay one
+            tap away without competing with the choice above. */}
+        {small.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
+              Repo-wide
+            </h2>
+            <DocsTileGrid tiles={small.map((project) => tile(project, "sm"))} />
           </section>
         )}
-
-        {contribute.length > 0 && (
-          <section className="docs-group" aria-labelledby="contribute">
-            <h2 id="contribute">Contribute</h2>
-            <p>
-              How each club project runs, and how to contribute, written by the
-              projects themselves. The code is public under BSD-3.
-            </p>
-            <DocsTileGrid tiles={contribute.map((entry) => tile(entry))} />
-          </section>
-        )}
-
-        {projects.length === 0 && (
-          <p className="docs-hubfoot">
-            No documentation has been published yet.
-          </p>
-        )}
-
-        <p className="docs-hubfoot">
-          Stuck? Ask in{" "}
-          <a className="textlink" href="/discord">
-            Discord
-          </a>
-          . Want to register an app that signs in with DevDogs? See{" "}
-          <Link className="textlink" href="/dashboard/oauth">
-            OAuth apps
-          </Link>
-          .
-        </p>
       </div>
-    </div>
+
+      {projects.length === 0 && (
+        <p className="text-sm text-mauve-400">
+          No documentation has been published yet.
+        </p>
+      )}
+    </PageShell>
   );
 }

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { DocsPageRoute, docsPageMetadata } from "~/components/DocsRoute";
+import {
+  DocsPageRoute,
+  docsPageMetadata,
+} from "~/classic/components/DocsRoute";
 import { allFolders, type DocsTreeNode } from "~/lib/docsTree";
 import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
 

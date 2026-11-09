@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import EventsBody from "~/components/EventsSection/EventsBody";
-import { DirectionsRoute } from "~/components/EventsSection/FindUs";
-import FindUsContent from "~/components/EventsSection/FindUs/FindUsContent";
+import FindUsContent from "~/classic/components/EventsSection/FindUs/FindUsContent";
 import { placeBlurb } from "~/components/EventsSection/FindUs/place";
 import { directionsTarget } from "~/components/EventsSection/FindUs/placeLookup";
 
@@ -22,14 +20,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * Directions are a drawer, not a page (D1): this URL renders the events page
- * with the drawer open over it. The schedule is the same cached read `/events`
- * uses; only the drawer depends on the request.
+ * The dialog's body; the segment's layout supplies the dialog around it.
  *
- * The place rides in the query string (`v` a venue id, `b` a map building,
- * `r` a room) rather than a route segment, so one page serves every venue and
- * the link a meeting hands out stays pasteable. See `directionsTarget` for how
- * a partial link resolves; an unrecognised one says so and is never the DLW.
+ * The place rides in the query string (`v` a venue id, `b` a map building, `r`
+ * a room) rather than a route segment, so one page serves every venue and the
+ * link a meeting hands out stays pasteable. See `directionsTarget` for how a
+ * partial link resolves; an unrecognised one says so and is never the DLW.
  */
 export default async function DirectionsPage({
   searchParams,
@@ -37,12 +33,5 @@ export default async function DirectionsPage({
   const { v, b, r } = await searchParams;
   const place = directionsTarget(v, b, r);
 
-  return (
-    <>
-      <EventsBody />
-      <DirectionsRoute place={place}>
-        <FindUsContent place={place} />
-      </DirectionsRoute>
-    </>
-  );
+  return <FindUsContent place={place} heading />;
 }

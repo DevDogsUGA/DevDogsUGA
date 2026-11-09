@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { loadCaller } from "~/server/auth/access";
 import { buildAppSearchEntries } from "~/server/search/appEntries";
 import { searchDocs } from "~/server/search/docsSearch";
-import { searchPublishedDocs } from "~/server/search/publishedDocsSearch";
 import { matchEntries } from "~/server/search/match";
 import { supportConfig } from "~/server/support/config";
 import { searchForumEntries } from "~/server/support/search";
@@ -32,17 +31,13 @@ export async function GET(request: Request) {
   const appEntries = buildAppSearchEntries(caller);
 
   const pages = matchEntries(appEntries, query, 8);
-  const [docs, publishedDocs, forum] = await Promise.all([
+  const [docs, forum] = await Promise.all([
     searchDocs(query, { limit: 10 }).catch((error) => {
       console.error("[search] docs full-text search failed", error);
       return [];
     }),
-    // Projects published through the docs pipeline, matched in memory from
-    // their `search.json`; nothing is written to the database index.
-    searchPublishedDocs(query, { limit: 5 }).catch((error) => {
-      console.error("[search] published docs search failed", error);
-      return [];
-    }),
+    // Project-published docs (`searchPublishedDocs`) are not offered while the
+    // project-docs surface is parked (pre-Cosmic rollback); their routes 404.
     // Anonymized FAQ posts from the support forum. Off with the widget.
     supportConfig()
       ? searchForumEntries(query, 5).catch((error) => {
@@ -56,7 +51,6 @@ export async function GET(request: Request) {
     ...(supportConfig() && HELP_QUERY.test(query) ? [GET_HELP] : []),
     ...pages,
     ...docs,
-    ...publishedDocs,
     ...forum,
   ]);
 }

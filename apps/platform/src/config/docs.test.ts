@@ -40,7 +40,7 @@ describe("the label and mark maps are gone", () => {
     }
   });
 
-  it("is named by nothing in the platform's source, docs, workflows or guides", () => {
+  it("is named by nothing in the platform's source, docs, workflows or guides, bar the pre-Cosmic rollback's copy under src/classic", () => {
     const here = new URL(import.meta.url).pathname;
     const roots = [
       SRC,
@@ -50,7 +50,14 @@ describe("the label and mark maps are gone", () => {
     const files = roots.flatMap((root) =>
       sources(root).filter(
         (f) =>
-          f !== here && !f.includes("/dist/") && !f.includes("node_modules"),
+          f !== here &&
+          // The rollback restores the baseline docs hub and sidebar under
+          // src/classic and in the /docs hub page, which still read these maps
+          // (`classic/config/docs`).
+          !f.includes("/src/classic/") &&
+          !f.endsWith("/src/app/(site)/docs/page.tsx") &&
+          !f.includes("/dist/") &&
+          !f.includes("node_modules"),
       ),
     );
     expect(files.length).toBeGreaterThan(100);

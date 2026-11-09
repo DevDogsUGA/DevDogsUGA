@@ -1,38 +1,27 @@
-import { Skeleton } from "~/ui/skeleton";
-
 /**
  * What appears between the click and the meeting arriving.
  *
  * The `(site)` layout reads auth cookies, so every route under it is dynamic,
  * and a dynamic route is not prefetched at all unless it has a loading
- * boundary. Without this file, hovering a meeting link fetches nothing.
+ * boundary. Without this file, hovering a meeting link fetches nothing, and the
+ * dialog opens on an empty frame while the query runs.
  *
- * It is shaped like the page it stands in for: head, then the rail beside the
- * body, so nothing jumps when the real content lands.
+ * It is shaped like the body it stands in for: badge row, a line of prose, the
+ * location, two agenda rows. The dialog then does not resize under the reader
+ * the moment the real content lands.
  */
 export default function Loading() {
   return (
-    <div aria-busy>
-      <section className="pagehead" aria-hidden>
-        <div className="wrap ev-fill">
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="mt-6 h-6 w-24" />
-          <Skeleton className="mt-4 h-14 w-2/3" />
-          <Skeleton className="mt-4 h-5 w-80 max-w-full" />
-        </div>
-      </section>
-      <div className="wrap ev-fill" aria-hidden>
-        <div className="ev-detail">
-          <aside className="ev-rail">
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </aside>
-          <div className="ev-main">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="mt-4 h-4 w-full" />
-            <Skeleton className="mt-2 h-4 w-3/4" />
-          </div>
-        </div>
+    <div aria-busy className="flex animate-pulse flex-col gap-4">
+      <div aria-hidden className="flex gap-2">
+        <div className="h-5 w-20 rounded-full bg-white/10" />
+        <div className="h-5 w-24 rounded-full bg-white/10" />
+      </div>
+      <div aria-hidden className="h-4 w-40 rounded-sm bg-white/10" />
+      <div aria-hidden className="h-4 w-2/3 rounded-sm bg-white/10" />
+      <div aria-hidden className="flex flex-col gap-2">
+        <div className="h-14 rounded-lg border border-white/10 bg-white/5" />
+        <div className="h-14 rounded-lg border border-white/10 bg-white/5" />
       </div>
     </div>
   );

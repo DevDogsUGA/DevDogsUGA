@@ -1,16 +1,59 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { cancellationNotice } from "~/components/EventsSection/meetingView";
-import MeetingDetail from "~/components/EventsSection/MeetingDetail";
-import { meetingTitle } from "~/lib/meetingTitle";
+import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
+import {
+  ACTION_PRIMARY_DARK_CLS,
+  CANCELLED_LABEL,
+  cancellationNotice,
+  CHIP_DARK_CLS,
+  meetingBadges,
+  segmentBadge,
+} from "~/classic/components/EventsSection/meetingView";
+import Callout from "~/classic/ui/callout";
+import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import { locationLine } from "~/components/EventsSection/FindUs/buildings";
-import { formatEventSpan } from "~/lib/eventTime";
+import {
+  describePlace,
+  hasDirections,
+} from "~/components/EventsSection/FindUs/place";
+import { placeOfMeeting } from "~/components/EventsSection/FindUs/placeLookup";
+import FindUs from "~/classic/components/EventsSection/FindUs";
+import AddToCalendar from "~/classic/components/EventsSection/AddToCalendar";
+import { calendarLinks } from "~/lib/calendarEvent";
+import { env } from "~/env";
+import {
+  formatEventSpan,
+  formatEventTime,
+  formatRelative,
+} from "~/lib/eventTime";
+import JsonLd, { eventLd } from "~/lib/structuredData";
 import {
   getMeetingBySlug,
   getMeetingWorkshops,
-  getUpcomingMeetings,
+  resolveMeetingSegments,
+  type MeetingWorkshop,
 } from "~/server/loaders/meetings";
+
+/**
+ * /events/[slug], one meeting, as the body of the dialog its layout opens.
+ *
+ * The STRUCTURE here is derived and stays that way: the segments come from
+ * `resolveMeetingSegments` and the agenda from the workshops attached to the
+ * meeting. Nothing restates in prose what the schedule already
+ * knows, because that copy goes stale the moment the schedule moves and this
+ * URL exists to be pasted into Discord weeks in advance.
+ *
+ * Three authored fields are allowed through, separated from the rule above by
+ * what they are ABOUT. `summary` and `nameOverride` describe the night, so
+ * they are timing-shaped and held to one or two sentences an officer rewrites
+ * when the night changes. `workshops.description` describes what a session
+ * TEACHES, which does not move when the calendar does: a Supabase workshop
+ * covers the same ground whichever Monday it lands on. It earns its place
+ * because "this is self-contained and assumes no prior work" is the most
+ * useful thing a prospective member can read here, and no derived structure
+ * can say it.
+ */
 
 /**
  * Per-meeting metadata, because this URL is made to be handed around.
@@ -64,38 +107,266 @@ export async function generateMetadata({
   };
 }
 
-/**
- * /events/[slug], one meeting, as a full page (`event-detail.html`). The page
- * itself only loads; `MeetingDetail` draws it, so every state of it (upcoming,
- * happening now, ended, cancelled) can be rendered from plain props.
- */
 export default async function MeetingPage({
   params,
 }: PageProps<"/events/[slug]">) {
-  // The page compares against now: whether the meeting is on, how far off it
-  // is. `connection()` opts the segment out of prerendering so those are
-  // answered for this request rather than frozen at build time.
+  // Every line below is a comparison against now: whether the meeting is on,
+  // how far off it is, whether there is a form to point at. `connection()`
+  // opts the segment out of prerendering so those are answered for this
+  // request rather than frozen at build time.
   await connection();
 
   const { slug } = await params;
   const meeting = await getMeetingBySlug(slug);
+  // The layout renders the dialog frame either way and falls back in its
+  // header; this interrupt swaps only the body for `not-found.tsx`, so the
+  // miss stays inside the dialog with the calendar still behind it.
   if (!meeting) notFound();
 
-  const [workshops, upcoming] = await Promise.all([
-    getMeetingWorkshops(meeting.id),
-    getUpcomingMeetings(5),
-  ]);
+  const workshops = await getMeetingWorkshops(meeting.id);
+
+  // Both derived and authored are rendered: a social that also runs a workshop
+  // is a real night, and showing only the kind would drop the workshop.
+  // `segments` is empty for a night an officer named, so the composition has to
+  // happen somewhere, and `meetingBadges` is that somewhere.
+  const { segments } = resolveMeetingSegments({ workshops });
+  const badges = meetingBadges({ category: meeting.category, segments });
+
+  // Read once and threaded through everything below, so the three questions
+  // that depend on it (happening now, ended, is the form live) cannot disagree
+  // because the clock ticked between them. Reading it in render is only legal
+  // because of the `await connection()` above, which makes this a request
+  // rather than a prerender.
+  const now = new Date();
+  const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
+  const ended = now >= meeting.endsAt;
+  // A cancelled night is still a night with a page, a room and an agenda. Only
+  // the clock-shaped claims and the two actions come off it below.
+  const cancelled = meeting.cancelledAt !== null;
+  const where = locationLine(meeting.building, meeting.location);
+  // Where the night is, from the venue catalog: it names the venue and room a
+  // reconciled row carries, and falls back to the mapped building of an older
+  // row. A place nobody recognises says so rather than guessing a room.
+  const place = placeOfMeeting(meeting);
+  const placeTitle =
+    place.state === "known" ? describePlace(place).title : null;
+  const eventUrl = `${env.BASE_URL.replace(/\/$/, "")}/events/${encodeURIComponent(slug)}`;
+  const addToCalendar = calendarLinks({
+    title: meetingTitle(meeting, workshops),
+    startsAt: meeting.startsAt,
+    endsAt: meeting.endsAt,
+    location: where,
+    summary: meeting.summary,
+    rsvpUrl: meeting.rsvpUrl,
+    eventUrl,
+  });
 
   return (
-    <MeetingDetail
-      slug={slug}
-      meeting={meeting}
-      workshops={workshops}
-      upcoming={upcoming}
-      // Read once and threaded through everything below, so the questions that
-      // depend on it (happening now, ended) cannot disagree because the clock
-      // ticked between them. Legal in render only because of `connection()`.
-      now={new Date()}
-    />
+    <>
+      {/* The facts the dialog prints, in the vocabulary a crawler reads, so
+          this URL shows up as an event with its date rather than one more page.
+          `where` is the value computed above rather than a second call, so the
+          structured location and the visible one are the same string by
+          construction. Nothing here is authored: every field comes off the
+          meeting row, and `eventLd` omits the ones it cannot fill. */}
+      <JsonLd
+        data={eventLd({
+          slug,
+          // Google's Event rich-result guidelines want a name and most nights
+          // have no authored one, so this derives rather than reading the
+          // column. It is the same string the tab and the dialog title use,
+          // computed once so the three cannot drift.
+          name: meetingTitle(meeting, workshops),
+          startsAt: meeting.startsAt,
+          endsAt: meeting.endsAt,
+          summary: meeting.summary,
+          where,
+          cancelledAt: meeting.cancelledAt,
+        })}
+      />
+      {/* Derived chips then the officer's kind, which prints itself in the
+          neutral pill when it has no hue of its own. See `kindBadge`. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {badges.map((badge) => (
+          <span
+            key={badge.label}
+            className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
+          >
+            {badge.label}
+          </span>
+        ))}
+      </div>
+
+      {/* A cancelled night keeps this URL rather than 404ing, for the same
+          reason the schedule keeps its row: the link is already in Discord and
+          in people's calendars, and a vanished page tells a member nothing.
+          They walk over anyway. So the notice comes first and the agenda below
+          stays rendered: what was going to happen is still what somebody
+          clicked to find out.
+
+          `cancellationReason` is null even on a cancelled night, because the
+          fact and the explanation arrive in separate keystrokes. The word
+          carries the meaning alone and the reason extends it when there is
+          one. */}
+      {cancelled && (
+        // `Callout tone="critical"`, not a hand-rolled block. The classes here
+        // were `border-rose-400/30 bg-rose-400/10 text-rose-200`, character for
+        // character `TONE_CLASSES.critical`, with a bolded first line, which is
+        // what `title` is. Callout exists because these had been nine separate
+        // inline blocks each picking its own radius and padding. This was the
+        // tenth, and already disagreed with it on both.
+        <Callout tone="critical" title={CANCELLED_LABEL}>
+          {meeting.cancellationReason}
+        </Callout>
+      )}
+
+      {/* The span itself is in the dialog header, where it stays put while
+          this scrolls; what belongs here is the bit that needs the clock.
+          Suppressed entirely for a cancelled night: "starts in two days" is the
+          wrong half of that sentence, and the notice above has already said the
+          useful one. */}
+      {!cancelled && (
+        <p className="text-sm font-semibold text-white">
+          {happeningNow ? (
+            <>Happening now — until {formatEventTime(meeting.endsAt)}</>
+          ) : ended ? (
+            <>
+              Ended{" "}
+              <time dateTime={meeting.endsAt.toISOString()}>
+                {formatRelative(meeting.endsAt, now)}
+              </time>
+            </>
+          ) : (
+            <>
+              Starts{" "}
+              <time dateTime={meeting.startsAt.toISOString()}>
+                {formatRelative(meeting.startsAt, now)}
+              </time>
+            </>
+          )}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="flex items-center gap-2 text-sm text-mauve-300">
+          <MapPinIcon className="shrink-0 text-mauve-400" weight="fill" />
+          {placeTitle ?? where ?? "Room to be announced"}
+        </p>
+      </div>
+
+      {/* Plain text authored in config, rendered as text. Never as markup: it
+          is typed by an officer, not authored as markup in this repo. */}
+      {meeting.summary !== null && (
+        <p className="text-sm/relaxed text-mauve-300">{meeting.summary}</p>
+      )}
+
+      {workshops.length > 0 && (
+        <section className="flex flex-col gap-2">
+          {/* h3, not h2. The dialog's own title is the h2 here, since Radix
+            renders `DialogTitle` as one and uses it for the accessible name, so
+            a section inside the body has to sit a level below it rather than
+            beside it, or a screen reader reads the agenda as a sibling of the
+            meeting rather than part of it. */}
+          <h3 className="font-display text-xs font-extrabold tracking-wide text-mauve-400 uppercase">
+            Agenda
+          </h3>
+          <ul className="flex flex-col gap-2">
+            {/* A workshop has no start of its own. The only honest time for
+                one is the meeting's span, which the header already shows, so
+                these rows print no time rather than inventing one. */}
+            {workshops.map((workshop) => (
+              <WorkshopRow key={workshop.workshopId} workshop={workshop} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Calendar and RSVP do not survive a cancellation. Directions does: the
+          room remains useful context for a night whose plans changed. */}
+      {(hasDirections(place) ||
+        (!cancelled && (meeting.rsvpUrl !== null || !ended))) && (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-2">
+              {!cancelled && !ended && (
+                <AddToCalendar
+                  googleUrl={addToCalendar.google}
+                  outlookUrl={addToCalendar.outlook}
+                  icsUrl={`/events/${encodeURIComponent(slug)}/calendar.ics`}
+                />
+              )}
+              {hasDirections(place) && (
+                <FindUs place={place} tone="dark" pair="aside" />
+              )}
+            </div>
+            {!cancelled && (
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
+                {/* Last in the right-hand group so the light primary action
+                    anchors the outer edge of the row. */}
+                {meeting.rsvpUrl !== null && (
+                  <a
+                    href={meeting.rsvpUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={ACTION_PRIMARY_DARK_CLS}
+                  >
+                    RSVP <ArrowUpRightIcon />
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ⚠️ `!cancelled`, and it is not a tidiness gate.
+          `attendanceCount === 0` is GUARANTEED for a cancelled night, since
+          nobody checks in to a meeting that did not happen, so this rendered
+          "No check-ins were recorded for this meeting." under the red Cancelled
+          notice, permanently, for every cancelled night in the archive: a
+          sentence that is always false and reads as an accusation that nobody
+          turned up. */}
+      {ended && !cancelled && (
+        <p className="border-t border-mauve-800 pt-3 text-sm text-mauve-400">
+          {meeting.attendanceCount === 0
+            ? "No check-ins were recorded for this meeting."
+            : `${meeting.attendanceCount} ${meeting.attendanceCount === 1 ? "member" : "members"} checked in.`}
+        </p>
+      )}
+    </>
+  );
+}
+
+const ROW_CLS =
+  "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-white/5 p-3";
+
+function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
+  const badge = segmentBadge.workshop;
+
+  return (
+    <li className={ROW_CLS}>
+      <span className="flex flex-col">
+        {/* `workshopLabel`, not `project`. Officers name these sessions by
+            topic ("Supabase", "Career Fair Readiness") and the schema named them
+            by project, so the page printed "Platform" where the published
+            schedule said "Next.js". A session with no project has only the
+            title, and one authored before the column existed has only the
+            project, so the fallback runs both ways. */}
+        <span className="text-sm font-semibold text-white">
+          {workshopLabel(workshop)}
+        </span>
+      </span>
+      <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
+        {badge.label}
+      </span>
+      {/* `basis-full` rather than a child of the flex-col above: `ROW_CLS` is
+          `flex flex-wrap items-center`, so this wraps onto its own line and
+          leaves the badge's `ml-auto` alignment intact. */}
+      {workshop.description !== null && (
+        <span className="basis-full text-xs/relaxed text-mauve-400">
+          {workshop.description}
+        </span>
+      )}
+    </li>
   );
 }

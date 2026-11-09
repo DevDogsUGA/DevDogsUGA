@@ -1,4 +1,4 @@
-import { DocsProjectIndex } from "~/components/DocsRoute";
+import { DocsProjectIndex } from "~/classic/components/DocsRoute";
 import { getDocsProjects } from "~/server/docs/queries";
 
 /** Built from `docs/` at build time, so it can't change until the next deploy. */

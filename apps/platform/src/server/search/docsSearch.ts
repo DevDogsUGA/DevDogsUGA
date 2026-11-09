@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { docsHref, splitProjectPath } from "~/lib/docsSlug";
-import { docsSectionLabel } from "~/lib/docsSection";
 import { toTitleCase } from "~/lib/toTitleCase";
 import { escapeHtml } from "./match";
 import { tsQuery, tsScore, type TsMatch } from "./tsquery";
@@ -94,7 +93,8 @@ export async function searchDocs(
       url: docsHref(project, relSegments),
       icon: "BookOpenIcon" as const,
       breadcrumbs: [
-        docsSectionLabel(project, path),
+        // One section, as at the baseline: the Docs/Contribute split is parked.
+        "Docs",
         toTitleCase(project),
         ...relSegments.slice(0, -1).map(toTitleCase),
       ],

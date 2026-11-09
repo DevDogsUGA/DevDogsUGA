@@ -1,4 +1,4 @@
-import { DocsProjectLayout } from "~/components/DocsRoute";
+import { DocsProjectLayout } from "~/classic/components/DocsRoute";
 
 export default async function DocsLayout({
   children,
