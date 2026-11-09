@@ -395,7 +395,7 @@
     "@types/node": "catalog:",
     "@types/vscode": "1.93.0",
     "@types/ws": "^8.18.1",
-    "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-electron": "^3.0.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "eslint": "catalog:",
