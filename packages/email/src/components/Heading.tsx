@@ -10,7 +10,7 @@ export function Heading({ children }: { children: ReactNode }) {
         margin: `0 0 ${theme.space.block}`,
         fontSize: theme.size.heading,
         lineHeight: "1.3",
-        fontWeight: 800,
+        fontWeight: 700,
         color: theme.color.ink,
       }}
     >

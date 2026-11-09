@@ -64,7 +64,6 @@ export function Layout({
             maxWidth: theme.maxWidth,
             margin: "0 auto",
             backgroundColor: theme.color.surface,
-            border: `${theme.border} solid ${theme.color.outline}`,
             borderRadius: theme.radius,
             padding: theme.space.gutter,
           }}
