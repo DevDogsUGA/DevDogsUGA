@@ -44,10 +44,10 @@ describe("validateConfigFiles", () => {
     const list = (files.meetings as { meetings: Record<string, unknown>[] })
       .meetings;
     list.push({
-      slug: "2026-12-02",
+      slug: "2026-12-09",
       series: "merge-monday",
-      startsAt: "2026-12-02T23:00:00.000Z",
-      endsAt: "2026-12-03T01:00:00.000Z",
+      startsAt: "2026-12-09T23:00:00.000Z",
+      endsAt: "2026-12-10T01:00:00.000Z",
       rsvpUrl: null,
       cancelledAt: null,
       cancellationReason: null,

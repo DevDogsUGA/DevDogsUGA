@@ -83,8 +83,11 @@ const EVENTS = {
   g311demoday: meeting("2026-10-30"),
   bugbash: meeting("2026-11-11"),
   workshopwed: meeting("2026-11-04"),
-  demoday: meeting("2026-11-16"),
+  supabase2: meeting("2026-11-09-workshop"),
+  merge1109: meeting("2026-11-09"),
+  merge1116: meeting("2026-11-16"),
   touchgrass2: meeting("2026-11-18"),
+  touchgrass1130: meeting("2026-11-30-touch-grass"),
 };
 
 export const ISSUES: ChangelogIssue[] = [
@@ -186,7 +189,7 @@ export const ISSUES: ChangelogIssue[] = [
       EVENTS.g311kickoff,
       EVENTS.merge1026,
       EVENTS.workshopwed,
-      EVENTS.demoday,
+      EVENTS.merge1116,
       EVENTS.touchgrass2,
     ],
     signoff:
@@ -217,11 +220,31 @@ export const ISSUES: ChangelogIssue[] = [
       EVENTS.g311demoday,
       EVENTS.workshopwed,
       EVENTS.bugbash,
-      EVENTS.demoday,
+      EVENTS.merge1116,
       EVENTS.touchgrass2,
     ],
     signoff:
       "Doors tonight at 6 in DLW 124. Georgia 311 teams start their sprint; everyone else, bring a laptop and keep building. See you there.",
+  },
+  {
+    version: "3.3.0",
+    term: "Fall 2026",
+    sendLabel: "Mon · Nov 9",
+    command: "changelog --date 2026-11-09",
+    title: "Supabase II at 6, Merge Monday at 7 (DevDogs Changelog v3.3.0)",
+    preview:
+      "Tonight in DLW 124: the Supabase II workshop at 6, then Merge Monday at 7.",
+    tagline: "Change the schema, then ship the PR.",
+    intro:
+      "Tonight at 6 in DLW 124, the Supabase II workshop covers changing the database in our apps. Bring a laptop. At 7, stay in the room for Merge Monday: pick an issue in DogDays or DogPack and open a pull request before you leave. An unfinished PR counts. There's no meeting this Wednesday.",
+    featuredLabel: "happening_tonight",
+    featured: [
+      { meeting: EVENTS.supabase2, cta: "See the schedule" },
+      { meeting: EVENTS.merge1109, cta: "See the schedule" },
+    ],
+    upcoming: [EVENTS.merge1116, EVENTS.touchgrass1130],
+    signoff:
+      "Doors tonight at 6 in DLW 124. Come for the workshop and stay until 8 to get a PR up.",
   },
 ];
 

@@ -404,7 +404,7 @@ describe("the committed files", () => {
     expect(titles.get("2026-09-16")).toBe("Build Session #1");
     expect(titles.get("2026-10-14")).toBe("Build Session #5");
     expect(titles.get("2026-10-07")).toBe("DevDogs Touch Grass #1");
-    expect(titles.get("2026-11-18")).toBe("DevDogs Touch Grass #2");
+    expect(titles.get("2026-11-30-touch-grass")).toBe("DevDogs Touch Grass #2");
     expect(titles.get("2026-11-02")).toBe("Merge Monday");
     expect(titles.get("2026-10-12")).toBe(
       "Merge Monday: Next.js II & Flutter II",
@@ -441,7 +441,7 @@ describe("the committed files", () => {
       null,
       "Morehouse College, Atlanta",
     ]);
-    expect(place.get("2026-11-18")).toEqual([null, "TBA"]);
+    expect(place.get("2026-11-30-touch-grass")).toEqual([null, "TBA"]);
   });
 
   it("resolves workshops from definitions with their old words", () => {
