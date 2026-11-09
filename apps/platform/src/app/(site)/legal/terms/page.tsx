@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import "~/components/Content/content.css";
-
 /**
  * Static copy; changes only with a deploy.
  */
@@ -22,7 +20,7 @@ export default async function Terms() {
   "use cache";
 
   return (
-    <article className="content-legal">
+    <div className="prose-sm prose-headings:text-balance mx-auto mt-19 w-full max-w-xl overflow-x-auto px-3 pt-12 pb-24 text-mauve-100">
       <h1 id="devdogs-terms-of-service">DevDogs Terms of Service</h1>
       {/* The effective date is when these terms first applied and never
           changes. An update adds or changes a "Last updated" line below it,
@@ -342,6 +340,6 @@ export default async function Terms() {
           <Link href="/legal/privacy#dogpack">Privacy Policy</Link>.
         </li>
       </ul>
-    </article>
+    </div>
   );
 }

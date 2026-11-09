@@ -1,21 +1,40 @@
+import { cn } from "~/lib/cn";
 import { Suspense, type ReactNode } from "react";
-import HeroSection from "~/components/HeroSection";
-import MissionSection from "~/components/MissionSection";
-import ProjectsSection from "~/components/ProjectsSection";
-import EventsSection from "~/components/EventsSection";
-import HowItWorks from "~/components/EventsSection/HowItWorks";
-import UpcomingMeetings, {
-  NextMeeting,
-} from "~/components/EventsSection/UpcomingMeetings";
-import PartnersSection from "~/components/PartnersSection";
-import LeadershipSection from "~/components/LeadershipSection";
+import {
+  CalendarDotsIcon,
+  CompassIcon,
+  DiamondIcon,
+  HeartIcon,
+  LightningIcon,
+  RocketIcon,
+  StarIcon,
+} from "@phosphor-icons/react/ssr";
+import HeroSection from "~/classic/components/HeroSection";
+import SectionMarquee, {
+  MarqueeItem,
+} from "~/classic/components/SectionMarquee";
+import MissionSection, {
+  MISSION_BLOBS,
+} from "~/classic/components/MissionSection";
+import ProjectsSection, {
+  PROJECTS_BLOBS,
+} from "~/classic/components/ProjectsSection";
+import EventsSection, {
+  EVENTS_BLOBS,
+} from "~/classic/components/EventsSection";
+import UpcomingMeetings from "~/classic/components/EventsSection/UpcomingMeetings";
+import PartnersSection from "~/classic/components/PartnersSection";
+import LeadershipSection from "~/classic/components/LeadershipSection";
+import StatCard from "~/classic/ui/stat-card";
 import JsonLd, { siteGraph } from "~/lib/structuredData";
-import "~/components/Home/home.css";
+
+const MARQUEE_TEXT_CLS =
+  "py-4 font-display text-base font-bold tracking-widest uppercase";
 
 /**
  * Cached for a minute, then re-rendered in the background. Everything
- * here is static copy except the meetings (the lead card and the list), and a
- * minute is as stale as "next meeting" should get when one ends.
+ * here is static copy except the next-meetings stack, and a minute is as
+ * stale as "next meeting" should get when one ends.
  */
 export const revalidate = 60;
 
@@ -32,11 +51,6 @@ export default function HomePage() {
           describes the site rather than the cached page sections themselves. */}
       <JsonLd data={siteGraph()} />
       <HomeSections
-        nextMeeting={
-          <Suspense>
-            <NextMeeting />
-          </Suspense>
-        }
         upcomingMeetings={
           <Suspense>
             <UpcomingMeetings />
@@ -50,38 +64,162 @@ export default function HomePage() {
 /**
  * `"use cache"` is what puts the homepage in the prerendered shell. Under Cache
  * Components everything is dynamic by default, so without it the static output
- * was the nav chrome and nothing else, and every visit re-rendered the whole
- * marketing page on the server. Every section here is static copy or reads a
- * cached loader, so caching is accurate -- except the meetings, which are
- * neither: they need "now", not whatever was true when this cache entry was
- * last populated. Those elements arrive as props, built by `HomePage` above
- * before this function is entered, so they render on the request that's
- * actually being served instead of getting frozen into the shared cache entry
- * (or, worse, having their database read attributed to the wrong request
- * entirely -- see `UpcomingMeetings`'s doc comment for what that looked like).
- *
- * The sections alternate: a plain section, then a `Band`, and never two of the
- * same kind in a row. The page's `<main>` is the site layout's.
+ * was the nav chrome and nothing else, 7.9 KB of shell, and every visit
+ * re-rendered the whole marketing page on the server. Every section here is
+ * static copy or reads the cached calendar frame, so caching is accurate --
+ * except the next-meetings stack, which is neither: it needs "now", not
+ * whatever was true when this cache entry was last populated. That element
+ * arrives as `upcomingMeetings`, built by `HomePage` above before this
+ * function is entered, so it renders on the request that's actually being
+ * served instead of getting frozen into the shared cache entry (or, worse,
+ * having its database read attributed to the wrong request entirely -- see
+ * `UpcomingMeetings`'s doc comment for what that looked like).
  */
 async function HomeSections({
-  nextMeeting,
   upcomingMeetings,
 }: {
-  nextMeeting: ReactNode;
   upcomingMeetings: ReactNode;
 }) {
   "use cache";
 
   return (
-    <div className="home">
+    <main className="flex flex-col gap-4 bg-black py-4 md:gap-6 md:py-6">
       <HeroSection />
-      {nextMeeting}
-      <MissionSection />
-      <ProjectsSection />
-      <EventsSection upcomingMeetings={upcomingMeetings} />
-      <HowItWorks />
-      <PartnersSection />
-      <LeadershipSection />
-    </div>
+
+      <SectionMarquee
+        slope="bs"
+        duration={50}
+        copyZBase={10}
+        hoverInvert
+        keepHoveredInView
+        aria-label="Homepage sections"
+      >
+        {/* In the order the sections themselves run, and each card in its own
+            section's hue. The fill is the 400 its blobs are drawn from, so a
+            card is a piece of the place it opens rather than a differently
+            coloured door onto it. `zIndexClass` stays with the *slot*, not the
+            card: it descends left to right for the hover lift alone. */}
+        <StatCard
+          description="Learn By Doing"
+          title="Mission"
+          cta="Read the Mission"
+          icon={CompassIcon}
+          textColor="text-rose-950"
+          bg="bg-rose-400"
+          darkBg="bg-rose-600"
+          blobs={MISSION_BLOBS}
+          href="#mission"
+          zIndexClass="z-30"
+        />
+        <StatCard
+          description="Real Applications"
+          title="Projects"
+          cta="Browse Projects"
+          icon={RocketIcon}
+          textColor="text-amber-950"
+          bg="bg-amber-400"
+          darkBg="bg-amber-600"
+          blobs={PROJECTS_BLOBS}
+          href="#projects"
+          zIndexClass="z-20"
+        />
+        <StatCard
+          description="Weekly Workshops"
+          title="Events"
+          cta="See the Schedule"
+          icon={CalendarDotsIcon}
+          textColor="text-cyan-950"
+          bg="bg-cyan-400"
+          darkBg="bg-cyan-600"
+          blobs={EVENTS_BLOBS}
+          href="#events"
+          zIndexClass="z-10"
+        />
+      </SectionMarquee>
+
+      <MissionSection topEdge="bs" bottomEdge="fs" />
+
+      <SectionMarquee
+        slope="fs"
+        bg="bg-rose-600"
+        className={cn(
+          MARQUEE_TEXT_CLS,
+          "text-shadow-block-sm text-rose-100 shadow-rose-900",
+        )}
+        icon={HeartIcon}
+      >
+        <MarqueeItem>Learn By Doing</MarqueeItem>
+        <MarqueeItem>Apply Real Skills</MarqueeItem>
+        <MarqueeItem>Software That Matters</MarqueeItem>
+        <MarqueeItem>SWE @ UGA</MarqueeItem>
+        <MarqueeItem>Industry-Standard Tech</MarqueeItem>
+        <MarqueeItem>A Place For You</MarqueeItem>
+        <MarqueeItem>Community Impact</MarqueeItem>
+      </SectionMarquee>
+
+      <ProjectsSection topEdge="fs" bottomEdge="bs" />
+
+      <SectionMarquee
+        slope="bs"
+        bg="bg-amber-600"
+        className={cn(
+          MARQUEE_TEXT_CLS,
+          "text-shadow-block-sm text-amber-100 shadow-amber-900",
+        )}
+        icon={LightningIcon}
+      >
+        <MarqueeItem>By Students, For Students</MarqueeItem>
+        <MarqueeItem>New Features Every Week</MarqueeItem>
+        <MarqueeItem>Shipped Every Semester</MarqueeItem>
+        <MarqueeItem>Real Projects for Real Users</MarqueeItem>
+        <MarqueeItem>Design, Frontend, Backend</MarqueeItem>
+        <MarqueeItem>100% Free and Open Source</MarqueeItem>
+      </SectionMarquee>
+
+      <EventsSection
+        topEdge="bs"
+        bottomEdge="bs"
+        upcomingMeetings={upcomingMeetings}
+      />
+
+      <SectionMarquee
+        slope="bs"
+        bg="bg-cyan-600"
+        className={cn(
+          MARQUEE_TEXT_CLS,
+          "text-shadow-block-sm text-cyan-100 shadow-cyan-900",
+        )}
+        icon={StarIcon}
+      >
+        <MarqueeItem>One Feature, Every Week</MarqueeItem>
+        <MarqueeItem>Everyone at Once</MarqueeItem>
+        <MarqueeItem>Weekly Workshops</MarqueeItem>
+        <MarqueeItem>Ship a Pull Request</MarqueeItem>
+        <MarqueeItem>Build Sessions</MarqueeItem>
+        <MarqueeItem>Show off to Your Friends</MarqueeItem>
+      </SectionMarquee>
+
+      <PartnersSection topEdge="bs" bottomEdge="fs" />
+
+      <SectionMarquee
+        slope="fs"
+        bg="bg-purple-600"
+        className={cn(
+          MARQUEE_TEXT_CLS,
+          "text-shadow-block-sm text-purple-100 shadow-purple-900",
+        )}
+        icon={DiamondIcon}
+      >
+        <MarqueeItem>Software Engineers</MarqueeItem>
+        <MarqueeItem>UI Designers</MarqueeItem>
+        <MarqueeItem>UX Researchers</MarqueeItem>
+        <MarqueeItem>Software Engineers</MarqueeItem>
+        <MarqueeItem>Data Scientists</MarqueeItem>
+        <MarqueeItem>Project Leaders</MarqueeItem>
+        <MarqueeItem>Community Builders</MarqueeItem>
+      </SectionMarquee>
+
+      <LeadershipSection topEdge="fs" bottomEdge="flat" />
+    </main>
   );
 }

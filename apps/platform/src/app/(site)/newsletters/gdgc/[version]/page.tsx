@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GDGC_ISSUES, gdgcIssueByVersion } from "@devdogsuga/newsletter";
-
-import EmailStage from "~/components/Content/EmailStage";
-import "~/components/Content/content.css";
-import { Breadcrumbs } from "~/ui/breadcrumbs";
+import {
+  ChangelogEmail,
+  GDGC_ISSUES,
+  gdgcIssueByVersion,
+  paintCss,
+  PALETTE,
+  webRenderContext,
+} from "@devdogsuga/newsletter";
 
 /**
  * /newsletters/gdgc/[version], one issue, rendered from the same email-safe
@@ -12,7 +16,7 @@ import { Breadcrumbs } from "~/ui/breadcrumbs";
  * `RenderContext`: pages get the `next/font` CSS variables the root layout
  * sets and SVG data-URI images; the send gets literal font stacks and
  * embedded PNGs. Copy cannot drift between the archive and an inbox because
- * there is exactly one copy. The shell is Paper, like the archive.
+ * there is exactly one copy.
  */
 
 /**
@@ -40,7 +44,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function GdgcIssue({
+export default async function ChangelogIssue({
   params,
 }: {
   params: Promise<{ version: string }>;
@@ -50,19 +54,25 @@ export default async function GdgcIssue({
   if (!issue) notFound();
 
   return (
-    <div className="paper content-paper">
-      <div className="wrap content-crumbs">
-        <Breadcrumbs
-          items={[
-            { label: "Newsletters", href: "/newsletters/gdgc" },
-            { label: `Issue ${issue.version}` },
-          ]}
-        />
+    <div className="flex-1" style={{ backgroundColor: PALETTE.bar }}>
+      <div className="mx-auto w-full max-w-2xl px-4 pt-28 pb-24">
+        <p className="mb-6 font-mono text-sm">
+          <Link
+            href="/newsletters/gdgc"
+            className="transition-colors hover:brightness-125"
+            style={{ color: PALETTE.dim }}
+          >
+            cd ../newsletters/gdgc
+          </Link>
+        </p>
+        <div className="mx-auto w-fit max-w-full overflow-x-auto">
+          {/* The email paints its backgrounds by class (never inline — see
+              Backstage's packages/newsletter/src/darkmode.ts), so the page embeds the
+              same base paint layer the mailed document does. */}
+          <style dangerouslySetInnerHTML={{ __html: paintCss() }} />
+          <ChangelogEmail issue={issue} ctx={webRenderContext()} />
+        </div>
       </div>
-      <h1 className="sr-only">
-        GDGC Newsletter issue {issue.version}: {issue.tagline}
-      </h1>
-      <EmailStage issue={issue} />
     </div>
   );
 }

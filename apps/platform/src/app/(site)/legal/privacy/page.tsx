@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import "~/components/Content/content.css";
-
 /**
  * Static copy; changes only with a deploy.
  */
@@ -23,7 +21,7 @@ export default async function Privacy() {
   "use cache";
 
   return (
-    <article className="content-legal">
+    <div className="prose-sm prose-headings:text-balance mx-auto mt-19 w-full max-w-xl overflow-x-auto px-3 pt-12 pb-24 text-mauve-100">
       <h1 id="devdogs-privacy-policy">DevDogs Privacy Policy</h1>
       {/* The effective date is when the first policy applied and never
           changes. A rewrite changes "Last updated" (§11 says so). */}
@@ -764,6 +762,6 @@ export default async function Privacy() {
           (§10).
         </li>
       </ul>
-    </article>
+    </div>
   );
 }

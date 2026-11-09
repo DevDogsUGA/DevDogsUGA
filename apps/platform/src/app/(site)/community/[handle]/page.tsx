@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import PublicProfile from "~/components/PublicProfile";
+import PublicProfile from "~/classic/components/PublicProfile";
 import { metadataFor } from "~/components/PublicProfile/view";
-import {
-  getPublicProfileActivity,
-  getPublicProfileByHandle,
-} from "~/server/loaders/publicProfiles";
-import { emptyWeekTreatment } from "~/server/loaders/weeklyParticipation";
+import { getPublicProfileByHandle } from "~/server/loaders/publicProfiles";
+import { getClassicProfileActivity } from "~/classic/loaders/profileActivity";
 import { handleFromSegment } from "~/lib/profilePath";
 import { publicProfilesEnabled } from "~/server/features";
 
@@ -56,15 +53,9 @@ export default async function CommunityProfilePage({
 
   const [profile, activity] = await Promise.all([
     getPublicProfileByHandle(handle),
-    getPublicProfileActivity(handle),
+    getClassicProfileActivity(handle),
   ]);
   if (!profile || !activity) notFound();
 
-  return (
-    <PublicProfile
-      profile={profile}
-      activity={activity}
-      treatment={emptyWeekTreatment()}
-    />
-  );
+  return <PublicProfile profile={profile} activity={activity} />;
 }

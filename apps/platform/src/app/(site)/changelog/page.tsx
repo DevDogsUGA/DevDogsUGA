@@ -1,15 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRightIcon, CalendarDotsIcon } from "@phosphor-icons/react/ssr";
-import { ISSUES, SITE } from "@devdogsuga/newsletter";
-
-import PageHeader from "~/components/PageHeader";
-import "~/components/Content/content.css";
-import Badge from "~/ui/badge";
-import { Card } from "~/ui/card";
-import { Tag } from "~/ui/tag";
-import { Timeline, TimelineItem } from "~/ui/timeline";
-import { TextLink } from "~/ui/text-link";
+import { ISSUES, PALETTE, UGA } from "@devdogsuga/newsletter";
 
 /**
  * Static data from `@devdogsuga/newsletter`; changes only with a deploy.
@@ -28,64 +19,62 @@ export const metadata: Metadata = {
 };
 
 /**
- * A Cosmic timeline of issues (`changelog.html`), newest first. The issues
- * themselves keep the newsletter's own palette; see `/changelog/[version]`.
+ * The page paints the newsletter's own palette inline rather than site theme
+ * tokens, because its content does too: every issue below renders from
+ * email-safe components that carry their colors with them. A themed shell
+ * around an unthemed email would split at the seam in dark mode.
  */
 export default function Changelog() {
   const issues = [...ISSUES].reverse();
-  const host = SITE.replace(/^https?:\/\//, "");
   return (
-    <>
-      <PageHeader
-        title="Changelog"
-        description="The weekly DevDogs newsletter, versioned like the software it covers. Each issue logs what the club is building and where to show up next."
-      />
-      <section className="section content-sec">
-        <div className="wrap content-layout">
-          <Timeline className="content-timeline" aria-label="Issues">
-            {issues.map((issue, i) => (
-              <TimelineItem key={issue.version}>
-                <Card className="quiet content-rel">
-                  <div className="content-rh">
-                    <span className="content-ver">v{issue.version}</span>
-                    {i === 0 && <Badge variant="brand">Latest</Badge>}
-                    <span className="muted small content-date">
-                      <CalendarDotsIcon weight="bold" aria-hidden />
-                      {issue.sendLabel}
-                    </span>
-                  </div>
-                  <h2 className="h2 content-title">{issue.tagline}</h2>
-                  <p className="content-lede">{issue.preview}</p>
-                  <div className="content-tags">
-                    <Tag>{issue.term}</Tag>
-                  </div>
-                  <div className="content-read">
-                    <TextLink asChild>
-                      <Link href={`/changelog/${issue.version}`}>
-                        Read issue v{issue.version}
-                        <ArrowRightIcon weight="bold" aria-hidden />
-                      </Link>
-                    </TextLink>
-                  </div>
-                </Card>
-              </TimelineItem>
-            ))}
-          </Timeline>
-          <aside className="content-sub" aria-label="Subscribe">
-            <Card className="quiet">
-              <div className="eyebrow">Subscribe</div>
-              <h2 className="h3">Follow along in your terminal</h2>
-              <p className="small muted">
-                The same page, as plain text. Pipe it into <code>less</code>, or
-                run it in a cron job.
-              </p>
-              <Link className="btn terminal" href="/changelog">
-                <b>$</b> curl {host}/changelog
+    <div className="flex-1" style={{ backgroundColor: PALETTE.bg }}>
+      <div className="mx-auto w-full max-w-2xl px-4 pt-28 pb-24">
+        <p className="font-mono text-sm" style={{ color: PALETTE.dim }}>
+          $ changelog --list
+        </p>
+        <h1
+          className="font-display mt-2 text-4xl font-bold"
+          style={{ color: PALETTE.ink }}
+        >
+          Changelog_
+        </h1>
+        <p className="mt-4 max-w-prose" style={{ color: PALETTE.mute }}>
+          The weekly DevDogs newsletter, versioned like the software it covers.
+          Each issue logs what the club is building and where to show up next.
+        </p>
+
+        <ul className="mt-10 space-y-4">
+          {issues.map((issue) => (
+            <li key={issue.version}>
+              <Link
+                href={`/changelog/${issue.version}`}
+                className="block rounded-md border p-5 transition-colors hover:brightness-110"
+                style={{
+                  backgroundColor: PALETTE.card,
+                  borderColor: PALETTE.border,
+                }}
+              >
+                <div className="flex items-baseline gap-3 font-mono text-sm">
+                  <span className="font-bold" style={{ color: UGA }}>
+                    v{issue.version}
+                  </span>
+                  <span style={{ color: PALETTE.dim }}>{issue.sendLabel}</span>
+                  <span style={{ color: PALETTE.dim }}>{issue.term}</span>
+                </div>
+                <p
+                  className="font-display mt-2 text-lg font-bold"
+                  style={{ color: PALETTE.ink }}
+                >
+                  {issue.tagline}
+                </p>
+                <p className="mt-1 text-sm" style={{ color: PALETTE.mute }}>
+                  {issue.preview}
+                </p>
               </Link>
-            </Card>
-          </aside>
-        </div>
-      </section>
-    </>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
