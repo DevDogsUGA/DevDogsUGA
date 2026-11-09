@@ -1,11 +1,11 @@
 "use client";
-import { cn } from "~/lib/cn";
 
 import Image from "next/image";
 import { useState } from "react";
 import devdog from "~/assets/devdog.svg";
-import { showcaseIcon, showcaseColor } from "~/config/showcaseKeys";
-import type { SwitcherProject } from "~/server/projects/showcase";
+import * as icons from "~/config/icons";
+import type { SwitcherProject } from "~/classic/config/projects";
+import { cn } from "~/lib/cn";
 import OpenOrShareDialog from "./OpenOrShareDialog";
 import { LIFT, PLAIN, PLAIN_HOVER, ROW } from "./rowStyles";
 
@@ -32,23 +32,9 @@ const TILE_SPACING = "gap-2 px-2 pt-4 pb-3.5 sm:gap-3 sm:px-4 sm:pt-5 sm:pb-4";
  * The homepage cards are for reading about a project: full description, tech
  * stack, repo links, the year it ran. This is for opening one.
  */
-function badgeColors(label: string): string {
-  switch (label.toLowerCase()) {
-    case "you are here":
-      return "bg-amber-400 text-black";
-    case "public alpha":
-      return "bg-emerald-400 text-black";
-    case "in development":
-      return "bg-cyan-400 text-black";
-    default:
-      return "bg-mauve-300 text-mauve-800";
-  }
-}
-
 export default function ProjectTile({ project, onNavigate }: Props) {
-  const { blurb, url, badge } = project;
-  const { Icon, logo } = showcaseIcon(project.iconKey);
-  const color = showcaseColor(project.colorKey);
+  const { icon, color, logo, blurb, url, badge } = project.switcher;
+  const Icon = icons[icon];
   const [open, setOpen] = useState(false);
 
   const body = (
@@ -79,10 +65,11 @@ export default function ProjectTile({ project, onNavigate }: Props) {
         <span
           className={cn(
             "absolute -top-px left-2 -translate-y-1/2 rounded-sm px-1.5 py-0.5 text-[0.625rem] leading-none font-bold tracking-wide whitespace-nowrap uppercase sm:left-4",
-            badgeColors(badge),
+            badge.bg,
+            badge.text,
           )}
         >
-          {badge}
+          {badge.label}
         </span>
       )}
 
@@ -97,10 +84,10 @@ export default function ProjectTile({ project, onNavigate }: Props) {
               onClick={() => setOpen(true)}
               className="rounded-sm text-left outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-white"
             >
-              {project.name}
+              {project.title}
             </button>
           ) : (
-            project.name
+            project.title
           )}
         </h3>
         <p className="text-[0.6875rem] leading-tight text-mauve-400 sm:text-xs">
@@ -132,7 +119,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
         {body}
       </div>
       <OpenOrShareDialog
-        title={project.name}
+        title={project.title}
         url={url}
         external={url.startsWith("http")}
         open={open}

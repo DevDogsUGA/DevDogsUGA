@@ -8,7 +8,8 @@ import { useNavUser } from "~/classic/components/TopNav/NavUserProvider";
 import SignInButton from "~/classic/components/TopNav/SignInButton";
 import * as icons from "~/config/icons";
 import { SOCIAL_LINKS, SWITCHER_LINKS, SWITCHER_PRIMARY } from "~/config/nav";
-import type { SwitcherProject } from "~/server/projects/showcase";
+import { SWITCHER_PROJECTS } from "~/classic/config/projects";
+import { isHiddenNavigation } from "~/config/hiddenRoutes";
 import LinkButton from "~/classic/ui/link-button";
 import EntryButton from "./EntryButton";
 import ProjectTile from "./ProjectTile";
@@ -19,7 +20,16 @@ import { useAppSwitcher } from "./provider";
  * icons, external listings, and social channels. Expands from the trigger's
  * position using the shared menu-expand/menu-collapse keyframes.
  */
-export default function Overlay({ projects }: { projects: SwitcherProject[] }) {
+/**
+ * Temporary: the old project list, see the note in ~/classic/config/projects.
+ * Read here, in the client, as the old switcher did: its badges carry icon
+ * components, which cannot cross from a server component as props.
+ */
+const PROJECTS = SWITCHER_PROJECTS.filter(
+  (p) => !p.switcher.url || !isHiddenNavigation(p.switcher.url),
+);
+
+export default function Overlay() {
   const { visible, closing, origin, close } = useAppSwitcher();
   const navUser = useNavUser();
 
@@ -135,9 +145,9 @@ export default function Overlay({ projects }: { projects: SwitcherProject[] }) {
                 margin, so the first badge clears its label and, side by
                 side, the tiles' top rims line up with the first link's. */}
             <div className="grid grid-cols-2 gap-x-3 gap-y-5">
-              {projects.map((project) => (
+              {PROJECTS.map((project) => (
                 <ProjectTile
-                  key={project.id}
+                  key={project.title}
                   project={project}
                   onNavigate={close}
                 />

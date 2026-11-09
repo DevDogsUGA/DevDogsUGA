@@ -2,8 +2,7 @@ import SectionBackground, {
   type BlobDef,
   type EdgeType,
 } from "~/classic/ui/section-background";
-import { getFeaturedProjects } from "~/server/projects/showcase";
-import { projectCardFor } from "./adapter";
+import { PROJECTS } from "~/classic/config/projects";
 import ProjectCard from "./ProjectCard";
 import Link from "next/link";
 import { PROJECTS_BLURB } from "~/classic/components/homeCopy";
@@ -52,10 +51,11 @@ interface Props {
   bottomEdge: EdgeType;
 }
 
-export default async function ProjectsSection({ topEdge, bottomEdge }: Props) {
-  const projects = (await getFeaturedProjects()).map(projectCardFor);
-  const OPEN_PROJECTS = projects.filter((p) => p.contributions === "open");
-  const CLOSED_PROJECTS = projects.filter((p) => p.contributions === "closed");
+// Temporary: see the note in ~/classic/config/projects.
+const OPEN_PROJECTS = PROJECTS.filter((p) => p.contributions === "open");
+const CLOSED_PROJECTS = PROJECTS.filter((p) => p.contributions === "closed");
+
+export default function ProjectsSection({ topEdge, bottomEdge }: Props) {
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section

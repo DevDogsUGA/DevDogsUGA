@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import type * as HiddenRoutes from "~/config/hiddenRoutes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedPermissions } from "~/server/auth/permissions";
 
@@ -26,8 +27,7 @@ vi.mock("next/navigation", () => ({
 // Overview is parked during the rollback ("the parked overview" below); the rest
 // of these tests cover the page itself, for when it returns.
 vi.mock("~/config/hiddenRoutes", async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import("~/config/hiddenRoutes")>();
+  const original = await importOriginal<typeof HiddenRoutes>();
   return {
     ...original,
     isHiddenNavigation: (path: string) =>

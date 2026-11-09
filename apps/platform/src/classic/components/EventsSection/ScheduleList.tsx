@@ -22,7 +22,12 @@ import {
   formatEventSpan,
   formatRelative,
 } from "~/lib/eventTime";
-import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
+import {
+  meetingTitle,
+  workshopLabel,
+  type TitleableMeeting,
+  type TitleableWorkshop,
+} from "~/lib/meetingTitle";
 // `resolveMeetingSegments` as a VALUE comes from `~/lib/meetingSegments`, not
 // from the loader that re-exports it: the loader imports `~/server/db`, whose
 // entry point runs `createDb(env.DB_URL, …)` at module scope, so importing the
@@ -614,9 +619,9 @@ function ScheduleRow({
           ))}
         </div>
 
-        {meeting.workshops.length > 0 && (
+        {extraWorkshops(meeting).length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
-            {meeting.workshops.map((workshop) => (
+            {extraWorkshops(meeting).map((workshop) => (
               <WorkshopChip key={workshop.workshopId} workshop={workshop} />
             ))}
           </div>
@@ -634,4 +639,17 @@ function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
   // permalink cannot print two different words for one row.
   const chipCls = `${segmentBadge.workshop.chipDark} ${CHIP_DARK_CLS}`;
   return <span className={chipCls}>{workshopLabel(workshop)}</span>;
+}
+
+/**
+ * The workshops worth a chip of their own: every one but a workshop whose name
+ * is already the night's title, which would print the same words twice.
+ */
+function extraWorkshops<W extends TitleableWorkshop>(
+  meeting: TitleableMeeting & { workshops: readonly W[] },
+): W[] {
+  const title = meetingTitle(meeting, meeting.workshops);
+  return meeting.workshops.filter(
+    (workshop) => workshopLabel(workshop) !== title,
+  );
 }

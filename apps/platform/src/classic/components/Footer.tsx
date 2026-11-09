@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import * as icons from "~/config/icons";
 import { PUBLIC_LINKS, SOCIAL_LINKS } from "~/config/nav";
-import { getFeaturedProjects } from "~/server/projects/showcase";
+import { PROJECTS } from "~/classic/config/projects";
 import devdog from "~/assets/devdog.svg";
 
 /** Docs sits under Resources instead, alongside the rest of the reference links. */
@@ -38,12 +38,15 @@ export default async function Footer() {
   "use cache";
   cacheLife("max");
 
-  const PROJECT_LINKS = (await getFeaturedProjects())
-    .map((p) => ({
-      title: p.name,
-      href: p.liveUrl ?? p.switcherUrl ?? p.githubUrls[0] ?? "/#projects",
-    }))
-    .filter((p) => !isHiddenNavigation(p.href));
+  // Temporary: the old project list, see the note in ~/classic/config/projects.
+  const PROJECT_LINKS = PROJECTS.map((project) => ({
+    title: project.title,
+    href:
+      project.liveUrl?.href ??
+      project.switcher?.url ??
+      project.githubUrl ??
+      "/#projects",
+  })).filter((p) => !isHiddenNavigation(p.href));
 
   return (
     <footer

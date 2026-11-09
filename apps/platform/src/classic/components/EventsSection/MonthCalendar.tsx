@@ -50,7 +50,12 @@ import {
 } from "~/classic/components/EventsSection/meetingView";
 import { locationLine } from "~/components/EventsSection/FindUs/buildings";
 import { clubDay, formatEventSpan, formatRelative } from "~/lib/eventTime";
-import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
+import {
+  meetingTitle,
+  workshopLabel,
+  type TitleableMeeting,
+  type TitleableWorkshop,
+} from "~/lib/meetingTitle";
 
 /**
  * The month label. Formatted from a `Date.UTC` instant read back in UTC, so
@@ -191,9 +196,9 @@ function MeetingDetail({
           </span>
         ))}
       </div>
-      {meeting.workshops.length > 0 && (
+      {extraWorkshops(meeting).length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          {meeting.workshops.map((workshop) => (
+          {extraWorkshops(meeting).map((workshop) => (
             <span
               key={workshop.workshopId}
               className={`${CHIP_DARK_CLS} border-emerald-400/30 bg-emerald-500/10 text-emerald-300`}
@@ -934,5 +939,18 @@ export default function MonthCalendar({
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+/**
+ * The workshops worth a chip of their own: every one but a workshop whose name
+ * is already the night's title, which would print the same words twice.
+ */
+function extraWorkshops<W extends TitleableWorkshop>(
+  meeting: TitleableMeeting & { workshops: readonly W[] },
+): W[] {
+  const title = meetingTitle(meeting, meeting.workshops);
+  return meeting.workshops.filter(
+    (workshop) => workshopLabel(workshop) !== title,
   );
 }

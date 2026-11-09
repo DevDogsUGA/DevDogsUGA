@@ -2,10 +2,6 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 // Vitest has no static-image metadata; image loading is covered by the build.
 vi.mock("next/image", () => ({ default: () => null }));
-const mocks = vi.hoisted(() => ({ getSwitcherProjects: vi.fn() }));
-vi.mock("~/server/projects/showcase", () => ({
-  getSwitcherProjects: mocks.getSwitcherProjects,
-}));
 vi.mock("./provider", () => ({
   useAppSwitcher: () => ({
     visible: true,
@@ -19,35 +15,28 @@ vi.mock("~/classic/components/TopNav/NavUserProvider", () => ({
 }));
 import AppSwitcher from "./index";
 import Overlay from "./Overlay";
-import type { SwitcherProject } from "~/server/projects/showcase";
-const project: SwitcherProject = {
-  id: "test",
-  name: "DogDays",
-  blurb: "Schedule Builder",
-  url: "https://dogdays.dev",
-  iconKey: "DogDaysIcon",
-  colorKey: "cyan-400",
-  badge: "Public alpha",
-};
+import { SWITCHER_PROJECTS } from "~/classic/config/projects";
+
 afterEach(cleanup);
+
 describe("classic switcher", () => {
-  it("reads today's showcase and excludes destinations hidden by the rollback", async () => {
-    mocks.getSwitcherProjects.mockResolvedValue([
-      project,
-      { ...project, id: "hidden", url: "/dashboard/projects/hidden" },
-    ]);
-    const element = await AppSwitcher();
-    expect(element.props).toEqual({ projects: [project] });
-    expect(mocks.getSwitcherProjects).toHaveBeenCalled();
+  it("lists the old project list's switcher tiles, in order", () => {
+    render(<AppSwitcher />);
+    const names = SWITCHER_PROJECTS.map((p) => p.title);
+    expect(names).toEqual(["DevDogs Platform", "DogDays", "DogPack", "Wuphf"]);
+    for (const name of names.slice(1)) {
+      expect(screen.getByText(name)).toBeTruthy();
+    }
   });
-  it("renders current showcase fields in the baseline overlay", () => {
-    render(<Overlay projects={[project]} />);
+
+  it("renders the old tiles and badges", () => {
+    render(<Overlay />);
     expect(
       screen.getByRole("dialog", { name: "More from DevDogs" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "DogDays" })).toBeTruthy();
     expect(screen.getByText("Schedule Builder")).toBeTruthy();
-    expect(screen.getByText("Public alpha")).toBeTruthy();
+    expect(screen.getByText("In Development")).toBeTruthy();
+    expect(screen.getByText("Paused")).toBeTruthy();
     expect(screen.queryByText(/Oct 15|Oct 11/)).toBeNull();
   });
 });
