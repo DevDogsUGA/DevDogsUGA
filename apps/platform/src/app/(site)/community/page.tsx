@@ -7,7 +7,7 @@ import { publicProfilesEnabled } from "~/server/features";
 import { getCurrentOfficers } from "~/server/loaders/officers";
 import {
   getPublicHandlesByUserId,
-  searchPublicProfiles,
+  listPublicProfiles,
 } from "~/server/loaders/publicProfiles";
 
 /**
@@ -28,14 +28,7 @@ export default async function Community() {
 
   const [officers, members] = await Promise.all([
     getCurrentOfficers(),
-    searchPublicProfiles({
-      q: "",
-      leadership: false,
-      major: null,
-      year: null,
-      page: 1,
-      excludeLeadership: true,
-    }),
+    listPublicProfiles(),
   ]);
   const officerHandles = await getPublicHandlesByUserId(
     officers.map((officer) => officer.slug),
@@ -50,7 +43,7 @@ export default async function Community() {
       <CommunityDirectory
         officers={officers}
         officerHandles={officerHandles}
-        members={members.members}
+        members={members}
       />
     </PageShell>
   );
