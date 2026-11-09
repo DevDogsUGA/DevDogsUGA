@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { getNavUser } from "~/components/TopNav/data";
 import VerificationChecklist from "~/components/VerificationChecklist";
 import "~/components/Settings/settings.css";
 import * as icons from "~/config/icons";
 import { DASHBOARD_GROUPS } from "~/config/dashboard";
+import { isHiddenNavigation } from "~/config/hiddenRoutes";
 import { formatDeletionDate } from "~/server/accountDeletion/dates";
 import { getPendingDeletion } from "~/server/accountDeletion/schedule";
 import { requireDashboard } from "~/server/auth/access";
@@ -45,7 +47,11 @@ const STATUS_LABEL = {
  */
 export default async function OverviewPage() {
   await connection();
+  // The gate comes first, so an anonymous visitor goes straight to sign-in, which
+  // the deploy smoke test requires (`workers.json`). Overview is parked during
+  // the pre-Cosmic rollback; the redirect is temporary so it can come back.
   const caller = await requireDashboard();
+  if (isHiddenNavigation("/dashboard")) redirect("/dashboard/profile");
   const [user, pending, weekly, el, projects] = await Promise.all([
     getNavUser(),
     getPendingDeletion(caller.userId),

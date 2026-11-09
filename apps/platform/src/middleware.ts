@@ -13,12 +13,6 @@ export async function middleware(request: NextRequest) {
     applySecurityHeaders(response.headers, platformSecurityHeaders());
     return response;
   }
-  if (request.nextUrl.pathname === "/dashboard") {
-    return NextResponse.redirect(
-      new URL("/dashboard/profile", request.url),
-      307,
-    );
-  }
   // Middleware leaves the request alone wherever it can, because vinext serves
   // a page from the shared cache only when middleware changed no request
   // header. So there is no CSP nonce here: pages render without one and the

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getWeeklyParticipation: vi.fn(),
   getElSummary: vi.fn(),
   getMyProjects: vi.fn(),
+  parked: { value: false },
 }));
 
 vi.mock("next/server", () => ({ connection: async () => undefined }));
@@ -22,6 +23,19 @@ vi.mock("next/navigation", () => ({
     throw new Error("NEXT_FORBIDDEN");
   },
 }));
+// Overview is parked during the rollback ("the parked overview" below); the rest
+// of these tests cover the page itself, for when it returns.
+vi.mock("~/config/hiddenRoutes", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("~/config/hiddenRoutes")>();
+  return {
+    ...original,
+    isHiddenNavigation: (path: string) =>
+      path === "/dashboard"
+        ? mocks.parked.value
+        : original.isHiddenNavigation(path),
+  };
+});
 vi.mock("~/server/auth", () => ({ expectSession: mocks.expectSession }));
 vi.mock("~/server/auth/permissions", () => ({
   getCallerContext: mocks.getCallerContext,
@@ -102,6 +116,27 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+describe("the parked overview", () => {
+  beforeEach(() => {
+    mocks.parked.value = true;
+  });
+  afterEach(() => {
+    mocks.parked.value = false;
+  });
+
+  it("sends a member on", async () => {
+    signIn();
+    await expect(OverviewPage()).rejects.toThrow("NEXT_REDIRECT");
+  });
+
+  it("reads no account data on the way", async () => {
+    mocks.getMyProjects.mockClear();
+    signIn();
+    await expect(OverviewPage()).rejects.toThrow("NEXT_REDIRECT");
+    expect(mocks.getMyProjects).not.toHaveBeenCalled();
+  });
 });
 
 describe("Overview", () => {

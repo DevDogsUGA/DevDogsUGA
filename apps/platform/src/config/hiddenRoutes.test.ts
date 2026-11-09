@@ -98,14 +98,13 @@ describe("rollback route gate", () => {
       false,
     );
   });
-  it("redirects only the overview temporarily; profile and connected accounts remain visible", async () => {
+  it("leaves the overview to its gated page; profile and connected accounts remain visible", async () => {
     const response = await middleware(
       new NextRequest("https://devdogs.uga.edu/dashboard"),
     );
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(
-      "https://devdogs.uga.edu/dashboard/profile",
-    );
+    // An anonymous /dashboard must reach the sign-in gate directly: `workers.json`
+    // smoke-tests that. `dashboard/page.tsx` redirects members to their profile.
+    expect(response.headers.get("location")).toBeNull();
     expect(isHiddenRoute("/dashboard/accounts")).toBe(false);
     expect(isHiddenRoute("/dashboard/profile")).toBe(false);
   });
