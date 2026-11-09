@@ -278,7 +278,7 @@
     },
     {
       "slug": "2026-11-04",
-      "summary": "A Supabase II workshop on changing the database in our apps. Bring a laptop.",
+      "summary": "A Supabase workshop on changing the database in our apps. Bring a laptop.",
       "series": "workshop-wednesday",
       "startsAt": "2026-11-04T23:00:00.000Z",
       "endsAt": "2026-11-05T00:00:00.000Z",
@@ -291,8 +291,8 @@
     },
     {
       "slug": "2026-11-09-workshop",
-      "title": "Workshop: Supabase II",
-      "summary": "A Supabase II workshop on changing the database in our apps. Bring a laptop.",
+      "title": "Supabase: Database Deep Dive",
+      "summary": "A Supabase workshop on changing the database in our apps. Bring a laptop.",
       "category": "workshop",
       "startsAt": "2026-11-09T23:00:00.000Z",
       "endsAt": "2026-11-10T00:00:00.000Z",

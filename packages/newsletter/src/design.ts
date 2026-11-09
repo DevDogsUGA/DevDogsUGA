@@ -83,7 +83,7 @@ export function eventArt(title: string, kind: KindKey): string {
 export const KIND_ART: Record<KindKey, string> = {
   build: "laptop",
   interest: "megaphone",
-  workshop: "triangular_flag",
+  workshop: "light_bulb",
   demo: "trophy",
   social: "party_popper",
   study: "light_bulb",

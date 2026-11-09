@@ -231,12 +231,13 @@ export const ISSUES: ChangelogIssue[] = [
     term: "Fall 2026",
     sendLabel: "Mon · Nov 9",
     command: "changelog --date 2026-11-09",
-    title: "Supabase II and Merge Monday Tonight (DevDogs Changelog v3.3.0)",
+    title:
+      "Supabase Deep Dive and Merge Monday Tonight (DevDogs Changelog v3.3.0)",
     preview:
-      "Tonight in DLW 124: the Supabase II workshop at 6, then Merge Monday at 7.",
+      "Tonight in DLW 124: a Supabase deep dive at 6, then Merge Monday at 7.",
     tagline: "Workshop at 6, merge by 8.",
     intro:
-      "Tonight at 6 in DLW 124, the Supabase II workshop covers changing the database in our apps. Bring a laptop. At 7, stay in the room for Merge Monday: pick an issue in DogDays or DogPack and open a pull request before you leave.",
+      "Tonight at 6 in DLW 124, Supabase: Database Deep Dive covers changing the database in our apps. Bring a laptop. At 7, stay in the room for Merge Monday: pick an issue in DogDays or DogPack and open a pull request before you leave.",
     featuredLabel: "happening_tonight",
     featured: [
       { meeting: EVENTS.supabase2, cta: "See the schedule" },

@@ -59,7 +59,7 @@
     },
     {
       "id": "supabase-ii",
-      "title": "Supabase II: Editing Our App Schemas",
+      "title": "Supabase: Database Deep Dive",
       "description": null,
       "project": "DogDays & DogPack",
       "elHours": 1,
