@@ -1,38 +1,18 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import PageShell from "~/components/PageShell";
-import "~/components/participation/passport.css";
-import CheckInForm, {
-  MeetingLine,
-  type CheckInMeeting,
-} from "~/components/participation/CheckInForm";
-import EmptyState from "~/components/participation/EmptyState";
-import WeeklyArt from "~/components/WeeklyArt";
-import {
-  CATEGORY_LABEL,
-  meetingCategory,
-} from "~/components/EventsSection/meetingView";
-import CheckInSurvey from "~/components/CheckInSurvey";
-import ReflectionCards from "~/components/ReflectionCards";
-import { formatEventDateTime } from "~/lib/eventTime";
-import { formatMeetingWhen } from "~/components/participation/when";
+import PageShell from "~/classic/components/PageShell";
+import StarGrid from "~/classic/components/participation/StarGrid";
+import { StarTotalsRow } from "~/classic/components/participation/StarBadges";
+import CheckInSurvey from "~/classic/components/CheckInSurvey";
+import ReflectionCards from "~/classic/components/ReflectionCards";
+import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { getAttendanceMeetings } from "~/server/attendance/getMeetings";
 import { expectSession } from "~/server/auth";
-import ContributionList from "~/components/Contributions";
-import { getCommitsForUser } from "~/server/loaders/commits";
-import {
-  emptyWeekTreatment,
-  getWeeklyParticipation,
-} from "~/server/loaders/weeklyParticipation";
-import { formatHours } from "~/server/el/format";
-import { getElSummary } from "~/server/el/summary";
+import { getStarsForUser, totalStars } from "~/classic/loaders/stars";
+import { getWeeklyParticipation } from "~/server/loaders/weeklyParticipation";
 import { getReflectionActivities } from "~/server/reflections/load";
 import { getSurvey } from "~/server/survey/load";
-import Callout, { type CalloutTone } from "~/ui/callout";
-import { Card } from "~/ui/card";
-import { StatTile, StatTiles } from "~/ui/stat-tile";
-import { TextLink } from "~/ui/text-link";
 
 export const metadata: Metadata = {
   title: "Attendance | DevDogs",
@@ -41,59 +21,49 @@ export const metadata: Metadata = {
 
 const STATUS_COPY: Record<
   string,
-  { title: string; body: string; tone: CalloutTone; good?: boolean }
+  { title: string; body: string; good?: boolean }
 > = {
   recorded: {
     title: "Attendance recorded",
     body: "You’re checked in. Your attendance and progress have been updated.",
-    tone: "success",
     good: true,
   },
   duplicate: {
     title: "Already checked in",
     body: "Your original attendance record is still on file.",
-    tone: "success",
     good: true,
   },
   invalid_meeting: {
     title: "Meeting unavailable",
     body: "That meeting was canceled, removed, or could not be found.",
-    tone: "critical",
   },
   invalid: {
     title: "Code expired or invalid",
     body: "Use the current code shown at the meeting and try again.",
-    tone: "critical",
   },
   rate_limited: {
     title: "Too many attempts",
     body: "Wait about a minute, then try the current code again.",
-    tone: "warning",
   },
   invite_invalid: {
     title: "Invite link not valid",
     body: "That link is not one we issued. Ask the officer to send a new one.",
-    tone: "critical",
   },
   invite_used: {
     title: "Invite already used",
     body: "That link has already been claimed. If that was you, your attendance is on file.",
-    tone: "warning",
   },
   invite_expired: {
     title: "Invite expired",
     body: "That link has expired. Ask an officer to resend it.",
-    tone: "critical",
   },
   invite_address_mismatch: {
     title: "Wrong account for this invite",
     body: "The invite is for a different UGA address than the one you signed in with. Sign out, open the link again, and choose the address the email was sent to. Nothing was recorded.",
-    tone: "critical",
   },
   uga_required: {
     title: "Use your UGA Google account",
     body: "Attendance was not recorded. Sign in again with an @uga.edu account, then scan or enter the current code.",
-    tone: "critical",
   },
 };
 
@@ -132,169 +102,168 @@ export default async function AttendancePage({
   // attendance row itself, so a hand-edited URL shows nothing.
   const surveyMeetingId =
     receipt?.good && requestedMeeting ? requestedMeeting : null;
-  const [weekly, reflectionData, survey, contributions, el] = userId
+  const [stars, reflectionData, streak, survey] = userId
     ? await Promise.all([
-        getWeeklyParticipation(userId),
+        getStarsForUser(userId),
         getReflectionActivities(userId),
+        getWeeklyParticipation(userId),
         surveyMeetingId && isUuid(surveyMeetingId)
           ? getSurvey(userId, surveyMeetingId)
           : null,
-        getCommitsForUser(userId, { publicOnly: false }),
-        getElSummary(userId),
       ])
-    : [null, null, null, null, null];
+    : [null, null, null, null];
   const selected = meetings.some((meeting) => meeting.id === requestedMeeting)
     ? requestedMeeting
     : meetings[0]?.id;
 
-  const options: CheckInMeeting[] = meetings.map((meeting) => {
-    const category = meetingCategory(meeting);
-    return {
-      id: meeting.id,
-      title: meetingTitle(meeting),
-      when: formatMeetingWhen(meeting.startsAt, meeting.endsAt),
-      category,
-      categoryLabel: CATEGORY_LABEL[category],
-      ongoing: meeting.ongoing,
-    };
-  });
-  const checkedInOption = options.find((o) => o.id === checkedInMeeting?.id);
-  const problem =
-    receipt && !receipt.good
-      ? {
-          tone: receipt.tone,
-          title: receipt.title,
-          body: receipt.body,
-          code: status === "invalid",
-        }
-      : undefined;
-
   return (
     <PageShell
-      kind="build"
+      accent="cyan"
       title="Attendance"
-      description="Scan the QR code on the projector, then type the six-digit code shown there. It changes every 30 seconds. New members can sign in with their UGA Google account without losing their check-in."
+      description="Enter the rotating code shown at a DevDogs meeting. New members can sign in with their UGA Google account without losing their check-in."
     >
-      <div className="att-col">
-        {receipt?.good && (
-          <Card
-            flat
-            className="att-card att-wide"
-            data-testid="checkin-receipt"
-          >
-            {checkedInOption && <MeetingLine meeting={checkedInOption} />}
-            <Callout tone={receipt.tone} title={receipt.title}>
-              {receiptBody}
-              {recordedAt && !Number.isNaN(recordedAt.getTime()) && (
-                <p className="att-rec">
-                  Recorded {formatEventDateTime(recordedAt)}
-                </p>
-              )}
-            </Callout>
-            {surveyUrl && (
-              <p className="att-note">
-                <TextLink href={surveyUrl} target="_blank" rel="noreferrer">
-                  Continue to survey
-                </TextLink>
-              </p>
-            )}
-          </Card>
-        )}
-
-        {survey && <CheckInSurvey survey={survey} />}
-
-        {!receipt?.good &&
-          (options.length === 0 ? (
-            <EmptyState
-              title="Nothing to check in to yet"
-              body="Check-in lists meetings that have started. Come back when a meeting is on."
-            />
-          ) : (
-            <Card
-              as="section"
-              flat
-              className="att-card"
-              aria-labelledby="checkin-h"
+      {receipt && (
+        <section
+          className={`rounded-xl border-2 px-5 py-4 ${
+            receipt.good
+              ? "border-cyan-500/60 bg-cyan-950/60"
+              : "border-rose-500/60 bg-rose-950/40"
+          }`}
+          role="status"
+        >
+          <h2 className="font-semibold text-white">{receipt.title}</h2>
+          <p className="mt-1 text-sm text-mauve-200">{receiptBody}</p>
+          {recordedAt && !Number.isNaN(recordedAt.getTime()) && (
+            <p className="mt-2 text-sm font-medium text-white">
+              Recorded {formatEventDateTime(recordedAt)}
+            </p>
+          )}
+          {surveyUrl && (
+            <a
+              href={surveyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-block rounded-sm border-2 border-cyan-400 px-4 py-1.5 text-sm font-medium text-cyan-400 transition outline-none hover:bg-cyan-400 hover:text-black focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-950"
             >
-              <h2 id="checkin-h" className="h3" style={{ margin: 0 }}>
-                Enter meeting code
+              Continue to survey
+            </a>
+          )}
+        </section>
+      )}
+
+      {survey && <CheckInSurvey survey={survey} />}
+
+      <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
+        <h2 className="text-lg font-semibold text-white">Enter meeting code</h2>
+        <p className="mt-1 text-sm text-mauve-400">
+          Codes rotate every 30 seconds. If the wrong meeting is selected, you
+          can change it below.
+        </p>
+
+        {meetings.length === 0 ? (
+          <p className="mt-6 text-sm text-mauve-300">
+            There are no meetings available for attendance yet.
+          </p>
+        ) : (
+          <form
+            action="/attendance/claim"
+            method="post"
+            className="mt-6 grid grid-cols-1 gap-5"
+          >
+            <label className="grid grid-cols-1 gap-2 text-sm font-medium text-white">
+              Meeting
+              <select
+                name="meeting"
+                defaultValue={selected}
+                required
+                className="rounded-md border border-mauve-700 bg-mauve-900 px-3 py-2.5 text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30"
+              >
+                {meetings.map((meeting) => (
+                  <option key={meeting.id} value={meeting.id}>
+                    {meeting.ongoing ? "Now · " : ""}
+                    {meetingTitle(meeting)} ·{" "}
+                    {formatEventSpan(meeting.startsAt, meeting.endsAt)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid grid-cols-1 gap-2 text-sm font-medium text-white">
+              Six-digit code
+              <input
+                name="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                minLength={6}
+                maxLength={6}
+                required
+                placeholder="000000"
+                className="rounded-md border border-mauve-700 bg-mauve-900 px-4 py-3 font-mono text-2xl tracking-[0.35em] text-white outline-none placeholder:text-mauve-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30"
+              />
+            </label>
+
+            <button
+              type="submit"
+              className="justify-self-start rounded-sm border-2 border-cyan-400 bg-cyan-400 px-5 py-2 font-medium text-black transition outline-none hover:bg-cyan-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-950"
+            >
+              Check in
+            </button>
+          </form>
+        )}
+      </section>
+
+      {stars && (
+        <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Your participation passport
               </h2>
-              <CheckInForm
-                meetings={options}
-                selectedId={selected ?? options[0]!.id}
-                offerSignIn={!userId || status === "uga_required"}
-                problem={problem}
-              />
-            </Card>
-          ))}
-
-        {weekly && (
-          <div className="att-sect">
-            <WeeklyArt
-              heading="Your weekly streak"
-              headingId="streak-h"
-              current={weekly.current}
-              longest={weekly.longest}
-              semesters={weekly.semesters}
-              treatment={emptyWeekTreatment()}
-              note="A week lights when you attend a workshop night or have a pull request merged. Monday counts for the week before. A week with no meetings is a Streak Freeze: it never breaks a streak."
-            />
+              <p className="mt-1 text-sm text-mauve-400">
+                One star for each eligible meeting you attend.
+              </p>
+            </div>
+            <StarTotalsRow totals={totalStars(stars)} />
           </div>
-        )}
-
-        {el && (
-          <section className="att-sect" aria-labelledby="el-h">
-            <h2 id="el-h">Your EL hours</h2>
-            <p className="muted small">
-              Hours the club can vouch for: a workshop you attended and
-              reflected on (at least 100 words, within a week of your attendance
-              being recorded), plus project reports a reviewer approved.
-              Officers pass these on to UGAHacks; the platform does not submit
-              anything for you.
-            </p>
-            <StatTiles>
-              <StatTile
-                label="Workshops attended"
-                value={el.workshopsAttended}
-                sub={`${el.workshopsVerified} with a qualifying reflection`}
+          {streak && (
+            <div className="mb-6 grid gap-3 rounded-lg border border-amber-400/25 bg-amber-400/5 p-4 sm:grid-cols-2">
+              <StreakStat
+                label="Current streak"
+                value={weeks(streak.current)}
               />
-              <StatTile
-                label="Verified EL hours"
-                value={formatHours(el.totalHours)}
-                sub={`${formatHours(el.workshopHours)} workshop, ${formatHours(el.projectHours)} project`}
+              <StreakStat
+                label="Longest streak"
+                value={weeks(streak.longest)}
               />
-            </StatTiles>
-            <p className="muted small">
-              <TextLink href="/dashboard/projects">
-                Projects and reports
-              </TextLink>
-            </p>
-          </section>
-        )}
+            </div>
+          )}
+          <StarGrid cells={stars} />
+        </section>
+      )}
 
-        {contributions && (
-          <section className="att-sect" aria-labelledby="contributions-h">
-            <h2 id="contributions-h">Your commits</h2>
-            <p className="muted small">
-              Commits you authored on the default branch of a public repository
-              that DevDogs syncs. They are matched through the GitHub account
-              linked under Settings, Accounts. A repository that has since gone
-              private or missing is still listed here but never on your public
-              profile.
-            </p>
-            <ContributionList items={contributions} />
-          </section>
-        )}
-
-        {reflectionData && (
-          <ReflectionCards
-            activities={reflectionData.activities}
-            minimumWordCount={reflectionData.minimumWordCount}
-          />
-        )}
-      </div>
+      {reflectionData && (
+        <ReflectionCards
+          activities={reflectionData.activities}
+          minimumWordCount={reflectionData.minimumWordCount}
+        />
+      )}
     </PageShell>
   );
+}
+
+function StreakStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs tracking-wide text-mauve-400 uppercase">{label}</p>
+      <p className="mt-1 font-semibold text-amber-300">{value}</p>
+    </div>
+  );
+}
+
+function weeks(count: number): string {
+  return `${count} ${count === 1 ? "week" : "weeks"}`;
 }
 
 function isUuid(value: string): boolean {

@@ -1,8 +1,8 @@
 import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import AttendanceDisplay from "~/components/AttendanceDisplay";
-import { toTitleCardMeeting } from "~/components/AttendanceDisplay/TitleCard";
+import AttendanceDisplay from "~/classic/components/AttendanceDisplay";
+import { toTitleCardMeeting } from "~/classic/components/AttendanceDisplay/TitleCard";
 import { meetingTitle } from "~/lib/meetingTitle";
 
 import { getOfficerAttendanceMeeting } from "~/server/attendance/getOfficerMeeting";
