@@ -146,9 +146,10 @@ describe("Overview", () => {
     expect(
       within(card).getByRole("link", { name: "Profile" }).getAttribute("href"),
     ).toBe("/dashboard/profile");
+    // Connected accounts are part of Profile now, not a section of their own.
     expect(
-      within(card).getByText("Link GitHub, Discord and LinkedIn."),
-    ).toBeTruthy();
+      within(card).queryByRole("link", { name: "Connected accounts" }),
+    ).toBeNull();
     expect(screen.queryByRole("link", { name: "Overview" })).toBeNull();
   });
 

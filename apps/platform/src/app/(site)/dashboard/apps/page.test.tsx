@@ -10,8 +10,8 @@ vi.mock("~/server/auth/access", () => ({
   rules: { manageOAuthApps: mocks.canManage },
 }));
 vi.mock("~/server/loaders/oauthApps", () => ({ getConsoleApps: vi.fn() }));
-vi.mock("~/components/AppSideNav", () => ({ default: () => null }));
-vi.mock("~/components/Console/ConsoleAppsField", () => ({
+
+vi.mock("~/classic/components/Console/ConsoleAppsField", () => ({
   default: () => null,
 }));
 

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import OAuthClientDetails from "~/components/Settings/OAuthClientDetails";
-import { statusLabel } from "~/components/Settings/OAuthClientTable";
-import "~/components/Settings/settings.css";
+import PageShell from "~/classic/components/PageShell";
+import OAuthClientDetails from "~/classic/components/Settings/OAuthClientDetails";
+import { statusLabel } from "~/classic/components/Settings/OAuthClientTable";
+import Badge from "~/classic/ui/badge";
 import { requireDashboard } from "~/server/auth/access";
 import { getOAuthClientPage } from "~/server/loaders/oauthClient";
-import { PageHeading } from "~/ui/app-shell";
-import Badge from "~/ui/badge";
 
 export const metadata: Metadata = {
   title: "OAuth app | DevDogs",
@@ -31,14 +31,9 @@ export default async function OAuthClientPage({
 
   const { client, devDogsApp, testAccounts, moderation } = page;
   return (
-    <div className="settings-shell">
-      <PageHeading
-        crumbs={[
-          devDogsApp
-            ? { label: "Apps", href: "/dashboard/apps" }
-            : { label: "OAuth apps", href: "/dashboard/oauth" },
-          { label: client.label },
-        ]}
+    <div className="flex min-w-0 flex-1 flex-col bg-mauve-900">
+      <PageShell
+        accent="cyan"
         title={client.label}
         description="Credentials, redirect URIs and the details members see when they sign in."
         actions={
@@ -48,13 +43,24 @@ export default async function OAuthClientPage({
             {statusLabel(client.status)}
           </Badge>
         }
-      />
-      <OAuthClientDetails
-        client={client}
-        testAccounts={testAccounts}
-        moderation={moderation}
-        devDogsApp={devDogsApp}
-      />
+      >
+        {/* The baseline page had no breadcrumbs, so the way back is a plain
+            link. A DevDogs app's list is the hidden Apps screen: no link. */}
+        {!devDogsApp && (
+          <Link
+            href="/dashboard/oauth"
+            className="w-fit text-sm text-mauve-300 underline underline-offset-4 hover:text-white"
+          >
+            Back to OAuth apps
+          </Link>
+        )}
+        <OAuthClientDetails
+          client={client}
+          testAccounts={testAccounts}
+          moderation={moderation}
+          devDogsApp={devDogsApp}
+        />
+      </PageShell>
     </div>
   );
 }

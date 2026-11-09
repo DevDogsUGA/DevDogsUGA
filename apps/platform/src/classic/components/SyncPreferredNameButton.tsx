@@ -4,7 +4,7 @@ import {
   SpinnerGapIcon,
   ArrowCounterClockwiseIcon,
 } from "@phosphor-icons/react/ssr";
-import { useCommand } from "~/ui/use-command";
+import { useCommand } from "~/classic/ui/use-command";
 import { updateIdentity } from "~/server/actions/profile";
 
 interface Props {

@@ -14,12 +14,19 @@ import { getMyHandleChoices } from "~/server/actions/publicProfile";
 import setHandle from "~/server/actions/profileHandle";
 import type { HandleChoices } from "~/server/loaders/publicProfiles";
 import Callout from "~/classic/ui/callout";
+import { profilePath } from "~/lib/profilePath";
 
 interface Props {
   /** What the server read when the picker rendered. Later reads replace it. */
   choices: HandleChoices;
   /** Called with the stored handle after a successful save. */
   onSaved?: (handle: string) => void;
+  /**
+   * Deferred mode, for a page with one Save: the parent owns the selection and
+   * does the write. The picker then shows no Save button and no result.
+   */
+  value?: string | null;
+  onValueChange?: (handle: string) => void;
 }
 
 /**
@@ -31,9 +38,17 @@ interface Props {
  * inline and follows with a fresh read, so the member sees the real state
  * rather than clicking the same dead option again.
  */
-export default function HandlePicker({ choices: initial, onSaved }: Props) {
-  const [choices, setChoices] = useState(initial);
-  const [selected, setSelected] = useState<string | null>(initial.current);
+export default function HandlePicker({
+  choices: initial,
+  onSaved,
+  value,
+  onValueChange,
+}: Props) {
+  const deferred = onValueChange !== undefined;
+  const [ownChoices, setChoices] = useState(initial);
+  const choices = deferred ? initial : ownChoices;
+  const [ownSelected, setSelected] = useState<string | null>(initial.current);
+  const selected = deferred ? (value ?? null) : ownSelected;
   const [result, setResult] = useState<HandleOutcomeMessage | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -112,7 +127,8 @@ export default function HandlePicker({ choices: initial, onSaved }: Props) {
                 checked={isSelected}
                 disabled={taken}
                 onChange={() => {
-                  setSelected(option.handle);
+                  if (deferred) onValueChange(option.handle);
+                  else setSelected(option.handle);
                   setResult(null);
                 }}
                 className="mt-1 accent-cyan-400"
@@ -135,24 +151,38 @@ export default function HandlePicker({ choices: initial, onSaved }: Props) {
         })}
       </fieldset>
 
-      {picked && revealsConnectedUsername(picked.kind) && (
-        <p className="max-w-md text-xs text-amber-200">
-          This publishes your {handleKindLabel(picked.kind)} to everyone who
-          sees your profile address.
-        </p>
-      )}
+      {picked &&
+        revealsConnectedUsername(picked.kind) &&
+        picked.handle !== choices.current && (
+          <p className="max-w-md text-xs text-amber-200">
+            This publishes your {handleKindLabel(picked.kind)} to everyone who
+            sees your profile address.
+          </p>
+        )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <FormButton
-          type="button"
-          theme="cyan"
-          className="w-fit text-sm"
-          disabled={unchanged || pending}
-          onClick={save}
-        >
-          {pending ? "Saving…" : "Save handle"}
-        </FormButton>
-      </div>
+      {deferred &&
+        picked &&
+        choices.current &&
+        picked.handle !== choices.current && (
+          <Callout tone="warning" title="Your address will change">
+            from {profilePath(choices.current)} to {profilePath(picked.handle)}.
+            Old links stop working when you save.
+          </Callout>
+        )}
+
+      {!deferred && (
+        <div className="flex flex-wrap items-center gap-3">
+          <FormButton
+            type="button"
+            theme="cyan"
+            className="w-fit text-sm"
+            disabled={unchanged || pending}
+            onClick={save}
+          >
+            {pending ? "Saving…" : "Save handle"}
+          </FormButton>
+        </div>
+      )}
 
       {result && (
         <Callout tone={result.tone} alert>

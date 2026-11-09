@@ -1,6 +1,5 @@
 /** Parked during the pre-Cosmic rollback. Match whole path segments. */
 export const HIDDEN_ROUTES = [
-  "/dashboard/apps",
   "/dashboard/badges",
   "/dashboard/graphics",
   "/dashboard/hackathons",

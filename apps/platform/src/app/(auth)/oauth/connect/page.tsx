@@ -6,9 +6,9 @@ import { expectUserWith } from "~/server/auth";
 import { parseConnectParams } from "~/server/oauth/connectParams";
 import ConnectCard from "../ConnectCard";
 import { approvalPath } from "../approvalPath";
-import FormButton from "~/components/FormButton";
-import Callout from "~/ui/callout";
-import { DefinitionList } from "~/ui/definition-list";
+import FormButton from "~/classic/components/FormButton";
+import Callout from "~/classic/ui/callout";
+import { DefinitionList } from "~/classic/ui/definition-list";
 
 /**
  * The one-click half of `devtools oauth`: a browser tab the CLI opens with a
@@ -82,7 +82,10 @@ export default async function OAuthConnectPage({ searchParams }: Props) {
           <Callout tone="warning">
             Connecting an OAuth client requires a linked GitHub account.
           </Callout>
-          <Link href="/dashboard/accounts#github" className="btn primary">
+          <Link
+            href="/dashboard/profile#github"
+            className="rounded-sm border-2 border-cyan-400 bg-cyan-400 px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-mauve-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
+          >
             Link GitHub account
           </Link>
         </div>
@@ -95,10 +98,13 @@ export default async function OAuthConnectPage({ searchParams }: Props) {
             ]}
           />
 
-          <p className="help" style={{ margin: 0 }}>
+          <p className="text-sm text-mauve-300">
             This creates a new OAuth client and sends its secret back to the CLI
             running on your machine. You can revoke it any time from{" "}
-            <Link href="/dashboard/oauth" className="textlink">
+            <Link
+              href="/dashboard/oauth"
+              className="underline hover:text-white"
+            >
               OAuth apps
             </Link>
             .
@@ -111,7 +117,7 @@ export default async function OAuthConnectPage({ searchParams }: Props) {
               <input type="hidden" name="state" value={state} />
               <input type="hidden" name="label" value={label} />
               <input type="hidden" name="callbackUri" value={callbackUri} />
-              <FormButton theme="cyan" type="submit">
+              <FormButton theme="cyan" type="submit" className="text-sm">
                 Approve
               </FormButton>
             </form>
@@ -122,7 +128,7 @@ export default async function OAuthConnectPage({ searchParams }: Props) {
               <input type="hidden" name="state" value={state} />
               <input type="hidden" name="label" value={label} />
               <input type="hidden" name="callbackUri" value={callbackUri} />
-              <FormButton theme="black" variant="ghost" type="submit">
+              <FormButton theme="black" type="submit" className="text-sm">
                 Deny
               </FormButton>
             </form>

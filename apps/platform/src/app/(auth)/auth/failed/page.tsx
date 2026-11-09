@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { GoogleLogoIcon, HouseIcon } from "@phosphor-icons/react/ssr";
 import {
   parseFailureQuery,
   retryUrl,
   SIGN_IN_FAILURE_COPY,
 } from "~/server/auth/signInFailure";
-import Callout from "~/ui/callout";
-import LinkButton from "~/ui/link-button";
-import { TextLink } from "~/ui/text-link";
+import AuthCard from "~/classic/components/AuthCard";
+import Callout from "~/classic/ui/callout";
+import { TextLink } from "~/classic/ui/text-link";
 
 export const metadata: Metadata = {
   title: "Sign-in problem | DevDogs",
@@ -38,39 +39,32 @@ export default async function SignInProblemPage({
   const copy = SIGN_IN_FAILURE_COPY[failure];
 
   return (
-    <div className="card w-full max-w-md p-8">
-      <h1 className="display mb-4 text-4xl">{copy.title}</h1>
+    <AuthCard className="max-w-md">
+      <h1 className="mb-4 text-xl font-semibold text-white">{copy.title}</h1>
       <Callout tone={TONES[failure]} alert>
         {copy.body}
       </Callout>
       <div className="mt-6 flex flex-col gap-3">
-        <span className="btn-shadow flex">
-          <LinkButton
-            href={retryUrl(returnTo)}
-            prefetch={false}
-            variant="default"
-            size="lg"
-            className="w-full"
-          >
-            <GoogleLogoIcon weight="bold" aria-hidden /> Try again
-          </LinkButton>
-        </span>
-        <LinkButton href="/" variant="secondary" className="w-full">
+        <Link
+          href={retryUrl(returnTo)}
+          prefetch={false}
+          className="flex w-full items-center justify-center gap-[1ch] rounded-sm border-2 border-white bg-white px-4 py-2.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+        >
+          <GoogleLogoIcon weight="bold" aria-hidden /> Try again
+        </Link>
+        <Link
+          href="/"
+          className="flex w-full items-center justify-center gap-[1ch] rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2.5 text-sm font-medium text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+        >
           <HouseIcon weight="bold" aria-hidden /> Back to the site
-        </LinkButton>
+        </Link>
       </div>
       {ref && (
-        <p className="mt-6 font-mono text-sm text-[var(--text-3)]">
-          Reference {ref}
-        </p>
+        <p className="mt-6 font-mono text-sm text-mauve-400">Reference {ref}</p>
       )}
-      <p className="mt-4 text-sm text-[var(--text-3)]">
-        Need a hand?{" "}
-        <TextLink href="/discord" className="inline">
-          Ask in Discord
-        </TextLink>
-        .
+      <p className="mt-4 text-sm text-mauve-400">
+        Need a hand? <TextLink href="/discord">Ask in Discord</TextLink>.
       </p>
-    </div>
+    </AuthCard>
   );
 }

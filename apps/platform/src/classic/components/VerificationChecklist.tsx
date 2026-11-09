@@ -177,14 +177,14 @@ export default function VerificationChecklist({
         <ul className="flex flex-col gap-0">
           <CheckItem
             met={verificationStatus.hasGithub}
-            href="/dashboard/accounts#github"
+            href="/dashboard/profile#github"
             onNavigate={onNavigate}
           >
             GitHub account linked
           </CheckItem>
           <CheckItem
             met={verificationStatus.hasDiscord}
-            href="/dashboard/accounts#discord"
+            href="/dashboard/profile#discord"
             onNavigate={onNavigate}
           >
             Discord account linked

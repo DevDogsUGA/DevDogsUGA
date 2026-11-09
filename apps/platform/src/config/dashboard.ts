@@ -46,16 +46,6 @@ export const ALL_DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     refusal: "forbidden",
   },
   {
-    id: "accounts",
-    label: "Connected accounts",
-    icon: "LinkSimpleIcon",
-    description: "Link GitHub, Discord and LinkedIn.",
-    group: "Account",
-    href: "/dashboard/accounts",
-    access: "member",
-    refusal: "forbidden",
-  },
-  {
     id: "attendance",
     label: "Attendance passport",
     icon: "StarIcon",

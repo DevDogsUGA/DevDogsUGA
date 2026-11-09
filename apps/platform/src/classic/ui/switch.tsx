@@ -21,6 +21,8 @@ interface Props {
    */
   pending?: boolean;
   disabled?: boolean;
+  /** Names the switch when no wrapping `<label>` does. */
+  "aria-label"?: string;
 }
 
 export default function Toggle({
@@ -28,6 +30,7 @@ export default function Toggle({
   name,
   pending: pendingProp,
   disabled,
+  "aria-label": ariaLabel,
 }: Props) {
   const { pending: formPending } = useFormStatus();
   const pending = pendingProp ?? formPending;
@@ -36,6 +39,9 @@ export default function Toggle({
     <button
       className="group relative h-lh w-[3.25em] shrink-0 rounded-full border border-mauve-600 bg-mauve-700 ring-mauve-200 ring-offset-1 outline outline-mauve-700 transition-colors hover:ring disabled:cursor-not-allowed disabled:opacity-50 data-enabled:border-mauve-400 data-enabled:bg-mauve-400"
       type="submit"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
       name={checked ? undefined : name}
       value={checked ? undefined : "on"}
       disabled={disabled}

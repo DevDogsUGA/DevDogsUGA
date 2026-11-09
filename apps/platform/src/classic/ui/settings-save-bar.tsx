@@ -80,10 +80,18 @@ const listFormatter = new Intl.ListFormat("en", {
 });
 
 export default function SettingsSaveBar() {
-  const { dirtyCount, invalidLabels, isSaving, saveAll, resetAll, blockedAt } =
-    useSettingsForm();
+  const {
+    dirtyCount,
+    invalidLabels,
+    isSaving,
+    saveAll,
+    resetAll,
+    blockedAt,
+    result,
+  } = useSettingsForm();
 
-  const show = dirtyCount > 0;
+  const failed = result?.kind === "error";
+  const show = dirtyCount > 0 || result !== null;
   const blocked = invalidLabels.length > 0;
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -220,10 +228,19 @@ export default function SettingsSaveBar() {
           role="status"
           className={cn(
             "min-w-0 text-left text-sm leading-tight font-semibold",
-            blocked ? "text-rose-300" : "text-mauve-100",
+            blocked || failed ? "text-rose-300" : "text-mauve-100",
           )}
         >
-          {blocked ? (
+          {failed ? (
+            <span role="alert" className="flex items-center gap-1.5">
+              <WarningCircleIcon
+                weight="fill"
+                aria-hidden
+                className="hidden size-4 shrink-0 sm:inline"
+              />
+              <span>{result?.message}</span>
+            </span>
+          ) : blocked ? (
             <span className="flex items-center gap-1.5">
               <WarningCircleIcon
                 weight="fill"

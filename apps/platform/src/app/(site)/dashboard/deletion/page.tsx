@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import AccountDeletionPending from "~/components/AccountDeletion";
+import AccountDeletionPending from "~/classic/components/AccountDeletion";
 import { getPendingDeletion } from "~/server/accountDeletion/schedule";
 import { requireDashboard } from "~/server/auth/access";
 import { getVerificationStatus } from "~/server/loaders/verification";

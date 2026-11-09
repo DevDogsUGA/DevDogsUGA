@@ -4,9 +4,12 @@ import { notFound, redirect } from "next/navigation";
 import * as z from "zod";
 import type { TestAccount } from "~/server/actions/testAccounts";
 import { expectSession, expectUserWith } from "~/server/auth";
-import ConsentActions from "~/components/ConsentCard/ConsentActions";
-import ConsentCard, { ConsentRefusedCard } from "~/components/ConsentCard";
-import ConsentForm from "~/components/ConsentForm";
+import AuthCard from "~/classic/components/AuthCard";
+import ConsentActions from "~/classic/components/ConsentCard/ConsentActions";
+import ConsentCard, {
+  ConsentRefusedCard,
+} from "~/classic/components/ConsentCard";
+import ConsentForm from "~/classic/components/ConsentForm";
 import { env } from "~/env";
 import { testAccountName } from "~/lib/testAccountName";
 import { approveAs } from "~/server/oauth/asAccount";
@@ -215,7 +218,7 @@ async function pickerStep(
 
   // The centring and the full-viewport ground come from `(auth)/layout.tsx`.
   return (
-    <div className="card w-full max-w-md" style={{ padding: 32 }}>
+    <AuthCard>
       <ConsentForm
         authorizationId={authorizationId}
         self={{
@@ -224,6 +227,6 @@ async function pickerStep(
         }}
         testAccounts={testAccounts}
       />
-    </div>
+    </AuthCard>
   );
 }

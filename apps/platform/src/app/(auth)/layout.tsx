@@ -19,7 +19,7 @@ export default function AuthLayout({
   return (
     <main
       id="main-content"
-      className="flex min-h-dvh flex-col items-center justify-center bg-[var(--bg)] px-4 py-10"
+      className="flex min-h-dvh flex-col items-center justify-center bg-mauve-950 px-4 py-10"
     >
       {children}
     </main>

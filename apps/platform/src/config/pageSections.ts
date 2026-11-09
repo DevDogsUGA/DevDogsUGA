@@ -35,14 +35,14 @@ export interface PageSection {
 export const PAGE_SECTIONS: Record<string, PageSection[]> = {
   "/dashboard/profile": [
     {
-      id: "details",
-      label: "Your details",
+      id: "profile",
+      label: "Profile",
       fields: [
         {
           id: "avatar",
           label: "Profile Photo",
           description:
-            "Press your photo to change it. Shown on your public profile, the community page and anywhere else your account appears.",
+            "Shown on your public profile, the community page, and anywhere else your account appears.",
         },
         {
           id: "preferredName",
@@ -59,7 +59,7 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "graduation",
           label: "Graduation",
           description:
-            "Your expected graduation semester and year. Used to verify your student status. Only the year is shown on your public profile.",
+            "Your expected graduation semester and year — used to verify your student status. Only the year is shown on your public profile.",
         },
         {
           id: "academics",
@@ -76,41 +76,13 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "links",
           label: "Links",
           description:
-            "Up to five links (a portfolio, a résumé, socials), shown on your public profile. Use the arrows to reorder.",
+            "Add up to five links (e.g., portfolio, resume, socials) to display on your public profile. Use the arrows to reorder.",
         },
       ],
     },
-    // No fields: they are rendered inside PublicProfileSection, which shares
-    // draft state between them, so the page source has no `<Field>` to mirror.
-    // The panel anchor still lands search on the section.
-    { id: "publicProfileSettings", label: "Public profile" },
-    // No fields: the switches are rendered by BadgeVisibility, one per badge
-    // the member holds, so the page source has no `<Field>` to mirror.
-    { id: "badges", label: "Badges" },
     {
-      id: "roles",
-      label: "Roles",
-      fields: [
-        { id: "roles-list", label: "Your roles" },
-        // Rendered only for leaders. Indexed for everyone: the field's existence
-        // is not sensitive, and gating it would mean threading `isLeader` into
-        // the search route for one anchor.
-        {
-          id: "roleDescription",
-          label: "Role Description",
-          description:
-            "A short description of what you do, shown under your name on your profile and on the leadership section of the homepage.",
-        },
-      ],
-    },
-    { id: "your-data", label: "Your data" },
-    { id: "delete-account", label: "Delete account" },
-  ],
-
-  "/dashboard/accounts": [
-    {
-      id: "accounts",
-      label: "Accounts",
+      id: "connectedAccounts",
+      label: "Connected Accounts",
       fields: [
         {
           id: "email",
@@ -136,16 +108,105 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           description:
             "Link your LinkedIn profile to display it on your public profile.",
         },
+        {
+          id: "connected-apps",
+          label: "Connected apps",
+          description:
+            "Apps you have approved to sign you in with DevDogs. Remove access to sign out of one app and make it ask again.",
+        },
       ],
     },
-    { id: "connected-apps", label: "Connected apps" },
-    { id: "verification", label: "Verification" },
+    {
+      id: "publicProfileSettings",
+      label: "Public Profile",
+    },
+    {
+      id: "status",
+      label: "Status",
+      fields: [
+        {
+          id: "roles",
+          label: "Roles",
+          description:
+            "Your roles within the club. Only officers can change these.",
+        },
+        {
+          id: "roleDescription",
+          label: "Role Description",
+          description:
+            "A short description of what you do, shown on the leadership section of the homepage.",
+        },
+        {
+          id: "verification",
+          label: "Profile Verification",
+          description:
+            "Complete all the steps below for your profile to appear on the DevDogs community page.",
+        },
+      ],
+    },
+    {
+      id: "your-data",
+      label: "Your Data",
+      fields: [
+        {
+          id: "download-data",
+          label: "Download my data",
+          description:
+            "A JSON file of what the DevDogs platform keeps about you: your profile, linked accounts (never their sign-in tokens), roles, attendance, reflections, survey answers, support threads, OAuth apps, schedule builder plans and the audit events you caused. DogDays and DogPack are separate apps and hold their own data about you.",
+        },
+      ],
+    },
+    {
+      id: "delete-account",
+      label: "Delete Account",
+      fields: [
+        {
+          id: "delete",
+          label: "Delete account",
+          description:
+            "Schedules your account for deletion in 14 days. Until then you can sign in and keep it. When the time is up, your profile, reflections, survey answers and OAuth apps are erased, and your attendance stays in the club's totals without your name. It isn't part of Save.",
+        },
+      ],
+    },
   ],
 
   "/dashboard/oauth": [
-    { id: "issuer", label: "Issuer URL" },
-    { id: "apps", label: "Your apps" },
-    { id: "test-accounts", label: "Test accounts" },
+    {
+      id: "issuer",
+      label: "Issuer URL",
+      fields: [
+        {
+          id: "issuer-url",
+          label: "Issuer URL",
+          description:
+            "Where an OpenID Connect provider (a custom OIDC provider in Supabase, for one) discovers DevDogs sign-in. Read from discovery, not typed in by hand. Copy it exactly: a provider set to any other issuer fails its issuer check.",
+        },
+      ],
+    },
+    {
+      id: "apps",
+      label: "Your apps",
+      fields: [
+        {
+          id: "apps-list",
+          label: "OAuth apps",
+          description:
+            "A logo, a homepage and a privacy policy are optional while you test. They are required before an officer can publish the app, and they are what members see on the consent screen. Open an app to add them.",
+        },
+      ],
+    },
+    {
+      id: "test-accounts",
+      label: "Test Accounts",
+      fields: [
+        {
+          id: "test-accounts-list",
+          label: "Test Accounts",
+          description:
+            "Sandboxed identities you can sign in as during the OAuth flow, so you can test without your own account.",
+        },
+      ],
+    },
     {
       id: "moderation",
       label: "Moderation",

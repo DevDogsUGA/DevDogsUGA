@@ -13,7 +13,9 @@ vi.mock("~/server/actions/consent", () => ({
   allowConsent: vi.fn(),
   cancelConsent: vi.fn(),
 }));
-vi.mock("~/components/TestAccountDialog", () => ({ default: () => null }));
+vi.mock("~/classic/components/TestAccountDialog", () => ({
+  default: () => null,
+}));
 
 const headerValues = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({
@@ -60,8 +62,10 @@ vi.mock("~/server/oauth/consentTarget", () => ({
   findDisplayName,
 }));
 
-import ConsentCard, { ConsentRefusedCard } from "~/components/ConsentCard";
-import ConsentForm from "~/components/ConsentForm";
+import ConsentCard, {
+  ConsentRefusedCard,
+} from "~/classic/components/ConsentCard";
+import ConsentForm from "~/classic/components/ConsentForm";
 import ConsentPage from "./page";
 
 interface CardProps {

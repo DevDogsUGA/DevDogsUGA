@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import Input from "~/components/Input";
-import OAuthCredentialsField from "~/components/OAuthCredentialsField";
-import OAuthModerationField from "~/components/OAuthModerationField";
-import OAuthTestAccountsField from "~/components/OAuthTestAccountsField";
-import SettingsAnchor from "~/components/Settings/SettingsAnchor";
-import "~/components/Settings/settings.css";
+import Input from "~/classic/components/Input";
+import OAuthCredentialsField from "~/classic/components/OAuthCredentialsField";
+import OAuthModerationField from "~/classic/components/OAuthModerationField";
+import OAuthTestAccountsField from "~/classic/components/OAuthTestAccountsField";
+import PageShell from "~/classic/components/PageShell";
+import { CardSkeleton } from "~/classic/components/Skeletons";
+import { ConsoleCard } from "~/classic/ui/card";
+import Field from "~/classic/ui/field";
+import { SettingsFormProvider } from "~/classic/ui/settings-form";
+import SettingsSaveBar from "~/classic/ui/settings-save-bar";
 import { getOAuthPageData } from "~/server/loaders/console";
 import { getOAuthModerationData } from "~/server/loaders/oauthModeration";
 import { resolveIssuer } from "~/server/oauth/issuer";
-import { PageHeading, Panel } from "~/ui/app-shell";
-import { SettingsFormProvider } from "~/ui/settings-form";
-import SettingsSaveBar from "~/ui/settings-save-bar";
-import { Skeleton } from "~/ui/skeleton";
 
 export const metadata: Metadata = {
   title: "OAuth apps | Settings | DevDogs",
@@ -42,90 +42,110 @@ async function OAuthData({ searchParams }: Props) {
 
   return (
     <>
-      <Panel
-        id="issuer"
-        title="Issuer URL"
-        help="Where an OpenID Connect provider (a custom OIDC provider in Supabase, for one) discovers DevDogs sign-in."
-      >
-        {issuer ? (
-          <div className="set-secret">
-            <Input mono copy value={issuer} aria-label="Issuer URL" />
-          </div>
-        ) : (
-          <p className="help">
-            Couldn&rsquo;t load the issuer right now. Try again in a moment.
-          </p>
-        )}
-        <p className="help" style={{ marginTop: 10, maxWidth: "62ch" }}>
-          Read from discovery, not typed in by hand. Copy it exactly: a provider
-          set to any other issuer fails its issuer check.
-        </p>
-      </Panel>
+      <ConsoleCard.Root id="issuer">
+        <ConsoleCard.Header title="Issuer URL" />
+        <ConsoleCard.Content>
+          <Field
+            id="issuer-url"
+            label="Issuer URL"
+            description="Where an OpenID Connect provider (a custom OIDC provider in Supabase, for one) discovers DevDogs sign-in. Read from discovery, not typed in by hand. Copy it exactly: a provider set to any other issuer fails its issuer check."
+          >
+            {issuer ? (
+              <Input
+                mono
+                copy
+                className="max-w-sm"
+                value={issuer}
+                aria-label="Issuer URL"
+              />
+            ) : (
+              <p className="text-sm text-mauve-400">
+                Couldn&rsquo;t load the issuer right now. Try again in a moment.
+              </p>
+            )}
+          </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
-      <Panel
-        id="apps"
-        title="Your apps"
-        help="Every app you create starts in Testing: only you and your test accounts can sign in to it. When it is ready, an officer publishes it so every member can. You keep managing it either way. Redirect URIs follow one rule: http only on localhost, 127.0.0.1 and [::1], https everywhere else. Needs a linked GitHub account."
-      >
-        <p className="help" style={{ marginBottom: 16, maxWidth: "62ch" }}>
-          A logo, a homepage and a privacy policy are optional while you test.
-          They are required before an officer can publish the app, and they are
-          what members see on the consent screen. Open an app to add them.
-        </p>
-        <OAuthCredentialsField
-          {...data}
-          prefillRedirectUri={prefillRedirectUri}
+      <ConsoleCard.Root id="apps">
+        <ConsoleCard.Header
+          title="Your apps"
+          description="Every app you create starts in Testing: only you and your test accounts can sign in to it. When it is ready, an officer publishes it so every member can. You keep managing it either way. Redirect URIs follow one rule: http only on localhost, 127.0.0.1 and [::1], https everywhere else. Needs a linked GitHub account."
         />
-      </Panel>
+        <ConsoleCard.Content>
+          <Field
+            id="apps-list"
+            label="OAuth apps"
+            description="A logo, a homepage and a privacy policy are optional while you test. They are required before an officer can publish the app, and they are what members see on the consent screen. Open an app to add them."
+          >
+            <OAuthCredentialsField
+              {...data}
+              prefillRedirectUri={prefillRedirectUri}
+            />
+          </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
-      <Panel
-        id="test-accounts"
-        title="Test accounts"
-        help="Sandboxed identities you can sign in as during the OAuth flow, so you can test without your own account."
-      >
-        <OAuthTestAccountsField {...data} />
-      </Panel>
+      <ConsoleCard.Root id="test-accounts">
+        <ConsoleCard.Header title="Test Accounts" />
+        <ConsoleCard.Content>
+          <Field
+            id="test-accounts-list"
+            label="Test Accounts"
+            description="Sandboxed identities you can sign in as during the OAuth flow, so you can test without your own account."
+          >
+            <OAuthTestAccountsField {...data} />
+          </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
-      <Panel id="moderation" title="Moderation">
-        <SettingsAnchor
-          id="moderation-clients"
-          label="Report and Block"
-          description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from an app in Testing land in a sandbox on its page, never in the moderators' queue."
-        >
-          <p className="help" style={{ marginBottom: 16, maxWidth: "62ch" }}>
-            Sign reports from your app&rsquo;s backend, and receive the
-            decisions moderators make. Reports from an app in Testing land in a
-            sandbox on its page, never in the moderators&rsquo; queue.
-          </p>
-          {unpaged.length > 0 ? (
-            <SettingsFormProvider>
-              <OAuthModerationField clients={unpaged} />
-              <SettingsSaveBar />
-            </SettingsFormProvider>
-          ) : (
-            <p className="help">
-              Moderation is set up per app. Open an app above to find it.
-            </p>
-          )}
-        </SettingsAnchor>
-      </Panel>
+      <ConsoleCard.Root id="moderation">
+        <ConsoleCard.Header title="Moderation" />
+        <ConsoleCard.Content>
+          <Field
+            id="moderation-clients"
+            label="Report and Block"
+            description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from an app in Testing land in a sandbox on its page, never in the moderators' queue."
+          >
+            {unpaged.length > 0 ? (
+              <SettingsFormProvider>
+                <OAuthModerationField clients={unpaged} />
+                <SettingsSaveBar />
+              </SettingsFormProvider>
+            ) : (
+              <p className="text-sm text-mauve-400">
+                Moderation is set up per app. Open an app above to find it.
+              </p>
+            )}
+          </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
     </>
   );
 }
 
-export default async function OAuthPage({ searchParams }: Props) {
+export default function OAuthPage({ searchParams }: Props) {
   return (
-    <div className="settings-shell">
-      <PageHeading
+    <div className="flex min-w-0 flex-1 flex-col bg-mauve-900">
+      <PageShell
+        accent="cyan"
         title="OAuth apps"
         description="Set up an OAuth app to test DevDogs sign-in from your own project."
-      />
-      {/* `searchParams` goes down as the promise
-          it already is, because awaiting it here would suspend the shell along
-          with the data and put the title behind the same wait. */}
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-[720px]" />}>
-        <OAuthData searchParams={searchParams} />
-      </Suspense>
+      >
+        {/* The page itself awaits nothing: `searchParams` goes down as the
+            promise it already is, because awaiting it here would suspend the
+            shell along with the data and put the title behind the same wait. */}
+        <Suspense
+          fallback={
+            <>
+              <CardSkeleton rows={1} />
+              <CardSkeleton rows={2} />
+            </>
+          }
+        >
+          <OAuthData searchParams={searchParams} />
+        </Suspense>
+      </PageShell>
     </div>
   );
 }

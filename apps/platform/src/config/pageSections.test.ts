@@ -17,7 +17,6 @@ import { ALL_DASHBOARD_SECTIONS } from "./dashboard";
 
 const SOURCES: Record<string, string> = {
   "/dashboard/profile": "app/(site)/dashboard/profile/page.tsx",
-  "/dashboard/accounts": "app/(site)/dashboard/accounts/page.tsx",
   "/dashboard/oauth": "app/(site)/dashboard/oauth/page.tsx",
   "/dashboard/permissions": "app/(site)/dashboard/permissions/page.tsx",
   "/dashboard/reflections": "components/ReflectionSettingsCard.tsx",

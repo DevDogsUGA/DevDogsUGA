@@ -20,7 +20,7 @@ vi.mock("~/server/auth/access", () => ({
 vi.mock("~/server/loaders/oauthClient", () => ({
   getOAuthClientPage: mocks.getOAuthClientPage,
 }));
-vi.mock("~/components/Settings/OAuthClientDetails", () => ({
+vi.mock("~/classic/components/Settings/OAuthClientDetails", () => ({
   default: ({ client }: { client: { label: string } }) => (
     <div>details for {client.label}</div>
   ),
@@ -57,26 +57,23 @@ beforeEach(() => {
 });
 
 describe("/dashboard/oauth/[clientId]", () => {
-  it("renders the owner's client under a back link to their apps", async () => {
+  it("renders the owner's client with a plain back link to their apps", async () => {
     mocks.getOAuthClientPage.mockResolvedValue(page());
     render(await OAuthClientPage({ params }));
     expect(mocks.getOAuthClientPage).toHaveBeenCalledExactlyOnceWith(CLIENT);
     expect(screen.getByRole("heading", { name: "Lab" })).toBeInTheDocument();
     expect(screen.getByText("Testing")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "OAuth apps" })).toHaveAttribute(
-      "href",
-      "/dashboard/oauth",
-    );
+    expect(
+      screen.getByRole("link", { name: "Back to OAuth apps" }),
+    ).toHaveAttribute("href", "/dashboard/oauth");
     expect(screen.getByText("details for Lab")).toBeInTheDocument();
   });
 
-  it("sends a holder editing a DevDogs app back to Console → Apps", async () => {
+  it("links nowhere for a DevDogs app, whose list is the hidden Apps screen", async () => {
     mocks.getOAuthClientPage.mockResolvedValue(page({ devDogsApp: true }));
     render(await OAuthClientPage({ params }));
-    expect(screen.getByRole("link", { name: "Apps" })).toHaveAttribute(
-      "href",
-      "/dashboard/apps",
-    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText("details for Lab")).toBeInTheDocument();
   });
 
   it("is a 404 for a client the caller may not manage, whether or not it exists", async () => {

@@ -7,11 +7,9 @@ import { formatUserCode, normalizeUserCode } from "~/server/oauth/deviceCodes";
 import { verifyDeviceUserCode } from "~/server/oauth/verifyDeviceCode";
 import ConnectCard from "../ConnectCard";
 import { approvalPath } from "../approvalPath";
-import FormButton from "~/components/FormButton";
-import { Button } from "~/ui/button";
-import Callout from "~/ui/callout";
-import { CodeInput } from "~/ui/code-input";
-import { DefinitionList } from "~/ui/definition-list";
+import FormButton from "~/classic/components/FormButton";
+import Callout from "~/classic/ui/callout";
+import { DefinitionList } from "~/classic/ui/definition-list";
 
 /**
  * The verification half of `devtools oauth`'s device-code fallback (RFC
@@ -70,15 +68,21 @@ function CodeEntryForm({ error }: { error?: string }) {
             {error}
           </Callout>
         )}
-        <CodeInput
-          length={8}
+        <input
+          type="text"
           name="user_code"
+          placeholder="XXXX-XXXX"
           aria-label="Device code"
-          className="[&_input]:w-full [&_input]:min-w-0"
-          invalid={Boolean(error)}
+          aria-invalid={Boolean(error) || undefined}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          className="rounded-sm border-2 border-mauve-700 bg-transparent px-4 py-2 text-center font-mono text-lg tracking-widest text-white uppercase outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         />
         <div>
-          <Button type="submit">Continue</Button>
+          <FormButton theme="cyan" type="submit" className="text-sm">
+            Continue
+          </FormButton>
         </div>
       </form>
     </ConnectCard>
@@ -166,7 +170,10 @@ export default async function OAuthDevicePage({ searchParams }: Props) {
           <Callout tone="warning">
             Connecting an OAuth client requires a linked GitHub account.
           </Callout>
-          <Link href="/dashboard/accounts#github" className="btn primary">
+          <Link
+            href="/dashboard/profile#github"
+            className="rounded-sm border-2 border-cyan-400 bg-cyan-400 px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-mauve-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
+          >
             Link GitHub account
           </Link>
         </div>
@@ -180,10 +187,13 @@ export default async function OAuthDevicePage({ searchParams }: Props) {
             ]}
           />
 
-          <p className="help" style={{ margin: 0 }}>
+          <p className="text-sm text-mauve-300">
             This creates a new OAuth client and sends its secret back to the CLI
             that requested this code. You can revoke it any time from{" "}
-            <Link href="/dashboard/oauth" className="textlink">
+            <Link
+              href="/dashboard/oauth"
+              className="underline hover:text-white"
+            >
               OAuth apps
             </Link>
             .
@@ -192,14 +202,14 @@ export default async function OAuthDevicePage({ searchParams }: Props) {
           <div className="flex items-center gap-3">
             <form action={approveDevice}>
               <input type="hidden" name="userCode" value={normalized} />
-              <FormButton theme="cyan" type="submit">
+              <FormButton theme="cyan" type="submit" className="text-sm">
                 Approve
               </FormButton>
             </form>
 
             <form action={denyDevice}>
               <input type="hidden" name="userCode" value={normalized} />
-              <FormButton theme="black" variant="ghost" type="submit">
+              <FormButton theme="black" type="submit" className="text-sm">
                 Deny
               </FormButton>
             </form>
