@@ -30,7 +30,9 @@ describe("showsAnnouncement", () => {
   ];
 
   it.each(publicPaths)("shows on %s", (pathname) => {
-    expect(showsAnnouncement(pathname, whileActive)).toBe(true);
+    expect(showsAnnouncement(pathname, whileActive)).toBe(
+      ANNOUNCEMENT !== null,
+    );
   });
 
   it.each(appPaths)("stays off %s", (pathname) => {
@@ -38,17 +40,21 @@ describe("showsAnnouncement", () => {
   });
 
   it("does not mistake a sibling route for a hidden prefix", () => {
-    expect(showsAnnouncement("/accounts", whileActive)).toBe(true);
-    expect(showsAnnouncement("/dashboard-log", whileActive)).toBe(true);
+    expect(showsAnnouncement("/accounts", whileActive)).toBe(
+      ANNOUNCEMENT !== null,
+    );
+    expect(showsAnnouncement("/dashboard-log", whileActive)).toBe(
+      ANNOUNCEMENT !== null,
+    );
   });
 
   it("shows when the router has not resolved a pathname yet", () => {
-    expect(showsAnnouncement(null, whileActive)).toBe(true);
+    expect(showsAnnouncement(null, whileActive)).toBe(ANNOUNCEMENT !== null);
   });
 
   it("stops showing after the configured deadline", () => {
     expect(showsAnnouncement("/", new Date("2026-09-16T23:59:59-04:00"))).toBe(
-      true,
+      ANNOUNCEMENT !== null,
     );
     expect(showsAnnouncement("/", new Date("2026-09-17T00:00:00-04:00"))).toBe(
       false,

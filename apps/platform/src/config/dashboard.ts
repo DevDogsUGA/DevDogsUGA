@@ -1,3 +1,4 @@
+import { isHiddenNavigation } from "./hiddenRoutes";
 import type { rules } from "~/server/auth/access";
 import type { NavIcon } from "./nav";
 
@@ -23,7 +24,7 @@ export interface DashboardSection {
 }
 
 /** The signed-in sections and their canonical dashboard URLs. */
-export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
+export const ALL_DASHBOARD_SECTIONS: readonly DashboardSection[] = [
   {
     id: "overview",
     label: "Overview",
@@ -240,7 +241,9 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
   },
 ];
 
-/** Where the user menu and the mobile sheet open the dashboard. */
-export const DASHBOARD_HOME = DASHBOARD_SECTIONS.find(
-  (section) => section.id === "overview",
-)!.href;
+export const DASHBOARD_SECTIONS = ALL_DASHBOARD_SECTIONS.filter(
+  (section) => !isHiddenNavigation(section.href),
+);
+
+/** Where the user menu and mobile sheet open the dashboard. */
+export const DASHBOARD_HOME = "/dashboard/profile";

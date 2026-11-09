@@ -1,4 +1,4 @@
-import NotFoundPage from "~/components/Content/NotFoundPage";
+import NotFoundPage from "~/classic/components/NotFoundPage";
 import SiteLayout from "./(site)/layout";
 
 /**

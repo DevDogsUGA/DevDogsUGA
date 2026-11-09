@@ -1,3 +1,4 @@
+import { isHiddenNavigation } from "~/config/hiddenRoutes";
 import "server-only";
 import { DASHBOARD_SECTIONS, type DashboardSection } from "~/config/dashboard";
 import { rules, type Caller } from "~/server/auth/access";
@@ -6,6 +7,7 @@ import { rules, type Caller } from "~/server/auth/access";
 export function visibleSections(caller: Caller | null): DashboardSection[] {
   return DASHBOARD_SECTIONS.filter(
     (section) =>
+      !isHiddenNavigation(section.href) &&
       caller !== null &&
       (section.access === "member" || rules[section.access](caller)),
   );

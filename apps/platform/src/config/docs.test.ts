@@ -111,12 +111,10 @@ describe("the Docs menu's rows", () => {
 });
 
 describe("the public links", () => {
-  it("lead with Docs and Contribute, and Contribute lands on the docs page's Contribute group", () => {
-    const links = nav.PUBLIC_LINKS.map((link) => link.label);
-    expect(links.slice(-2)).toEqual(["Docs", "Contribute"]);
-    expect(nav.PUBLIC_LINKS.find((l) => l.label === "Contribute")?.href).toBe(
-      nav.CONTRIBUTE_HREF,
+  it("keeps Docs and hides the post-review Contribute entry", () => {
+    expect(nav.PUBLIC_LINKS.at(-1)?.label).toBe("Docs");
+    expect(nav.PUBLIC_LINKS.some((link) => link.label === "Contribute")).toBe(
+      false,
     );
-    expect(nav.CONTRIBUTE_HREF).toBe("/docs#contribute");
   });
 });

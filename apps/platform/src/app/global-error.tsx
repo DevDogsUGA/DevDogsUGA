@@ -10,10 +10,11 @@ import { reloadForChunkError } from "~/lib/chunkReload";
  *
  * Every style here is inline and every colour is a literal. `global-error`
  * replaces the root layout when it renders, so it renders its own document and
- * receives **none** of the app's stylesheet: no Tailwind utilities, no Cosmic
- * kit, no fonts, no images. A className here would silently do nothing, so the
- * Cosmic ground is spelled out by hand: `#0a0718` (the sky), `#fff` (ink),
- * `#a89ea9` (muted text) and `#ffa1ad` (the accent).
+ * receives **none** of the app's global stylesheet: no Tailwind utilities, no
+ * mauve palette, no fonts. A className here would silently do nothing, so the
+ * DevDogs dark ground is spelled out by hand. The values are
+ * `--color-mauve-950`, `-900`, `-800` and `-400` from `globals.css`, copied
+ * literally.
  */
 export default function GlobalError({
   error,
@@ -47,7 +48,7 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           padding: "2rem 1rem",
-          backgroundColor: "#0a0718",
+          backgroundColor: "#0c090c",
           color: "#ffffff",
           fontFamily:
             "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
@@ -55,19 +56,7 @@ export default function GlobalError({
       >
         <title>Something went wrong — DevDogs</title>
         <main style={{ maxWidth: "34rem", display: "grid", gap: "1rem" }}>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#ffa1ad",
-            }}
-          >
-            Error
-          </p>
-          <h1 style={{ margin: 0, fontSize: "2rem", fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800 }}>
             DevDogs is having a moment
           </h1>
           <p
@@ -113,7 +102,7 @@ export default function GlobalError({
                 lint rule assumes a working shell, which is exactly what this
                 file exists to handle the absence of. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a href="/" style={{ color: "#ffa1ad", fontSize: "0.875rem" }}>
+            <a href="/" style={{ color: "#a89ea9", fontSize: "0.875rem" }}>
               Back to the homepage
             </a>
           </div>
@@ -123,7 +112,7 @@ export default function GlobalError({
                 margin: 0,
                 fontFamily: "ui-monospace, monospace",
                 fontSize: "0.75rem",
-                color: "#a89ea9",
+                color: "#79697b",
               }}
             >
               Reference {error.digest}

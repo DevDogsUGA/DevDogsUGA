@@ -1,3 +1,4 @@
+import { isHiddenNavigation } from "~/config/hiddenRoutes";
 import { visibleSections } from "~/server/dashboard/sections";
 import { PUBLIC_LINKS, SEARCH_ONLY_PAGES, type NavItem } from "~/config/nav";
 import { PAGE_SECTIONS } from "~/config/pageSections";
@@ -26,6 +27,7 @@ function toEntry(item: NavItem, breadcrumbs: string[] = []): SearchEntry {
  * console page it wouldn't open.
  */
 function toEntries(item: NavItem, breadcrumbs: string[] = []): SearchEntry[] {
+  if (isHiddenNavigation(item.href)) return [];
   const entries = [toEntry(item, breadcrumbs)];
   const trail = [...breadcrumbs, item.label];
 

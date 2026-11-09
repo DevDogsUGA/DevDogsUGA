@@ -1,7 +1,8 @@
+import { isHiddenNavigation } from "./hiddenRoutes";
 import type { StaticImageData } from "next/image";
 import gdgFavicon from "~/assets/favicons/gdg.png";
-import googleFormsFavicon from "~/assets/favicons/google-forms.png";
 import involvementFavicon from "~/assets/favicons/involvement-network.png";
+import type { DashboardSection } from "./dashboard";
 import type * as icons from "./icons";
 import { SOCIALS } from "./socials";
 
@@ -58,40 +59,36 @@ export interface SwitcherEntry {
 }
 
 /** Left-aligned navbar links. Every entry is publicly accessible. */
-export const PUBLIC_LINKS: NavItem[] = [
-  {
-    label: "Community",
-    href: "/community",
-    icon: "UsersIcon",
-    description: "Meet the members and leadership of DevDogs.",
-  },
-  {
-    label: "Events",
-    href: "/events",
-    icon: "CalendarDotsIcon",
-    description: "Upcoming meetings, workshops, and events hosted by DevDogs.",
-  },
-  {
-    label: "Partners",
-    href: "/partners",
-    icon: "HandshakeIcon",
-    description: "Organizations and sponsors that partner with DevDogs.",
-  },
-  {
-    label: "Docs",
-    href: "/docs",
-    icon: "BookOpenIcon",
-    description:
-      "Workshops, shared tooling, operations, and the guides for building on DevDogs.",
-  },
-  {
-    label: "Contribute",
-    href: CONTRIBUTE_HREF,
-    icon: "GithubLogoIcon",
-    description:
-      "How each DevDogs project works and how to contribute, written by the projects themselves.",
-  },
-];
+export const PUBLIC_LINKS: NavItem[] = (
+  [
+    {
+      label: "Community",
+      href: "/community",
+      icon: "UsersIcon",
+      description: "Meet the members and leadership of DevDogs.",
+    },
+    {
+      label: "Events",
+      href: "/events",
+      icon: "CalendarDotsIcon",
+      description:
+        "Upcoming meetings, workshops, and events hosted by DevDogs.",
+    },
+    {
+      label: "Partners",
+      href: "/partners",
+      icon: "HandshakeIcon",
+      description: "Organizations and sponsors that partner with DevDogs.",
+    },
+    {
+      label: "Docs",
+      href: "/docs",
+      icon: "BookOpenIcon",
+      description:
+        "Workshops, shared tooling, operations, and the guides for building on DevDogs.",
+    },
+  ] satisfies NavItem[]
+).filter((item) => !isHiddenNavigation(item.href));
 
 /** Public pages indexed by search but not shown in the navbar. */
 export const SEARCH_ONLY_PAGES: NavItem[] = [
@@ -142,22 +139,6 @@ export const SWITCHER_PRIMARY: SwitcherEntry = {
  */
 export const SWITCHER_LINKS: SwitcherEntry[] = [
   {
-    label: "Georgia 311 Application",
-    href: "/georgia311",
-    favicon: googleFormsFavicon,
-    description: "Civic hackathon · apply by Thu, Oct 15",
-    external: true,
-    featured: true,
-  },
-  {
-    label: "Georgia 311 Virtual Meeting",
-    href: "https://gdg.community.dev/events/details/google-gdg-on-campus-university-of-georgia-athens-united-states-presents-georgia-311-challenge-interest-meeting-virtual-oct-11/",
-    favicon: gdgFavicon,
-    description: "Interest meeting · Sun, Oct 11, 5 PM",
-    external: true,
-    featured: true,
-  },
-  {
     label: "UGA Involvement Network Listing",
     href: INVOLVEMENT_NETWORK_URL,
     favicon: involvementFavicon,
@@ -192,3 +173,68 @@ export const SOCIAL_LINKS: SwitcherEntry[] = [
     external: true,
   },
 ];
+
+export const ACCOUNT_ITEMS: NavItem[] = (
+  [
+    {
+      label: "Attendance",
+      href: "/dashboard/attendance",
+      icon: "StarIcon",
+      description:
+        "Check in with the meeting code and track your participation passport.",
+    },
+    {
+      label: "Account",
+      href: "/dashboard/profile",
+      icon: "UserIcon",
+      description:
+        "Manage your profile information, connected accounts, and verification status.",
+    },
+    {
+      label: "OAuth Client",
+      href: "/dashboard/oauth",
+      icon: "KeyIcon",
+      description:
+        "Set up a local OAuth client to test DevDogs sign-in from your own project.",
+    },
+  ] satisfies NavItem[]
+).filter((item) => !isHiddenNavigation(item.href));
+
+/**
+ * Every signed-in-only page, in menu order. The profile popover splits these
+ * back apart. Search and the mobile sheet want one flat list and read this, so
+ * a page added to either half above is picked up by both without a second edit.
+ */
+export const PROFILE_ITEMS: NavItem[] = [...ACCOUNT_ITEMS];
+
+/**
+ * A named sub-menu inside the profile popover.
+ *
+ * `iconBg` is the fill behind every row's mark, so a sub-menu's rows read as
+ * one set. Per group rather than per item, since these pages have no identity
+ * of their own to carry a colour for.
+ */
+export interface NavGroup {
+  label: string;
+  iconBg: string;
+  items: NavItem[];
+  /**
+   * Split the panel into two columns where the viewport is wide enough to
+   * take it. For a group long enough to want it, like the Console's six, one
+   * 20rem column of described rows is a scroll masquerading as a menu.
+   */
+  twoColumn?: boolean;
+}
+
+/**
+ * The Console sub-menu's label and fill. Its items are missing because they are
+ * permission-filtered per request: `visibleConsoleItems` resolves them
+ * server-side and they reach the popover as props.
+ */
+export const CONSOLE_GROUP: Omit<NavGroup, "items"> = {
+  label: "Console",
+  iconBg: "bg-mauve-300",
+  twoColumn: true,
+};
+
+export type ConsoleItem = DashboardSection;

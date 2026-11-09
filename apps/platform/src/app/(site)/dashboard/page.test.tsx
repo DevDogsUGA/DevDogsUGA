@@ -127,9 +127,7 @@ describe("Overview", () => {
     const console = screen.getByRole("heading", { name: "Console" });
     expect(console).toBeTruthy();
     const card = console.closest("section")!;
-    expect(
-      within(card).getByRole("link", { name: "Schedule editor" }),
-    ).toBeTruthy();
+    expect(within(card).getByRole("link", { name: "Meetings" })).toBeTruthy();
     cleanup();
 
     signIn();

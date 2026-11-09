@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import VerificationDialog from "~/components/VerificationDialog";
+import VerificationDialog from "~/classic/components/VerificationDialog";
 import type { DashboardSection } from "~/config/dashboard";
 import type { HighestRankingRole } from "~/server/auth/permissions";
 import type { profiles } from "~/server/db/schema";

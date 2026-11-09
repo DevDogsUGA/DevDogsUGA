@@ -59,28 +59,7 @@ export const ANNOUNCEMENT_STORAGE_KEY = "devdogs:announcementDismissed";
  */
 const NON_PUBLIC_PREFIXES = ["/dashboard", "/oauth", "/settings", "/tools"];
 
-/**
- * The live notice, or `null` for none.
- *
- * `action.href` is `/leadership`, a next.config redirect onto the form that
- * takes applications. It is `external` despite the leading slash: the path is
- * ours, the page at the end of it is not, so it opens in a new tab and wears
- * the outbound arrow rather than pretending to stay on the site. The
- * homepage's Leadership section carries the same claim behind the same button,
- * so a change to this copy belongs there too. The notice is dismissible and
- * session-scoped; that section is the standing copy that outlives it. See
- * ~/components/LeadershipSection.
- */
-export const ANNOUNCEMENT: Announcement | null = {
-  id: "leadership-applications-2026",
-  eyebrow: "Now open",
-  message:
-    "Leadership applications for the 2026–27 executive board close at 11:59 PM on Wednesday, September 16.",
-  // 11:59 PM Eastern on Wednesday, September 16, 2026.
-  expiresAt: "2026-09-17T03:59:59.999Z",
-  action: { label: "Apply Now", href: "/leadership", external: true },
-  tone: "urgent",
-};
+export const ANNOUNCEMENT: Announcement | null = null;
 
 /** Whether the notice belongs on the page currently being rendered. */
 export function showsAnnouncement(
@@ -125,12 +104,16 @@ export function showsAnnouncement(
  *
  * Empty when there is no notice, so `null` really does leave nothing behind.
  */
-export const ANNOUNCEMENT_HIDE_SCRIPT = ANNOUNCEMENT
-  ? `try{if(Date.now()>new Date(${JSON.stringify(
-      ANNOUNCEMENT.expiresAt,
-    )}).getTime()||sessionStorage.getItem(${JSON.stringify(
-      ANNOUNCEMENT_STORAGE_KEY,
-    )})===${JSON.stringify(
-      ANNOUNCEMENT.id,
-    )})document.documentElement.dataset.announcement="dismissed"}catch(e){}`
-  : "";
+function hideScript(announcement: Announcement | null): string {
+  return announcement
+    ? `try{if(Date.now()>new Date(${JSON.stringify(
+        announcement.expiresAt,
+      )}).getTime()||sessionStorage.getItem(${JSON.stringify(
+        ANNOUNCEMENT_STORAGE_KEY,
+      )})===${JSON.stringify(
+        announcement.id,
+      )})document.documentElement.dataset.announcement="dismissed"}catch(e){}`
+    : "";
+}
+
+export const ANNOUNCEMENT_HIDE_SCRIPT = hideScript(ANNOUNCEMENT);

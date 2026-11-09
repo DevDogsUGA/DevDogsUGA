@@ -4,7 +4,7 @@ import { type Metadata } from "next";
 import { Alan_Sans, Cascadia_Code, Hanken_Grotesk } from "next/font/google";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import QueryProvider from "~/ui/query-provider";
-import Toaster from "~/components/Toaster";
+import Toaster from "~/classic/components/Toaster";
 import { cn } from "~/lib/cn";
 import { env } from "~/env";
 import { ANNOUNCEMENT_HIDE_SCRIPT } from "~/config/announcement";
@@ -147,10 +147,7 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      {/* `cosmic` is the kit's scope (tokens, ground, type). It sits on the body,
-          not a wrapper, so Radix portals, which mount on document.body, are
-          inside it too. */}
-      <body className="cosmic">
+      <body className="bg-black text-mauve-950">
         {/* Stamps `<html data-announcement="dismissed">` before first paint
             when this session already dismissed the current notice, so the card
             in the static shell never flashes up. First in the <body> so it has

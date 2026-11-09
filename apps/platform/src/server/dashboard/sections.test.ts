@@ -1,9 +1,10 @@
+import { isHiddenRoute } from "~/config/hiddenRoutes";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve, relative } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 vi.mock("~/server/auth", () => ({ expectSession: vi.fn() }));
 vi.mock("~/server/auth/permissions", () => ({ getCallerContext: vi.fn() }));
-import { DASHBOARD_SECTIONS } from "~/config/dashboard";
+import { ALL_DASHBOARD_SECTIONS, DASHBOARD_SECTIONS } from "~/config/dashboard";
 import { rules, type Caller } from "~/server/auth/access";
 import { matchTerminalPath, TERMINAL_PATHS } from "~/terminal/paths";
 import { buildAppSearchEntries } from "~/server/search/appEntries";
@@ -70,9 +71,9 @@ describe("Section registry", () => {
   );
   it("gives the Overview only its own page, since every section sits beneath it", () => {
     const overview = DASHBOARD_SECTIONS.find((s) => s.id === "overview");
-    expect(overview?.href).toBe("/dashboard");
-    expect(sectionFor("/dashboard")).toBe(overview);
-    expect(sectionFor("/dashboard?tab=1#top")).toBe(overview);
+    expect(overview).toBeUndefined();
+    expect(sectionFor("/dashboard")).toBeNull();
+    expect(sectionFor("/dashboard?tab=1#top")).toBeNull();
     expect(sectionFor("/dashboard/unknown")).toBeNull();
     expect(sectionFor("/dashboard/deletion")).toBeNull();
   });
@@ -87,20 +88,16 @@ describe("Section registry", () => {
   });
   it("shows the Overview to every signed-in caller", () => {
     for (const caller of callers)
-      expect(visibleSections(caller).map((s) => s.id)).toContain("overview");
+      expect(visibleSections(caller).map((s) => s.id)).not.toContain(
+        "overview",
+      );
   });
-  it("lists Hackathons for every signed-in member, in the Projects group", () => {
-    const section = DASHBOARD_SECTIONS.find((s) => s.id === "hackathons");
-    expect(section).toMatchObject({
-      href: "/dashboard/hackathons",
-      group: "Projects",
-      access: "member",
-      refusal: "forbidden",
-    });
+  it("hides Hackathons while preserving its page", () => {
+    expect(sectionFor("/dashboard/hackathons")).toBeNull();
     for (const caller of callers)
-      expect(visibleSections(caller)).toContain(section);
-    expect(visibleSections(null)).not.toContain(section);
-    expect(sectionFor("/dashboard/hackathons#submit")).toBe(section);
+      expect(visibleSections(caller).some((s) => s.id === "hackathons")).toBe(
+        false,
+      );
   });
   it("answers the Hackathons terminal twin with the sign-in notice, never a list", () => {
     const match = matchTerminalPath("/dashboard/hackathons");
@@ -189,7 +186,13 @@ describe("dashboard page access drift", () => {
         "",
       );
       const path = suffix ? `/dashboard/${suffix}` : "/dashboard";
-      const section = sectionFor(path);
+      const section =
+        sectionFor(path) ??
+        ALL_DASHBOARD_SECTIONS.find(
+          (s) =>
+            path === s.href ||
+            (s.group !== "Overview" && path.startsWith(`${s.href}/`)),
+        );
       // Pending deletion is deliberately absent from navigation; the layout gates it.
       if (path === "/dashboard/[...slug]") {
         expect(readFileSync(file, "utf8")).toContain(
@@ -251,11 +254,11 @@ describe("dashboard page access drift", () => {
     },
   );
   it("gates the review queue on reviewProjectReports alone: officers without it are refused, and advisors review from the project page", () => {
-    const reviews = DASHBOARD_SECTIONS.find((s) => s.id === "reviews")!;
+    const reviews = ALL_DASHBOARD_SECTIONS.find((s) => s.id === "reviews")!;
     expect(reviews.access).toBe("reviewProjectReports");
     for (const caller of callers) {
       expect(visibleSections(caller).includes(reviews)).toBe(
-        caller.flags.canReviewProjectReports,
+        caller.flags.canReviewProjectReports && !isHiddenRoute(reviews.href),
       );
     }
     // The project page serves the advisor through its record rule, not this section.

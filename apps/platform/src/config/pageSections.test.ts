@@ -6,7 +6,7 @@ import {
   type PageField,
   type PageSection,
 } from "./pageSections";
-import { DASHBOARD_SECTIONS } from "./dashboard";
+import { ALL_DASHBOARD_SECTIONS } from "./dashboard";
 
 /**
  * PAGE_SECTIONS restates anchors and copy that live in page JSX. Rather than
@@ -98,7 +98,7 @@ describe("PAGE_SECTIONS", () => {
   });
 
   it("only keys pages that exist in the nav manifest", () => {
-    const hrefs = new Set(DASHBOARD_SECTIONS.map((item) => item.href));
+    const hrefs = new Set(ALL_DASHBOARD_SECTIONS.map((item) => item.href));
 
     for (const href of Object.keys(PAGE_SECTIONS)) {
       expect(hrefs, `${href} is not a nav item`).toContain(href);
