@@ -176,7 +176,9 @@ export default function ExportsWorkspace({
           </Field>
 
           <fieldset className="flex flex-col gap-2.5">
-            <legend className="mb-2 text-xs font-medium text-white/70">Formats</legend>
+            <legend className="mb-2 text-xs font-medium text-white/70">
+              Formats
+            </legend>
             {options.map((o) => (
               <div key={o.name}>
                 <Check
@@ -184,7 +186,7 @@ export default function ExportsWorkspace({
                   onChange={(e) => toggle(o.name, e.target.checked)}
                   label={o.label}
                 />
-                <p className="ml-6 mt-0.5 text-xs text-mauve-400">
+                <p className="mt-0.5 ml-6 text-xs text-mauve-400">
                   {o.hint}
                   {o.perEvent ? " Needs one meeting." : ""}
                 </p>
@@ -293,13 +295,18 @@ function ReadyPanel({
   return (
     <Panel title="Ready to download" id="exp-ready">
       <div className={STACK}>
-        <ul className="max-w-xl divide-y divide-mauve-800 text-sm text-mauve-200" aria-label="Counts">
+        <ul
+          className="max-w-xl divide-y divide-mauve-800 text-sm text-mauve-200"
+          aria-label="Counts"
+        >
           {files.map((f) => (
             <li key={f.name} className="flex justify-between gap-4 py-2">
               <span className="[overflow-wrap:anywhere]">
                 {f.label} ({f.name})
               </span>
-              <b className="tabular-nums text-white">{plural(f.count, f.unit)}</b>
+              <b className="text-white tabular-nums">
+                {plural(f.count, f.unit)}
+              </b>
             </li>
           ))}
         </ul>

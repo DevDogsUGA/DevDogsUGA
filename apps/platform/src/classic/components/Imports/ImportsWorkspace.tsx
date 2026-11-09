@@ -383,7 +383,7 @@ function MappingPicker({
   onChange: (next: Record<string, string>) => void;
 }) {
   return (
-    <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+    <div className="grid [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))] gap-4">
       {fields.map((f) => (
         <Field
           key={f.key}
@@ -483,13 +483,16 @@ function PreviewPanel({
           </Callout>
         )}
 
-        <ul className="max-w-xl divide-y divide-mauve-800 text-sm text-mauve-200" aria-label="What this import does">
+        <ul
+          className="max-w-xl divide-y divide-mauve-800 text-sm text-mauve-200"
+          aria-label="What this import does"
+        >
           {preview.summary.map((line) => (
             <li key={line.label} className="flex justify-between gap-4 py-2">
               <span className={cn(line.tone === "remove" && "text-rose-400")}>
                 {line.label}
               </span>
-              <b className="tabular-nums text-white">{line.count}</b>
+              <b className="text-white tabular-nums">{line.count}</b>
             </li>
           ))}
         </ul>
@@ -596,7 +599,9 @@ function InvalidTable({ rows }: { rows: InvalidRow[] }) {
           {rows.map((r, i) => (
             <Tr key={`${r.line}-${i}`}>
               <Td num>{r.line ?? ""}</Td>
-              <Td className="[overflow-wrap:anywhere]">{r.value || "(empty)"}</Td>
+              <Td className="[overflow-wrap:anywhere]">
+                {r.value || "(empty)"}
+              </Td>
               <Td>{r.reason}</Td>
             </Tr>
           ))}
@@ -636,11 +641,14 @@ function ResultPanel({
         >
           {result.message}
         </Callout>
-        <ul className="max-w-xl divide-y divide-mauve-800 text-sm text-mauve-200" aria-label="Counts">
+        <ul
+          className="max-w-xl divide-y divide-mauve-800 text-sm text-mauve-200"
+          aria-label="Counts"
+        >
           {result.counts.map((c) => (
             <li key={c.label} className="flex justify-between gap-4 py-2">
               <span>{c.label}</span>
-              <b className="tabular-nums text-white">{c.count}</b>
+              <b className="text-white tabular-nums">{c.count}</b>
             </li>
           ))}
         </ul>
