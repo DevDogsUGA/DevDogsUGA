@@ -1,11 +1,12 @@
 import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
-import "~/components/Console/console.css";
-import ImportsWorkspace from "~/components/Imports/ImportsWorkspace";
+import Link from "next/link";
+import ConsoleFrame from "~/classic/components/Console/ConsoleFrame";
+import ImportsWorkspace from "~/classic/components/Imports/ImportsWorkspace";
+import PageShell from "~/classic/components/PageShell";
 import { formatEventShortDate } from "~/lib/eventTime";
 
 import { listImportableMeetings } from "~/server/imports/deps";
-import { PageHeading } from "~/ui/app-shell";
 
 export const metadata: Metadata = {
   title: "Imports | Console | DevDogs",
@@ -35,25 +36,33 @@ export default async function ImportsPage({
   const wanted = single(params.meeting);
 
   return (
-    <div className="con">
-      <PageHeading
+    <ConsoleFrame>
+      <PageShell
+        accent="cyan"
         title="Imports"
         description="Upload a CSV, check the columns and the preview, then confirm. Uploading changes nothing by itself, and the file is not kept."
-        crumbs={[
-          { label: "Data tools", href: "/dashboard/data" },
-          { label: "Imports" },
-        ]}
-      />
-      <ImportsWorkspace
-        meetings={meetings.map((m) => ({
-          id: m.id,
-          label: `${formatEventShortDate(m.startsAt)} · ${m.title}`,
-        }))}
-        initialKind={single(params.kind) === "roster" ? "roster" : "attendance"}
-        initialMeetingId={
-          wanted && meetings.some((m) => m.id === wanted) ? wanted : null
+        actions={
+          <Link
+            href="/dashboard/data"
+            className="rounded-sm text-sm text-mauve-400 transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+          >
+            &larr; Back to data tools
+          </Link>
         }
-      />
-    </div>
+      >
+        <ImportsWorkspace
+          meetings={meetings.map((m) => ({
+            id: m.id,
+            label: `${formatEventShortDate(m.startsAt)} · ${m.title}`,
+          }))}
+          initialKind={
+            single(params.kind) === "roster" ? "roster" : "attendance"
+          }
+          initialMeetingId={
+            wanted && meetings.some((m) => m.id === wanted) ? wanted : null
+          }
+        />
+      </PageShell>
+    </ConsoleFrame>
   );
 }

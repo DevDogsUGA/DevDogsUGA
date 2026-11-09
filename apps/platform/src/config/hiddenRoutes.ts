@@ -10,6 +10,15 @@ export const HIDDEN_ROUTES = [
   "/preview/kit",
 ] as const;
 
+/**
+ * Hidden pages under a dynamic segment, which a path prefix cannot name. The
+ * meeting graphics page is a post-review feature; its `image` and `zip`
+ * handlers live under `/dashboard/graphics/meetings`, not here.
+ */
+const HIDDEN_ROUTE_PATTERNS = [
+  /^\/dashboard\/meetings\/[^/]+\/graphics(?:\/|$)/,
+];
+
 /** Existing API handlers keep their own authorization and response behavior. */
 const KEPT_API_ROUTES = [
   /^\/dashboard\/graphics\/brand\/?$/,
@@ -24,8 +33,10 @@ export function isHiddenRoute(path: string): boolean {
     /* Invalid escapes do not match a page. */
   }
   if (KEPT_API_ROUTES.some((route) => route.test(pathname))) return false;
-  return HIDDEN_ROUTES.some(
-    (hidden) => pathname === hidden || pathname.startsWith(`${hidden}/`),
+  return (
+    HIDDEN_ROUTES.some(
+      (hidden) => pathname === hidden || pathname.startsWith(`${hidden}/`),
+    ) || HIDDEN_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname))
   );
 }
 

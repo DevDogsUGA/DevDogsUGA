@@ -21,6 +21,13 @@ interface Props {
   githubUrl?: string;
   /** Under the article: a course page's step pager. */
   footer?: ReactNode;
+  /** A note above the article, such as the live preview's. */
+  notice?: ReactNode;
+  /**
+   * A page from a project's own repository rather than this one: never offers
+   * the VS Code handoff, which opens a path in the club's checkout.
+   */
+  external?: boolean;
 }
 
 export default function DocPageContent({
@@ -29,9 +36,12 @@ export default function DocPageContent({
   breadcrumbs,
   githubUrl,
   footer,
+  notice,
+  external = false,
 }: Props) {
   // Only a local build shows the "Review in VS Code" links.
-  const vscode = (process.env.DEPLOY_ENV ?? "development") === "development";
+  const vscode =
+    !external && (process.env.DEPLOY_ENV ?? "development") === "development";
   const toc: TOCItem[] = headings.map((h) => ({
     title: h.title,
     url: `#${h.id}`,
@@ -43,6 +53,12 @@ export default function DocPageContent({
       <div className="flex min-w-0 flex-1">
         <div className="min-w-0 flex-1 overflow-auto px-6 py-10 lg:px-10">
           <InlineTableOfContents items={toc} />
+
+          {notice && (
+            <p className="mx-auto mb-4 max-w-3xl text-sm text-mauve-400">
+              {notice}
+            </p>
+          )}
 
           {(breadcrumbs && breadcrumbs.length > 0) || githubUrl ? (
             <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between gap-4">

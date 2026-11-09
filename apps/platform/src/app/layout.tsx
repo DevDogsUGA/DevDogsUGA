@@ -3,7 +3,7 @@ import "~/styles/globals.css";
 import { type Metadata } from "next";
 import { Alan_Sans, Cascadia_Code, Hanken_Grotesk } from "next/font/google";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
-import QueryProvider from "~/ui/query-provider";
+import QueryProvider from "~/classic/ui/query-provider";
 import Toaster from "~/classic/components/Toaster";
 import { cn } from "~/lib/cn";
 import { env } from "~/env";

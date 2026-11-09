@@ -40,6 +40,37 @@ describe("rollback route gate", () => {
       expect(isHiddenRoute(encoded)).toBe(true);
     },
   );
+  it("hides each meeting's graphics page but not the meeting or its siblings", async () => {
+    expect(
+      existsSync(
+        resolve(
+          "src/app/(site)/dashboard/meetings/[meetingId]/graphics/page.tsx",
+        ),
+      ),
+    ).toBe(true);
+    for (const path of [
+      "/dashboard/meetings/abc/graphics",
+      "/dashboard/meetings/abc/graphics/",
+      "/dashboard/meetings/abc/graphics?x=1",
+    ]) {
+      expect(isHiddenRoute(path)).toBe(true);
+      const response = await middleware(
+        new NextRequest(`https://devdogs.uga.edu${path}`),
+      );
+      expect(response.status).toBe(404);
+      expect(response.headers.get("x-middleware-rewrite")).toBe(
+        "https://devdogs.uga.edu/rollback-not-found",
+      );
+    }
+    for (const path of [
+      "/dashboard/meetings",
+      "/dashboard/meetings/abc",
+      "/dashboard/meetings/abc/present",
+      "/dashboard/meetings/abc/graphics-other",
+    ]) {
+      expect(isHiddenRoute(path)).toBe(false);
+    }
+  });
   it.each([
     "/dashboard/graphics/brand",
     "/dashboard/graphics/meetings/meeting/image",

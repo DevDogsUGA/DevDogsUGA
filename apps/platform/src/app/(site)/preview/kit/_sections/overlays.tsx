@@ -11,7 +11,7 @@ import {
 
 import DialogShell from "~/ui/dialog-shell";
 import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
-import { toast } from "~/lib/toast";
+import { toast } from "~/ui/cosmic-toast";
 import { Button } from "~/ui/button";
 import {
   AlertDialog,

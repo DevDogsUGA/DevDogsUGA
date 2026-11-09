@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { PreviewPage, previewMetadata } from "~/components/DocsPreviewRoute";
+import {
+  PreviewPage,
+  previewMetadata,
+} from "~/classic/components/DocsPreviewRoute";
 
 export async function generateMetadata({
   params,

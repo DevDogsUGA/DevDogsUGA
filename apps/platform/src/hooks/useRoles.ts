@@ -11,7 +11,7 @@ import {
 } from "~/server/actions/permissions";
 import type { ResolvedPermissions } from "~/server/auth/permissions";
 import type { RoleRow } from "~/server/loaders/permissions";
-import { useCommand } from "~/ui/use-command";
+import { useCommand } from "~/classic/ui/use-command";
 
 export type { RoleRow };
 

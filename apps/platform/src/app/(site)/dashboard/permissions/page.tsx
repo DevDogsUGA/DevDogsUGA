@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import "~/components/Console/console.css";
-import RolesManager from "~/components/RolesManager";
-import { CardSkeleton } from "~/components/Skeletons";
-import UserRoleManager from "~/components/UserRoleManager";
+import ConsoleFrame from "~/classic/components/Console/ConsoleFrame";
+import Callout from "~/classic/ui/callout";
+import { ConsoleCard } from "~/classic/ui/card";
+import PageShell from "~/classic/components/PageShell";
+import RolesManager from "~/classic/components/RolesManager";
+import { CardSkeleton } from "~/classic/components/Skeletons";
+import UserRoleManager from "~/classic/components/UserRoleManager";
 import { getPermissionsPageData } from "~/server/loaders/permissions";
-import { PageHeading, Panel } from "~/ui/app-shell";
-import Callout from "~/ui/callout";
 
 export const metadata: Metadata = {
   title: "Permissions | Console | DevDogs",
@@ -34,47 +35,51 @@ async function PermissionsData() {
         </Callout>
       )}
 
-      <Panel
-        id="assign-roles"
-        title="Assign roles"
-        help="Search for a member by name. You can give out and take away roles ranked below yours."
-      >
-        <UserRoleManager
-          roles={roles}
-          callerMinRank={callerMinRank}
-          callerCapability={callerCapability}
-        />
-      </Panel>
+      <ConsoleCard.Root id="assign-roles">
+        <ConsoleCard.Header title="Assign Roles" />
+        <ConsoleCard.Content>
+          <UserRoleManager
+            roles={roles}
+            callerMinRank={callerMinRank}
+            callerCapability={callerCapability}
+          />
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
-      <Panel id="role-definitions" title="Role definitions">
-        <RolesManager
-          initialRoles={roles}
-          callerMinRank={callerMinRank}
-          callerPermissions={callerPermissions}
-          callerCapability={callerCapability}
-        />
-      </Panel>
+      <ConsoleCard.Root id="role-definitions">
+        <ConsoleCard.Header title="Role Definitions" />
+        <ConsoleCard.Content>
+          <RolesManager
+            initialRoles={roles}
+            callerMinRank={callerMinRank}
+            callerPermissions={callerPermissions}
+            callerCapability={callerCapability}
+          />
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
     </>
   );
 }
 
 export default function PermissionsPage() {
   return (
-    <div className="con">
-      <PageHeading
+    <ConsoleFrame>
+      <PageShell
+        accent="violet"
         title="Permissions"
         description="Every member starts with no permissions; President holds all of them and is assigned on Discord."
-      />
-      <Suspense
-        fallback={
-          <>
-            <CardSkeleton rows={2} />
-            <CardSkeleton rows={3} />
-          </>
-        }
       >
-        <PermissionsData />
-      </Suspense>
-    </div>
+        <Suspense
+          fallback={
+            <>
+              <CardSkeleton rows={2} />
+              <CardSkeleton rows={3} />
+            </>
+          }
+        >
+          <PermissionsData />
+        </Suspense>
+      </PageShell>
+    </ConsoleFrame>
   );
 }

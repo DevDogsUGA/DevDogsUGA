@@ -1,12 +1,11 @@
 import { rules, requireAccess } from "~/server/auth/access";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import AuditLogContent from "~/components/AuditLogContent";
-import "~/components/Console/console.css";
-import { TableSkeleton } from "~/components/Skeletons";
-import { PageHeading } from "~/ui/app-shell";
+import AuditLogContent from "~/classic/components/AuditLogContent";
+import ConsoleFrame from "~/classic/components/Console/ConsoleFrame";
+import PageShell from "~/classic/components/PageShell";
+import { TableSkeleton } from "~/classic/components/Skeletons";
 import { parseAuditSource } from "~/lib/audit";
-
 import {
   getAuditLogPageData,
   type AuditLogFilters,
@@ -57,14 +56,16 @@ export default async function AuditLogPage({
   };
 
   return (
-    <div className="con">
-      <PageHeading
-        title="Audit log"
-        description="The append-only history of attendance, reflections, exports, moderation actions, and production OAuth client changes. Nothing here can be edited or removed."
-      />
-      <Suspense fallback={<TableSkeleton />}>
-        <AuditLogData page={page} filters={filters} />
-      </Suspense>
-    </div>
+    <ConsoleFrame>
+      <PageShell
+        accent="blue"
+        title="Audit Log"
+        description="The append-only history of attendance, reflections, exports, moderation actions, and production OAuth client changes."
+      >
+        <Suspense fallback={<TableSkeleton />}>
+          <AuditLogData page={page} filters={filters} />
+        </Suspense>
+      </PageShell>
+    </ConsoleFrame>
   );
 }

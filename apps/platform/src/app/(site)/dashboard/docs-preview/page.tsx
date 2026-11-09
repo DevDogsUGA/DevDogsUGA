@@ -1,6 +1,6 @@
-import PageShell from "~/components/PageShell";
-import DocsProjectMark from "~/components/DocsProjectMark";
-import DocsTileGrid from "~/components/DocsTileGrid";
+import PageShell from "~/classic/components/PageShell";
+import DocsProjectMark from "~/classic/components/DocsProjectMark";
+import DocsTileGrid from "~/classic/components/DocsTileGrid";
 import { DOCS_PREVIEW_BASE } from "~/lib/docsSlug";
 import { requireDocsPreview } from "~/server/docs/previewAccess";
 import { listPreviewableProjects } from "~/server/docs/previewTarget";
@@ -23,7 +23,7 @@ export default async function DocsPreviewLandingPage() {
         tiles={projects.map((project) => ({
           href: `${DOCS_PREVIEW_BASE}/${encodeURIComponent(project.slug)}`,
           title: project.name,
-          mark: <DocsProjectMark mark={{ kind: "fallback" }} size="sm" />,
+          mark: <DocsProjectMark slug={project.slug} size="sm" />,
         }))}
       />
     </PageShell>

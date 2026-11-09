@@ -1,4 +1,4 @@
-import { PreviewIndex } from "~/components/DocsPreviewRoute";
+import { PreviewIndex } from "~/classic/components/DocsPreviewRoute";
 
 export default async function DocsPreviewProjectPage({
   params,

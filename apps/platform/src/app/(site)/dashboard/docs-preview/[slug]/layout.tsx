@@ -1,4 +1,4 @@
-import { PreviewLayout } from "~/components/DocsPreviewRoute";
+import { PreviewLayout } from "~/classic/components/DocsPreviewRoute";
 
 export default async function DocsPreviewProjectLayout({
   children,

@@ -44,19 +44,19 @@ vi.mock("~/server/loaders/moderation", () => ({
 vi.mock("~/components/AppSideNav", () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
-vi.mock("~/components/ReportListItem", () => ({ default: () => null }));
-vi.mock("~/components/StatusBadges", () => ({
+vi.mock("~/classic/components/ReportListItem", () => ({ default: () => null }));
+vi.mock("~/classic/components/StatusBadges", () => ({
   StandingBadge: () => null,
   standingOf: () => "good",
 }));
-vi.mock("~/components/UserRoleForm", () => ({ default: () => null }));
-vi.mock("~/components/AccountDeletion/ScheduleDeletionPanel", () => ({
+vi.mock("~/classic/components/UserRoleForm", () => ({ default: () => null }));
+vi.mock("~/classic/components/AccountDeletion/ScheduleDeletionPanel", () => ({
   default: () => null,
 }));
 
 const { default: Page } = await import("./page");
 const { default: ScheduleDeletionPanel } =
-  await import("~/components/AccountDeletion/ScheduleDeletionPanel");
+  await import("~/classic/components/AccountDeletion/ScheduleDeletionPanel");
 
 type Node = { type?: unknown; props?: { children?: unknown } };
 

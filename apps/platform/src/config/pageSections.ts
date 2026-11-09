@@ -222,8 +222,8 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
   ],
 
   "/dashboard/permissions": [
-    { id: "assign-roles", label: "Assign roles" },
-    { id: "role-definitions", label: "Role definitions" },
+    { id: "assign-roles", label: "Assign Roles" },
+    { id: "role-definitions", label: "Role Definitions" },
   ],
 
   "/dashboard/reflections": [

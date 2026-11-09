@@ -39,7 +39,7 @@ export default function PageHeader({
 }: Props) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 px-1">
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col gap-1.5 [overflow-wrap:anywhere]">
         <h1
           className={cn("font-display text-3xl font-bold", ACCENT_TEXT[accent])}
         >

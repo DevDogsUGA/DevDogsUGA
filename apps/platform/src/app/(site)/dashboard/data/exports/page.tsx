@@ -5,15 +5,16 @@ import {
   FORMATS_BY_KIND,
   formatFor,
 } from "@devdogsuga/events/exports";
-import "~/components/Console/console.css";
+import Link from "next/link";
+import ConsoleFrame from "~/classic/components/Console/ConsoleFrame";
 import ExportsWorkspace, {
   type FormatOptions,
-} from "~/components/Exports/ExportsWorkspace";
+} from "~/classic/components/Exports/ExportsWorkspace";
+import PageShell from "~/classic/components/PageShell";
 import { CONSOLE_EXPORT_KINDS } from "~/lib/exports";
 import { formatEventShortDate } from "~/lib/eventTime";
 
 import { listImportableMeetings } from "~/server/imports/deps";
-import { PageHeading } from "~/ui/app-shell";
 
 export const metadata: Metadata = {
   title: "Exports | Console | DevDogs",
@@ -42,22 +43,28 @@ export default async function ExportsPage() {
   // newest 80 the import picker lists.
   const meetings = await listImportableMeetings(new Date(), 1000);
   return (
-    <div className="con">
-      <PageHeading
+    <ConsoleFrame>
+      <PageShell
+        accent="cyan"
         title="Exports"
         description="Choose a dataset and format, check the counts and who was left out, then download. These files hold member details: keep them to the work that needs them."
-        crumbs={[
-          { label: "Data tools", href: "/dashboard/data" },
-          { label: "Exports" },
-        ]}
-      />
-      <ExportsWorkspace
-        meetings={meetings.map((m) => ({
-          id: m.id,
-          label: `${formatEventShortDate(m.startsAt)} · ${m.title}`,
-        }))}
-        formats={formats}
-      />
-    </div>
+        actions={
+          <Link
+            href="/dashboard/data"
+            className="rounded-sm text-sm text-mauve-400 transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+          >
+            &larr; Back to data tools
+          </Link>
+        }
+      >
+        <ExportsWorkspace
+          meetings={meetings.map((m) => ({
+            id: m.id,
+            label: `${formatEventShortDate(m.startsAt)} · ${m.title}`,
+          }))}
+          formats={formats}
+        />
+      </PageShell>
+    </ConsoleFrame>
   );
 }

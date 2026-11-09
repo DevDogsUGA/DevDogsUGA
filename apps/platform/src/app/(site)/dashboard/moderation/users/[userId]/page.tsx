@@ -1,17 +1,18 @@
 import { rules, loadCaller } from "~/server/auth/access";
 import type { Metadata } from "next";
-import ScheduleDeletionPanel from "~/components/AccountDeletion/ScheduleDeletionPanel";
-import "~/components/Console/console.css";
-import ReportListItem from "~/components/ReportListItem";
-import { StandingBadge, standingOf } from "~/components/StatusBadges";
-import UserRoleForm from "~/components/UserRoleForm";
+import Link from "next/link";
+import ScheduleDeletionPanel from "~/classic/components/AccountDeletion/ScheduleDeletionPanel";
+import ConsoleFrame from "~/classic/components/Console/ConsoleFrame";
+import PageShell from "~/classic/components/PageShell";
+import ReportListItem from "~/classic/components/ReportListItem";
+import { StandingBadge, standingOf } from "~/classic/components/StatusBadges";
+import UserRoleForm from "~/classic/components/UserRoleForm";
 import { formatDeletionDate } from "~/server/accountDeletion/dates";
 import { getPendingDeletion } from "~/server/accountDeletion/schedule";
 
 import { expectSession } from "~/server/auth";
 import { getUserModerationData } from "~/server/loaders/moderation";
-import { PageHeading, Panel } from "~/ui/app-shell";
-import { EmptyState } from "~/ui/empty-state";
+import { ConsoleCard } from "~/classic/ui/card";
 
 export const metadata: Metadata = {
   title: "Standing | Moderation | Console | DevDogs",
@@ -40,79 +41,95 @@ export default async function UserModerationPage({
     : null;
 
   return (
-    <div className="con">
-      <PageHeading
-        crumbs={[
-          { label: "Moderation", href: "/dashboard/moderation" },
-          { label: displayName },
-        ]}
+    <ConsoleFrame>
+      <PageShell
+        accent="rose"
         title={displayName}
-        description={<code className="con-code">{targetUserId}</code>}
-      />
+        description={<span className="font-mono">{targetUserId}</span>}
+        actions={
+          <Link
+            href="/dashboard/moderation"
+            className="rounded-sm text-sm text-mauve-400 transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+          >
+            &larr; Back to dashboard
+          </Link>
+        }
+      >
+        <ConsoleCard.Root id="current-standing">
+          <ConsoleCard.Header title="Current Standing" />
+          <ConsoleCard.Content>
+            <StandingBadge
+              standing={standingOf(isBanned, suspension)}
+              detail={suspension?.reason}
+            />
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
 
-      <Panel id="current-standing" title="Current standing">
-        <StandingBadge
-          standing={standingOf(isBanned, suspension)}
-          detail={suspension?.reason}
-        />
-      </Panel>
+        <ConsoleCard.Root id="update-role">
+          <ConsoleCard.Header title="Update Role" />
+          <ConsoleCard.Content>
+            <UserRoleForm
+              targetUserId={targetUserId}
+              currentRole={
+                isBanned ? "banned" : suspension ? "suspended" : "member"
+              }
+            />
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
 
-      <Panel id="update-role" title="Update role">
-        <UserRoleForm
-          targetUserId={targetUserId}
-          currentRole={
-            isBanned ? "banned" : suspension ? "suspended" : "member"
-          }
-        />
-      </Panel>
-
-      {/* Your own account is deleted from Settings, where the dialog signs you
+        {/* Your own account is deleted from Settings, where the dialog signs you
           out to the pending page; scheduling it here would revoke the session
           this page is rendering for. */}
-      {canDelete && targetUserId !== viewerId && (
-        <Panel
-          id="account-deletion"
-          title="Account deletion"
-          help="Holders of the delete-accounts permission only. Audited with you as the actor."
-        >
-          <ScheduleDeletionPanel
-            targetUserId={targetUserId}
-            memberName={displayName}
-            pending={
-              pendingDeletion
-                ? {
-                    date: formatDeletionDate(pendingDeletion.scheduledFor),
-                    started: pendingDeletion.started,
-                    requestedBy: pendingDeletion.requestedByOfficer
-                      ? "officer"
-                      : "member",
-                  }
-                : null
-            }
-          />
-        </Panel>
-      )}
-
-      <Panel id="report-history" title={`Report history (${reports.length})`}>
-        {reports.length === 0 ? (
-          <EmptyState title="No reports found" />
-        ) : (
-          <ul className="con-list">
-            {reports.map((report) => (
-              <li key={report.id}>
-                <ReportListItem
-                  id={report.id}
-                  contentId={report.contentRef}
-                  contentTypeLabel={report.contentType}
-                  reasonTitle={report.reasonDetail?.title}
-                  status={report.status}
-                  createdAt={report.createdAt}
-                />
-              </li>
-            ))}
-          </ul>
+        {canDelete && targetUserId !== viewerId && (
+          <ConsoleCard.Root id="account-deletion">
+            <ConsoleCard.Header
+              title="Account Deletion"
+              description="Holders of the delete-accounts permission only. Audited with you as the actor."
+            />
+            <ConsoleCard.Content>
+              <ScheduleDeletionPanel
+                targetUserId={targetUserId}
+                memberName={displayName}
+                pending={
+                  pendingDeletion
+                    ? {
+                        date: formatDeletionDate(pendingDeletion.scheduledFor),
+                        started: pendingDeletion.started,
+                        requestedBy: pendingDeletion.requestedByOfficer
+                          ? "officer"
+                          : "member",
+                      }
+                    : null
+                }
+              />
+            </ConsoleCard.Content>
+          </ConsoleCard.Root>
         )}
-      </Panel>
-    </div>
+
+        <ConsoleCard.Root id="report-history">
+          <ConsoleCard.Header title={`Report History (${reports.length})`} />
+          <ConsoleCard.Content>
+            {reports.length === 0 ? (
+              <p className="text-sm text-mauve-400">No reports found.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {reports.map((report) => (
+                  <li key={report.id}>
+                    <ReportListItem
+                      id={report.id}
+                      contentId={report.contentRef}
+                      contentTypeLabel={report.contentType}
+                      reasonTitle={report.reasonDetail?.title}
+                      status={report.status}
+                      createdAt={report.createdAt}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
+      </PageShell>
+    </ConsoleFrame>
   );
 }
