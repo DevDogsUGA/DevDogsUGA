@@ -13,9 +13,9 @@ runs:
     - name: Install Flutter
       shell: bash
       run: |
-        FLUTTER_VERSION=$(sed -nE '/^environment:/,/^[^[:space:]]/s/^  flutter: ([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]*$/\1/p' "$GITHUB_WORKSPACE/packages/sdk_dart/pubspec.yaml")
+        FLUTTER_VERSION=$(sed -nE "/^environment:/,/^[^[:space:]]/s/^  flutter: ([\"']?)(>=)?([0-9]+\.[0-9]+\.[0-9]+)\1[[:space:]]*$/\3/p" "$GITHUB_WORKSPACE/packages/sdk_dart/pubspec.yaml")
         if ! [[ "$FLUTTER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::error::sdk_dart must declare an exact environment.flutter version (X.Y.Z)."
+          echo "::error::sdk_dart must declare environment.flutter as >=X.Y.Z or X.Y.Z."
           exit 1
         fi
         git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"

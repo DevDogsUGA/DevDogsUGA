@@ -233,20 +233,22 @@ export function checkEnvKeysPresent(
 
 export { validateSessionPoolerUrl };
 
-/** Only product apps with an exact Flutter pin opt into version warnings. */
+/** Product apps pin Flutter to their declared lower bound. */
 export function readFlutterPin(repoRoot: string): string | null {
   if (!existsSync(join(repoRoot, CONFIG_FILE))) return null;
   try {
     const pubspec = z
       .object({
         environment: z.object({
-          flutter: z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/),
+          flutter: z.string().regex(/^(?:>=)?\d+\.\d+\.\d+$/),
         }),
       })
       .safeParse(
         parseYaml(readFileSync(join(repoRoot, "pubspec.yaml"), "utf8")),
       );
-    return pubspec.success ? pubspec.data.environment.flutter : null;
+    return pubspec.success
+      ? pubspec.data.environment.flutter.replace(/^>=/, "")
+      : null;
   } catch {
     return null;
   }

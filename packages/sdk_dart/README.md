@@ -91,8 +91,8 @@ MaterialApp(
 `DevDogsTheme` returns `material_ui`'s `ThemeData`. Apps using the SDK need
 Flutter 3.50.0 or newer and must add `material_ui` and import
 `package:material_ui/material_ui.dart` for their Material widgets too.
-The SDK declares `environment.flutter: 3.50.0`, which pub enforces as a lower
-bound, and Dart ^3.13.0. CI reads the Flutter tag from this pubspec.
+The SDK declares `environment.flutter: ">=3.50.0"` and Dart ^3.13.0.
+The lower bound is the pinned Flutter version that CI clones.
 
 ## Configuration
 

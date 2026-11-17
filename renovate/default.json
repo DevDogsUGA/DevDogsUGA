@@ -84,7 +84,9 @@
       "groupSlug": "flutter",
       "automerge": false,
       "schedule": ["at any time"],
-      "labels": ["dependencies", "flutter", "needs-officer"]
+      "labels": ["dependencies", "flutter", "needs-officer"],
+      "rangeStrategy": "bump",
+      "versioning": "npm"
     }
   ]
 }

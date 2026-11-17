@@ -51,8 +51,8 @@ describe("product Flutter pins", () => {
     return root;
   }
 
-  it.each(["3.50.0", '"3.50.0"', "'3.50.0'"])(
-    "reads an exact pin %s",
+  it.each(["3.50.0", '"3.50.0"', "'3.50.0'", '">=3.50.0"', "'>=3.50.0'"])(
+    "reads a Flutter pin %s",
     (pin) => {
       expect(
         readFlutterPin(repo(`environment:\n  flutter: ${pin} # team pin\n`)),
@@ -64,7 +64,8 @@ describe("product Flutter pins", () => {
     undefined,
     "environment: [",
     "environment:\n  sdk: ^3.13.0",
-    "environment:\n  flutter: '>=3.47.0'",
+    "environment:\n  flutter: '>=3.47.0 <4.0.0'",
+    "environment:\n  flutter: '~3.50.0'",
     "environment:\n  flutter: ^3.50.0",
     "environment:\n  flutter: 3.50",
   ])("skips absent, invalid or ranged pins: %s", (pubspec) => {

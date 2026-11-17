@@ -7,7 +7,7 @@ issue_tracker: https://github.com/DevDogsUGA/DevDogsUGA/issues
 
 environment:
   sdk: ^3.13.0
-  flutter: 3.50.0
+  flutter: ">=3.50.0"
 
 dependencies:
   flutter:

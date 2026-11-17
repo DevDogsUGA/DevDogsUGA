@@ -74,7 +74,7 @@ describe("product doctor Flutter check", () => {
     "reports %s without failing",
     async (version) => {
       const product = makeProduct({
-        files: { "pubspec.yaml": "environment:\n  flutter: 3.50.0\n" },
+        files: { "pubspec.yaml": 'environment:\n  flutter: ">=3.50.0"\n' },
       });
       const previous = process.cwd();
       const { run, calls } = recordingRunner(({ command }) => {

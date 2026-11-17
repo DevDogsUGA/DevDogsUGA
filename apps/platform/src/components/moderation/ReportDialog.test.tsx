@@ -81,7 +81,7 @@ describe("ReportDialog", () => {
     await waitFor(() =>
       // No arguments: the vocabulary is global, so there is nothing to scope
       // by. `undefined` rather than `{}` because a zero-argument function is
-      // generated as `Args: never`, and callRpc drops the parameter entirely.
+      // generated with empty Args, and callRpc drops the parameter entirely.
       expect(rpc).toHaveBeenCalledWith("list_report_reasons", undefined),
     );
     expect(await reasonOption("Spam")).toBeInTheDocument();
