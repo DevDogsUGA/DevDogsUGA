@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "The DevDogs Renovate preset (Q33). One file for DevDogsUGA, DogDays and DogPack: `\"extends\": [\"github>DevDogsUGA/DevDogsUGA//renovate/default\"]`. Covers npm, pub, GitHub Actions digests and the Supabase CLI pin. One grouped PR per repository on weekends; patch and minor updates automerge through the merge queue once the required checks pass; majors wait for the officer.",
+  "description": "The DevDogs Renovate preset (Q33). One file for DevDogsUGA, DogDays and DogPack: `\"extends\": [\"github>DevDogsUGA/DevDogsUGA//renovate/default\"]`. Covers npm, pub, GitHub Actions digests and the Supabase CLI pin and pubspec Flutter versions. One grouped PR per repository on weekends; patch and minor updates automerge through the merge queue once the required checks pass; majors wait for the officer.",
   "extends": [
     "config:recommended",
     "helpers:pinGitHubActionDigests",
@@ -71,10 +71,20 @@
       "automerge": true
     },
     {
-      "description": "Flutter and Dart: the SDK constraint follows the Flutter channel, not pub, so it is left to the officer.",
+      "description": "Dart SDK constraints follow the Flutter release and are left to the officer.",
       "matchManagers": ["pub"],
-      "matchDepNames": ["dart", "flutter"],
+      "matchDepNames": ["dart"],
       "enabled": false
+    },
+    {
+      "description": "Every Flutter bump makes each member upgrade Flutter locally. Group pubspec environment.flutter updates in their own PR for officer review.",
+      "matchDatasources": ["flutter-version"],
+      "matchPackageNames": ["flutter"],
+      "groupName": "Flutter",
+      "groupSlug": "flutter",
+      "automerge": false,
+      "schedule": ["at any time"],
+      "labels": ["dependencies", "flutter", "needs-officer"]
     }
   ]
 }

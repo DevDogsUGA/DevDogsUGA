@@ -1,7 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { regenerateAfterSync } from "./commands.js";
+import { DONE } from "@devdogsuga/cli-core/dispatch";
+import {
+  createProductHandlers,
+  defaultDeps,
+  regenerateAfterSync,
+} from "./commands.js";
 import { CLI, makeProduct, recordingRunner, writeFiles } from "./fixtures.js";
 import type { DbTarget } from "./target.js";
 
@@ -62,4 +67,35 @@ describe("regenerateAfterSync (Q82: db sync regenerates the types)", () => {
       regenerateAfterSync(product, CLI, LOCAL, APPLIED, { run }),
     ).resolves.toBeUndefined();
   });
+});
+
+describe("product doctor Flutter check", () => {
+  it.each(["3.50.0", "3.47.5", "3.51.0", null])(
+    "reports %s without failing",
+    async (version) => {
+      const product = makeProduct({
+        files: { "pubspec.yaml": "environment:\n  flutter: 3.50.0\n" },
+      });
+      const previous = process.cwd();
+      const { run, calls } = recordingRunner(({ command }) => {
+        if (command === "flutter")
+          return version === null
+            ? { code: 1 }
+            : { stdout: JSON.stringify({ frameworkVersion: version }) };
+        return { stdout: "2.117.0" };
+      });
+      try {
+        process.chdir(product.root);
+        const handler = createProductHandlers({ ...defaultDeps, run });
+        await expect(handler.doctor!([])).resolves.toBe(DONE);
+        expect(calls.find((c) => c.command === "flutter")?.args).toEqual([
+          "--version",
+          "--machine",
+        ]);
+      } finally {
+        process.chdir(previous);
+        rmSync(product.root, { recursive: true, force: true });
+      }
+    },
+  );
 });
