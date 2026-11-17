@@ -16,6 +16,7 @@ import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { hasYes, isNonInteractive } from "@devdogsuga/cli-core/mode";
 import { bail, unwrap } from "@devdogsuga/cli-core/ui";
 import { OAUTH } from "@devdogsuga/sdk/constants";
+import { checkFlutterVersion, readFlutterPin } from "../doctor/commands.js";
 import { validateSessionPoolerUrl } from "../db/pooler.js";
 import { runOAuthSetup } from "../oauth/wizard.js";
 import { currentProduct, ProductConfigError, type Product } from "./config.js";
@@ -503,6 +504,19 @@ async function runDoctor(product: Product, deps: ProductDeps): Promise<string> {
     warn(
       "Docker is not reachable. The local stack and the schema diff need it.",
     );
+
+  const flutterPin = readFlutterPin(product.root);
+  if (flutterPin) {
+    const flutter = await deps
+      .run("flutter", ["--version", "--machine"], { cwd: product.root })
+      .catch(() => ({ code: 1, stdout: "", stderr: "" }));
+    const check = checkFlutterVersion(
+      flutter.code === 0 ? flutter.stdout : null,
+      flutterPin,
+    );
+    if (check.status === "ok") ok(check.summary);
+    else warn(`${check.summary}\n      fix: ${check.fix}`);
+  }
 
   if (product.config.types.kind === "supadart") {
     const dart = await deps

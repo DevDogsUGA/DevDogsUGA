@@ -1,5 +1,13 @@
 # @devdogsuga/devtools
 
+## Release notes for next
+
+`doctor` now checks Flutter in any product repository with `devtools.config.json`
+and an `environment.flutter` lower bound (`>=X.Y.Z` or bare `X.Y.Z`) in its pubspec. A different local
+version, including a newer one, prints a warning with the version to install.
+Missing Flutter or unreadable version output also warns. The check does not
+fail the command. The existing study-group-finder checks are unchanged.
+
 Contributor CLI for a DevDogsUGA checkout: the real tools with the session's
 tier filled in, a menu over them, and the checks CI runs.
 

@@ -1,5 +1,5 @@
 import 'package:devdogsuga_sdk/devdogsuga_sdk.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Run with `flutter run --dart-define-from-file=.env`.

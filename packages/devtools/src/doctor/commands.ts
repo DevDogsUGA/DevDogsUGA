@@ -26,6 +26,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { log, note } from "@clack/prompts";
 import { parse as parseDotenv } from "dotenv";
+import { parse as parseYaml } from "yaml";
+import { z } from "zod";
+import { CONFIG_FILE, findProductRoot } from "../product/config.js";
 import {
   describeEnvironment,
   probeEnvironment,
@@ -230,6 +233,54 @@ export function checkEnvKeysPresent(
 
 export { validateSessionPoolerUrl };
 
+/** Product apps pin Flutter to their declared lower bound. */
+export function readFlutterPin(repoRoot: string): string | null {
+  if (!existsSync(join(repoRoot, CONFIG_FILE))) return null;
+  try {
+    const pubspec = z
+      .object({
+        environment: z.object({
+          flutter: z.string().regex(/^(?:>=)?\d+\.\d+\.\d+$/),
+        }),
+      })
+      .safeParse(
+        parseYaml(readFileSync(join(repoRoot, "pubspec.yaml"), "utf8")),
+      );
+    return pubspec.success
+      ? pubspec.data.environment.flutter.replace(/^>=/, "")
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The machine output is external input, including when Flutter fails to start. */
+export function checkFlutterVersion(
+  machineOutput: string | null,
+  pinned: string,
+): DoctorCheck {
+  let installed: string | null = null;
+  try {
+    const version = z
+      .object({ frameworkVersion: z.string().min(1) })
+      .safeParse(JSON.parse(machineOutput ?? "null"));
+    if (version.success) installed = version.data.frameworkVersion;
+  } catch {
+    // A broken installation can print a diagnostic instead of JSON.
+  }
+  const ok = installed === pinned;
+  return {
+    id: "flutter-version",
+    status: ok ? "ok" : "warn",
+    summary: installed
+      ? ok
+        ? `Flutter ${installed}`
+        : `Flutter ${installed} does not match the pinned ${pinned}`
+      : `Could not read the installed Flutter version (repo pins ${pinned})`,
+    fix: ok ? undefined : `Install Flutter ${pinned} and put it on PATH.`,
+  };
+}
+
 // ── Orchestrator ─────────────────────────────────────────────────────────────
 
 function has(cmd: string, args: string[]): string | null {
@@ -392,7 +443,16 @@ export async function runEnvironmentDoctor(
     });
   }
 
-  if (!opts.app || opts.app === "study-group-finder") {
+  const productRoot = findProductRoot();
+  const flutterPin = productRoot ? readFlutterPin(productRoot) : null;
+  if (flutterPin) {
+    checks.push(
+      checkFlutterVersion(
+        has("flutter", ["--version", "--machine"]),
+        flutterPin,
+      ),
+    );
+  } else if (!opts.app || opts.app === "study-group-finder") {
     const flutter = has("flutter", ["--version"]) !== null;
     checks.push({
       id: "flutter-missing",

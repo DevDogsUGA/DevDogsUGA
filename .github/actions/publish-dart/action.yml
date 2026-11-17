@@ -9,11 +9,16 @@ runs:
   steps:
     # Not subosito/flutter-action or dart-lang/setup-dart: both call actions by
     # tag, and the org requires every action pinned to a commit SHA. A shallow
-    # clone of Flutter's stable branch is the same SDK, uncached.
-    - name: Install Flutter (stable)
+    # clone of Flutter's pinned release installs the SDK uncached.
+    - name: Install Flutter
       shell: bash
       run: |
-        git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+        FLUTTER_VERSION=$(sed -nE "/^environment:/,/^[^[:space:]]/s/^  flutter: ([\"']?)(>=)?([0-9]+\.[0-9]+\.[0-9]+)\1[[:space:]]*$/\3/p" "$GITHUB_WORKSPACE/packages/sdk_dart/pubspec.yaml")
+        if ! [[ "$FLUTTER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error::sdk_dart must declare environment.flutter as >=X.Y.Z or X.Y.Z."
+          exit 1
+        fi
+        git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
         echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
     - name: Stamp the version from the tag
       shell: bash
