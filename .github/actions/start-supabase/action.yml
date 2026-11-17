@@ -31,6 +31,18 @@ runs:
       if: steps.images.outputs.cache-hit == 'true'
       shell: bash
       run: docker load --input ~/.cache/supabase-images/images.tar
+    # The stack binds fixed host ports (54320-54329), inside Linux's
+    # ephemeral range (32768-60999), from which the kernel picks the local
+    # port of every outgoing connection. When one of them, such as a
+    # connection Docker keeps open after an image pull, holds a stack port,
+    # `supabase start` fails with "address already in use". Reserving the
+    # block stops the kernel from handing those ports out; binding them
+    # explicitly still works.
+    - name: Reserve the stack's ports
+      shell: bash
+      run: |
+        echo "ephemeral range: $(cat /proc/sys/net/ipv4/ip_local_port_range)"
+        sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
     # config.toml enables OAuth providers with `env()` credentials that CI
     # does not have; an unset one is a WARN, not an error.
     - name: Start the local Supabase stack

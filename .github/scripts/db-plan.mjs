@@ -352,8 +352,11 @@ export function buildDesired(
   mkdirSync(join(target, "migrations"), { recursive: true });
   // A port block per run: parallel jobs on one machine do not collide. Two
   // databases of one run (base and head) take blocks `portOffset` apart.
+  // The blocks stay under 28000, below Linux's ephemeral range (32768-60999):
+  // a port in that range can already be held by an outgoing connection, and
+  // then the database fails to start with "address already in use".
   const portBase =
-    (Number(rt.env.DB_PLAN_PORT_BASE) || 56000 + (process.pid % 400) * 20) +
+    (Number(rt.env.DB_PLAN_PORT_BASE) || 20000 + (process.pid % 400) * 20) +
     portOffset;
   const projectId = `dbplan${process.pid}${name === "desired" ? "" : name}`;
   const config = rewriteConfig(readFileSync(configPath, "utf8"), {

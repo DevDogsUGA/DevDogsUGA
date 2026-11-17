@@ -108,6 +108,15 @@ jobs:
       matrix:
         product: [DogDays, DogPack]
     steps:
+      # Supabase's local stack binds fixed host ports (54320-54329) inside
+      # Linux's ephemeral range, so an outgoing connection (an image pull) can
+      # already hold one and `supabase start` fails with "address already in
+      # use". Reserved before anything connects; see
+      # .github/actions/start-supabase.
+      - name: Reserve Supabase's local ports
+        run: |
+          echo "ephemeral range: $(cat /proc/sys/net/ipv4/ip_local_port_range)"
+          sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
       # The product's own main, at the workspace root, so its setup actions and
       # the script that runs its docs' steps are the ones it ships.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -188,6 +197,15 @@ jobs:
       DEVDOGS_OAUTH_BASE_URL: ${{ vars.E2E_OAUTH_BASE_URL }}
       DEVTOOLS_TELEMETRY: "0"
     steps:
+      # Supabase's local stack binds fixed host ports (54320-54329) inside
+      # Linux's ephemeral range, so an outgoing connection (an image pull) can
+      # already hold one and `supabase start` fails with "address already in
+      # use". Reserved before anything connects; see
+      # .github/actions/start-supabase.
+      - name: Reserve Supabase's local ports
+        run: |
+          echo "ephemeral range: $(cat /proc/sys/net/ipv4/ip_local_port_range)"
+          sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: DevDogsUGA/${{ matrix.product }}
