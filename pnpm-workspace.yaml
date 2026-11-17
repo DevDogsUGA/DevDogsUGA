@@ -48,7 +48,7 @@ overrides:
 # package stay as literal ranges in that package's package.json.
 catalog:
   # --- Framework / runtime ---
-  next: 16.4.1
+  next: 16.4.5
   react: ^19.3.0
   react-dom: ^19.3.0
 

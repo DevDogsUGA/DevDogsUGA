@@ -103,8 +103,8 @@ catalogs:
       specifier: ^12.43.0
       version: 12.43.0
     next:
-      specifier: 16.4.1
-      version: 16.4.1
+      specifier: 16.4.5
+      version: 16.4.5
     papaparse:
       specifier: ^5.6.0
       version: 5.7.0
@@ -357,7 +357,7 @@ importers:
         version: 10.75.2(@cloudflare/workers-types@5.20261005.1)(wrangler@4.142.0(@cloudflare/workers-types@5.20261005.1)(@types/node@26.6.2))
       '@sentry/nextjs':
         specifier: 'catalog:'
-        version: 10.75.2(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))(webpack@5.111.1(esbuild@0.28.2)(postcss@8.5.28))
+        version: 10.75.2(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))(webpack@5.111.1(esbuild@0.28.2)(postcss@8.5.28))
       '@shikijs/rehype':
         specifier: ^4.4.3
         version: 4.5.0
@@ -381,7 +381,7 @@ importers:
         version: 5.104.1(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
       '@vinext/cloudflare':
         specifier: 1.0.1
-        version: 1.0.1(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(@cloudflare/vite-plugin@1.57.1(@types/node@26.6.2)(vite@8.3.3(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(wrangler@4.142.0(@cloudflare/workers-types@5.20261005.1)(@types/node@26.6.2)))(vinext@1.0.1(abcec73d3d77f816bbb8fcb04614710b))
+        version: 1.0.1(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(@cloudflare/vite-plugin@1.57.1(@types/node@26.6.2)(vite@8.3.3(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(wrangler@4.142.0(@cloudflare/workers-types@5.20261005.1)(@types/node@26.6.2)))(vinext@1.0.1(ae4d11544f8831ff7539647865162b8b))
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -423,7 +423,7 @@ importers:
         version: 12.43.0(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
       next:
         specifier: 'catalog:'
-        version: 16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
+        version: 16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
@@ -510,7 +510,7 @@ importers:
         version: 11.0.5
       vinext:
         specifier: 1.0.1
-        version: 1.0.1(abcec73d3d77f816bbb8fcb04614710b)
+        version: 1.0.1(ae4d11544f8831ff7539647865162b8b)
       zod:
         specifier: 'catalog:'
         version: 4.6.6
@@ -1210,8 +1210,8 @@ importers:
         specifier: ^0.13.11
         version: 0.13.11(typescript@6.0.3)(zod@4.6.6)
       next:
-        specifier: '>=16'
-        version: 16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
+        specifier: '>=16.4.5'
+        version: 16.4.6(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
       qrcode:
         specifier: 1.5.4
         version: 1.5.4
@@ -3033,57 +3033,115 @@ packages:
   '@next/env@16.4.1':
     resolution: {integrity: sha512-5sUUrrSvs/2/2LnLoesybMGx12EtPB46fdZ6RhAw0XDGSPxU2LFyQBB7yuEiOFFJPKmBY6+q2jTr1/AMbnp0/g==}
 
+  '@next/env@16.4.5':
+    resolution: {integrity: sha512-JwSPwpdkZL5VMl2jA/q+JI8MZdweAL3xmw5/tb9y/TLtmS0YXZnmYDzSihwk8xTj1OL+WM53gTqaj96yuLp6Xw==}
+
+  '@next/env@16.4.6':
+    resolution: {integrity: sha512-SunBjJ6t+oBtecS3dTjdVuMhUogP5wD/vrGL5EVuQYM1iS4O5ilL51HkiJ3sPjMzRHiCChvr4dbaSJbR7F3lxA==}
+
   '@next/eslint-plugin-next@16.3.2':
     resolution: {integrity: sha512-z+HW1cZgt8QhByw8p2EbxF94AImgsKIYUbtSkA7Zld2T9yrKAlys4jNOcAOCtv6csX2CoA/5qCVyesL5pHmJ0A==}
 
-  '@next/swc-darwin-arm64@16.4.1':
-    resolution: {integrity: sha512-U+hQ5Gj3fpzf4fveTIF3dpUFYhaSW8vHhdAnbiIomzXzg7boreYFgBqprepXFtW4sw+aTttiNmg0gew/iFNhbg==}
+  '@next/swc-darwin-arm64@16.4.5':
+    resolution: {integrity: sha512-W5TniBzWKASbNNwHZ/S/f1MxQUXU/LdjklVMWA0Ujbfl7SZnUzFls45hO0i/sF7Bx1jJBWp7WWmoQajXtX/O8A==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@next/swc-darwin-x64@16.4.1':
-    resolution: {integrity: sha512-/hqC3V1XLUjhMASf/WridKdO9FXoEgN3HBWmtKbj00MPgnltutfraWJ3bYTpCRIgEIpbjJyOVLpYgAhh/BkdcQ==}
+  '@next/swc-darwin-arm64@16.4.6':
+    resolution: {integrity: sha512-kJ4VVZkley17xKaJx72QN2IBqjrj7zenCQZaUF0l9ShS/1Mt2kW4+Z5KGG6vgr3L/J562xTOizVyM1iA/u5nlg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@next/swc-darwin-x64@16.4.5':
+    resolution: {integrity: sha512-uWq4qkHapBDS1oFltWS4YxTb9pLHAtLNcpbuK6SmRsebLYZqpBML/j/C0op+50JYGTpZgVL/DWNt/6oWlamrrw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@next/swc-linux-arm64-gnu@16.4.1':
-    resolution: {integrity: sha512-GHzncHbcaS9g95kcvTNtKQW3aCLoR+xc3Jm7qrkpk1R+D2BjMHIPyvQGRPKCdMX95BsH/421jBUK06q9tEwzjw==}
+  '@next/swc-darwin-x64@16.4.6':
+    resolution: {integrity: sha512-eIPGZIqC+8JKaeZmvnCANJQF4xWkkHqSnAAajtFxgwDMAOnCgxNvP52SeWZ41PyVwoe+Le/NQuZSaQ8j7YshSA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@next/swc-linux-arm64-gnu@16.4.5':
+    resolution: {integrity: sha512-FdRcyOx5u5P51mlAqLB9EXdd8jZO5fsdHtk4BAQSkqOywCsbTNN/rmw+jO7pnmjNdAtu2AG46NzbCL2FPDrrgw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@next/swc-linux-arm64-musl@16.4.1':
-    resolution: {integrity: sha512-1SuJyDxW/PR9dHJat/ZRgcYLhuSZ+1psP4DlKb2tKIuXbjygqpLrJWRSq+onZQBv8LcmU67EIrmb6c3XTaJLjw==}
+  '@next/swc-linux-arm64-gnu@16.4.6':
+    resolution: {integrity: sha512-9nI6O8vvczH2D9ZNdMGqb/3NuT15T9ksOZnAmx9/gjF2cOi74+xxyf1Hk96uIMfm14c9y6wHeBq6SH8g6udvcA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@next/swc-linux-arm64-musl@16.4.5':
+    resolution: {integrity: sha512-cyvmmgtRXR8aGVT86wi9Py53IlfyCx7P2fZxuAXAoTummDnhKtUyjrMeXfapqp4qgD+gT5RqyGD/VfA16jEK7Q==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@next/swc-linux-x64-gnu@16.4.1':
-    resolution: {integrity: sha512-Istng1hMGp9TGO4lUqeKLd70MPN/OOkucVTP2Nmj+gLkwBgmPqUw8CJYBCC7nbl/B/23bBCcjCI5Hsh6hazC1A==}
+  '@next/swc-linux-arm64-musl@16.4.6':
+    resolution: {integrity: sha512-7/qPhTxDp2ScluOJOhLuhWmlA17o1yZ0SIgpISBCpBxXgtnK4+KGywBpFkfLPiU1rnSM1faFGzYkH6i7JdTrqA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@next/swc-linux-x64-gnu@16.4.5':
+    resolution: {integrity: sha512-hPc+Fl+N22DAvqZHq559NmamXboOX5Lu8I5Wl0DezfrhTk1Zz21NQeYoZDmNI/NjTcrdsVxM72Fzn2lI+Q+vAw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@next/swc-linux-x64-musl@16.4.1':
-    resolution: {integrity: sha512-aSC9wMNiZRRFVpPkPWBzRwLQxIGm/CiQcXyFF1XNcgodb+uMxdk7aSSGGpDXCbnvZdf4itjHxpOd5h7i7zaiYw==}
+  '@next/swc-linux-x64-gnu@16.4.6':
+    resolution: {integrity: sha512-oOpbNa8XOW1qCGd9VvzC4fbkkRxEls7/WI6tz+YHC0xRA7KpV1U7DrAnCPjzVyOk/karzWEepCOcTIDmwK8FwQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@next/swc-linux-x64-musl@16.4.5':
+    resolution: {integrity: sha512-gbACYE8IP/jlprNTpiWXHb8N9CofOzpnEwH2SrIz1dUbiJf1FbDssDupCAPeP1Taxe8mgG20sGZamJI7KFOdZw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@next/swc-win32-arm64-msvc@16.4.1':
-    resolution: {integrity: sha512-t/myvwFDlypMUjRvbBf8qLPyuaB0iXYYdBtwMt6DM6f+60wtGr4bSYholdPqNeV5VUXZhrpMwfza829kmhS3iA==}
+  '@next/swc-linux-x64-musl@16.4.6':
+    resolution: {integrity: sha512-aM8CZ+OR2EwXaAYw7KGkW2GDmNDsLBIRe1MMRZCJPTdw/xhTD0IMUVO4sf3KqrzuRouGzwwLZn34+gFeVXiUQA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@next/swc-win32-arm64-msvc@16.4.5':
+    resolution: {integrity: sha512-+8gj++ZMo8H20Xh2ijjNqyFk5LPLw0AC4Fs4Tq/G94rjjQXhOjN4jgSWsWKPFsyY26hfIeemJIwKtMxOsp5GBA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
 
-  '@next/swc-win32-x64-msvc@16.4.1':
-    resolution: {integrity: sha512-6ICqPo9awCkrtYNPhwkx1uU7rlFWrZRrIboDHS2LU+jv088UBYQtmJ25h6pCp27/+FZjF6BQ4Te4ErugyMeuBg==}
+  '@next/swc-win32-arm64-msvc@16.4.6':
+    resolution: {integrity: sha512-U0p7/tEtqvHX2crhd841CDwKtp5CFkKXVjOhmfccR3Pvp64sj8KBwRqsvltqLOwVBbj0NtkxwXSDpEHYGbxeXQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@next/swc-win32-x64-msvc@16.4.5':
+    resolution: {integrity: sha512-qNZj66pYXnaWLiF9R9GUbfBdrCv7kC6TaZfIwB2KH5WPc/8pEM3nVOj8hpQhWJU8S94rlH5MPDcX15+RrgUhiw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@next/swc-win32-x64-msvc@16.4.6':
+    resolution: {integrity: sha512-3ZG15/5WIdlTQsIEvc9sPTTSL5XFrlLklIKmfF4fwsDnoAhu6NcBDXsk3mbGxNyo6aVLEGex+fHCv2MahY7a9g==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
@@ -4673,6 +4731,7 @@ packages:
   '@secretlint/secretlint-rule-preset-recommend@10.2.2':
     resolution: {integrity: sha512-K3jPqjva8bQndDKJqctnGfwuAxU2n9XNCPtbXVI5JvC7FnQiNg/yWlQPbMUlBXtBoBGFYp08A94m6fvtc9v+zA==}
     engines: {node: '>=20.0.0'}
+    deprecated: Built into secretlint v14 and later. Remove this package; the rule id still works. https://github.com/secretlint/secretlint/blob/HEAD/docs/rules/preset-recommend.md
 
   '@secretlint/source-creator@10.2.2':
     resolution: {integrity: sha512-h6I87xJfwfUTgQ7irWq7UTdq/Bm1RuQ/fYhA3dtTIAop5BwSFmZyrchph4WcoEvbN460BWKmk4RYSvPElIIvxw==}
@@ -9810,8 +9869,29 @@ packages:
       react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
       react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
 
-  next@16.4.1:
-    resolution: {integrity: sha512-uc657V62E34fOI6W5NtG9IzwsPcms0Z60grz2MJGtglgD+pTFnNt4Yw2PzaU622tfX4vhrDgLZzicE2YlhI20Q==}
+  next@16.4.5:
+    resolution: {integrity: sha512-rmdfsWosjTUO+6R0S3KokoIk6Kj0sWDRTe86tZHdqaWH/oXq/udX3/4xb+YQi7aWbyEFoglDU54kaifLCdXbBw==}
+    engines: {node: '>=20.9.0'}
+    hasBin: true
+    peerDependencies:
+      '@opentelemetry/api': ^1.1.0
+      '@playwright/test': ^1.51.1
+      babel-plugin-react-compiler: '*'
+      react: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+      react-dom: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+      sass: ^1.3.0
+    peerDependenciesMeta:
+      '@opentelemetry/api':
+        optional: true
+      '@playwright/test':
+        optional: true
+      babel-plugin-react-compiler:
+        optional: true
+      sass:
+        optional: true
+
+  next@16.4.6:
+    resolution: {integrity: sha512-QZJiYhaZLJMo2KpkQGQIwvmd79WVsAWeYIU554a8d7zArS3si/IRy3lBNV/rtYhE70oLwdLYhPAXLPx8HwcwtA==}
     engines: {node: '>=20.9.0'}
     hasBin: true
     peerDependencies:
@@ -11262,6 +11342,7 @@ packages:
 
   tldts-core@7.4.20:
     resolution: {integrity: sha512-C630TWXZCZmLq0F2bW4QqwnaaxCQ/svpAqvJwnC4JvgEM5ohhBnGsEzTLSOXcN+xjz+kEaHS5uoWIw2klnqd0A==}
+    deprecated: Partial release, see https://github.com/remusao/tldts/issues/2735. Use >=7.4.22.
 
   tldts@6.1.86:
     resolution: {integrity: sha512-WMi/OQ2axVTf/ykqCQgXiIct+mSQDFdH2fkwhPwgEwvJ1kSzZRiinb0zF2Xb8u4+OqPChmyI6MEu4EezNJz+FQ==}
@@ -13755,6 +13836,10 @@ snapshots:
 
   '@next/env@16.4.1': {}
 
+  '@next/env@16.4.5': {}
+
+  '@next/env@16.4.6': {}
+
   '@next/eslint-plugin-next@16.3.2(eslint@9.39.5(jiti@2.7.0))':
     dependencies:
       '@eslint-community/eslint-utils': 4.9.1(eslint@9.39.5(jiti@2.7.0))
@@ -13762,28 +13847,52 @@ snapshots:
     transitivePeerDependencies:
       - eslint
 
-  '@next/swc-darwin-arm64@16.4.1':
+  '@next/swc-darwin-arm64@16.4.5':
     optional: true
 
-  '@next/swc-darwin-x64@16.4.1':
+  '@next/swc-darwin-arm64@16.4.6':
     optional: true
 
-  '@next/swc-linux-arm64-gnu@16.4.1':
+  '@next/swc-darwin-x64@16.4.5':
     optional: true
 
-  '@next/swc-linux-arm64-musl@16.4.1':
+  '@next/swc-darwin-x64@16.4.6':
     optional: true
 
-  '@next/swc-linux-x64-gnu@16.4.1':
+  '@next/swc-linux-arm64-gnu@16.4.5':
     optional: true
 
-  '@next/swc-linux-x64-musl@16.4.1':
+  '@next/swc-linux-arm64-gnu@16.4.6':
     optional: true
 
-  '@next/swc-win32-arm64-msvc@16.4.1':
+  '@next/swc-linux-arm64-musl@16.4.5':
     optional: true
 
-  '@next/swc-win32-x64-msvc@16.4.1':
+  '@next/swc-linux-arm64-musl@16.4.6':
+    optional: true
+
+  '@next/swc-linux-x64-gnu@16.4.5':
+    optional: true
+
+  '@next/swc-linux-x64-gnu@16.4.6':
+    optional: true
+
+  '@next/swc-linux-x64-musl@16.4.5':
+    optional: true
+
+  '@next/swc-linux-x64-musl@16.4.6':
+    optional: true
+
+  '@next/swc-win32-arm64-msvc@16.4.5':
+    optional: true
+
+  '@next/swc-win32-arm64-msvc@16.4.6':
+    optional: true
+
+  '@next/swc-win32-x64-msvc@16.4.5':
+    optional: true
+
+  '@next/swc-win32-x64-msvc@16.4.6':
     optional: true
 
   '@noble/ciphers@1.3.0': {}
@@ -15255,7 +15364,7 @@ snapshots:
     dependencies:
       '@sentry/core': 10.75.2
 
-  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))(webpack@5.111.1(esbuild@0.28.2)(postcss@8.5.28))':
+  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))(webpack@5.111.1(esbuild@0.28.2)(postcss@8.5.28))':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@rollup/plugin-commonjs': 28.0.1(rollup@4.64.0)
@@ -15269,7 +15378,7 @@ snapshots:
       '@sentry/server-utils': 10.75.2
       '@sentry/vercel-edge': 10.75.2
       '@sentry/webpack-plugin': 5.4.0(rollup@4.64.0)(webpack@5.111.1(esbuild@0.28.2)(postcss@8.5.28))
-      next: 16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
+      next: 16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
       rollup: 4.64.0
       stacktrace-parser: 0.1.11
     transitivePeerDependencies:
@@ -16612,13 +16721,13 @@ snapshots:
     dependencies:
       unpic: 4.2.2
 
-  '@unpic/react@1.0.2(next@16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))':
+  '@unpic/react@1.0.2(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))':
     dependencies:
       '@unpic/core': 1.0.3
       react: 19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)
       react-dom: 19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
     optionalDependencies:
-      next: 16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
+      next: 16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
 
   '@unrs/resolver-binding-android-arm-eabi@1.12.2':
     optional: true
@@ -16704,10 +16813,10 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@vinext/cloudflare@1.0.1(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(@cloudflare/vite-plugin@1.57.1(@types/node@26.6.2)(vite@8.3.3(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(wrangler@4.142.0(@cloudflare/workers-types@5.20261005.1)(@types/node@26.6.2)))(vinext@1.0.1(abcec73d3d77f816bbb8fcb04614710b))':
+  '@vinext/cloudflare@1.0.1(patch_hash=d47add602e9460bc00da845c47340b604fe1616b1059edeed2d4ed049ec0ef42)(@cloudflare/vite-plugin@1.57.1(@types/node@26.6.2)(vite@8.3.3(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(wrangler@4.142.0(@cloudflare/workers-types@5.20261005.1)(@types/node@26.6.2)))(vinext@1.0.1(ae4d11544f8831ff7539647865162b8b))':
     dependencies:
       '@cloudflare/workers-response-store': 1.0.1
-      vinext: 1.0.1(abcec73d3d77f816bbb8fcb04614710b)
+      vinext: 1.0.1(ae4d11544f8831ff7539647865162b8b)
     optionalDependencies:
       '@cloudflare/vite-plugin': 1.57.1(@types/node@26.6.2)(vite@8.3.3(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(wrangler@4.142.0(@cloudflare/workers-types@5.20261005.1)(@types/node@26.6.2))
 
@@ -21121,9 +21230,9 @@ snapshots:
       react: 19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)
       react-dom: 19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
 
-  next@16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)):
+  next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)):
     dependencies:
-      '@next/env': 16.4.1
+      '@next/env': 16.4.5
       '@swc/helpers': 0.5.23
       baseline-browser-mapping: 2.11.34
       caniuse-lite: 1.0.30001820
@@ -21132,14 +21241,40 @@ snapshots:
       react-dom: 19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
       styled-jsx: 5.1.6(@babel/core@7.29.7)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
     optionalDependencies:
-      '@next/swc-darwin-arm64': 16.4.1
-      '@next/swc-darwin-x64': 16.4.1
-      '@next/swc-linux-arm64-gnu': 16.4.1
-      '@next/swc-linux-arm64-musl': 16.4.1
-      '@next/swc-linux-x64-gnu': 16.4.1
-      '@next/swc-linux-x64-musl': 16.4.1
-      '@next/swc-win32-arm64-msvc': 16.4.1
-      '@next/swc-win32-x64-msvc': 16.4.1
+      '@next/swc-darwin-arm64': 16.4.5
+      '@next/swc-darwin-x64': 16.4.5
+      '@next/swc-linux-arm64-gnu': 16.4.5
+      '@next/swc-linux-arm64-musl': 16.4.5
+      '@next/swc-linux-x64-gnu': 16.4.5
+      '@next/swc-linux-x64-musl': 16.4.5
+      '@next/swc-win32-arm64-msvc': 16.4.5
+      '@next/swc-win32-x64-msvc': 16.4.5
+      '@opentelemetry/api': 1.9.1
+      sharp: 0.35.5(@types/node@26.6.2)
+    transitivePeerDependencies:
+      - '@babel/core'
+      - '@types/node'
+      - babel-plugin-macros
+
+  next@16.4.6(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)):
+    dependencies:
+      '@next/env': 16.4.6
+      '@swc/helpers': 0.5.23
+      baseline-browser-mapping: 2.11.34
+      caniuse-lite: 1.0.30001820
+      postcss: 8.5.23
+      react: 19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)
+      react-dom: 19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
+      styled-jsx: 5.1.6(@babel/core@7.29.7)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
+    optionalDependencies:
+      '@next/swc-darwin-arm64': 16.4.6
+      '@next/swc-darwin-x64': 16.4.6
+      '@next/swc-linux-arm64-gnu': 16.4.6
+      '@next/swc-linux-arm64-musl': 16.4.6
+      '@next/swc-linux-x64-gnu': 16.4.6
+      '@next/swc-linux-x64-musl': 16.4.6
+      '@next/swc-win32-arm64-msvc': 16.4.6
+      '@next/swc-win32-x64-msvc': 16.4.6
       '@opentelemetry/api': 1.9.1
       sharp: 0.35.5(@types/node@26.6.2)
     transitivePeerDependencies:
@@ -23546,9 +23681,9 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vinext@1.0.1(abcec73d3d77f816bbb8fcb04614710b):
+  vinext@1.0.1(ae4d11544f8831ff7539647865162b8b):
     dependencies:
-      '@unpic/react': 1.0.2(next@16.4.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
+      '@unpic/react': 1.0.2(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react-dom@19.3.0(patch_hash=0bbbf983447e94bb14f88b6f2ccfbd7ddf32790e6b3d94c2fb5f5ad0d8e0fd26)(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c)))(react@19.3.0(patch_hash=a6aa41c6f55e4a40ba1c3e3ff0022820cb78c1413bb5d05f953a345f6de78a1c))
       '@vercel/og': 1.0.3(@types/node@26.6.2)
       '@vinext/types': 1.0.1
       '@vitejs/plugin-react': 6.1.1(vite@8.3.3(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
