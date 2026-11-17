@@ -45,7 +45,7 @@
     "@sentry/node": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "cross-spawn": "^7.0.6",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.0",
     "postgres": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
